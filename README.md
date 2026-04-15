@@ -54,7 +54,7 @@ You                          Cowork
 
 ## Quick start
 
-1. **[Download ZIP](../../archive/refs/heads/main.zip)** — unzip anywhere on your computer
+1. **[Download ZIP](https://github.com/JLCyb3r/cowork-starter-kit/archive/refs/heads/main.zip)** — unzip anywhere on your computer
 2. Open Claude Cowork → create a new Project → point it at the unzipped folder
 3. Say: **"Help me set up my workspace"**
 
@@ -97,7 +97,7 @@ Every preset includes a non-negotiable rule: **Cowork will always ask for your c
 
 ## Staying up to date
 
-This repo uses [semantic versioning](../../releases). When a new version ships, check the [Releases](../../releases) tab. The CHANGELOG lists which presets changed. To update: download the new preset folder and replace only the template files. Your `cowork-profile.md` and `project-instructions.txt` are yours and are never overwritten.
+This repo uses [semantic versioning](https://github.com/JLCyb3r/cowork-starter-kit/releases). When a new version ships, check the [Releases](https://github.com/JLCyb3r/cowork-starter-kit/releases) tab. The CHANGELOG lists which presets changed. To update: download the new preset folder and replace only the template files. Your `cowork-profile.md` and `project-instructions.txt` are yours and are never overwritten.
 
 ---
 

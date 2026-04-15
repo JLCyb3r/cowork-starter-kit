@@ -117,4 +117,4 @@ Open `skills-as-prompts.md` in your preset folder. Copy the skill content you wa
 
 ## Keeping up to date
 
-When a new version ships, check the [Releases tab on GitHub](../../releases). `CHANGELOG.md` lists which presets changed. To update a specific preset: download the new `presets/<name>/` folder and replace only the template files. Your `cowork-profile.md` and `project-instructions.txt` are yours — they won't be overwritten.
+When a new version ships, check the [Releases tab on GitHub](https://github.com/JLCyb3r/cowork-starter-kit/releases). `CHANGELOG.md` lists which presets changed. To update a specific preset: download the new `presets/<name>/` folder and replace only the template files. Your `cowork-profile.md` and `project-instructions.txt` are yours — they won't be overwritten.
