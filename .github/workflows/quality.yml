@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a759222d78cdaff96f # v19.1.0
+      - uses: DavidAnson/markdownlint-cli2-action@05f32210e84442804257b2a6f20b273450ec8265 # v19.1.0
         with:
           globs: "**/*.md"
 
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: lycheeverse/lychee-action@f81b5982fd8eb46cf4c7fbcd6fc56e75bab79bd7 # v2.3.0
+      - uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
         with:
           args: --no-progress --offline "**/*.md"
           fail: true
@@ -28,7 +28,7 @@ jobs:
     continue-on-error: true
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: lycheeverse/lychee-action@f81b5982fd8eb46cf4c7fbcd6fc56e75bab79bd7 # v2.3.0
+      - uses: lycheeverse/lychee-action@f613c4a64e50d792e0b31ec34bbcbba12263c6a6 # v2.3.0
         with:
           args: --no-progress "**/*.md"
           fail: true
