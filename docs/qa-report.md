@@ -1,85 +1,111 @@
-# QA Report — cowork-starter-kit v1.0.0
+# QA Report — cowork-starter-kit v1.1
 
 ## Phase: 5
-## Date: 2026-04-15T10:00:00Z
-## Status: PASS WITH NOTES
+## Date: 2026-04-16T08:00:00Z
+## Status: PASS
 
 ---
 
-## Test Results
+## v1.1 Test Results
 
-| Test | Area | Result | Notes |
-|------|------|--------|-------|
-| T01 | Preset structure — study | PASS | All 9 required files present, 3 skill files |
-| T02 | Preset structure — research | PASS | All 9 required files present, 3 skill files |
-| T03 | Preset structure — writing | PASS | All 9 required files present, 3 skill files |
-| T04 | Preset structure — project-management | PASS | All 9 required files present, 3 skill files |
-| T05 | Preset structure — creative | PASS | All 9 required files present, 3 skill files |
-| T06 | Preset structure — business-admin | PASS | All 9 required files present, 3 skill files |
-| T07 | Safety rule — study | PASS | "Always ask for explicit confirmation before deleting" present |
-| T08 | Safety rule — research | PASS | "Always ask for explicit confirmation before deleting" present |
-| T09 | Safety rule — writing | PASS | "Always ask for explicit confirmation before deleting" present |
-| T10 | Safety rule — project-management | PASS | "Always ask for explicit confirmation before deleting" present |
-| T11 | Safety rule — creative | PASS | "Always ask for explicit confirmation before deleting" present |
-| T12 | Safety rule — business-admin | PASS | "Always ask for explicit confirmation before deleting" present |
-| T13 | WIZARD.md — 5 question sections | PASS | Q1–Q5 all present |
-| T14 | WIZARD.md — Q order (Goal→Format→Context→Tools→Safety) | PASS | Q1 Goal, Q2 Format, Q3 Context, Q4 Tools, Q5 Safety |
-| T15 | WIZARD.md — Q5 pre-question context line | PASS | "One important thing — Cowork can read, write, and delete files..." present |
-| T16 | WIZARD.md — SkillRisk.org safety note | PASS | Reference present in Step 4 skill safety note |
-| T17 | WIZARD.md — memory tip | PASS | Memory tip present after Step 2 |
-| T18 | WIZARD.md — fallback/resume instructions | PASS | "Fallback — if the wizard is interrupted" section present |
-| T19 | WIZARD.md — model check at start | PASS | "Before we begin — model check" section at top |
-| T20 | SETUP-CHECKLIST.md — 9 steps | PASS | Steps 1–9 confirmed |
-| T21 | SETUP-CHECKLIST.md — "Try this now" with all 6 presets | PASS | Step 8 has file-based and file-agnostic prompts for all 6 presets |
-| T22 | SETUP-CHECKLIST.md — "What if something goes wrong?" section | PASS | Section present with 3 recovery scenarios |
-| T23 | SETUP-CHECKLIST.md — "Keeping up to date" section | PASS | Section present at end |
-| T24 | CI — 5 jobs present | PASS | markdown-lint, link-check, link-check-external, shellcheck, safety-rule-check |
-| T25 | CI — all actions SHA-pinned | PASS | All 9 action usages are pinned to full 40-char SHA with version comment |
-| T26 | CI — safety-rule-check job uses correct grep pattern | PASS | Greps "Always ask for explicit confirmation before deleting" across all presets/*/global-instructions.md |
-| T27 | setup-folders.sh — path traversal rejection | PASS | `..` detected and rejected |
-| T28 | setup-folders.sh — system dir rejection | PASS | /usr /etc /bin /sbin /System /Library rejected |
-| T29 | setup-folders.sh — $HOME root rejection | PASS | Rejects TARGET == $HOME exactly |
-| T30 | setup-folders.sh — must be inside $HOME | PASS | Requires TARGET inside $HOME/* |
-| T31 | setup-folders.sh — all 6 presets defined | PASS | study, research, writing, project-management, creative, business-admin all in PRESET_FOLDERS |
-| T32 | LICENSE — MIT license | PASS | "MIT License" present, copyright 2026 JmLozano |
-| T33 | CONTRIBUTING.md — DCO requirement | PASS | "git commit -s" (Developer Certificate of Origin) present |
-| T34 | CONTRIBUTING.md — SkillRisk.org reference | PASS | Present in skill content safety section |
-| T35 | VERSION — contains 1.0.0 | PASS | File contains exactly "1.0.0" |
-| T36 | Skill format — study/research-synthesis.md | PASS | Has # Skill:, **Description:**, **When to use:**, **Instructions:**, **Example prompts:** |
-| T37 | Skill format — creative/ideation.md | PASS | Has # Skill:, **Description:**, **When to use:**, **Instructions:**, **Example prompts:** |
-| T38 | Skill format — business-admin/doc-summary.md | PASS | Has # Skill:, **Description:**, **When to use:**, **Instructions:**, **Example prompts:** |
-| T39 | Naming deviation — doc-summary.md | INFO | business-admin skill file is doc-summary.md (spec said report-summary.md). @dev noted this was blocked by Write tool filename guard. Functionally equivalent. |
-| T40 | README — "Star this repo" CTA | PASS | Present on line 3 |
-| T41 | README — ASCII diagram or wizard flow table | PASS | ASCII sequence diagram present showing 5-question wizard flow |
-| T42 | README — quick start ≤8 steps | PASS | Exactly 8 numbered steps |
-| T43 | README — "Versions and Updates" section | PASS | Section present |
+| # | Test | Category | Result | Notes |
+|---|------|----------|--------|-------|
+| T01 | project-instructions-starter.txt exists — study | Structural | PASS | File present at presets/study/project-instructions-starter.txt |
+| T02 | project-instructions-starter.txt exists — research | Structural | PASS | File present |
+| T03 | project-instructions-starter.txt exists — writing | Structural | PASS | File present |
+| T04 | project-instructions-starter.txt exists — project-management | Structural | PASS | File present |
+| T05 | project-instructions-starter.txt exists — creative | Structural | PASS | File present |
+| T06 | project-instructions-starter.txt exists — business-admin | Structural | PASS | File present |
+| T07 | .claude/skills/setup-wizard/SKILL.md exists at repo root | Structural | PASS | File present |
+| T08 | All 18 skills in folder/SKILL.md format — no flat .md at skills root | Structural | PASS | 18/18 verified, no flat files found |
+| T09 | skills-as-prompts.md retained in all 6 presets | Structural | PASS | All 6 present |
+| T10 | templates/preset-template/project-instructions-starter.txt exists | Structural | PASS | File present |
+| T11 | templates/preset-template/.claude/skills/example-skill/SKILL.md exists | Structural | PASS | Folder format used, no flat example-skill.md |
+| T12 | docs/OUTPUT-STRUCTURE.md references starter file | Structural | PASS | File exists and references project-instructions-starter.txt |
+| T13 | Safety rule verbatim in all 6 project-instructions-starter.txt | Content | PASS | All 6 contain "Always ask for explicit confirmation before deleting, moving, or overwriting any file or folder" |
+| T14 | Safety rule verbatim in all 6 global-instructions.md | Content | PASS | All 6 confirmed |
+| T15 | AskUserQuestion nudge in all 6 starter files | Content | PASS | All 6 contain AskUserQuestion reference |
+| T16 | State machine check (cowork-profile.md) in all 6 starter files | Content | PASS | All 6 reference cowork-profile.md for session detection |
+| T17 | Fast-track pause in all 6 starter files | Content | PASS | All 6 contain fast-track pause after Step 5 |
+| T18 | /skill-creator fallback in all 6 starter files | Content | PASS | All 6 reference /skill-creator with fallback |
+| T19 | Reset confirmation in setup-wizard SKILL.md | Content | PASS | "This will reset your profile... Confirm? (Yes / No)" present |
+| T20 | YAML frontmatter (name:, description:) in setup-wizard SKILL.md | Content | PASS | name: setup-wizard, description: present |
+| T21 | YAML frontmatter in all 18 preset skill files | Content | PASS | 18/18 have name: and description: in frontmatter |
+| T22 | Word count ≤300 — study (300 words) | Word count | PASS | Exactly at limit |
+| T23 | Word count ≤300 — research (298 words) | Word count | PASS | Under limit |
+| T24 | Word count ≤300 — writing (300 words) | Word count | PASS | Exactly at limit |
+| T25 | Word count ≤300 — project-management (300 words) | Word count | PASS | Exactly at limit |
+| T26 | Word count ≤300 — creative (300 words) | Word count | PASS | Exactly at limit |
+| T27 | Word count ≤300 — business-admin (300 words) | Word count | PASS | Exactly at limit |
+| T28 | Numbered options (1,2,3) NOT lettered (A,B,C) — setup-wizard SKILL.md | Format | PASS | No lettered options found |
+| T29 | Numbered options — all 6 starter files | Format | PASS | No A. B. C. lettered options in any starter file |
+| T30 | **Your answer:** CTA present in setup-wizard SKILL.md | Format | PASS | Found; no "→ Type a number." deprecated pattern |
+| T31 | **Your answer:** CTA in all 6 starter files | Format | PASS | All 6 contain "Your answer:" |
+| T32 | Skill presentation: 3 options (Yes/No/Show me more) NOT 4 | Format | PASS | "1. Yes — activate  2. No — skip it  3. Show me more" in SKILL.md |
+| T33 | CI job: starter-file-check exists in quality.yml | CI | PASS | Job present with 6-preset explicit loop |
+| T34 | CI job: starter-safety-rule-check exists in quality.yml | CI | PASS | Job present |
+| T35 | CI job: skill-format-check exists in quality.yml | CI | PASS | Job present |
+| T36 | starter-safety-rule-check uses .txt glob (not .md) | CI | PASS | Uses `for f in presets/*/project-instructions-starter.txt` — explicit .txt path |
+| T37 | starter-safety-rule-check has count check (≥6 files) | CI | PASS | COUNT variable validated |
+| T38 | Existing CI jobs still present (markdown-lint, link-check, shellcheck, safety-rule-check) | CI | PASS | All 4 confirmed present |
+| T39 | All 6 global-instructions.md use proactive trigger format ("offer automatically when") | Proactive trigger | PASS | All 6 have "offer automatically when" per skill |
+| T40 | All 6 global-instructions.md have session-start behavior block | Proactive trigger | PASS | All 6 have "## Session-start behavior" section |
+| T41 | All 6 global-instructions.md have "Never" block | Proactive trigger | PASS | All 6 have "## Never" section |
+| T42 | VERSION = 1.1.0 | Infrastructure | PASS | VERSION file contains "1.1.0" |
+| T43 | CHANGELOG.md has v1.1.0 entry | Infrastructure | PASS | ## [1.1.0] - 2026-04-16 present |
+| T44 | CONTRIBUTING.md PR checklist has 7 items | Infrastructure | PASS | All 7 v1.1 checklist items confirmed |
+| T45 | SETUP-CHECKLIST.md: paste starter step is Step 3 (before conversation Step 4) | Infrastructure | PASS (INFO) | Spec F7 AC (Step 3) followed — conflicts with spec F1 AC literal "Step 1". F7 is more specific; implementation is functionally correct (paste before conversation) |
+| T46 | README.md mentions /setup-wizard as primary CTA | Infrastructure | PASS | Quick Start Step 4 has `/setup-wizard` as primary CTA |
+| T47 | about-me.md has "Upcoming deadlines:" field in all 6 presets | Infrastructure | PASS | All 6 context/about-me.md files contain field |
+| T48 | WIZARD.md doc-only header present | Regression | PASS | "> Users: start with /setup-wizard..." note present |
+| T49 | All 6 preset folders retain v1.0 required files | Regression | PASS | README.md, folder-structure.md, connector-checklist.md, context/ (3 files) all present across all 6 presets |
+| T50 | No broken relative links (../../) in markdown files | Regression | PASS | No ../../ patterns found |
+| T51 | SETUP-CHECKLIST.md retains "What if something goes wrong?" section | Regression | PASS | Section present |
+| T52 | cowork-profile.md template includes Upcoming deadlines field | Content | PASS | setup-wizard SKILL.md instructs generation with "Upcoming deadlines" field |
 
 ---
 
 ## Findings
 
-### INFO — Naming Deviation (T39)
-`presets/business-admin/.claude/skills/doc-summary.md` deviates from spec's `report-summary.md` name.
-- Cause: Write tool filename guard blocked the filename containing "report" during Phase 4 implementation.
-- Impact: Zero functional impact. Content is identical in purpose. CI, skill loading, and all other checks pass.
-- Resolution: Acceptable. Phase 4 Summary documented this deviation with explanation.
+### INFO — Spec Conflict: SETUP-CHECKLIST Step Numbering (T45)
+Spec F1 AC says "Step 1 = paste project-instructions-starter.txt". Spec F7 AC says "(1) Create Cowork Project, (2) Assign project folder, (3) Paste starter file". Implementation follows F7 (more detailed, more sensible — you must create the project before you can paste into its Custom Instructions).
 
-### PASS — All Security Carry-Forwards Verified
-S1, S2, S3, L1, L5 carry-forwards from Phase 2 were all resolved in Phase 4:
-- S1: CI safety-rule grep ships at v1 (T26 PASS)
-- S2: All GitHub Actions SHA-pinned (T25 PASS)
-- S3: Path validation in setup-folders.sh (T27–T30 PASS)
-- L1: MIT LICENSE file exists (T32 PASS)
-- L5: DCO requirement in CONTRIBUTING.md (T33 PASS)
+- Impact: Zero functional impact. Paste step (Step 3) still precedes conversation step (Step 4), satisfying the core intent.
+- Resolution: PASS. F7 AC is the authoritative source. The spec's final AC checklist line contains a simplification error. Flag for spec cleanup in next revision.
+
+### PASS — All v1.1 Security Carry-Forwards Verified
+- S1: CONTRIBUTING.md updated to v1.1 PR checklist with 7 items (T44 PASS)
+- S2: CI starter-safety-rule-check uses explicit .txt glob with count check (T36, T37 PASS)
+
+### PASS — All v1.0 Security Carry-Forwards Still Intact
+Safety rule 4-layer defense confirmed operational in v1.1:
+- Layer 1: global-instructions.md (T14 PASS)
+- Layer 2: project-instructions-starter.txt (T13 PASS)
+- Layer 3: setup-wizard SKILL.md (T19 PASS)
+- Layer 4: CI enforcement jobs (T34, T38 PASS)
 
 ---
 
 ## Summary
 
-43 tests run. 42 PASS, 0 FAIL, 1 INFO.
+52 tests run. 52 PASS, 0 FAIL, 1 INFO.
 
-The single INFO item (T39 naming deviation) was pre-documented in the Phase 4 Summary as an explained scope deviation caused by tool constraints. It carries no functional or security impact.
+The single INFO item (T45 spec conflict on step numbering) is a spec inconsistency, not an implementation defect. The implementation follows the more detailed and functionally correct F7 AC.
 
-Critical AC verified: safety rule "Always ask for explicit confirmation before deleting" is present in all 6 presets' global-instructions.md and is enforced by CI job at every push.
+All v1.1 ACs verified:
+- 6 starter files present, all ≤300 words, all containing safety rule + AskUserQuestion nudge + state machine check + fast-track pause + /skill-creator fallback
+- 18 skills converted to folder/SKILL.md format with valid YAML frontmatter
+- 6 global-instructions.md rewritten with proactive trigger rules (offer-when, session-start, Never blocks)
+- Root .claude/skills/setup-wizard/SKILL.md present with YAML frontmatter + reset guard
+- 3 new CI jobs (starter-file-check, starter-safety-rule-check with .txt glob, skill-format-check)
+- VERSION 1.1.0, CHANGELOG entry, CONTRIBUTING.md 7-item checklist, about-me.md deadlines field
 
 **Verdict: APPROVED for security audit.**
+
+---
+
+## v1.0 Test Results (archived)
+
+_Archived from Phase 5 v1.0 — 43 tests, 42 PASS, 0 FAIL, 1 INFO._
+
+See git history for full v1.0 test table.
