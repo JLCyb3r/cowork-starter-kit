@@ -1,6 +1,6 @@
 # cowork-starter-kit
 
-> Set up your Claude Cowork workspace in 15 minutes. No code. No configuration files. Paste one file — Cowork does the rest.
+> Set up your Claude Cowork workspace in 15 minutes. No code. No configuration files. Open the folder in Cowork — the wizard runs automatically.
 
 [![CI](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -18,16 +18,16 @@ This fixes that.
 
 ## How it works
 
-Paste one file into Cowork Project Settings before your first conversation. Cowork auto-detects it's your first session and runs a personalized onboarding interview — goal selection, deep customization, skill activation. Takes about 15 minutes. No terminal required.
+Open this folder as a Cowork Project. Cowork auto-loads `CLAUDE.md` as system context and runs a dynamic onboarding wizard the moment you start talking — open-ended goal discovery, profile, writing voice calibration, then skill activation. Takes about 15 minutes. No terminal required. No paste required.
 
 ```
 You                                Cowork
  |                                    |
- |  Paste project-instructions-       |
- |  starter.txt into Project          |
- |  Settings > Custom Instructions    |
+ |  Open the cowork-starter-kit       |
+ |  folder as a Cowork Project        |
  | ---------------------------------> |
- |                                    |  (injected as system context)
+ |                                    |  Auto-loads CLAUDE.md
+ |                                    |  as system context
  |                                    |
  |  Start conversation                |
  | ---------------------------------> |
@@ -35,7 +35,9 @@ You                                Cowork
  |                                    |  this workspace for?"
  |  [your goal in your own words]     |
  | ---------------------------------> |
- |                                    |  Detects goal, proposes workspace
+ |                                    |  Detects goal, proposes scaffold
+ |                                    |  (preset if one matches, or
+ |                                    |  builds from scratch)
  |                                    |  Asks profile + writing questions
  |  [your answers]                    |
  | ---------------------------------> |
@@ -50,6 +52,11 @@ You                                Cowork
  |  Type /setup-wizard                |
  | ---------------------------------> |  Explicit fallback — redo setup
 ```
+
+**Two alternative entry paths** if you can't open the folder directly:
+
+- Paste `presets/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions for a preset-flavored start from message one.
+- Type `/setup-wizard` inside any Cowork project to invoke the wizard explicitly.
 
 ---
 
@@ -96,7 +103,7 @@ Pick the one that matches your work. The wizard auto-selects the right preset an
 
 **Each preset includes:**
 
-- `project-instructions-starter.txt` — paste into Project Settings > Custom Instructions BEFORE any conversation
+- `project-instructions-starter.txt` — optional manual entry path: paste into Project Settings > Custom Instructions for preset-specific onboarding without opening the repo folder (functionally equivalent to `CLAUDE.md` auto-load)
 - `global-instructions.md` — proactive skill trigger rules (session behavior) with writing profile integration
 - `context/about-me.md` — fill in your name, role, and goals
 - `context/working-rules.md` — safe defaults (includes confirm-before-delete rule)

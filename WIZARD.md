@@ -1,6 +1,6 @@
 # Cowork Setup Wizard
 
-> **Users:** Start with `/setup-wizard` or paste `project-instructions-starter.txt` into Project Settings > Custom Instructions. This file is the script source, not the entry point.
+> **Users:** The primary v1.2 entry point is `CLAUDE.md` at the repo root — open this folder as a Cowork Project and the dynamic wizard runs automatically on your first message. Alternatively, type `/setup-wizard` or paste a preset's `project-instructions-starter.txt` into Project Settings > Custom Instructions. This file (`WIZARD.md`) is the authoritative interview script source — not a runtime entry point.
 
 ---
 
@@ -150,6 +150,7 @@ Copy the following files from `presets/<preset-name>/context/` to a `context/` f
 - `about-me.md` (user fills this in — leave as-is)
 - `working-rules.md` (pre-filled safe defaults)
 - `output-format.md` (pre-filled for their preset)
+- `writing-profile.md` (goal-appropriate writing voice defaults; user refines during the writing-profile questions — see CLAUDE.md Phase 3)
 
 ### Step 4 — Copy skill files
 

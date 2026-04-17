@@ -1,6 +1,8 @@
 # Setup Checklist
 
-Use this checklist to complete your Cowork workspace configuration. Complete every step in order.
+This is the **manual fallback path**. The primary v1.2 path is: open the `cowork-starter-kit` folder as a Cowork Project — Cowork auto-loads `CLAUDE.md` and the wizard runs on first message. No paste required.
+
+Use this checklist if you cannot open the repo folder directly as a Cowork Project and want preset-specific onboarding from message one. Complete every step in order.
 
 ---
 
@@ -12,7 +14,7 @@ Open `presets/<preset-name>/project-instructions-starter.txt` from this repo. Co
 
 Replace `<preset-name>` with your goal preset: study, research, writing, project-management, creative, or business-admin.
 
-This is the key step — it tells Cowork how to run your personalized onboarding interview automatically.
+This step substitutes for the `CLAUDE.md` auto-load path — it tells Cowork how to run your personalized onboarding interview automatically when you start talking.
 
 **Step 2 — Create your Cowork Project**
 
