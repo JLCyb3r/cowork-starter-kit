@@ -6,3 +6,8 @@ Thumbs.db
 ~$*
 .env
 node_modules/
+
+# B10 per-skill user-input session files (pipeline state, not product content)
+.claude/projects/
+cycles/v1.3.*/
+skill-inputs/

@@ -31,6 +31,11 @@ Before merging a new preset PR, verify all 11 items:
 - [ ] **`curated-skills-registry.md` entry follows schema** — if the PR adds skills to `curated-skills-registry.md`, each entry must include: `name`, `description`, `source_url` (HTTPS only or `builtin`), `vetting_date` (ISO 8601), `tier` (1 or 2), `goal_tags`. PR description must include vetting evidence (source repo stars/health, last commit date, keyword scan result showing no flagged terms)
 - [ ] **CLAUDE.md sync** — if the PR modifies the wizard flow in any `project-instructions-starter.txt`, `CLAUDE.md` must be updated to match (and vice versa). All 7 wizard surfaces (CLAUDE.md + 6 starter files) must stay in sync. PRs that touch one must touch all.
 - [ ] **No `Sample:` or `Raw sample:` field** — `writing-profile.md` files must not store raw user writing samples; wizard instructions must extract patterns only
+- [ ] **New/edited SKILL.md in depth-enforced preset contains all 9 sections** — `## When to use`, `## Triggers`, `## Instructions`, `## Output format`, `## Quality criteria`, `## Anti-patterns`, `## Example`, `## Writing-profile integration`, `## Example prompts` (per `templates/skill-template/SKILL.md`)
+- [ ] **New SKILL.md has ≥ 60 lines** — run `wc -l presets/<preset>/.claude/skills/<skill>/SKILL.md` to confirm; the `skill-depth-check` CI job enforces this for depth-enforced presets
+- [ ] **Frontmatter `trigger_examples` list has 3–6 entries if present** — the field is optional; if included it must have at least 3 and no more than 6 example phrases
+- [ ] **Placeholder authoring rules followed** — see `##Placeholder authoring rules` section below
+- [ ] **B10 skill-input file lives under the pipeline path** — if this PR proposes a new skill, any B10 skill-input file (session notes, Q&A responses) must live under `.claude/projects/<slug>/cycles/…` and NOT under any product repo path (presets/, docs/, templates/)
 - [ ] **Prior retro carry-forwards reviewed** — per `docs/retro-template.md` §Carry-Forward Review; every item from the previous cycle's Section 8 must have an explicit disposition before this PR closes
 
 ---
@@ -67,6 +72,20 @@ The Tier 2 community skill search list in `WIZARD.md` is maintained by repo main
 ## Skill content safety
 
 Before submitting any skill content from external sources, scan it at [SkillRisk.org](https://skillrisk.org). Do not submit skill content that was not written by you or sourced from Anthropic's official materials.
+
+---
+
+## Placeholder authoring rules
+
+When writing placeholder text in SKILL.md files (the bracketed `[...]` tokens contributors fill in), follow these five rules to avoid shipping unintended runtime instructions to Cowork:
+
+1. **Placeholders are bracketed nouns, never imperatives.** Write `[action description]`, not `[Do X]` or `[Tell Cowork to…]`.
+2. **Never include the words `Ignore`, `Disregard`, `Override`, `Instead`, or `Always` inside a placeholder.** These terms can leak as LLM instructions if a placeholder is left unfilled or partially filled.
+3. **Use inline HTML comments for contributor guidance.** Intent and instructions for the contributor belong in `<!-- HTML comment -->` blocks, not in the visible placeholder text. HTML comments are invisible at Cowork runtime.
+4. **No safety-rule pattern in placeholders.** Do not write placeholder text that could be read as a rule about confirming, deleting, or overwriting files — that surface is reserved for the canonical safety rule in `global-instructions.md`.
+5. **Example section placeholders must read as contributor-guidance, not Cowork-instructions.** Placeholder text inside `## Example` must clearly signal that the contributor should paste a real input/output pair there — it must not read as an instruction Cowork would follow if left unfilled (e.g., use "Paste a real input/output here" not "Show an example").
+
+These rules are enforced by review, not by CI. The `safety-rule-check` CI job does not parse placeholder content.
 
 ---
 
