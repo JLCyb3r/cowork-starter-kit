@@ -280,15 +280,9 @@ jobs:
             echo "MISSING: curated-skills-registry.md at repo root"
             exit 1
           fi
-          # Count data rows in markdown table (lines starting with | that are not header or separator rows)
-          # Separator rows contain only |, -, and spaces. Header rows have header text.
-          # Data rows have actual content fields.
-          ENTRY_COUNT=$(grep -c '^|' curated-skills-registry.md | tr -d '[:space:]' || echo 0)
-          # Subtract 2 for the header row and separator row per table
-          # Count tables first, then subtract header/separator rows
-          HEADER_ROWS=$(grep -c '^| [A-Za-z]' curated-skills-registry.md || echo 0)
-          SEPARATOR_ROWS=$(grep -c '^|[-| ]*|$' curated-skills-registry.md || echo 0)
-          DATA_ROWS=$(( ENTRY_COUNT - HEADER_ROWS - SEPARATOR_ROWS ))
+          # Count data rows in markdown table: rows whose source_url field is either 'builtin' or 'https://...'
+          # This reliably distinguishes data rows from header/separator rows regardless of column ordering.
+          DATA_ROWS=$(grep -cE '\| (builtin|https?://)' curated-skills-registry.md || echo 0)
           if [ "$DATA_ROWS" -lt 18 ]; then
             echo "curated-skills-registry.md has only $DATA_ROWS entries (minimum: 18)"
             echo "Add more entries to meet the minimum registry cardinality requirement."
