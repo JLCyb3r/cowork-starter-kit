@@ -26,6 +26,9 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-012 | Skill Discovery Hybrid Architecture — Tier 1/Tier 2 Model | ACCEPTED |
 | ADR-013 | Writing Profile Architecture — Universal Artifact for All Workspaces | ACCEPTED |
 | ADR-014 | CI Expansion v1.2 — Writing Profile Template Enforcement | ACCEPTED |
+| ADR-015 | Canonical 9-Section Skill Template (v1.3.0) | ACCEPTED |
+| ADR-016 | `skill-depth-check` CI with Path Allowlist (v1.3.0) | ACCEPTED |
+| ADR-017 | Per-Skill User-Input Schema for User-in-the-Loop Authoring (v1.3.0) | ACCEPTED |
 
 ---
 
@@ -1159,3 +1162,588 @@ The v1.1 four-layer safety architecture extends with one new layer:
 5. **CI layer:** claude-md-safety-rule-check + starter-safety-rule-check + safety-rule-check — three independent enforcement points (v1.1.1 + v1.1; unchanged)
 
 The writing profile trigger in `global-instructions.md` is not a safety rule but a behavioral consistency rule. It is not CI-enforced at this time — it is a CONTRIBUTING.md checklist requirement for community presets.
+
+---
+
+## ADR-015: Canonical 9-Section Skill Template (v1.3.0)
+
+**Date:** 2026-04-17
+**Status:** ACCEPTED
+
+### Context
+
+All 18 preset skills shipped in v1.0–v1.2 as 16-line stubs: YAML frontmatter, one-line "When to use," one-paragraph "Instructions," three "Example prompts." There is no quality floor — a skill does not tell Cowork what GOOD output looks like vs BAD output, and community contributors will copy whatever shape ships. v1.3.0 establishes the permanent quality baseline via a canonical template at `templates/skill-template/SKILL.md`.
+
+Section NAMES and count are fixed by @pm's spec (B1); section CONTENTS, order, and length guidance are this ADR's responsibility.
+
+### Options Considered
+
+**Option A — 9-section template, order follows runtime invocation flow** (RECOMMENDED)
+
+Order: `When to use` → `Triggers` → `Instructions` → `Output format` → `Quality criteria` → `Anti-patterns` → `Example` → `Writing-profile integration` → `Example prompts`.
+
+Rationale for order: follows the way Cowork actually reads the skill at runtime — first decides IF it applies (`When to use` + `Triggers`), then HOW to execute (`Instructions` + `Output format`), then checks its work (`Quality criteria` + `Anti-patterns`), then references a concrete reference (`Example`), then layers voice (`Writing-profile integration`), then gives the user discoverable invocation phrasings (`Example prompts`).
+
+- Pros: Matches execution flow; reviewer reading top-to-bottom follows a natural "decide → act → check" narrative; `Triggers` before `Instructions` is critical because `global-instructions.md` proactive trigger rules (v1.1) must stay consistent with the skill's own `Triggers` list.
+- Cons: `Example prompts` at the end feels "away" from `When to use`, but splitting would fragment the trigger surface.
+
+**Option B — Prompt-surface-first order (Example prompts after Triggers)**
+
+Put `Example prompts` immediately after `Triggers`, before `Instructions`.
+
+- Pros: All user-facing invocation surface is grouped at the top.
+- Cons: Reviewer skims over `Instructions`/`Quality criteria` rather than reading top-down. Also weakens the existing `presets/*/skills-as-prompts.md` pattern, which already serves as the "prompt-first" copy-paste surface (ADR-007 decision to retain).
+
+**Option C — Minimal template (6 sections, no Triggers, no Writing-profile integration)**
+
+- Pros: Shorter skill files (~60 lines).
+- Cons: Fails to integrate with v1.1 proactive triggers (regression) and v1.2 writing profile (regression). Rejected.
+
+### Decision
+
+**Option A — 9-section template, runtime-flow order.**
+
+### Template Specification
+
+| # | Section (`## heading`) | Required content | Length guidance |
+|---|-----------------------|------------------|-----------------|
+| 1 | `## When to use` | 2–3 sentences covering normal case + 1 edge condition. Declarative, not imperative. | 3–6 lines |
+| 2 | `## Triggers` | Bullet list of signal phrases/situations that should auto-invoke. Must be consistent with the preset's `global-instructions.md` proactive rules. | 4–8 bullets |
+| 3 | `## Instructions` | Numbered steps (not prose paragraph). Each step: one verb + one outcome. | 5–10 numbered steps |
+| 4 | `## Output format` | Explicit structure Cowork must produce (sections, headings, tables, counts, or bullet schema). Example: "Numbered list of 10–20 items. Each item: `**Q:** ... **A:** ...` (A ≤ 3 sentences)." | 4–10 lines |
+| 5 | `## Quality criteria` | 3–5 concrete, checkable criteria. Each on one line, testable (a reviewer can answer yes/no). | 3–5 bullets |
+| 6 | `## Anti-patterns` | 3–5 common mistakes, one line each. What NOT to do. | 3–5 bullets |
+| 7 | `## Example` | Exactly ONE worked input→output pair. A real example, not a hypothetical. | 15–40 lines |
+| 8 | `## Writing-profile integration` | 1–3 sentences describing when this skill consults `context/writing-profile.md` (per v1.2 ≥100-word trigger). If skill always produces <100 words, say so. | 1–4 lines |
+| 9 | `## Example prompts` | 3 bullets. Realistic invocations the user might type. | 3 bullets |
+
+**Order justification — Triggers before Instructions:** The `Triggers` section is read by `global-instructions.md` proactive rules at session start; `Instructions` is read only when the skill actually fires. Putting `Triggers` first matches the "does this apply?" → "now execute" reading order. This ADR treats the pair as an inseparable gate.
+
+**Order justification — Writing-profile integration near the end:** It is a cross-cutting overlay that modifies output voice, not output structure. It must be placed AFTER `Output format` and `Example` so a contributor composing a skill reads "here is the structure" → "here is a concrete example" → "now overlay voice." Placing it earlier would invite contributors to skip the structure and write voice-first skills.
+
+### YAML Frontmatter Schema
+
+```yaml
+---
+name: <skill-slug>           # required, matches folder name
+description: <one sentence>  # required, ≤ 160 chars
+trigger_examples:            # NEW in v1.3.0, optional
+  - "example phrase 1"
+  - "example phrase 2"
+  - "example phrase 3"
+---
+```
+
+`trigger_examples` is optional (community skills may omit) but recommended; it provides the raw strings `global-instructions.md` rules can pattern-match against without needing to parse the `## Triggers` markdown body. Field is a YAML list of strings, 3–6 entries recommended.
+
+### Length Budget
+
+- **Target:** 80–120 lines per SKILL.md (frontmatter + body combined).
+- **Floor:** 60 lines. Below this, content depth is insufficient; CI fails (ADR-016).
+- **Soft cap:** 150 lines. Above this, skill becomes over-engineered; CONTRIBUTING.md advises splitting or trimming (no CI enforcement — judgment call).
+- **Hard cap:** None. CI only enforces the floor and section presence, not ceiling.
+
+### A-v1.3-2 Stress Test (two non-Study skills on paper)
+
+Per the spec and assumption A-v1.3-2, the template must be validated against at least one non-Study skill before other presets commit to it. Two skills were evaluated against the 9 sections as a desk-check:
+
+**Skill 1 — `presets/writing/.claude/skills/voice-matching/SKILL.md` (exercises Writing-profile integration)**
+
+| Section | Fits? | Note |
+|---------|-------|------|
+| When to use | Yes | "When Cowork-generated content must sound like the user" — existing 16-line skill already has this. |
+| Triggers | Yes | "User shares a writing sample"; "User requests content in their voice"; "Output ≥100 words and a voice profile exists." |
+| Instructions | Yes | Maps to existing prose as 4–5 numbered steps: read samples → identify patterns → generate → note voice choices → ask for sample if none. |
+| Output format | Yes | "Text block matching user's register; 1-sentence meta-note on voice choices at the end." |
+| Quality criteria | Yes | "Sentence-length distribution within 20% of sample"; "Named voice idiosyncrasy preserved"; "Meta-note present"; etc. |
+| Anti-patterns | Yes | "Averaging samples to generic clear writing"; "Ignoring sample when one exists"; "Silently adopting AI tics (em-dash flood)." |
+| Example | Yes | One sample paragraph → one generated paragraph in that voice. |
+| Writing-profile integration | Yes (primary fit) | This skill IS the writing profile at runtime. Section states: "Always consult `context/writing-profile.md` regardless of output length — this skill's entire purpose is voice." |
+| Example prompts | Yes | Existing three prompts map directly. |
+
+Template fits `voice-matching` without contortion. Writing-profile integration section is especially valuable here — it upgrades from "when applicable" to "always primary source."
+
+**Skill 2 — `presets/project-management/.claude/skills/status-update/SKILL.md` (exercises different output shape from flashcards)**
+
+| Section | Fits? | Note |
+|---------|-------|------|
+| When to use | Yes | "Communicating project progress to stakeholders." |
+| Triggers | Yes | "User says 'status update'"; "User mentions weekly report"; "User asks what's in-flight." |
+| Instructions | Yes | 4–5 numbered steps: ask project/audience → gather state → structure output by four-section schema → calibrate to audience. |
+| Output format | Yes (strong fit) | Fixed schema: `(1) Status (RAG), (2) Progress bullets, (3) Risks with mitigation, (4) Next steps`. Template's `Output format` section is IDEAL for fixed-schema outputs — this is where `status-update` is easier to specify than `flashcard-generation` (which has a looser schema). |
+| Quality criteria | Yes | "All four sections present"; "Total ≤200 words"; "Audience-calibrated formality"; "Risks ranked by severity." |
+| Anti-patterns | Yes | "RAG without evidence"; "Generic 'on track' with no progress bullets"; "Missing ownership on next steps." |
+| Example | Yes | One ask → one 4-section update. |
+| Writing-profile integration | Yes | Status updates are typically <200 words, so writing profile applies for the narrative clauses inside progress/risks bullets; use when voice profile exists. |
+| Example prompts | Yes | Existing three prompts map directly. |
+
+Template fits `status-update` with the `Output format` section providing structure the current 16-line stub entirely lacks. No template revision required.
+
+**Stress test result: A-v1.3-2 VALIDATED.** The 9-section template fits both a voice-centric skill (`voice-matching`) and a fixed-schema skill (`status-update`) without requiring section additions, removals, or order changes. The template is suitable for all 18 preset skills. No revisions required before Study preset commits.
+
+### Backwards Compatibility
+
+Non-Study presets ship with 16-line format until their scheduled rewrite release (v1.3.1–v1.3.5):
+
+1. `skill-format-check` CI (ADR-008) continues to validate `folder/SKILL.md` format — 16-line skills pass.
+2. `skill-depth-check` CI (ADR-016) is scoped via path allowlist — does NOT run on non-rewritten presets.
+3. CONTRIBUTING.md will declare the 9-section template the "community submission bar" for NEW skills in any preset, but existing 16-line skills in not-yet-rewritten presets remain valid until their cycle.
+4. When a preset's release lands (e.g., v1.3.1 Research), the allowlist widens and CI begins enforcing depth for that preset's SKILL.md files. All 3 skills in that preset must be rewritten in the same release.
+
+### Consequences
+
+- New file: `templates/skill-template/SKILL.md` — the canonical 9-section template with inline placeholder comments for each section.
+- 3 Study preset skills (`flashcard-generation`, `note-taking`, `research-synthesis`) will be rewritten to this template during v1.3.0 Phase 4 via the user-in-the-loop workflow (ADR-017).
+- `templates/preset-template/.claude/skills/example-skill/SKILL.md` is NOT replaced in v1.3.0 — it remains as the minimal scaffold for NEW preset creation. A separate item (post-v1.3.5) consolidates `skill-template` + `example-skill` into one canonical scaffold after all presets are deep.
+- `trigger_examples` YAML field is new; `skill-format-check` must NOT fail a skill that lacks it (optional field).
+- CONTRIBUTING.md PR checklist gains an item referencing the new template for any new skill submission.
+
+---
+
+## ADR-016: `skill-depth-check` CI with Path Allowlist (v1.3.0)
+
+**Date:** 2026-04-17
+**Status:** ACCEPTED
+
+### Context
+
+The 9-section template (ADR-015) is enforceable only if CI verifies it on every PR. But rolling out to 6 presets over 6 releases (v1.3.0–v1.3.5) means non-rewritten presets must NOT fail CI while still on the 16-line format. A path allowlist is the mechanism.
+
+### Options Considered
+
+**Option A — Path allowlist widened per release** (RECOMMENDED — matches spec & plan)
+
+One shell variable inside the CI job lists the currently-enforced preset paths. v1.3.0 starts with `study/`. Each v1.3.x bumps the list by one.
+
+- Pros: Zero risk of false-positive failures on not-yet-deep presets. One-line edit per release. Failure mode (missing preset from allowlist) is silent skip — safe default.
+- Cons: Allowlist can drift (preset renamed without list update = silent skip). Mitigated by a) comment documenting rollout schedule inside the CI job, b) per-release spec review confirms the path. Trade-off accepted per A-v1.3-4.
+
+**Option B — Global enforcement on `presets/**` starting v1.3.0**
+
+- Pros: Zero allowlist maintenance.
+- Cons: Would fail CI on the 15 skills across 5 presets still on 16-line format at v1.3.0. Unacceptable — blocks v1.3.0 release. Rejected.
+
+**Option C — File-frontmatter opt-in (`depth_format: true` field)**
+
+Each SKILL.md opts in to the deep check via YAML frontmatter.
+
+- Pros: Per-skill granularity.
+- Cons: Contributor cognitive load (two formats to know about); future migrations require touching every skill file twice (opt-in, then remove opt-in post-v1.3.5). Rejected as over-engineering.
+
+### Decision
+
+**Option A — Path allowlist widened per release.** Matches spec B2 AC ("Job scope is limited to `presets/study/.claude/skills/**` in v1.3.0") and the rollout plan.
+
+### Header-Matcher Implementation
+
+Reuses the `grep -qF` (fixed-string header match) idiom already proven in `safety-rule-check` and `writing-profile-template-check`. Exact bash implementation:
+
+```yaml
+skill-depth-check:
+  name: Skill Depth Check
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    - name: Verify 9-section structure and line count for depth-enforced presets
+      run: |
+        # Path allowlist — widened one preset per release (v1.3.0–v1.3.5).
+        # v1.3.0: study only. v1.3.1: study + research. ... v1.3.5: all 6.
+        # See ADR-016 and docs/spec.md Rollout Plan section.
+        ENFORCED_PRESETS="study"
+        REQUIRED_SECTIONS=(
+          "## When to use"
+          "## Triggers"
+          "## Instructions"
+          "## Output format"
+          "## Quality criteria"
+          "## Anti-patterns"
+          "## Example"
+          "## Writing-profile integration"
+          "## Example prompts"
+        )
+        MIN_LINES=60
+        FAIL=0
+        for preset in $ENFORCED_PRESETS; do
+          for skill_file in presets/$preset/.claude/skills/*/SKILL.md; do
+            [ -f "$skill_file" ] || continue
+            # 1. All 9 section headers present (exact match)
+            for section in "${REQUIRED_SECTIONS[@]}"; do
+              if ! grep -qF "$section" "$skill_file"; then
+                echo "MISSING section \"$section\" in: $skill_file"
+                echo "  Fix: add a '$section' heading. See templates/skill-template/SKILL.md for the canonical structure."
+                FAIL=1
+              fi
+            done
+            # 2. Line-count floor
+            LINES=$(wc -l < "$skill_file")
+            if [ "$LINES" -lt "$MIN_LINES" ]; then
+              echo "TOO SHORT ($LINES lines, minimum $MIN_LINES): $skill_file"
+              echo "  Depth-enforced skills must be >=60 lines. Target range is 80-120."
+              FAIL=1
+            fi
+          done
+        done
+        if [ "$FAIL" -eq 1 ]; then
+          echo ""
+          echo "skill-depth-check failed. Every SKILL.md in an enforced preset must have all 9 section headers (exact match) and be >=60 lines."
+          echo "Reference: templates/skill-template/SKILL.md and docs/architecture.md (ADR-015)."
+          exit 1
+        fi
+        echo "skill-depth-check passed for enforced presets: $ENFORCED_PRESETS"
+```
+
+### Non-Emptiness of Each Section (judgment call — NOT enforced in v1.3.0)
+
+The spec open-question "each section non-empty (at least N non-whitespace lines inside)" is intentionally NOT enforced by CI in v1.3.0:
+
+- Counting "lines inside a section" requires parsing section boundaries (next `##` heading or EOF), which is fragile.
+- The risk of a "heading-only, no content" skill passing is mitigated by the line-count floor (60 lines across 9 sections implies average 6–7 lines per section).
+- CONTRIBUTING.md PR review catches per-section emptiness; machine enforcement here is over-engineering.
+
+Documented in ADR as an explicit non-goal of v1.3.0 CI. Revisit in v1.3.5 retrospective.
+
+### Negative Test Fixture
+
+A negative test fixture proves CI fails on malformed input without shipping the malformed file to main. Three options considered:
+
+- Fixture at `tests/ci-fixtures/negative-skill-missing-section.md` — a committed file the CI validates separately. Reject: clutters repo.
+- Inline fixture (temporary file created during CI step, asserted to fail). Reject: adds complexity.
+- **ADOPTED — Documented manual negative test:** The ADR + CI job comment specifies the negative test procedure:
+  1. Locally: `sed -i '/^## Anti-patterns/,/^## /d' presets/study/.claude/skills/flashcard-generation/SKILL.md`
+  2. Run `act -j skill-depth-check` (or push to a throwaway branch).
+  3. Expected: job fails with "MISSING section '## Anti-patterns' in: presets/study/.claude/skills/flashcard-generation/SKILL.md".
+  4. `git checkout -- presets/study/.claude/skills/flashcard-generation/SKILL.md` to restore.
+  5. Re-run: passes.
+
+  This procedure is documented in the CI job comment (`# Negative test: delete ## Anti-patterns → expect fail`) and in CONTRIBUTING.md for maintainer verification. B2 AC "Deliberately deleting the `## Anti-patterns` section from any Study skill causes the job to fail" is satisfied by following this procedure at implementation time; @qa verifies during Phase 5 as part of CI validation scenarios.
+
+### Failure Output
+
+The CI error message MUST be contributor-friendly (A-v1.3-3 risk mitigation):
+
+```
+MISSING section "## Anti-patterns" in: presets/study/.claude/skills/flashcard-generation/SKILL.md
+  Fix: add a '## Anti-patterns' heading. See templates/skill-template/SKILL.md for the canonical structure.
+```
+
+Not just exit code 1. This is the reason to prefer explicit bash output over off-the-shelf linting tools.
+
+### Rollout Plan (CI allowlist widening)
+
+| Release | `ENFORCED_PRESETS` value | PR diff size |
+|---------|--------------------------|--------------|
+| v1.3.0 | `"study"` | (initial) |
+| v1.3.1 | `"study research"` | 1-line edit in CI + 3 new deep skills |
+| v1.3.2 | `"study research writing"` | same |
+| v1.3.3 | `"study research writing creative"` | same |
+| v1.3.4 | `"study research writing creative project-management"` | same |
+| v1.3.5 | `"study research writing creative project-management business-admin"` OR replace with `*` glob | final — consider retiring allowlist |
+
+At v1.3.5, evaluate consolidation to `for preset in presets/*/; do` (no allowlist). Close the technical debt per A-v1.3-4 validation path.
+
+### Consequences
+
+- `.github/workflows/quality.yml` gains one new job (`skill-depth-check`). Total CI jobs: 14 → 15 after v1.3.0.
+- Non-Study presets remain on 16-line format until their release — no CI regression.
+- CI error output format establishes a precedent: fixable, human-readable messages with pointer to canonical reference. Future CI jobs should follow.
+- Per-release spec must confirm the allowlist edit in its Phase 4 Intent Contract.
+
+---
+
+## ADR-017: Per-Skill User-Input Schema for User-in-the-Loop Authoring (v1.3.0)
+
+**Date:** 2026-04-17
+**Status:** ACCEPTED
+
+### Context
+
+B10 (spec) introduces user-in-the-loop authoring: for each of the 3 Study skills, the orchestrator asks the user 4–6 targeted questions before @dev drafts. Answers are saved as pipeline state under `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/<skill-name>.md`. This ADR locks the question set, file schema, and how @dev and @qa consume the file.
+
+### Options Considered
+
+**Option A — Free-form conversation, orchestrator summarizes to file**
+
+- Pros: Lowest friction for user.
+- Cons: Summary is lossy; hard for retro to compare across 3 skills; @dev input→output mapping ambiguous.
+
+**Option B — Fixed question set + structured file format** (RECOMMENDED)
+
+A fixed question set (the same 5 questions asked per skill, one optional 6th follow-up) saved to a templated markdown file with one section per question.
+
+- Pros: Consistency across 3 skills; unambiguous @dev mapping; retro has clean Q&A evidence.
+- Cons: 5 questions may feel formulaic for simple skills. Mitigation: question 6 is an optional free-form "anything else" follow-up.
+
+**Option C — 6+ questions including test-case generation**
+
+- Pros: More input material.
+- Cons: Exceeds B10 spec scope and risks A-v1.3-1 fatigue. Rejected.
+
+### Decision
+
+**Option B — Fixed 5-question schema, 1 optional follow-up, structured file.**
+
+### The 5 Locked Questions (+ 1 optional)
+
+Every skill's input session asks these exact questions in this order:
+
+1. **Quality criteria (Q1):** "What makes a GOOD `<skill-name>` output, in your experience? Give me 3–5 concrete things a reviewer could check yes/no on."
+   → Feeds `## Quality criteria` section.
+
+2. **Anti-patterns (Q2):** "What does Cowork (or AI tools in general) tend to get wrong when you use this skill today? Give me 3–5 common failure modes."
+   → Feeds `## Anti-patterns` section.
+
+3. **Worked example (Q3):** "Give me ONE real input you'd feed this skill + the ideal output you want back. Don't sanitize — a real, specific example is much more valuable than a generic one."
+   → Feeds `## Example` section.
+
+4. **Writing voice feel (Q4):** "When this skill produces prose (any amount, even a bullet), how should it feel? Clinical, conversational, academic, punchy, warm, something else? Is there a voice you actively want to avoid?"
+   → Feeds `## Writing-profile integration` section.
+
+5. **Trigger phrases (Q5):** "What phrases or situations should auto-invoke this skill proactively? Give me 3–6 real phrases you (or your user archetype) might say that should fire this skill without being asked."
+   → Feeds `## Triggers` section AND YAML `trigger_examples` field.
+
+6. **(Optional — Q6):** "Anything else about how this skill should behave that I haven't asked about?"
+   → Free-form. May feed any section or inform the `## When to use` / `## Instructions` framing. Not required.
+
+**Why these 5, not others:** Each question maps 1:1 to the template section most dependent on human judgment. `Instructions`, `Output format`, and `Example prompts` are derivable by @dev from the worked example (Q3) + existing 16-line skill as a scaffold, so they are NOT asked directly. `When to use` is a restatement of Q5 with a broader framing, so it's derivable. This keeps the user-facing ask minimum.
+
+### Input File Schema
+
+Location: `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/<skill-name>.md`
+
+Not committed to product repo — pipeline state only. Lives in The-Council's project state directory.
+
+```markdown
+---
+skill: <skill-slug>
+preset: study
+cycle: v1.3.0
+session_started: <ISO-8601-UTC>
+session_completed: <ISO-8601-UTC>
+---
+
+# Skill Input Session — <skill-name>
+
+## Q1 — Quality criteria
+<user's verbatim or close-paraphrase answer>
+
+## Q2 — Anti-patterns
+<user's answer>
+
+## Q3 — Worked example
+**Input:**
+<user's real input>
+
+**Desired output:**
+<user's ideal output>
+
+## Q4 — Writing voice feel
+<user's answer>
+
+## Q5 — Trigger phrases
+<user's answer — list or prose>
+
+## Q6 — Anything else (optional)
+<user's answer OR "N/A">
+
+---
+
+## Draft → Review iterations
+
+### Draft 1 — <ISO-8601-UTC>
+<link or path to draft commit/SHA>
+User feedback: <per-section good/change/replace notes>
+
+### Draft 2 — <ISO-8601-UTC>
+<link/SHA>
+User feedback: ...
+
+### Approved — <ISO-8601-UTC>
+Final commit SHA: <sha>
+```
+
+### @dev → SKILL.md Mapping
+
+Explicit mapping from input-file section to SKILL.md target section:
+
+| Input file section | SKILL.md target | Transformation |
+|-------------------|-----------------|----------------|
+| Q1 (Quality criteria) | `## Quality criteria` | 3–5 bullets, one line each, rephrased for imperative ("Each card Q is answerable only by reading the source") |
+| Q2 (Anti-patterns) | `## Anti-patterns` | 3–5 bullets, one line each, phrased as "Avoid X" or just the failure mode |
+| Q3 (Worked example) | `## Example` | Verbatim input→output (may trim per spec E1 with user confirmation) |
+| Q4 (Writing voice feel) | `## Writing-profile integration` | 1–3 sentences describing when/how `writing-profile.md` is consulted for this skill's outputs |
+| Q5 (Trigger phrases) | `## Triggers` (body) + YAML `trigger_examples` (frontmatter list) | Bullet list in body; 3–6 strings in frontmatter |
+| Q6 (Anything else) | Any section, judgment call | Often informs `## When to use` or step ordering in `## Instructions` |
+| (derived from Q3 + existing skill) | `## When to use`, `## Instructions`, `## Output format`, `## Example prompts` | @dev drafts from worked example + v1.2 16-line skill as scaffold |
+
+### Retro (Phase 8) Evidence
+
+The input files provide three kinds of evidence for retro:
+
+1. **"Did user input produce better skills?" signal:** Compare `## Quality criteria` in the final SKILL.md against Q1 answer fidelity. If user's exact criteria survive into the committed skill, the workflow worked. If @dev paraphrased away user intent, the workflow failed.
+2. **A-v1.3-1 fatigue validation:** Look at `session_started` → `session_completed` span and Q6 completeness across 3 skills. If skill 3's Q6 is "N/A" while skills 1–2 have content, fatigue is confirmed.
+3. **Pilot-first validation:** Compare `flashcard-generation` input file against `note-taking` input file. Did the user's quality bar rise (reflecting pilot learnings)? Did @dev's interpretation tighten?
+
+Retro reads these three signals, writes findings to `docs/retro.md` under the v1.3.0 section.
+
+### Consequences
+
+- Before Phase 4 begins, `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/` directory is created by the orchestrator.
+- @dev MUST NOT commit a Study skill without a corresponding input file committed to pipeline state first. Phase 7 approval checks all 3 input files exist.
+- @qa (Phase 5) cross-references input file Q1 against committed SKILL.md `## Quality criteria` to verify user intent survived drafting.
+- @qa (Phase 8) uses input files for retro evidence per the three signals above.
+- Spec B10 AC ("User-input session file exists for all 3 Study skills") is satisfied by this schema.
+- No product repo changes — all artifacts are pipeline state under `.claude/projects/claude-cowork-config/`.
+
+---
+
+## v1.3.0 Supporting Architecture Updates
+
+### README "Next up" section (B9) — exact placement
+
+- **File:** `README.md` (repo root)
+- **Placement:** Immediately ABOVE the existing `## Staying up to date` heading.
+- **Section heading:** `## Next up — v1.3.0 Preset Skills Depth`
+- **Body (≤5 sentences):**
+
+  > Preset skills are moving from 16-line stubs to structured, production-grade skills with explicit triggers, output formats, quality criteria, anti-patterns, and worked examples. **Study preset ships first** in v1.3.0 (pilot: `flashcard-generation`). Subsequent point releases (v1.3.1–v1.3.5) deepen one preset per release. Track progress on the pinned [Roadmap Issue](https://github.com/jmlozano1990/cowork-starter-kit/issues/2) or the [v1.3.0 Milestone](https://github.com/jmlozano1990/cowork-starter-kit/milestone/1).
+
+- **Verification:** After edit, `grep -n "## Next up" README.md` must return a line number strictly less than the line number of `## Staying up to date` in the same file.
+
+### Retro template carry-forward section (B8)
+
+- **File:** `docs/retro-template.md`
+- **Section heading:** `## Carry-Forward Review` (level-2, immediately after `## 1. Cycle Summary`)
+- **Body structure:** One instruction line + one table:
+
+  > Review `docs/retro.md` previous cycle's Carry-Forward Items table before writing any Phase 0 ACs. Any MEDIUM-or-higher carry-forward must be either (a) addressed in this cycle's spec or (b) explicitly deferred with rationale in the Action column below.
+
+  | Item | Source | Priority | Disposition (addressed-in-spec / deferred-with-reason) | Reference |
+  |------|--------|----------|---------------------------------------------------------|-----------|
+  | - [ ] <item>         | <Phase X Finding ID> | CRITICAL / MEDIUM / LOW | <disposition> | <spec section or deferral note> |
+
+- **CONTRIBUTING.md checklist row wording (appended to the existing numbered PR checklist):**
+  > [N+1]. Carry-forward items from prior retro reviewed and actioned or explicitly deferred with rationale. See [retro-template.md](docs/retro-template.md#carry-forward-review) for the review procedure.
+
+### `registry-url-check` tightening (B7)
+
+Resolves A2 MEDIUM carry-forward from v1.2 Phase 6.
+
+- **Allowlist regex:** `^https://github\.com/` (GitHub only) OR exact literal string `builtin`. All other URL schemes and hosts are rejected, including previously-allowed generic `https://` URLs to non-GitHub hosts.
+
+- **Exact rejection logic (replaces current `grep -q '^http://'` check in the existing job):**
+
+  ```bash
+  # For each extracted url value:
+  if [ "$url" != "builtin" ] && ! echo "$url" | grep -qE '^https://github\.com/'; then
+    echo "DISALLOWED URL scheme or host: $url"
+    echo "source_url must be either 'builtin' or an HTTPS URL on github.com."
+    echo "Rationale: community skill sources must be reviewable on GitHub (SHA-pinnable)."
+    echo "See CONTRIBUTING.md 'Registry entry URL policy' and docs/architecture.md (ADR-012)."
+    FAIL=1
+  fi
+  ```
+
+- **Negative test fixture layout:** An unreachable sentinel row in a test-only file `curated-skills-registry.test.md` (NOT the real registry) with a hardcoded `| ftp://NEGATIVE-TEST-FIXTURE-v1.3.0 |` entry. CI job runs the same logic against the test file in a separate step and asserts `FAIL=1` is set; if it passes instead, CI fails. This proves the check is live without risk of the sentinel leaking into production registry. Document the sentinel string in the CI job comment.
+
+- **Error message (contributor-friendly):**
+
+  ```
+  DISALLOWED URL scheme or host: <offending-url>
+  source_url must be either 'builtin' or an HTTPS URL on github.com (e.g., https://github.com/org/repo/blob/<sha>/path/SKILL.md).
+  Rationale: all community skill sources must be reviewable on GitHub and SHA-pinnable.
+  ```
+
+- **Existing 18 registry entries compatibility:** Verified at Phase 4 commit time by running the tightened check against the current `curated-skills-registry.md` — if any existing entry fails, @dev escalates to @architect before merging the tightening. Current v1.2 entries are all `builtin` (Phase 5 Re-test confirmed, 2026-04-17); no non-GitHub HTTPS entries exist, so tightening is non-breaking as of Phase 1.
+
+---
+
+## v1.3.0 Deliverable Dependency Graph
+
+This graph formalizes sequencing for @dev in Phase 4. Arrows mean "must complete before." Independent deliverables can parallelize.
+
+```
+                          B1 (template)
+                            |
+                            v
+                          B2 (CI job)
+                            |
+                            v
+                  B3 (flashcard-generation — PILOT)
+                            |   (pilot approved)
+                            v
+                   B4a (note-taking)
+                            |
+                            v
+                   B4b (research-synthesis)
+                            |
+                            v
+                 B5 (regenerate skills-as-prompts.md)
+                            |
+                            v
+              B6 (curated-skills-registry Study entries review)
+
+  [independent tracks — parallelizable with B1-B6]:
+  B7 (registry-url-check tightening)     --- resolves v1.2 A2
+  B8 (retro-template carry-forward)      --- resolves v1.2 process gap
+  B9 (README "Next up" + GH signals)     --- Milestone + Issue already live
+  B10 (input-file schema + 3 sessions)   --- runs DURING B3 and B4, not after
+```
+
+**Hard sequencing constraints (from spec):**
+
+1. **B1 → B2:** CI job can only check what the template defines; B1 must land first.
+2. **B1 → B3/B4:** Skill rewrites reference the template; cannot begin before B1 exists.
+3. **B3 (pilot) → B4a (note-taking):** `flashcard-generation` must be fully approved (committed + CI green) before `note-taking` authoring begins. Hard pilot-first sequencing — enables template revisions if pilot reveals issues.
+4. **B4a → B4b:** Serial within Study preset for consistency with pilot-first ethos (ordering from spec).
+5. **All 3 Study skills → B5:** `skills-as-prompts.md` regeneration reads from the final committed SKILL.md sources.
+6. **B5 → B6:** Registry descriptions may shift during rewrite; B6 reconciles after B5.
+7. **B10 intertwines with B3 and B4:** Each skill's input session happens immediately BEFORE @dev drafts that skill, not in a batch. B10 is a sub-step of B3/B4, not a precursor.
+
+**Independent (parallelizable with the template track):**
+
+- B7, B8, B9 touch entirely different files from B1–B6 and can land in any order. Recommended execution: land B7 and B8 early in Phase 4 so CI (B7) and process docs (B8) are in force before skill commits begin.
+
+**Phase 4 recommended commit sequence:**
+
+1. B1 — template file commit
+2. B7 — registry-url-check tightening commit (independent, fast)
+3. B8 — retro-template carry-forward section + CONTRIBUTING.md row commit
+4. B9 — README "Next up" teaser commit
+5. B2 — skill-depth-check CI commit (the CI job is inert until B3 lands, but landing it early catches any B3 drift immediately)
+6. B3 + B10 (flashcard-generation) — input session → draft → approval → commit
+7. B4a + B10 (note-taking) — same
+8. B4b + B10 (research-synthesis) — same
+9. B5 — skills-as-prompts.md regeneration
+10. B6 — registry entries review
+11. Version bump, CHANGELOG, release
+
+---
+
+## v1.3.0 Anti-Pattern Scan
+
+Applied per `.claude/skills/architect/A1-architect-framework.md` to v1.3.0 additions (ADR-015, ADR-016, ADR-017, and the supporting architecture updates):
+
+| # | Anti-Pattern | Applies to v1.3.0? | Notes |
+|---|-------------|--------------------|-------|
+| 1 | God Class/Module | No | Template is one file with nine sections — single-responsibility per section. No module aggregation. |
+| 2 | Circular Dependencies | No | Dependency chain: template → CI → skill files → skills-as-prompts → registry. One-directional. |
+| 3 | Leaky Abstraction | No | Template sections map to runtime behavior; no hidden implementation bleeding through. |
+| 4 | Premature Optimization | No | `trigger_examples` YAML field is additive and motivated by v1.1 proactive rules (existing use case), not speculative. |
+| 5 | Over-Engineering | Watched | 9 sections is near the ceiling of what a contributor can maintain. Justified by A-v1.3-2 stress test showing every section earns its presence. Revisit at v1.3.5 — if any section has been empty-or-placeholder in ≥30% of community PRs, trim. |
+| 6 | Tight Coupling | Watched | `## Triggers` section in SKILL.md must stay consistent with `global-instructions.md` proactive rules. Coupling is acknowledged; mitigation is the `trigger_examples` frontmatter field as the machine-readable source of truth. |
+| 7 | Missing Separation of Concerns | No | Template (structure) vs CI (enforcement) vs input-file (user judgment capture) are three clean concerns. |
+| 8 | N+1 Query Pattern | No | No queries. |
+| 9 | Destructive Migration | No | v1.3.0 replaces 3 Study skills' contents. Old 16-line format remains in git history and in the 5 other presets. No data loss. |
+
+**Coupling flag (#6):** Acceptable trade-off. Template authority is `## Triggers` (human-readable bullets) for contributor ergonomics; `trigger_examples` (machine-readable YAML) is what proactive-rule tooling reads. When they diverge, CONTRIBUTING.md review is the control; if divergence becomes a recurring issue in v1.3.1+, add a CI job that asserts `trigger_examples` is a subset of `## Triggers` bullet lines.
+
+No blocking anti-patterns detected for v1.3.0.
+
+---
+
+## v1.3.0 Open Issues for Phase 2 (@security) and Deliberation
+
+1. **Template as LLM instruction surface:** `templates/skill-template/SKILL.md` becomes the canonical shape for every community Tier 2 submission. Is the template itself an injection vector (e.g., placeholder text like "[your instructions here]" that a contributor could accidentally ship verbatim)? @security to review.
+2. **`skill-depth-check` allowlist drift:** If a preset folder is renamed without updating `ENFORCED_PRESETS`, the check silently skips. @security to evaluate whether this fail-open default is acceptable (vs fail-closed: unknown preset fails CI).
+3. **Input file path containment:** `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/` lives outside the product repo. Confirm this path is NOT included in any product-repo commit; orchestrator must enforce.
+4. **`registry-url-check` tightening breaking change risk:** Confirmed non-breaking at Phase 1 against v1.2 entries (all `builtin`). @security to re-confirm at Phase 2 in case any late-landing PR adds a non-GitHub HTTPS entry before v1.3.0 commits.

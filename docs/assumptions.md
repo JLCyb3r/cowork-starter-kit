@@ -158,3 +158,41 @@ Last updated: v1.2 — 2026-04-17T00:00:00Z
 **Risk:** Skills at external URLs become unavailable (repo deleted, renamed, rate-limited). Registry entries become stale.
 **Mitigation:** Vetting date in each registry entry. CONTRIBUTING.md instructs contributors to verify URL accessibility before submitting.
 **Validation path:** After 60 days post-launch, audit registry entries for broken URLs. If >15% are stale, evaluate adding an automated URL health check to CI.
+
+---
+
+## v1.3.0 Assumptions
+
+_Added: 2026-04-17T21:00:00Z — v1.3.0 Preset Skills Depth cycle_
+
+### B10 — Users will complete the per-skill input session without fatigue [NEW v1.3.0]
+**ID:** A-v1.3-1
+**Confidence:** [UNTESTED — MEDIUM risk]
+**Assumption:** The project owner will answer 4–6 targeted questions for each of the 3 Study skills during `/implement` without abandoning the session partway through. Total input load: 12–18 questions across 3 sessions.
+**Risk:** If the owner fatigues mid-session, a skill may be drafted with incomplete quality criteria or a missing worked example, reducing the template's signal quality for future community contributors.
+**Mitigation:** Only 3 skills in v1.3.0 (hybrid cadence). Sessions are spread across 3 separate commits, not batched. Orchestrator saves partial answers to `skill-inputs/<skill-name>.md` so a session can resume if interrupted.
+**Validation path:** Monitor whether all 3 input files exist and are complete at Phase 5. If any file is missing answers for quality criteria or worked example, flag as incomplete before Phase 7 approval.
+
+### A-v1.3-2 — The 9-section template fits all 18 preset skills [NEW v1.3.0]
+**ID:** A-v1.3-2
+**Confidence:** [UNTESTED — MEDIUM risk]
+**Assumption:** The 9-section template (`When to use`, `Triggers`, `Instructions`, `Output format`, `Quality criteria`, `Anti-patterns`, `Example`, `Writing-profile integration`, `Example prompts`) is structurally appropriate for all 18 preset skills across 6 presets — not just Study.
+**Risk:** A non-Study skill (e.g., `voice-matching` in Writing, or `ideation-partner` in Creative) may require a section that doesn't map cleanly to the template, forcing a template revision after v1.3.0 ships. If the template changes post-v1.3.0, the Study skills (already committed) may need retroactive updates.
+**Mitigation:** Pilot `flashcard-generation` first. If the pilot reveals a structural mismatch, adjust the template before `note-taking` and `research-synthesis` are authored. Template is considered provisional until all 3 Study skills are approved.
+**Validation path:** At Phase 1 design, @architect reviews the template against 1–2 non-Study skill examples (e.g., `voice-matching`, `status-update`) and confirms or adjusts fit. Document in ADR.
+
+### A-v1.3-3 — Community contributors will accept the deeper template as the submission bar [NEW v1.3.0]
+**ID:** A-v1.3-3
+**Confidence:** [UNTESTED — LOW risk (aspirational)]
+**Assumption:** When `templates/skill-template/SKILL.md` ships with v1.3.0 and `skill-depth-check` CI enforces the 9-section format, community Tier 2 contributors will adopt the template rather than submitting stub-quality skills or abandoning PRs.
+**Risk:** If the template is perceived as too onerous, community contributions to `curated-skills-registry.md` and new preset PRs stall. This risks the v1.2 metric of ≥10 community registry entries within 60 days.
+**Mitigation:** Template ships with clear inline placeholder comments. CONTRIBUTING.md PR checklist includes a reference to the template. `skill-depth-check` CI failure message is human-readable (not just "exit code 1").
+**Validation path:** Track Tier 2 PR submissions after v1.3.0 launch. If zero PRs attempt the new template format within 30 days, add a "Getting started" tutorial section to CONTRIBUTING.md.
+
+### A-v1.3-4 — CI allowlist approach is sustainable through v1.3.5 [NEW v1.3.0]
+**ID:** A-v1.3-4
+**Confidence:** [ESTIMATED — LOW risk (accepted trade-off)]
+**Assumption:** Maintaining a path allowlist in `skill-depth-check` CI (widening by one preset per point release) is operationally sustainable for 6 releases (v1.3.0–v1.3.5) without accumulating technical debt. Each release requires a 1-line CI edit to add the new preset path.
+**Risk:** If a preset is renamed or reorganized before its scheduled release, the allowlist entry must be updated manually. Missed update would silently skip enforcement for that preset.
+**Mitigation:** CI job comment documents the rollout schedule and next-preset path explicitly. Each v1.3.x spec revision confirms the path before Phase 4.
+**Validation path:** At v1.3.5, evaluate whether to consolidate to a global glob. If all 6 presets are on the new template format, replace the allowlist with `presets/**` and close the technical debt.

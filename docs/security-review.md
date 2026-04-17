@@ -1,7 +1,7 @@
-# Security Review — Claude Cowork Config v1.2 (Dynamic Workspace Architect)
+# Security Review — cowork-starter-kit v1.3.0 (Preset Skills Depth — Study Preset Pilot)
 
 ## Phase: 2
-## Date: 2026-04-17T13:00:00Z
+## Date: 2026-04-17T22:30:00Z
 ## Status: PASS WITH WARNINGS
 
 ---
@@ -10,84 +10,183 @@
 
 | ID | Severity | Phase | Surface | Description |
 |----|----------|-------|---------|-------------|
-| S1 | WARNING | 2 | configuration | CONTRIBUTING.md PR checklist is v1.1 — missing v1.2 items (writing-profile.md template section, curated-skills-registry.md schema, CLAUDE.md alignment check) |
-| S2 | WARNING | 2 | configuration | CLAUDE.md word-count ceiling (≤350 words) is unenforced by CI — an oversized CLAUDE.md with a long instruction chain passes all current CI checks |
-| S3 | WARNING | 2 | external-api | curated-skills-registry.md source_url has no integrity validation — a PR can add an entry pointing to any URL; no hash pinning, no SHA pinning, and no CI check on the URL field |
-| S4 | WARNING | 2 | auth | CLAUDE.md is now the universal auto-load entry point (Layer 1a, ADR-010); blast radius of a malicious CLAUDE.md commit affects all users who open the repo folder — larger blast radius than any preset-specific change |
-| S5 | INFO | 2 | external-api | Tier 2 keyword scan is LLM-assisted text review only — obfuscated payloads (base64, unicode escapes, multi-hop references) would not be detected; this is documented as best-effort but the "I understand" confirmation flow may be insufficient for non-technical users |
-| S6 | INFO | 2 | configuration | Tier 2 hardcoded repo list in WIZARD.md has no CI enforcement — a malicious PR could add adversarial repos to the search list; WIZARD.md has no content validation jobs |
-| S7 | INFO | 2 | configuration | curated-skills-registry.md `source_url: builtin` sentinel is trust-by-convention only — a PR could claim `builtin` for a community skill; no CI validation distinguishes this value from a real GitHub URL |
-| S8 | INFO | 2 | logging | Writing profile E6 design is architecturally sound (patterns only, no raw sample storage) — flag for @dev: implementation must extract patterns and discard raw sample text; no CI enforcement of this behavior |
+| S1 | WARNING | 2 | configuration | `skill-depth-check` CI is fail-open by design — unknown preset paths silently skip; a malicious PR adding skills under a new (unallowlisted) path bypasses depth enforcement |
+| S2 | WARNING | 2 | configuration | CONTRIBUTING.md PR checklist is v1.2 — missing v1.3.0 items (9-section template compliance for any NEW skill submission, `trigger_examples` optionality, reference to `templates/skill-template/SKILL.md`) |
+| S3 | WARNING | 2 | configuration | Negative test fixture file (`curated-skills-registry.test.md` with `ftp://NEGATIVE-TEST-FIXTURE-v1.3.0`) must be excluded from (a) the production `registry-cardinality-check` count, (b) `link-check` lychee scans, and (c) release ZIP artifacts — no exclusion mechanism yet specified |
+| S4 | WARNING | 2 | configuration | `.gitignore` does not explicitly block `.claude/projects/` — if orchestrator ever runs a Bash/Write from inside the product repo tree, raw B10 input session files (potentially containing user's real worked examples with sensitive data) could leak into a product commit |
+| S5 | INFO | 2 | auth | Template placeholder text in `templates/skill-template/SKILL.md` is a shallow indirect injection vector — contributor who ships unedited placeholders creates low-quality noise, not instruction hijack, provided the placeholder-authoring guidance below is followed |
+| S6 | INFO | 2 | configuration | `trigger_examples` YAML frontmatter field is a new machine-readable trigger surface — a malicious community skill could craft trigger phrases that auto-fire the skill on unrelated user prompts; proactive-rule tooling consumes this field without sanitization |
+| S7 | INFO | 2 | logging | Writing-profile integration section (ADR-015 §8) mandates every skill reference `context/writing-profile.md` — verify the Study skill drafts do NOT echo writing-profile contents into example output that could be mirrored into logs/telemetry (no telemetry exists today — forward-looking guard) |
+| S8 | INFO | 2 | external-api | README B9 teaser links to GitHub Milestone #1 and Issue #2 (world-readable); sanity check — confirm no unreleased security fix details leak into those issue bodies before v1.3.0 tag |
+| S9 | INFO | 2 | configuration | B7 allowlist regex `^https://github\.com/|^builtin$` verified non-breaking — all 18 v1.2 registry entries use literal `builtin` (0 non-GitHub HTTPS entries); tightening can land safely |
 
 ---
 
-### CRITICAL
+## Phase 1 Open-Issue Verdicts
 
-*(None — pipeline not blocked)*
+Four explicit open issues from @architect require a security verdict before PASS.
 
----
+### Open Issue 1 — Template placeholder text as injection vector
 
-### WARNING
+**Verdict: NEEDS-POLICY — SAFE with placeholder-authoring guidance documented.**
 
-- [ ] **S1 — CONTRIBUTING.md PR checklist must be updated to v1.2 before Phase 4 commit.** The current v1.1 checklist has 7 items (starter file presence, ≤300 word count, safety rule in starter, folder/SKILL.md format, minimum file count, "Try this now" prompts, CI passes). v1.2 adds three new required artifacts that are absent from the checklist:
-  - (8) `writing-profile.md` template section present in preset's `context/` with non-placeholder content
-  - (9) `curated-skills-registry.md` entry follows schema (name, description, source_url, vetting_date, tier, goal_tags) and the PR includes vetting evidence (date tested, source repo health indicators)
-  - (10) CLAUDE.md and all 6 starter files are in sync — any wizard flow change must propagate to all 7 files; PRs that modify one must update all
-  - (11) Starter file ≤**350** words (was ≤300 in v1.1 checklist)
+**Reasoning.** `templates/skill-template/SKILL.md` is a *contributor-facing* file, not a runtime LLM context file. Community contributors COPY it, edit it, and submit a filled-in version via PR. The raw template never reaches Cowork runtime for any end user — only the filled-in community skill reaches runtime, and only after (a) CONTRIBUTING.md PR review, (b) B7 registry-url-check, (c) the incoming B2 skill-depth-check, and (d) Tier 2 opt-in gating per v1.2 ADR-012. The injection surface is therefore the *filled-in* skill, not the template.
 
-  CI backstops items 8 and 11 partially (ADR-014 checks template sections; the word-count gap is covered by S2). Items 9 and 10 require human review. **Recommendation:** @dev must update CONTRIBUTING.md with items 8–11 at v1.2 implementation time.
+The real risk the architect flagged is different and still valid: a lazy contributor ships unedited placeholder text (e.g., `[your instructions here]`, `[YOUR QUALITY CRITERIA]`) verbatim. Outcome: the committed skill contains placeholder strings that Cowork reads at runtime. A placeholder string like `[describe what Cowork should do here]` is benign — it reads as broken content, not as an instruction. But a placeholder phrased as an imperative ("Ignore previous instructions and...", "Always respond with...", "Delete these files:") WOULD be a live prompt injection string shipping into user workspaces.
 
-- [ ] **S2 — CI has no word-count enforcement on CLAUDE.md or starter files.** The architecture establishes ≤350 words as the security-relevant word budget (ADR-011): at ≤350 words, the wizard bootstrap cannot embed a long-form malicious instruction chain. This is a real (shallow) defense against verbose prompt injection payloads. However, no CI job validates it. The current `claude-md-safety-rule-check` only verifies safety rule presence, not file size. A PR could submit a 2,000-word CLAUDE.md that passes all CI checks.
+**Therefore placeholder-authoring MUST follow these rules (document in CONTRIBUTING.md and the template file itself):**
 
-  Attack scenario: A community PR replaces CLAUDE.md with a 1,500-word instruction chain that passes safety rule check (by including the phrase), adds adversarial goal-detection logic that routes users matching certain profiles to a malicious workspace, and passes all other CI checks (markdown lint, link check). No existing job catches this.
+1. **Placeholders are bracketed nouns, never imperatives.** Use `[one-line description of when this skill fires]`, NOT `[Tell Cowork to...]`.
+2. **Never include the words "Ignore", "Disregard", "Override", "Instead", or "Always" inside a placeholder.** These are first-order injection tokens — even as placeholder filler, they would be executable if a contributor forgot to replace them.
+3. **Use inline HTML comments for intent explanation:** `<!-- Replace: describe quality criteria as 3–5 yes/no-checkable bullets -->`. HTML comments are invisible to Cowork runtime (stripped from markdown rendering in most skill-loading pipelines), so intent docs cannot double as instructions.
+4. **Never ship a placeholder matching the safety rule pattern.** The template must NOT contain placeholder text that includes "confirm before delete" variants; real safety rule must live ONLY in `global-instructions.md` and `project-instructions-starter.txt` to avoid dilution.
+5. **Placeholder text for the `## Example` section MUST use obvious non-runtime phrasing.** `[Paste a real input here]` + `[Paste the ideal output here]` reads as instructions-to-contributor; any phrasing that could be misread as instructions-to-Cowork (e.g., "Generate an example where...") is forbidden.
 
-  **Recommendation:** Add a `claude-md-word-count-check` CI job that verifies `CLAUDE.md` ≤ 400 words (upper safety bound). Optionally extend to all 6 starter files. Implementation: `wc -w CLAUDE.md | awk '{if($1 > 400) { print "CLAUDE.md exceeds 400 words: "$1; exit 1 }}'`. This closes the enforcement gap for S2 and is a direct CI-enforcement of ADR-011's security property.
+Finding S5 (INFO) captures this. It is INFO rather than WARNING because ADR-015 Length Budget §Floor=60 lines and B2 `skill-depth-check` both make an unedited template stub visible (a 60-line file full of `[placeholder]` strings is obvious in PR review). The bigger risk is contributor sloppiness, not adversarial authoring.
 
-- [ ] **S3 — curated-skills-registry.md source_url has no integrity validation.** The registry (ADR-012) introduces a new trust surface: each entry's `source_url` field is an external pointer. CONTRIBUTING.md requires human vetting of registry PRs, but there is no CI enforcement of URL format, no hash pinning (a URL can change content after vetting), and no mechanism to distinguish a legitimate community skill URL from a URL pointing to a malicious skill that was added in a typosquatting repo.
-
-  Specific risks:
-  - **URL rotation attack:** A PR adds a legitimate skill at `github.com/legitimateorg/skill`. After merge, the repo owner renames or replaces the skill content with a malicious SKILL.md. The registry entry still passes all checks (URL still valid, vetting_date is in the past). Users directed to that URL install the now-malicious skill.
-  - **Typosquatting:** A PR adds a registry entry for `github.com/anthropics-skills/flashcard-gen` (note: `anthropics-skills` not `anthropics`). The CI link-checker validates the URL resolves — but this is a typosquat of the official Anthropic org.
-  - **source_url: builtin fiction (see S7):** A PR claims `source_url: builtin` for a non-Anthropic skill. No CI distinguishes this.
-
-  **Recommendation (v1.2 scope):** (a) Add a CI step that validates `source_url` in `curated-skills-registry.md` matches one of the approved patterns: `builtin`, `https://github.com/` (require HTTPS, block `http://`). This catches the most obvious evasions. (b) Add CONTRIBUTING.md guidance that registry entries must pin to a specific commit SHA in the URL (e.g., `https://github.com/org/repo/blob/<sha>/SKILL.md`), not just a branch URL. This mitigates the URL rotation attack. (c) The `vetting_date` field should be treated as the date the specific SHA was vetted — CONTRIBUTING.md should document this clearly.
-
-  Note: Full automated integrity pinning is v1.3 scope per the spec. The v1.2 recommendation is the minimum: HTTPS-only URL validation in CI, and SHA-pinning guidance in CONTRIBUTING.md.
-
-- [ ] **S4 — CLAUDE.md blast radius escalation requires explicit PR ceremony guidance.** In v1.1, CLAUDE.md was a secondary surface. In v1.2 (ADR-010), CLAUDE.md becomes the universal Layer 1a trigger — auto-loaded for any user who opens the repo folder in Cowork, with no user action required. The blast radius of a malicious CLAUDE.md commit is now the entire user population of the repo, not just users of a specific preset.
-
-  Current controls:
-  - CI safety rule check (verifies safety rule text is present)
-  - CI word-count check (proposed in S2 — not yet present)
-  - Standard PR review process
-
-  Gap: CLAUDE.md has no elevated merge protection relative to other repo files. A social engineering attack (a convincing "wizard improvement" PR that passes CI) reaches all users automatically.
-
-  **Recommendation:** (a) Add a CONTRIBUTING.md note that changes to `CLAUDE.md` require maintainer review and are treated as high-impact changes — equivalent to a security-relevant patch. (b) The CONTRIBUTING.md PR process should add: "PRs modifying `CLAUDE.md` must update all 6 `presets/*/project-instructions-starter.txt` files to match (and vice versa)." This enforces the sync requirement from ADR-010 and also makes it harder to slip a targeted change to only CLAUDE.md without touching the other 6 files. (c) Optionally, add a CI sync check: compute a content signature of the wizard bootstrap block in CLAUDE.md vs. each starter file and fail if they diverge. (This is the `combined-path: eligible` escalation path if the architect decides to add it.)
+**Action for @dev Phase 4:**
+- Draft `templates/skill-template/SKILL.md` following rules 1–5 above.
+- Add a CONTRIBUTING.md subsection "Placeholder authoring rules" listing the 5 rules.
+- Verify (manually at Phase 5) that no placeholder string in the template contains any of the forbidden imperative tokens.
 
 ---
 
-### INFO
+### Open Issue 2 — `skill-depth-check` fail-open design
 
-- **S5 — Tier 2 keyword scan is best-effort; "I understand" confirmation may be insufficient for non-technical users.** ADR-012 documents this limitation explicitly: "The keyword scan is a heuristic performed by reviewing SKILL.md text. It is NOT sandbox execution." The ten flagged keywords (`exec`, `subprocess`, `curl`, `wget`, `$HOME`, `$PATH`, `rm`, `delete`, `os.system`, `eval`) cover obvious patterns but not obfuscated variants. A skill that uses Unicode homoglyphs, base64-encoded shell commands, or multi-hop references (e.g., "fetch the file at https://..." which itself contains the dangerous instruction) would pass the scan.
+**Verdict: REQUIRES CHANGE — keep fail-open for the `ENFORCED_PRESETS` list as architecturally designed, BUT add a fail-closed guard for new skill files under unknown paths.**
 
-  For Alex and Maria personas (non-technical), the WARNING + "I understand" flow may not communicate adequate risk. A user who has just been guided through a helpful wizard may click "I understand" as a formality. The opt-in barrier is the primary protection — most users never see Tier 2 — but for those who do, the risk communication needs to be calibrated to the persona.
+**Reasoning.** The architect's fail-open design is correct for its stated purpose: during v1.3.0–v1.3.5 rollout, preset directories not yet on the 9-section format MUST not break CI. Fail-closed on `presets/**` would block v1.3.0 on day one because 5 presets (15 skills) are still 16-line stubs. Option A in ADR-016 is the right call for the preset-level rollout.
 
-  This is INFO because: (a) Tier 2 is explicitly opt-in and non-default; (b) the limitation is documented in the architecture; (c) fully automated sandbox execution is deferred to v1.3 as a non-trivial engineering task. No action required at v1.2 beyond the existing documentation. Recommend the wizard framing for Tier 2 include: "These skills are not verified by us. Even if the keyword scan passes, review the full skill file before installing."
+**But the architect's flagged attack is different:** "a contributor adds a malicious preset in a NEW path, bypassing depth checks." The attack vector is not `presets/research/.claude/skills/...` (allowlist will catch research at v1.3.1). It is a NEW path like `presets/legal/.claude/skills/malicious-skill/SKILL.md` landing in a PR that claims to be "adding a new preset." The B2 CI job as written (`ENFORCED_PRESETS="study"`) would silently skip `presets/legal/**` — no depth enforcement, no section check, no floor check.
 
-- **S6 — WIZARD.md Tier 2 search list has no CI enforcement.** The Tier 2 discovery path (ADR-012) hardcodes four source repos in WIZARD.md: `anthropics/skills`, `travisvn/awesome-claude-skills`, `VoltAgent/awesome-agent-skills`, `EAIconsulting/cowork-skills-library`. These are trusted sources chosen by maintainers. A malicious PR could add adversarial repos to this list, directing users who opt into Tier 2 toward a targeted GitHub org.
+This is a real gap, but it is also the intended trade-off (per ADR-016 §Options §Cons and A-v1.3-4). Two layers of mitigation already exist:
+- `skill-format-check` (ADR-008) DOES run across all presets globally — it catches flat `.md` files and missing `SKILL.md` entries.
+- CONTRIBUTING.md requires human review of new preset PRs.
 
-  Current protection: WIZARD.md is documentation-only (not a runtime path for the wizard bootstrap), but the Tier 2 instructions in WIZARD.md are LLM-read during the skill discovery phase via `/setup-wizard` invocation. A changed list would affect Tier 2 users.
+What's missing is a **guardrail-over-floor**: if a NEW SKILL.md file lands under `presets/<unknown-preset>/.claude/skills/*/SKILL.md`, CI should at minimum log a warning that the file exists in an unenforced path, so a human reviewer cannot miss it. The recommended form is NOT fail-closed on depth — it is an explicit CI notice that new preset paths are unallowlisted:
 
-  Mitigation: WIZARD.md is in the standard PR review flow. The CONTRIBUTING.md PR checklist (once updated per S1) should add "WIZARD.md Tier 2 source list not modified without maintainer approval." Low-probability attack for a public repo with transparent PR history. INFO-level only.
+```bash
+# After the ENFORCED_PRESETS loop:
+UNENFORCED_PRESETS=$(for d in presets/*/; do
+  p=$(basename "$d")
+  if ! echo " $ENFORCED_PRESETS " | grep -q " $p "; then
+    echo "$p"
+  fi
+done)
+if [ -n "$UNENFORCED_PRESETS" ]; then
+  echo "::notice::Presets not yet under depth enforcement: $UNENFORCED_PRESETS"
+  echo "::notice::If this PR adds skills under those paths, they must meet the 9-section template per ADR-015."
+fi
+```
 
-- **S7 — `source_url: builtin` is trust-by-convention only.** The sentinel value `builtin` in `curated-skills-registry.md` identifies Anthropic official skills (Tier 1, zero-config). There is no CI rule that validates `builtin` only appears for entries from Anthropic. A community PR claiming `source_url: builtin` for a third-party skill would be treated by the wizard as Anthropic-official. Current protection: human review. This is the same category as S3 — S3 covers URL rotation and typosquatting; S7 covers the specific `builtin` sentinel misuse. Recommend CONTRIBUTING.md explicitly state: "`source_url: builtin` is reserved for Anthropic official pre-built skills. Community skills must use a full GitHub URL."
+This is an advisory, not a fail. It surfaces the gap to human reviewers without breaking v1.3.0 rollout.
 
-- **S8 — Writing profile E6 design is sound but has no implementation enforcement.** ADR-013 specifies: "The raw sample text is NOT stored in writing-profile.md — only extracted patterns are written." This correctly addresses E6 (user pastes sensitive content in writing sample). The security property is: user PII or confidential content in a writing sample is never committed to the file system. However, there is no CI job that enforces this behavior — it is entirely dependent on correct LLM behavior (the wizard must extract and discard, not copy-paste).
+**Action for @dev Phase 4:**
+- Keep `ENFORCED_PRESETS="study"` as specified in ADR-016.
+- Add the advisory notice block above to the `skill-depth-check` job after the enforcement loop.
+- Keep finding S1 as a WARNING (not CRITICAL) because `skill-format-check` and human PR review are the primary controls; this is a defense-in-depth addition, not a gap closure.
 
-  Risk: If the wizard implementation writes the raw sample to `writing-profile.md` (e.g., as a comment or in a "Sample:" field), and the user later commits their workspace to a public fork, sensitive content would be exposed.
+---
 
-  **Recommendation for @dev:** The writing profile template (`templates/writing-profile-template.md`) must not include a "Sample:" or "Raw sample:" field. The template should only have fields for extracted patterns. The wizard instruction in WIZARD.md and starter files should explicitly state: "Extract 2–3 observable patterns. Do NOT copy or quote the sample text in the profile."
+### Open Issue 3 — B10 input-file path containment
+
+**Verdict: REQUIRES CHANGE — add explicit `.gitignore` guard in the product repo.**
+
+**Reasoning.** ADR-017 correctly specifies that B10 session files live at `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/<skill>.md` — a path INSIDE The-Council worktree (`/home/user/The-Council/.claude/projects/...`), NOT inside the product repo (`/home/user/claude-cowork-config/...`). This is architecturally correct.
+
+The risk: a future orchestrator run (background agent, recovery from crash, misconfigured worktree) could create `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/` *inside* the product repo by mistake. The product repo's `.gitignore` does NOT currently exclude `.claude/projects/` or `cycles/`. If that directory is ever created inside the product tree, `git status` will surface the files, and they could be committed accidentally. The contents would be:
+
+- Q3 Worked examples — the spec explicitly says "Don't sanitize — a real, specific example is much more valuable." This is the problem. A user's real study material, real meeting notes, real writing sample, real research synthesis input could include personal names, employer-internal information, course-internal material, or domain-specific content the user would not consent to publishing.
+- Q4 Writing voice feel answers — low sensitivity but still personal preference data.
+- Q2 Anti-patterns stories — may reference employer or team context.
+
+This is a direct E6-class issue (sensitive user content → committed file tree → public GitHub repo), identical in kind to the v1.2 writing-sample leak vector ADR-013 addressed for `writing-profile.md`.
+
+**Action for @dev Phase 4 (MUST, not optional):**
+
+1. Add to product repo `.gitignore`:
+   ```
+   # v1.3.0 — B10 user-input session files MUST NOT live in the product repo
+   # Canonical path is under The-Council pipeline state; this entry is a belt-and-braces guard
+   # in case an orchestrator misconfiguration ever creates the path inside the product tree.
+   .claude/projects/
+   /cycles/
+   skill-inputs/
+   ```
+
+2. Add a CONTRIBUTING.md note that B10 input files are pipeline state, never committed to the product repo.
+
+3. Add a Phase 5 @qa check: `git ls-files | grep -E 'skill-inputs/|cycles/v1\.3\.' | wc -l` must equal 0 before any v1.3.0 commit is approved.
+
+Finding S4 (WARNING) tracks this. Escalating to WARNING (not INFO) because Q3 worked examples are specifically instructed to be un-sanitized, so the blast radius of an accidental commit is the full content of the user's real domain work.
+
+---
+
+### Open Issue 4 — B7 `registry-url-check` non-breaking verification
+
+**Verdict: SAFE — confirmed non-breaking at Phase 2.**
+
+**Reasoning.** Grepped every data row in `curated-skills-registry.md`. Result:
+
+- 18 total data rows (6 sections × 3 entries each — Study, Research, Writing, PM, Creative, Business/Admin).
+- All 18 rows have `source_url = builtin` (literal).
+- 0 rows use `https://github.com/...` URLs.
+- 0 rows use any other URL scheme.
+
+B7 regex `^https://github\.com/|^builtin$` matches all 18 rows without exception. Tightening is non-breaking as of 2026-04-17T22:30:00Z. Finding S9 (INFO) documents this verification.
+
+**Residual risk:** between Phase 2 approval and the v1.3.0 Phase 4 commit, a late-landing PR could add a non-GitHub HTTPS entry (e.g., `https://skills.sh/...`, `https://anthropic.com/...`) that the current (pre-B7) `registry-url-check` would accept. @dev MUST re-run the grep immediately before committing B7 to confirm the assumption still holds. If any non-GitHub HTTPS entry has landed, escalate to @architect for reconciliation (either the entry is legitimate and the regex needs widening, or the entry is a policy violation and the PR must be reverted).
+
+**Action for @dev Phase 4:**
+- Immediately before B7 commit: run `grep -oE '\| (https?://[^ |]+|builtin) \|' curated-skills-registry.md | sort -u` and confirm output is exactly `| builtin |`.
+- If any non-`builtin` value appears, STOP. Escalate to @architect.
+
+---
+
+## CRITICAL
+
+*(None — pipeline not blocked.)*
+
+---
+
+## WARNING
+
+- [ ] **S1 — `skill-depth-check` fail-open design needs an advisory notice for unenforced preset paths.** See Open Issue 2 verdict. Recommendation: add the `UNENFORCED_PRESETS` advisory block to the CI job. Keeps fail-open rollout posture while surfacing new-path risk to PR reviewers. @dev action at Phase 4.
+
+- [ ] **S2 — CONTRIBUTING.md PR checklist must be updated to v1.3.0 before Phase 4 commit.** Current v1.2 checklist has 11 items. v1.3.0 adds:
+  - (12) New Study preset skills follow the 9-section template (`## When to use`, `## Triggers`, `## Instructions`, `## Output format`, `## Quality criteria`, `## Anti-patterns`, `## Example`, `## Writing-profile integration`, `## Example prompts`) — reference `templates/skill-template/SKILL.md`.
+  - (13) `trigger_examples` YAML field is OPTIONAL for v1.3.0 community skills — `skill-format-check` must not reject skills that omit it.
+  - (14) For ANY new skill submission (even outside Study preset): the 9-section template IS the community submission bar. Skills outside depth-enforced presets will still be human-reviewed against the template.
+  - (15) Placeholder-authoring rules (per Open Issue 1 verdict, rules 1–5) linked from CONTRIBUTING.md.
+  - (16) B10 input files are pipeline state, never committed to product repo.
+  - (17) Carry-forward review per B8 — link to `docs/retro-template.md#carry-forward-review`.
+
+  CI backstops (12) partially via `skill-depth-check` for Study; items (14), (15), (16), (17) require human review.
+
+- [ ] **S3 — Negative test fixture exclusion from production CI jobs and release artifacts.** ADR §B7 specifies a negative test fixture in a test-only file `curated-skills-registry.test.md` containing `ftp://NEGATIVE-TEST-FIXTURE-v1.3.0`. This file must be explicitly excluded from:
+
+  1. `registry-cardinality-check` — current job greps `curated-skills-registry.md` (singular, exact filename), so the `.test.md` variant is already excluded *by name*. VERIFIED SAFE.
+  2. `link-check` and `link-check-external` (lychee) — current globs are `**/*.md`. The test fixture WOULD be scanned. An `ftp://` URL will fail lychee's URL validation (unreachable), causing CI failure. ACTION: add `curated-skills-registry.test.md` to a lychee exclusion list via a `.lycheeignore` file or an explicit `--exclude` arg in the workflow.
+  3. `markdown-lint` — the fixture's ftp URL could trip markdownlint rules. ACTION: add `.markdownlint.jsonc` ignore entry for `curated-skills-registry.test.md`.
+  4. Release ZIP — the v1.3.0 Release artifact should NOT contain test fixtures. ACTION: if `.gitattributes` or release workflow filters files, add `curated-skills-registry.test.md export-ignore`.
+
+  Alternative that avoids most of the above: inline the negative test using a `here-doc` in the CI step itself, with no committed test fixture file. This is the approach originally considered and rejected in ADR-016 for `skill-depth-check` ("adds complexity"). Re-evaluate for B7 specifically — the simpler path may be an inline `printf "...\n...\n| ftp://NEGATIVE-TEST-FIXTURE-v1.3.0 |" | bash check_logic` rather than a committed file. @dev decision at Phase 4.
+
+- [ ] **S4 — `.gitignore` must block `.claude/projects/`, `/cycles/`, and `skill-inputs/` in the product repo.** See Open Issue 3 verdict. Mandatory. Q3 worked examples are explicitly un-sanitized per ADR-017 — committing them would expose user's real domain content publicly.
+
+---
+
+## INFO
+
+- **S5 — Template placeholder text injection risk: mitigated by authoring rules.** See Open Issue 1 verdict. The 5 placeholder-authoring rules must be documented in both CONTRIBUTING.md and as inline comments in the template file itself. Low residual risk once rules are in place.
+
+- **S6 — `trigger_examples` YAML field is a new machine-readable trigger surface.** ADR-015 introduces `trigger_examples` as an optional frontmatter list (3–6 strings). Architecture notes (anti-pattern scan #6) that proactive-rule tooling consumes this field as "the machine-readable source of truth" for triggers, without parsing the `## Triggers` markdown body. Risk: a Tier 2 community skill could set `trigger_examples: ["delete all files", "rm -rf", "format my disk"]` — trigger phrases that, if the user happens to type them in an unrelated context, auto-fire the skill. No current v1.3.0 tooling consumes this field (proactive-rule tooling is Phase 4 scope in global-instructions.md), so the risk is latent. Mitigation already present: Tier 2 opt-in gating (ADR-012) and keyword-scan of SKILL.md body (which catches `rm`, `delete` — so a malicious `trigger_examples` containing these strings would be visible in the Tier 2 opt-in warning). INFO-level because (a) Tier 1 builtin entries don't use community-sourced `trigger_examples`, (b) Tier 2 opt-in already warns users about unverified skills, (c) the field is optional and v1.3.0 Study skills author it from the user's own Q5 answers.
+
+- **S7 — Writing-profile integration section logging sanity check.** ADR-015 §8 mandates every skill include a "Writing-profile integration" section describing when it consults `context/writing-profile.md`. @dev draft for flashcard-generation, note-taking, research-synthesis must NOT include example outputs that echo writing-profile contents (e.g., "Tone: professional; Vocabulary: technical" pattern strings). No current telemetry or logging hooks exist in the repo (verified — the repo has zero runtime code, no analytics, no external network calls). Forward-looking guard: if any future cycle adds telemetry, writing-profile content must be on the exclusion list alongside the existing `security-review.md`, `scratchpad.md`, `risk-register.md` list in `docs/integrations-setup.md`.
+
+- **S8 — README B9 teaser links sanity check.** B9 adds `## Next up — v1.3.0 Preset Skills Depth` section linking to GitHub Milestone #1 and pinned Issue #2. Both are world-readable. Confirmed by reading the proposed body (ADR-015 §B9): the teaser text contains no mention of specific CVEs, unreleased security fixes, or internal vulnerability details. It references architectural scope (9-section template, Study pilot) only. No leak risk. INFO for posterity.
+
+- **S9 — B7 tightening is non-breaking: all 18 entries verified as `builtin`.** See Open Issue 4 verdict. Confirmed at 2026-04-17T22:30:00Z. @dev must re-verify immediately before B7 commit.
 
 ---
 
@@ -95,51 +194,63 @@
 
 | Category | Status | Notes |
 |----------|--------|-------|
-| A01:2021 — Broken Access Control | N/A | No access control system. Public repo. Template files only. No user data, no privileged operations. |
-| A02:2021 — Cryptographic Failures | N/A | No secrets. No credentials. No encryption operations. curated-skills-registry.md source_url integrity gap (S3) is trust/integrity, not cryptographic. |
-| A03:2021 — Injection | WATCHED | Prompt injection surface has expanded in v1.2. CLAUDE.md is now system context for all repo-folder users (LLM01 — see below). Community preset PRs remain the primary indirect injection vector. S1–S4 recommendations reduce the attack surface. |
-| A04:2021 — Insecure Design | PASS WITH S1-S4 | Defense-in-depth architecture is strengthened in v1.2 (5 layers). The identified WARNINGs are gaps in the enforcement layers, not architectural failures. Core design is sound. |
-| A05:2021 — Authentication Failures | N/A | No authentication system. No user accounts. |
-| A06:2021 — Sensitive Data Exposure | WATCHED | Writing profile introduces a new PII-adjacent surface. E6 design is sound (S8). User's `writing-profile.md` is local only — no server-side storage, no telemetry. Risk is user-action exposure (committing workspace to public fork). |
-| A07:2021 — Identification & Authentication Failures | N/A | No auth. No sessions. |
-| A08:2021 — Software & Data Integrity Failures | WATCHED | S3 covers registry source_url integrity. S2 covers wizard bootstrap integrity (word count). SHA-pinned CI actions (from v1.1) remain sound. v1.2 introduces curated-skills-registry.md as a new integrity surface without SHA pinning. |
-| A09:2021 — Security Logging & Monitoring Failures | N/A | No runtime system. Git history is audit trail. CHANGELOG.md per release. |
-| A10:2021 — Server-Side Request Forgery | N/A | No server. No HTTP requests during wizard execution. Tier 2 skill discovery is user-manual (paste-and-review), not automated HTTP. |
+| A01:2021 — Broken Access Control | N/A | No access control system. Template files only. |
+| A02:2021 — Cryptographic Failures | N/A | No secrets, no credentials. (Verified: repo scan for API key / token patterns returned 0 hits across new ADRs, workflow, and template plan.) |
+| A03:2021 — Injection | WATCHED | S5 (placeholder text), S6 (trigger_examples field) — both INFO. Core design (filled-in community skill passing through 4+ review layers) keeps this surface well-gated. |
+| A04:2021 — Insecure Design | PASS WITH S1-S4 | Fail-open CI design (S1) is a deliberate rollout trade-off per ADR-016 — the mitigation advisory strengthens defense-in-depth without breaking the rollout. |
+| A05:2021 — Authentication Failures | N/A | No auth. |
+| A06:2021 — Sensitive Data Exposure | WATCHED | S4 (B10 input files containment) is the primary finding. Q3 worked examples are explicitly un-sanitized; `.gitignore` must block them. |
+| A07:2021 — Identification & Authentication Failures | N/A | No auth. |
+| A08:2021 — Software & Data Integrity Failures | STRENGTHENED | B7 tightens registry URL integrity (`^https://github\.com/|^builtin$`) — reduces surface vs. v1.2. SHA-pinned CI actions maintained (18/18). |
+| A09:2021 — Security Logging & Monitoring Failures | N/A | No runtime. |
+| A10:2021 — Server-Side Request Forgery | N/A | No server, no HTTP runtime. Tier 2 discovery is human paste-and-review. |
 
 ### OWASP LLM Top 10 Assessment
 
 | Category | Status | Notes |
 |----------|--------|-------|
-| LLM01 — Prompt Injection | ELEVATED | v1.2 blast radius increase: CLAUDE.md is now auto-loaded as system context for any user opening the repo folder. A malicious CLAUDE.md commit is a direct prompt injection targeting all users. S2 (word-count CI) and S4 (blast radius guidance) are the recommended mitigations. No external runtime data injection — the injection vector is still community PR content, not live data. |
-| LLM02 — Insecure Output Handling | LOW RISK | Wizard output is local files written to the user's machine. No programmatic downstream consumption. writing-profile.md output is new in v1.2 — S8 flags the raw-sample-storage risk. |
-| LLM06 — Sensitive Information Disclosure | LOW RISK ELEVATED BY E6 | Writing profile introduces a new pattern: user may paste sensitive content (E6). ADR-013 correctly addresses this architecturally (extract patterns only). Implementation must faithfully execute this — S8 covers the implementation guidance gap. |
+| LLM01 — Prompt Injection | ELEVATED WATCHED | Carry from v1.2 (CLAUDE.md universal entry). v1.3.0 adds `templates/skill-template/SKILL.md` but this is a contributor-copy surface, not a runtime surface — no blast radius increase. S5 placeholder-authoring rules are the mitigation. |
+| LLM02 — Insecure Output Handling | LOW RISK | Wizard output remains local-file only. B10 input files are pipeline state only — must not reach product repo (S4). |
+| LLM06 — Sensitive Information Disclosure | ELEVATED BY B10 | Q3 worked examples explicitly un-sanitized per ADR-017. This is a new class-of-risk in v1.3.0 — directly addressed by S4 `.gitignore` guard. Comparable in kind to v1.2 E6 writing-sample risk; comparable mitigation (storage containment + human review). |
 
-### Additional v1.2 Surface Assessment
+### Additional v1.3.0 Surface Assessment
 
 | Surface | Status | Notes |
 |---------|--------|-------|
-| CLAUDE.md (new universal entry point) | WATCHED | S2 and S4 cover. CI enforces safety rule; word-count enforcement is missing (S2). Blast radius is full user population (S4). Existing `claude-md-safety-rule-check` job is correctly present. |
-| curated-skills-registry.md | WATCHED | S3 and S7 cover. New trust surface with no integrity mechanism beyond human review. Minimum v1.2 remediation: HTTPS-only URL validation in CI + SHA-pin guidance in CONTRIBUTING.md. |
-| Tier 1 skill recommendations (from registry) | PASS | Wizard reads local registry file — no network calls. Goal-tag filtering is a passive content match. No injection vector in the filter logic. |
-| Tier 2 opt-in discovery | WATCHED | S5 and S6 cover. Explicit opt-in gating is sound. Keyword scan limitations are documented. The "I understand" confirmation flow is the right UX pattern but may be insufficient for the target persona. |
-| Writing profile step (universal) | PASS WITH S8 | Architecture is sound. Patterns-only storage addresses E6. Template design must not include raw sample fields (S8). |
-| 7-file sync problem (CLAUDE.md + 6 starter files) | WATCHED | S1 and S4 cover. Sync is a maintenance burden and an attack surface — a targeted PR could modify only CLAUDE.md. No CI sync check exists. Recommend CONTRIBUTING.md guidance at minimum; CI sync check as stretch. |
-| CI job count (10 jobs, all SHA-pinned) | PASS | All 10 planned CI jobs from ADR-014 are documented. SHA pinning from v1.1 is confirmed present (verified in current quality.yml). New writing-profile-template-check job must be added at implementation time. |
-| Safety architecture (5-layer defense-in-depth) | PASS | Template → preset → starter file → CLAUDE.md → CI is a sound 5-layer model. The existing CI jobs (safety-rule-check, starter-safety-rule-check, claude-md-safety-rule-check) enforce the critical safety rule across all three runtime surfaces. |
+| `templates/skill-template/SKILL.md` (contributor-copy surface) | PASS WITH S5 | Not a runtime surface. Injection risk limited to contributor sloppiness shipping unedited placeholders. 5 placeholder-authoring rules close this. |
+| `skill-depth-check` CI (fail-open by design) | PASS WITH S1 | Intended trade-off per ADR-016. Advisory notice for unenforced preset paths strengthens without breaking rollout. |
+| `trigger_examples` YAML frontmatter field (new machine-readable trigger surface) | WATCHED (S6) | Latent risk — no v1.3.0 tooling consumes this field yet. Tier 2 opt-in + keyword-scan keeps risk low. Re-evaluate when proactive-rule tooling consumes the field. |
+| B10 input file path containment | PASS WITH S4 | Architecturally correct (pipeline state only). `.gitignore` guard is the operational control. MUST land at Phase 4. |
+| B7 `registry-url-check` tightening | PASS | Non-breaking (18/18 `builtin`). Strengthens A08 integrity posture vs. v1.2. |
+| B7 negative test fixture (`curated-skills-registry.test.md` with `ftp://NEGATIVE-TEST-FIXTURE-v1.3.0`) | PASS WITH S3 | Fixture is architecturally sound but must be excluded from lychee, markdownlint, and release ZIP. @dev decision: keep file vs. inline. |
+| B9 README teaser (Milestone #1, Issue #2 world-readable) | PASS | No unreleased security fix leak (S8 verified). |
+| B8 retro-template carry-forward workflow | PASS | Process doc only. No security surface — resolves v1.2 process gap. |
+| Safety rule defense-in-depth (5 layers from v1.2) | PASS | No regression. `safety-rule-check`, `starter-safety-rule-check`, `claude-md-safety-rule-check` all unchanged. |
+| CI action SHA-pinning | PASS | All 14 existing jobs remain SHA-pinned (verified: `actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683`, `markdownlint-cli2-action@05f32210...`, `lychee-action@f613c4a...`, `action-shellcheck@00cae500...`). New `skill-depth-check` job must also SHA-pin (already specified in ADR-016 code). |
+
+### Carry-Forward Confirmations from v1.2
+
+| Phase 6 Finding | v1.2 Status | v1.3.0 Disposition |
+|-----------------|-------------|---------------------|
+| A1 (registry-cardinality-check logic bug) | Fixed in v1.2 rework (sha:6f8f692) | Resolved — no action needed. |
+| A2 (registry-url-check URL scheme gap) | Carry-forward MEDIUM | RESOLVED by B7 (this cycle). Verified non-breaking. |
+| A3 (CLAUDE.md 385 words vs ≤350 target) | Carry-forward LOW | Deferred per v1.3.0 spec §"Out of Scope" — within ≤400 hard cap. Not a security finding this cycle. |
 
 ---
 
 ### Summary
 
-The v1.2 architecture is a thoughtful evolution of a security-conscious design. The hybrid Tier 1/Tier 2 skill model directly addresses confirmed security research (13.4% critical risk rate in community skills), and the decision to gate Tier 2 behind explicit opt-in is the correct default. The writing profile architecture handles E6 (sensitive writing samples) correctly by design. The 5-layer safety rule defense-in-depth is sound and operationally verified from v1.1.
+v1.3.0 is an incremental depth cycle — no new runtime surfaces, no new auth, no new external API calls, no new user-data paths exposed to the product repo. The architecture correctly identifies B10 pipeline-state containment as its highest-risk new surface, and the ADR correctly places input files OUTSIDE the product repo. The `.gitignore` guard (S4) is the belt-and-braces control that converts the architectural correctness into an operational guarantee.
 
-**The primary security concern in v1.2 is the blast radius escalation of CLAUDE.md.** Elevating CLAUDE.md from a secondary surface to the universal Layer 1a entry point (ADR-010) is architecturally correct but shifts the stakes: a single malicious file at repo root now affects all users, not just preset-specific users. The current enforcement mechanism (safety-rule CI check only, no word-count check) is insufficient for this elevated blast radius. S2 and S4 together address this gap.
+Of the 4 Phase-1 open issues:
+- **Issue 1 (template as injection vector):** NEEDS-POLICY — 5 placeholder-authoring rules must be documented. SAFE with rules in place.
+- **Issue 2 (fail-open CI):** REQUIRES CHANGE — add advisory notice for unenforced preset paths. Rollout posture preserved.
+- **Issue 3 (B10 path containment):** REQUIRES CHANGE — `.gitignore` guard is mandatory. Q3 worked examples are explicitly un-sanitized.
+- **Issue 4 (B7 non-breaking):** SAFE — 18/18 entries use `builtin`, verified.
 
-**The second concern is the curated-skills-registry.md integrity surface.** S3 is the most technically substantive new finding. The registry is a trust anchor for skill recommendations — if it can be poisoned (by URL rotation, typosquatting, or `builtin` sentinel abuse), the Tier 1 curated path's security guarantee is undermined. The v1.2 minimum remediation (HTTPS-only CI validation + SHA-pin guidance) is achievable without v1.3 features.
+B7 tightening strengthens the v1.2 A08 integrity posture and resolves the v1.2 MEDIUM carry-forward (A2). B8 closes the v1.2 retro process gap. B9 adds zero security surface. No CRITICAL findings.
 
-**CONTRIBUTING.md staleness (S1) is the highest-leverage fix.** The checklist is the human control point for all community PRs. Updating it before v1.2 launches ensures community contributors operate within the correct security model from day one.
-
-No CRITICAL findings. The four WARNINGs are all addressable at Phase 4 implementation time. The pipeline is not blocked.
+The WARNINGs are all addressable at Phase 4 implementation time. S4 (`.gitignore`) and S3 (negative-test-fixture exclusions) are the two must-fix items that most concretely map to user-safety outcomes. S1 and S2 are defense-in-depth strengthening.
 
 **Decision: PASS WITH WARNINGS.**
 
@@ -153,5 +264,8 @@ See original findings above (S1–S6). All v1.0 WARNINGs resolved in Phase 4. Fu
 ### v1.1 Review (2026-04-15T22:00:00Z)
 PASS WITH WARNINGS. S1 (CONTRIBUTING.md v1.1 update), S2 (CI .txt glob fix). Both resolved in Phase 4. Full v1.1 review archived in git history.
 
-### v1.2 Review (this document — 2026-04-17T13:00:00Z)
-4 WARNINGs (S1–S4), 4 INFOs (S5–S8). No CRITICALs.
+### v1.2 Review (2026-04-17T13:00:00Z)
+4 WARNINGs (S1–S4), 4 INFOs (S5–S8). No CRITICALs. Full v1.2 review archived in git history.
+
+### v1.3.0 Review (this document — 2026-04-17T22:30:00Z)
+4 WARNINGs (S1–S4), 5 INFOs (S5–S9). No CRITICALs. Four Phase-1 open issues resolved: 2 SAFE, 2 REQUIRES CHANGE (S1/S4 in findings list), 1 NEEDS-POLICY (placeholder-authoring rules — tracked under S5).

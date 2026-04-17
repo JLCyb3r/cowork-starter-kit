@@ -459,3 +459,273 @@ See `docs/assumptions.md` for full register. Key assumptions for v1.2:
 _Written by @architect — Phase 1 v1.2. Read by @pm on /spec --revise to close feedback loop._
 
 - AC: F1 fast-track placement — "offered after requirements gathering (before writing profile and skill steps)" → Changed to "offered after writing profile step (Step 6)" — Reason: F1 AC conflicts with F2 AC and the Proposed Changes table. F2 AC explicitly states "Fast-track pause moves to after Step 6 (post-writing-profile)." The Proposed Changes table confirms "Fast-track pause moves to after Step 6 (was Step 5)." Architecture follows F2 (fast-track after Step 6) because: (a) writing profile is a brief 3–4 question step users benefit from regardless of fast-track timing; (b) fast-tracking before writing profile would mean all fast-track users get a workspace with no voice calibration — directly contradicting F6's universal writing profile AC. Recommend @pm reconcile F1 AC in next spec revision.
+
+**@pm resolution (v1.3.0 spec revision):** F1 AC updated below to align with F2 AC. Fast-track pause is offered after writing profile step (Step 6) — not after requirements gathering. This resolves the v1.1 retro carry-forward (step numbering) and the v1.2 architectural modification flag. All v1.3.0 ACs follow the F2 definition.
+
+---
+
+# Product Spec — v1.3.0: Preset Skills Depth (Study Preset Pilot)
+
+> **Cycle:** v1.3.0
+> **Status:** Phase 0 — Requirements
+> **Date:** 2026-04-17T21:00:00Z
+> **Mode:** revise (incremental depth pass — v1.2 personas/competitive/JTBD carry forward unchanged)
+> **Replaces section:** v1.3.0 appended to v1.2 spec
+
+---
+
+## v1.2 Retro Carry-Forwards (B8 demonstration — surfaced at Phase 0)
+
+The following items were documented in `docs/retro.md` v1.2 Section 8 and MUST be actioned this cycle before Phase 4:
+
+| Item | Source | Priority | Action in v1.3.0 |
+|------|--------|----------|------------------|
+| A2: URL scheme allowlist for `registry-url-check` | Phase 6 A2 | MEDIUM | B7 — tighten CI to `^https://github\.com/` or exact `builtin`; add negative test fixture |
+| A3: CLAUDE.md trim to ≤350 words | Phase 6 A3 / Phase 5 WARN-1 | LOW | Deferred — plan explicitly parks this; CLAUDE.md at 385 is within ≤400 hard cap |
+| Token metrics instrumentation | v1.1 carry-forward | LOW | Deferred — out of scope for v1.3.0 |
+| /skill-creator validation | Phase 2 v1.1 S3 | MEDIUM | Deferred — awaiting Cowork API surface exposure |
+| Retro carry-forward surfacing in Phase 4 | Phase 8 observation | MEDIUM | B8 — add mandatory carry-forward review to `docs/retro-template.md` + CONTRIBUTING.md PR checklist |
+
+**B7 and B8 are in scope for v1.3.0 and resolve the two MEDIUM carry-forwards above.**
+
+---
+
+## Problem (v1.3.0 increment)
+
+All 18 preset skills shipped in v1.2 as 16-line boilerplate stubs: one-line "when to use," one paragraph of instructions, three example prompts. There is no quality floor — a skill does not tell Cowork what GOOD output looks like vs. BAD output. Community contributors will copy whatever shape ships, making v1.3.0's template the permanent quality baseline for Tier 2 contributions.
+
+The Study preset is chosen as the pilot because its output quality is easy to judge (a good flashcard vs. a bad one is unambiguous), and `flashcard-generation` is the flagship example referenced in the v1.2 README and CHANGELOG.
+
+---
+
+## Goals (v1.3.0)
+
+1. Establish a canonical 9-section skill template that becomes the community quality floor.
+2. Rewrite the 3 Study preset skills using the template, with user-in-the-loop authoring per skill.
+3. Enforce template compliance via scoped CI (Study preset only in v1.3.0; one preset per point release through v1.3.5).
+4. Tighten `registry-url-check` CI (carry-forward B7) and add retro carry-forward process (carry-forward B8).
+5. Update supporting artifacts: `skills-as-prompts.md`, `curated-skills-registry.md` Study entries, README teaser.
+
+## Non-Goals (v1.3.0)
+
+- Rewriting skills for any preset other than Study (v1.3.1–v1.3.5 handle remaining 5 presets).
+- CLAUDE.md word trim (deferred — within hard cap, not blocking).
+- Writing-profile adoption validation (needs real user data, not an engineering change).
+- Automated skill-vetting pipeline (revisit when Tier 2 submissions create review load).
+- Changing the 9-section template's content beyond what the approved plan specifies — that is @architect's call in Phase 1.
+
+---
+
+## Core Features (v1.3.0)
+
+### B1 — Canonical Skill Template
+
+**New file:** `templates/skill-template/SKILL.md`
+
+Required sections (9): `When to use`, `Triggers`, `Instructions` (numbered steps), `Output format`, `Quality criteria`, `Anti-patterns`, `Example` (one worked input→output), `Writing-profile integration`, `Example prompts`. Target ~80–120 lines per skill.
+
+**AC:**
+- [ ] `templates/skill-template/SKILL.md` exists at that exact path
+- [ ] File contains all 9 required section headers at the `##` level
+- [ ] YAML frontmatter includes at minimum: `name`, `description`, `trigger_examples`
+- [ ] Template ships with inline comments/placeholders that make each section's intent unambiguous to a first-time contributor
+- [ ] File is 80–120 lines (floor and ceiling enforced by CI `skill-depth-check` at commit time for this file)
+
+### B2 — `skill-depth-check` CI Job
+
+**Change:** `.github/workflows/quality.yml` — new job scoped to `presets/study/**` in v1.3.0.
+
+**AC:**
+- [ ] `skill-depth-check` job exists in `.github/workflows/quality.yml`
+- [ ] Job scope is limited to `presets/study/.claude/skills/**` (path allowlist; not global)
+- [ ] Job verifies all 9 required section headers are present in each scoped SKILL.md
+- [ ] Deliberately deleting the `## Anti-patterns` section from any Study skill causes the job to fail
+- [ ] Restoring the section causes the job to pass (negative-test confirmation documented in CI comments)
+- [ ] Job pattern reuses the `awk`/`grep` header-matcher approach from `skill-format-check` (no new tooling dependency)
+- [ ] Non-Study presets still on 16-line format: `skill-depth-check` does NOT run on their paths and CI passes for those presets
+
+### B3/B4 — Study Preset Skills Rewrite (User-in-the-Loop)
+
+Three Study skills rewritten in order: `flashcard-generation` (pilot) → `note-taking` → `research-synthesis`.
+
+Per-skill authoring workflow (B10):
+1. Orchestrator asks user 4–6 targeted questions (quality criteria, anti-patterns, worked example, writing-voice feel, trigger phrases)
+2. Answers saved to `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/<skill-name>.md`
+3. @dev drafts using template + user answers
+4. User reviews by section; @dev iterates until approved
+5. Single commit per skill: `dev: v1.3.0 Study preset — deepen <skill-name>`
+
+**AC — per each of the 3 Study skills:**
+- [ ] `presets/study/.claude/skills/<skill-name>/SKILL.md` contains all 9 required section headers
+- [ ] `Instructions` section uses numbered steps (not prose paragraph)
+- [ ] `Example` section contains exactly one worked input→output pair (not a hypothetical, a real example)
+- [ ] `Quality criteria` section contains 3–5 concrete, checkable criteria
+- [ ] `Anti-patterns` section contains 3–5 items, each one line
+- [ ] `Writing-profile integration` section references `context/writing-profile.md` explicitly
+- [ ] Skill file is 80–120 lines
+- [ ] User-input session file exists at `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/<skill-name>.md` with the Q&A that fed the draft
+- [ ] `skill-depth-check` CI passes on the rewritten file
+- [ ] `flashcard-generation` is completed and approved before `note-taking` authoring begins (pilot-first order enforced by B10 workflow)
+
+### B5 — Regenerate `presets/study/skills-as-prompts.md`
+
+**AC:**
+- [ ] `presets/study/skills-as-prompts.md` is regenerated from the 3 new deep SKILL.md sources after all 3 are approved
+- [ ] File reflects the new 9-section depth (not the old 16-line stub format)
+- [ ] Other 5 presets' `skills-as-prompts.md` files are unchanged
+
+### B6 — `curated-skills-registry.md` Study Entries Review
+
+**AC:**
+- [ ] All 3 Study skill entries in `curated-skills-registry.md` are reviewed
+- [ ] If frontmatter `description` fields changed during rewrite, registry entries are updated to match
+- [ ] No other registry entries (non-Study) are modified
+- [ ] Registry still passes `registry-cardinality-check` CI (≥18 entries total)
+
+### B7 — `registry-url-check` Hardening (Carry-Forward A2)
+
+**AC:**
+- [ ] `registry-url-check` CI job rejects any `source_url` that does not match `^https://github\.com/` or the exact string `builtin`
+- [ ] A negative test fixture exists in the CI job (a hardcoded `ftp://example.com` URL is tested and expected to fail)
+- [ ] Existing 18 registry entries all pass the new stricter check (no existing entries use non-GitHub HTTPS URLs)
+- [ ] CI job comment documents the allowlist pattern explicitly
+
+### B8 — Retro Carry-Forward Workflow (Carry-Forward Process Gap)
+
+**AC:**
+- [ ] `docs/retro-template.md` contains a mandatory `## Carry-Forward Review` section immediately after `## 1. Cycle Summary`
+- [ ] Section template includes: a table with columns (Item, Source, Priority, Action This Cycle) and an instruction line: "Review `docs/retro.md` previous cycle's Carry-Forward Items table before writing any Phase 0 ACs"
+- [ ] `CONTRIBUTING.md` PR checklist item added: "Carry-forward items from prior retro reviewed and actioned or explicitly deferred with rationale"
+- [ ] The checklist item is numbered (appended to existing list) and includes a link to `docs/retro-template.md`
+
+### B9 — README "Next Up" Teaser + GitHub Signals
+
+**AC:**
+- [ ] README contains a `## Next up — v1.3.0 Preset Skills Depth` section positioned above `## Staying up to date`
+- [ ] Section body matches the plan: describes the template, Study-first pilot, and links to pinned Issue #2
+- [ ] GitHub Milestone `v1.3.0 — Preset Skills Depth` exists (created prior to this cycle — already live per plan)
+- [ ] Pinned Issue #2 exists and links to CHANGELOG `[1.3.0]` block (already live per plan)
+- [ ] README does not duplicate the full deliverable list — teaser only (≤5 sentences)
+
+---
+
+## Out of Scope (v1.3.0)
+
+- Skills rewrite for Research, Writing, Creative, PM, Business/Admin presets (v1.3.1–v1.3.5)
+- CLAUDE.md word trim to ≤350 (currently 385, within ≤400 hard cap — not blocking)
+- Automated skill-vetting pipeline
+- Writing-profile adoption validation (needs real usage data)
+- Token metrics instrumentation fix (`model: "unknown"` in metrics.json)
+- `/skill-creator` validation (awaiting Cowork API surface)
+- Any changes to v1.2 wizard flow, writing profile, or curated registry beyond B6/B7 scope
+
+---
+
+## Technical Constraints (v1.3.0)
+
+- **Stack:** Static markdown repo — no runtime, no application code.
+- **CI pattern:** New `skill-depth-check` job must reuse `awk`/`grep` pattern from existing jobs — no new tooling.
+- **CI scope isolation:** `skill-depth-check` path allowlist starts at `presets/study/**`; other presets must not fail CI on 16-line format.
+- **Skill size:** 80–120 lines is a target range, not a hard CI limit. CI enforces section presence, not line count.
+- **Template authority:** Section contents (what goes IN each section) are @architect's call in Phase 1. @pm specifies section NAMES and count only.
+- **B10 user-input files:** Saved under `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/` — pipeline state only, not committed to product repo.
+- **Pilot sequencing:** `flashcard-generation` must be approved before `note-taking` authoring begins. Hard dependency — not parallelizable.
+- **Model floor:** Claude Sonnet 4.6 or better (unchanged from v1.2).
+
+---
+
+## User Stories (v1.3.0)
+
+- As a Study preset user, I can run `/flashcard-generation` and get a response that explicitly states what makes a good card vs. a bad card, so that output quality is predictable.
+- As a community contributor, I can open `templates/skill-template/SKILL.md` and understand exactly what is expected in each section without needing to read CONTRIBUTING.md, so that my first PR meets the quality bar.
+- As a maintainer, I can run CI on a PR that adds a new Study skill and have the `skill-depth-check` job fail if any required section is missing, so that stub-quality skills cannot merge.
+- As the project owner, I can answer 4–6 targeted questions per skill and review a draft before it commits, so that the final skill reflects my actual quality standards — not an AI's guess.
+
+---
+
+## Acceptance Criteria (v1.3.0 — summary, full ACs in feature sections above)
+
+- [ ] `templates/skill-template/SKILL.md` exists with all 9 required section headers and placeholder comments
+- [ ] `skill-depth-check` CI job exists, scoped to `presets/study/**`, passes on rewritten skills, fails if any section header removed
+- [ ] All 3 Study skills rewritten to 80–120 lines with all 9 sections
+- [ ] `flashcard-generation` approved before `note-taking` authoring begins (pilot order enforced)
+- [ ] User-input session files exist for all 3 Study skills under `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/`
+- [ ] `presets/study/skills-as-prompts.md` regenerated from new deep skills
+- [ ] Study entries in `curated-skills-registry.md` reviewed; updated if descriptions changed
+- [ ] `registry-url-check` rejects `ftp://` and non-GitHub HTTPS URLs; negative fixture present
+- [ ] `docs/retro-template.md` has mandatory `## Carry-Forward Review` section
+- [ ] CONTRIBUTING.md PR checklist includes carry-forward review item
+- [ ] README has `## Next up — v1.3.0 Preset Skills Depth` section above `## Staying up to date`
+- [ ] All 5 non-Study presets still at 16-line format; CI passes for them
+- [ ] `CHANGELOG.md` `[1.3.0]` block written
+- [ ] `VERSION` → `1.3.0`, README version badge bumped
+- [ ] Tag `v1.3.0` + GitHub Release created; zip verified to contain template + 3 deepened Study skills
+
+---
+
+## Edge Cases (v1.3.0)
+
+**E1 — User's worked example in B10 input session is too long or domain-specific:** @dev trims to fit within the `Example` section's 80–120 line budget. The orchestrator confirms with the user before trimming: "Your example is detailed — I'll condense it to the key input/output pair. Here's what I'd keep: [summary]. OK?"
+
+**E2 — User approves `flashcard-generation` but changes quality criteria mid-session for `note-taking`:** Changed criteria apply only to `note-taking` forward. `flashcard-generation` is already committed and not revised retroactively unless user explicitly requests a second pass.
+
+**E3 — `skill-depth-check` CI fails on a non-Study skill path due to misconfigured glob:** Treated as a CI configuration bug — fix the path allowlist before Phase 4 commit. Non-Study presets must not be gated by the new job.
+
+**E4 — All 3 Study skills rewritten but `skills-as-prompts.md` regeneration produces a file >150 lines:** No hard limit on `skills-as-prompts.md` size. Regenerate faithfully from the deep SKILL.md sources. Document the new line count in CHANGELOG.
+
+**E5 — `registry-url-check` negative fixture accidentally matches a valid entry:** Negative fixtures use a hardcoded string that cannot appear in a real registry entry (e.g., `ftp://NEGATIVE-TEST-FIXTURE`). Document in CI job comment.
+
+---
+
+## Success Metrics (v1.3.0)
+
+- **Primary:** All 3 Study skills pass `skill-depth-check` CI with 0 section-header failures — measurable at Phase 5.
+- **Secondary:** Rework rate ≤10% (v1.2 was 19%; v1.3.0 has two known risk surfaces — new CI job first-write and `skills-as-prompts.md` regeneration).
+- **Secondary:** B10 user-input session completed for all 3 skills (no skill committed without a corresponding input file).
+- **Proxy:** Community contributor opens `templates/skill-template/SKILL.md` and submits a PR that passes `skill-depth-check` on first submission (observable when v1.3.1+ community PRs arrive).
+
+---
+
+## Assumptions (v1.3.0) [confidence]
+
+See `docs/assumptions.md` B-section for full register. New assumptions for v1.3.0:
+
+- [UNTESTED] A-v1.3-1: Users will complete the 4–6-question input session for each of the 3 Study skills without fatigue. Mitigation: only 3 skills this cycle; hybrid cadence spreads load across releases.
+- [UNTESTED] A-v1.3-2: The 9-section template fits all 18 preset skills. Mitigation: pilot `flashcard-generation` first; adjust template before other presets commit to it if the pilot reveals structural issues.
+- [UNTESTED] A-v1.3-3: Community Tier 2 contributors will accept the deeper template as the submission bar. Feedback channel: pinned Issue #2.
+- [ESTIMATED] A-v1.3-4: CI allowlist approach (widening one preset per release) is sustainable through v1.3.5. Rationale: avoids breaking non-rewritten presets; accepted trade-off vs. single global gate.
+
+---
+
+## Dependencies Between v1.3.0 Deliverables
+
+```
+B1 (template) → B2 (CI job) → B3/B4 (skill rewrites, pilot-first order)
+                                      ↓
+                               B5 (regenerate skills-as-prompts.md)
+                               B6 (update registry Study entries)
+B7 (registry-url-check) — independent, can parallelize with B1
+B8 (retro-template) — independent, can parallelize with B1
+B9 (README teaser) — already partially live (Milestone + Issue); README edit is independent
+```
+
+**Hard sequencing constraints:**
+1. B1 must be complete before any skill rewrite begins (B3/B4 reference the template)
+2. `flashcard-generation` must be approved before `note-taking` authoring begins
+3. B5 runs only after all 3 Study skills are approved
+4. B6 runs after B5 (descriptions may change in the rewrite)
+
+---
+
+## Rollout Plan (Hybrid Cadence)
+
+| Release | Scope | CI allowlist |
+|---------|-------|-------------|
+| v1.3.0 | Study preset (3 skills) | `presets/study/**` |
+| v1.3.1 | Research preset (3 skills) | + `presets/research/**` |
+| v1.3.2 | Writing preset (3 skills) | + `presets/writing/**` |
+| v1.3.3 | Creative preset (3 skills) | + `presets/creative/**` |
+| v1.3.4 | Project Management preset (3 skills) | + `presets/project-management/**` |
+| v1.3.5 | Business/Admin preset (3 skills) | + `presets/business-admin/**` |
+
+Each point release reuses B1 template unchanged. CI allowlist widens by one preset path. Non-rewritten presets are never gated by `skill-depth-check`.
