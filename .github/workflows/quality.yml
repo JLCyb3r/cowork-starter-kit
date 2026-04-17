@@ -245,3 +245,53 @@ jobs:
             exit 1
           fi
           echo "Registry URL check passed — all source_url values are HTTPS or builtin."
+
+  starter-file-word-count-check:
+    name: Starter File Word Count Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Fail if any starter file exceeds 400 words
+        run: |
+          FAIL=0
+          for f in presets/*/project-instructions-starter.txt; do
+            COUNT=$(wc -w < "$f")
+            if [ "$COUNT" -gt 400 ]; then
+              echo "EXCEEDS 400 words ($COUNT words): $f"
+              echo "Starter files must be <=400 words. Target is <=350."
+              FAIL=1
+            else
+              echo "OK ($COUNT words): $f"
+            fi
+          done
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "All starter files within word count limit."
+
+  registry-cardinality-check:
+    name: Registry Cardinality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Fail if curated-skills-registry.md has fewer than 18 entries
+        run: |
+          if [ ! -f "curated-skills-registry.md" ]; then
+            echo "MISSING: curated-skills-registry.md at repo root"
+            exit 1
+          fi
+          # Count data rows in markdown table (lines starting with | that are not header or separator rows)
+          # Separator rows contain only |, -, and spaces. Header rows have header text.
+          # Data rows have actual content fields.
+          ENTRY_COUNT=$(grep -c '^|' curated-skills-registry.md | tr -d '[:space:]' || echo 0)
+          # Subtract 2 for the header row and separator row per table
+          # Count tables first, then subtract header/separator rows
+          HEADER_ROWS=$(grep -c '^| [A-Za-z]' curated-skills-registry.md || echo 0)
+          SEPARATOR_ROWS=$(grep -c '^|[-| ]*|$' curated-skills-registry.md || echo 0)
+          DATA_ROWS=$(( ENTRY_COUNT - HEADER_ROWS - SEPARATOR_ROWS ))
+          if [ "$DATA_ROWS" -lt 18 ]; then
+            echo "curated-skills-registry.md has only $DATA_ROWS entries (minimum: 18)"
+            echo "Add more entries to meet the minimum registry cardinality requirement."
+            exit 1
+          fi
+          echo "Registry cardinality check passed: $DATA_ROWS entries found (minimum: 18)."

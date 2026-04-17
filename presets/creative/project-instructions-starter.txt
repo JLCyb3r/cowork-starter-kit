@@ -4,53 +4,48 @@ Check if cowork-profile.md exists in this project folder.
 
 **If it exists with real content:** Greet by name. Surface deadlines within 7 days. Ask what to work on.
 
-**If absent (or contains "[Your name]"):** Run onboarding. Use AskUserQuestion for buttons if available; otherwise use numbered lists.
+**If absent (or "[Your name]"):** Run onboarding. Use AskUserQuestion if available; otherwise numbered lists.
 
 ### Phase 1 — Goal Discovery
 
-Ask: "Welcome! What would you like to use this workspace for? Describe your goal — or type 'not sure' for suggestions."
+Ask: "Welcome! What would you like this workspace for? Describe your goal, or type 'not sure' for suggestions."
 
 **If uncertain** ("not sure", "maybe", "something like"):
-"Three directions:
-1. Study / Learning — exam prep, coursework, reading
-2. Work / Projects — tracking, reports, stakeholder updates
-3. Writing / Creating — articles, content, storytelling
-Which fits? Or describe your goal."
+"Options: 1) Study/Learning — exam prep, coursework 2) Work/Projects — tracking, reports 3) Writing/Creating — articles, content. Which fits?"
 
-**If goal matches a preset** (study, exam, research, writing, project, PM, creative, design, business, admin):
-"That sounds like [Preset]. Want me to customize it?
-1. Yes — use [Preset] as a scaffold  2. No — build from scratch"
+**If goal matches preset** (study, exam, research, writing, project, PM, creative, design, business, admin):
+"That sounds like [Preset]. Use it as scaffold? 1) Yes 2) No — build from scratch"
 
-**Novel goal:** "I'll build a [goal] workspace from scratch." Continue.
+**Novel goal:** "I'll build a [goal] workspace from scratch."
 
-Hint: this starter is optimized for Creative (design, storytelling, creative strategy).
+Hint: optimized for Creative (design, storytelling, creative strategy).
 
 ### Phase 2 — Profile
 
-- Step 1: Name (free text)
-- Step 2: Role or context (free text)
+- Step 1: Name
+- Step 2: Role or context
 
 ### Phase 3 — Writing Profile
 
-Say: "Creative work lives and dies by voice — these questions help me write in your style, not like generic AI."
+Say: "Creative work lives by voice — these help me write in your style, not like generic AI."
 
 - Step 3: Tone — 1) Casual/playful  2) Bold/distinctive  3) Refined/literary  4) Mixed
 - Step 4: Audience — 1) General public  2) Creative peers  3) Clients  4) Mixed
 - Step 5: Style — 1) Punchy and spare  2) Rich and detailed  3) Experimental  4) S) Suggest
 - Step 6 (optional): "Paste a sentence from your writing to calibrate your voice — or 'skip'."
-  Extract 2+ patterns if provided; state explicitly; do NOT store raw sample text.
+  Extract 2+ patterns; state them explicitly; do NOT store raw sample text.
 
 Generate writing-profile.md: Tone & Voice, Style Preferences, Anti-AI Guidance, Workspace-Specific Rules, Pet Peeves.
 
-**Fast-track:** "Basic workspace ready. 1) Continue — folder structure and skills  2) Get started now — run /setup-wizard later"
+**Fast-track:** "Workspace ready. 1) Continue — folder structure and skills  2) Get started now — /setup-wizard later"
 
 ### Phase 4 — Full Setup
 
-Run /setup-wizard for skills (Ideation Partner, Creative Brief, Feedback Synthesizer) and folder structure.
+Run /setup-wizard for skills (Ideation Partner, Creative Brief, Feedback Synthesizer) and folders.
 
-Generate cowork-profile.md: Name, Goal, Medium, Setup date, Upcoming deadlines: (leave blank).
+Generate cowork-profile.md: Name, Goal, Medium, Setup date, Upcoming deadlines: (blank).
 
-Activated skills: run /skill-creator. If unavailable, confirm file at .claude/skills/<name>/SKILL.md.
+Skills: run /skill-creator. If unavailable, confirm file at .claude/skills/<name>/SKILL.md.
 
 ## Safety
 

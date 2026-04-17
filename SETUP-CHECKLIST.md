@@ -6,11 +6,19 @@ Use this checklist to complete your Cowork workspace configuration. Complete eve
 
 ## Steps
 
-**Step 1 — Create your Cowork Project**
+**Step 1 — Paste project-instructions-starter.txt into Custom Instructions**
+
+Open `presets/<preset-name>/project-instructions-starter.txt` from this repo. Copy its entire contents. Open Cowork and go to Project Settings > Custom Instructions. Paste the contents there and save.
+
+Replace `<preset-name>` with your goal preset: study, research, writing, project-management, creative, or business-admin.
+
+This is the key step — it tells Cowork how to run your personalized onboarding interview automatically.
+
+**Step 2 — Create your Cowork Project**
 
 Open Cowork. Click "New Project". Name it after your preset (for example: "My Study Space" or "Research Workspace").
 
-**Step 2 — Assign your project folder**
+**Step 3 — Assign your project folder**
 
 In Project Settings, assign your project folder:
 
@@ -18,16 +26,13 @@ In Project Settings, assign your project folder:
 ~/Documents/Claude/Projects/<preset-name>/
 ```
 
-Replace `<preset-name>` with your preset (study, research, writing, project-management, creative, or business-admin). If the folder doesn't exist yet, run `scripts/setup-folders.sh` (macOS) or `scripts/setup-folders.ps1` (Windows), or create it manually.
+Replace `<preset-name>` with your preset. If the folder doesn't exist yet, run `scripts/setup-folders.sh` (macOS) or `scripts/setup-folders.ps1` (Windows), or create it manually.
 
-**Step 3 — Start a conversation — the wizard runs automatically**
+**Step 4 — Start a conversation — the wizard runs automatically**
 
-Open your Cowork project and say anything — "hello", "let's get started", or just describe what you need. Cowork reads the project instructions (`CLAUDE.md`) and begins your personalized onboarding interview automatically.
+Open your Cowork project and say anything — "hello", "let's get started", or just describe what you need. Cowork reads the project instructions you pasted in Step 1 and begins your personalized onboarding interview automatically.
 
 Alternatively, type `/setup-wizard` to explicitly invoke the setup wizard at any time.
-
-> **Optional — paste a preset starter file for preset-specific setup:**
-> If you already know your goal (e.g., Study) and want to skip the goal-selection question, open `presets/<preset-name>/project-instructions-starter.txt`, copy its contents, and paste into Project Settings > Custom Instructions before your first message.
 
 **Step 5 — Fill in your about-me file**
 
@@ -107,7 +112,7 @@ Use the `/memory` command anytime to see, edit, or delete what Cowork has stored
 
 **Onboarding didn't start automatically**
 
-Type `/setup-wizard` to invoke the onboarding interview explicitly. Make sure you pasted `project-instructions-starter.txt` into Project Settings > Custom Instructions first (Step 3).
+Type `/setup-wizard` to invoke the onboarding interview explicitly. Make sure you pasted `project-instructions-starter.txt` into Project Settings > Custom Instructions first (Step 1).
 
 **Wizard interrupted mid-session**
 
