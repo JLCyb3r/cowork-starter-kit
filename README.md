@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.2.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.1-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -138,9 +138,9 @@ Every preset includes a non-negotiable rule: **Cowork will always ask for your c
 
 ---
 
-## Next up — v1.3.0 Preset Skills Depth
+## Next up — v1.3.2 Writing Preset Depth
 
-Preset skills are moving from 16-line stubs to structured, production-grade skills with 9 standard sections: triggers, instructions, output format, quality criteria, anti-patterns, worked examples, and writing-profile integration. The Study preset ships first in v1.3.0 as the pilot, starting with `flashcard-generation`; one preset is depth-upgraded per point release after that. Track progress on [Milestone #1](https://github.com/jmlozano1990/cowork-starter-kit/milestone/1) or follow the conversation in [Issue #2](https://github.com/jmlozano1990/cowork-starter-kit/issues/2).
+v1.3.1 shipped Research preset depth — all 3 Research skills (`literature-review`, `source-analysis`, `research-synthesis`) were rewritten to the full 9-section ADR-015 template with worked examples, quality criteria, and writing-profile integration. v1.3.2 applies the same treatment to the Writing preset: `voice-matching`, `editing-pass`, and `outline-generator` will each get the full depth upgrade, bringing the Writing preset up to the same production-grade standard as Study and Research.
 
 ---
 
