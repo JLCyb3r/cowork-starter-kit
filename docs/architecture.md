@@ -29,6 +29,9 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-015 | Canonical 9-Section Skill Template (v1.3.0) | ACCEPTED |
 | ADR-016 | `skill-depth-check` CI with Path Allowlist (v1.3.0) | ACCEPTED |
 | ADR-017 | Per-Skill User-Input Schema for User-in-the-Loop Authoring (v1.3.0) | ACCEPTED |
+| ADR-015 (amendment v1.3.1) | Stress-test re-validation on Research preset shapes; 130-line ceiling for Research-preset skills | ACCEPTED |
+| ADR-016 (amendment v1.3.1) | `ENFORCED_PRESETS="study research"`; word-split-loop verification | ACCEPTED |
+| ADR-018 | Preset isolation for skill-slug collisions (research-synthesis dual-file disposition) | ACCEPTED |
 
 ---
 
@@ -1747,3 +1750,318 @@ No blocking anti-patterns detected for v1.3.0.
 2. **`skill-depth-check` allowlist drift:** If a preset folder is renamed without updating `ENFORCED_PRESETS`, the check silently skips. @security to evaluate whether this fail-open default is acceptable (vs fail-closed: unknown preset fails CI).
 3. **Input file path containment:** `.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/` lives outside the product repo. Confirm this path is NOT included in any product-repo commit; orchestrator must enforce.
 4. **`registry-url-check` tightening breaking change risk:** Confirmed non-breaking at Phase 1 against v1.2 entries (all `builtin`). @security to re-confirm at Phase 2 in case any late-landing PR adds a non-GitHub HTTPS entry before v1.3.0 commits.
+
+---
+
+## ADR-015 Amendment (v1.3.1): Stress-Test Re-Validation on Research Preset Shapes + Line-Ceiling Raise
+
+**Date:** 2026-04-18
+**Status:** ACCEPTED (amendment — ADR-015 decision body unchanged)
+**Amends:** ADR-015 (length budget; stress-test evidence set)
+
+### Context
+
+v1.3.0 validated the 9-section template on two non-Study shapes (`voice-matching`, `status-update`) and one Study pilot (`flashcard-generation`). Per v1.3.0 precedent and spec §Technical Constraints ("Template stress-test is mandatory per v1.3.0 precedent"), v1.3.1 re-validates the template against the three Research-preset shapes before committing the Research pilot:
+
+- `literature-review` — multi-source survey; matrix + thematic synthesis + gap analysis.
+- `source-analysis` — single-source deep read; evaluation criteria (primary/secondary, methodology, bias, authority).
+- `research-synthesis` (Research variant) — peer-review multi-source synthesis with citation-network awareness and research-gap as first-class output.
+
+The spec also raises the soft length ceiling from 120 → 130 for Research-preset skills only. This amendment documents the raise and its rationale.
+
+### Line-Ceiling Raise for Research Preset (80–130)
+
+ADR-015's length budget remains the canonical target (80–120 lines for most presets; floor 60; soft cap 150). For the Research preset specifically, the target range is **80–130**.
+
+- Research skills must carry academic-context qualifiers (peer-reviewed vs. preprint vs. grey literature), methodology-critique prose, and citation-network distinctions (foundational vs. derivative). These add ~5–10 lines to `## Instructions` and `## Quality criteria` relative to Study skills.
+- The soft cap of 150 (CONTRIBUTING.md judgment-call trim advice) is unchanged.
+- CI floor (60 lines) is unchanged.
+- `skill-depth-check` does not enforce a ceiling, so no CI change is needed for the Research target-range raise. The 130 target is documentation-only guidance for @dev and community contributors.
+
+### Research Preset Stress-Test (mandatory pre-Phase-2 re-validation)
+
+Applied the 9-section template desk-check to all three Research skills. Per v1.3.0 precedent (A-v1.3-2), one skill receives a full section-by-section fit analysis; the other two receive a verdict with focused notes on any sections that required special consideration.
+
+#### Skill 1 (full fit analysis) — `presets/research/.claude/skills/literature-review/SKILL.md`
+
+Pilot for the Research preset. Exercises multi-source, thematic-grouping, gap-analysis shape.
+
+| # | Section | Fits? | Note |
+|---|---------|-------|------|
+| 1 | When to use | Yes | "When you have multiple sources and need to understand what the field says collectively, identify themes, and find gaps." Direct carry from current stub; 2–3 sentences + edge case ("when gap analysis is the primary deliverable, not per-source summary"). |
+| 2 | Triggers | Yes | Bullets: "User says 'literature review'"; "User supplies ≥3 sources with a topic"; "User mentions 'survey the field' / 'state of the field'"; "User asks what is contested vs. settled." 4–8 bullets target met. |
+| 3 | Instructions | Yes | Numbered steps map cleanly: (1) confirm scope/research question; (2) read all sources; (3) identify themes by argument type (NOT chronology, NOT by-paper); (4) classify each theme's evidence quality (peer-reviewed consensus vs. contested vs. grey-literature only); (5) identify gaps; (6) assemble 4-section output. 6 steps — within 5–10 range. |
+| 4 | Output format | Yes | Schema: `(1) Scope/question; (2) Themes — one H3 per theme with evidence quality; (3) Gaps — named research gaps; (4) Suggested next sources.` Author-year citations throughout. Strong fit — the template's `Output format` section accommodates fixed multi-section academic outputs. |
+| 5 | Quality criteria | Yes | "Themes named by argument type, not by paper"; "At least one gap identified that no source addresses"; "Evidence-quality label on each theme (consensus / contested / grey-literature-only)"; "Conflicting claims preserved as disagreement, not silently resolved"; "Author-year citations present for every claim." 5 checkable criteria — within 3–5. |
+| 6 | Anti-patterns | Yes | "Chronological ordering instead of thematic"; "One paragraph per paper instead of per theme"; "Silently reconciling contradictory findings"; "Omitting gap analysis"; "Treating preprints identically to peer-reviewed sources." 5 items, one line each — matches target. |
+| 7 | Example | Yes | ONE worked example: input = 4 papers on a topic (title + abstract excerpts); output = 4-section review with themes, gaps, next-source suggestions. Real academic example, not hypothetical. Estimated 20–30 lines — within 15–40 range. |
+| 8 | Writing-profile integration | Yes | 1–3 sentences: "Literature reviews typically exceed 100 words, so consult `context/writing-profile.md` for register and tone — especially for the Introduction and Gap Analysis sections, which carry the reviewer's voice. Theme summaries should stay neutral and source-anchored regardless of voice profile." |
+| 9 | Example prompts | Yes | 3 bullets. Existing three prompts from the stub map directly; realistic user invocations. |
+
+**Verdict — `literature-review`: VALIDATED.** Template fits without contortion. No template revision required.
+
+#### Skill 2 — `presets/research/.claude/skills/source-analysis/SKILL.md`
+
+Single-source deep read — exercises a *different output shape* from `literature-review` (flat evaluation vs. multi-theme aggregation).
+
+| Section | Fit verdict | Key note |
+|---------|-------------|----------|
+| When to use | Fits | Single-source focus; edge case: user supplies multiple sources but wants per-source deep evaluation (route to repeated `source-analysis`, not `literature-review`). |
+| Triggers | Fits | "User asks 'evaluate this paper'"; "User supplies one source and asks is-it-credible"; "User asks about methodology/bias of a single source." |
+| Instructions | Fits | 6–8 steps: identify source type (primary/secondary/tertiary) → check peer-review status → check citation network position → assess methodology → flag bias → note recency/authority → synthesize evaluation. |
+| Output format | Fits (strong) | Fixed-schema evaluation card: `(1) Source metadata; (2) Type + peer-review status; (3) Citation network position; (4) Methodology assessment; (5) Bias notes; (6) Recency/authority; (7) Bottom line.` Template's `Output format` handles fixed schemas cleanly (confirmed by v1.3.0 `status-update` stress test). |
+| Quality criteria | Fits | "Peer-review status explicitly stated"; "Methodology assessment cites the actual method used, not vibes"; "Bias source named (funding, affiliation, selection) or 'none found'"; "Citation-network position (foundational/derivative/isolated) labelled." |
+| Anti-patterns | Fits | "Credibility yes/no without evidence"; "Appeal-to-authority on prestigious venue"; "Ignoring preprint status"; "Missing methodology critique on empirical claims." |
+| Example | Fits | ONE worked source analysis (one real academic paper → one evaluation card). |
+| Writing-profile integration | Fits | Source-analysis outputs are typically <200 words — evaluation cards are terse. Writing-profile applies selectively for the "Bottom line" narrative clause only. Section should state this explicitly. |
+| Example prompts | Fits | 3 realistic invocations. |
+
+**Verdict — `source-analysis`: VALIDATED.** No section is a stretch. The fixed-schema `Output format` section absorbs what would otherwise be prose in the 16-line stub.
+
+#### Skill 3 — `presets/research/.claude/skills/research-synthesis/SKILL.md` (Research variant)
+
+Peer-review multi-source synthesis — exercises *distinct content from the Study variant of the same skill slug*. Template-shape question: does the 9-section template accommodate the Research-variant's required additions (peer-review status per source, citation network awareness, research-gap as first-class section, academic citation format defaults) without structural changes?
+
+| Section | Fit verdict | Key note |
+|---------|-------------|----------|
+| When to use | Fits | Multi-source synthesis for academic/professional research. Edge case: when sources span incompatible paradigms, synthesis flags paradigm differences rather than averaging. |
+| Triggers | Fits | "User says 'synthesize these papers'"; "User shares ≥2 peer-reviewed sources"; "User asks 'what does the literature say about [X]' with specific sources at hand." |
+| Instructions | Fits | 7–9 steps: label each source (peer-reviewed / preprint / grey); assess citation-network position per source; extract claims; flag methodology incompatibilities; identify consensus; identify research gaps; produce citation-formatted output. Fits within 5–10 numbered-step range. |
+| Output format | Fits | Schema includes a **dedicated `Research gaps` section** (not an afterthought). Peer-review status appears as a column in the comparison matrix. Academic citation format (APA/MLA/Chicago) rather than GitHub-flavored markdown tables. Template absorbs this cleanly — `Output format` section is flexible on schema shape. |
+| Quality criteria | Fits | Minimum per spec AC: "peer-review status per source," "methodology differences surfaced," "research gaps as distinct output section." Plus: "citation-network position noted per source," "claim→source attribution ≥1:1." |
+| Anti-patterns | Fits (must diverge from Study variant per AC) | "Treating preprints identically to peer-reviewed studies"; "Ignoring citation network"; "Omitting research-gap section"; "Averaging effect sizes across incompatible study designs"; "Silently reconciling contested findings." All distinct from Study variant's anti-patterns. |
+| Example | Fits | ONE worked example using real peer-reviewed academic sources (NOT the Study variant's cognitive-psychology working-memory example). |
+| Writing-profile integration | Fits | Synthesis outputs typically exceed 200 words; writing-profile applies to narrative synthesis paragraphs. Reference matrix/tables remain neutral regardless of voice profile. |
+| Example prompts | Fits | 3 academic-context invocations. |
+
+**Verdict — `research-synthesis` (Research variant): VALIDATED.** Template accommodates all Research-specific requirements without structural additions. The dedicated research-gap output is expressed through `## Output format`, not via a new template section. Peer-review status enters as both a `## Output format` schema field and a `## Quality criteria` bullet — no new template section required.
+
+#### Stress-Test Overall Result
+
+**A-v1.3-2 re-validation on Research preset: VALIDATED.** All three Research skills fit the 9-section template without requiring section additions, removals, or reordering. The 80–130 line target (vs. Study's 80–120) is documentation guidance only — CI behaviour is unchanged. No revisions to ADR-015's template specification are required before the Research pilot (B1) commits.
+
+---
+
+## ADR-016 Amendment (v1.3.1): `ENFORCED_PRESETS` → `"study research"` + Word-Split-Loop Verification
+
+**Date:** 2026-04-18
+**Status:** ACCEPTED (amendment — ADR-016 decision body unchanged)
+**Amends:** ADR-016 (rollout-plan row v1.3.1 was pre-declared; this amendment closes the execution commitment and verifies the loop logic)
+
+### Decision
+
+Update `ENFORCED_PRESETS` from `"study"` to `"study research"` in both the enforcement block (`skill-depth-check` step) and the advisory-notice block (unenforced-presets advisory step) of `.github/workflows/quality.yml`. Both string literals must match; drift is disallowed.
+
+### Word-Split-Loop Verification (spec requirement — E4)
+
+The existing CI logic is:
+
+```bash
+ENFORCED_PRESETS="study"
+for preset in $ENFORCED_PRESETS; do
+  skill_base="presets/${preset}/.claude/skills"
+  ...
+done
+```
+
+and in the advisory block:
+
+```bash
+for preset_dir in presets/*/; do
+  preset=$(basename "$preset_dir")
+  if ! echo "$ENFORCED_PRESETS" | grep -qw "$preset"; then
+    UNENFORCED_PRESETS="$UNENFORCED_PRESETS $preset"
+  fi
+done
+```
+
+**Analysis:**
+
+1. **Unquoted `$ENFORCED_PRESETS` expansion in `for preset in $ENFORCED_PRESETS`:** Standard POSIX-shell word-splitting on IFS (default = space/tab/newline). With `ENFORCED_PRESETS="study research"`, the loop iterates twice: `preset=study`, then `preset=research`. Verified behaviour; no shell code change required.
+2. **`grep -qw "$preset"` in the advisory block:** `-w` matches `$preset` as a whole word against the entire `$ENFORCED_PRESETS` string. `grep -qw "study" <<<"study research"` → match. `grep -qw "research" <<<"study research"` → match. `grep -qw "creative" <<<"study research"` → no match (correctly continues to advisory). Verified.
+3. **No glob expansion risk (spec E4):** `presets/$preset/.claude/skills/*/SKILL.md` expansion uses `$preset` as a literal directory name; `*` only expands inside `.claude/skills/`. `$preset` values (`study`, `research`) contain no glob metacharacters. Safe.
+4. **Two-literals invariant:** Both the enforcement-block and advisory-block assignments must read `ENFORCED_PRESETS="study research"`. If only one is updated, non-Research presets will still receive the advisory notice correctly but the enforcement loop will silently skip Research. This is why spec AC explicitly requires both blocks updated.
+
+**Verification verdict:** No CI shell-logic change required beyond the two string-literal edits. `@dev` MUST edit both occurrences of `ENFORCED_PRESETS="study"` in the same commit.
+
+### Rollout-Plan Table Row (now authoritative for v1.3.1)
+
+ADR-016's rollout table already anticipated v1.3.1:
+
+| Release | `ENFORCED_PRESETS` | Change |
+|---------|--------------------|--------|
+| v1.3.0 | `"study"` | (initial) |
+| **v1.3.1** | `"study research"` | **1-line edit × 2 blocks + 3 new deep skills** |
+
+Amendment locks v1.3.1 as executed per plan.
+
+---
+
+## ADR-018: Preset Isolation for Skill-Slug Collisions (Research-Synthesis Dual-File Disposition)
+
+**Date:** 2026-04-18
+**Status:** ACCEPTED
+
+### Context
+
+`presets/study/.claude/skills/research-synthesis/SKILL.md` (shipped v1.3.0) and `presets/research/.claude/skills/research-synthesis/SKILL.md` (to land v1.3.1 B3) share a folder name and file name but live under different preset paths. The @pm spec (v1.3.1 §Technical Constraints) flags this as an open architectural question: is the dual-naming a coupling or dependency concern worth a new ADR, or a documented non-issue under existing repo-structure policy?
+
+This ADR provides the one-sentence disposition (spec's requested outcome) and escalates it to a preset-level naming principle so future slug-collisions across presets have a named policy.
+
+### Decision
+
+**Dual-file skill-slug collision across different presets is a documented non-issue under the preset-isolation model.** Files are independent by repo path, CI path, registry entry, and user-installation boundary. No shared import, no runtime dependency, no file coupling.
+
+### Evidence for Non-Issue Disposition
+
+Four independent isolation boundaries already enforce separation:
+
+1. **Filesystem / repo path (ADR-004):** `presets/study/.claude/skills/research-synthesis/SKILL.md` and `presets/research/.claude/skills/research-synthesis/SKILL.md` are distinct paths. No symlinks, no shared content files. Flat preset structure is canonical.
+2. **CI scoping (ADR-016):** `skill-depth-check` iterates `presets/$preset/.claude/skills/*/SKILL.md` per enforced preset — each file is checked in isolation against its own preset-path loop iteration.
+3. **Curated registry (ADR-012):** `curated-skills-registry.md` treats each preset's skills as independent entries. Two rows with `name=research-synthesis` are permitted when `preset` column differs. Registry cardinality CI (`registry-cardinality-check`) counts rows, not name-uniqueness.
+4. **User installation boundary:** A user adopts one preset at a time. The skill slug `/research-synthesis` resolves against the installed preset's `.claude/skills/` — there is no concurrent-preset installation that would require disambiguation. Cowork's skill discovery is scoped to the installed workspace.
+
+### Content-Divergence Requirement (preserved via spec AC, not ADR)
+
+Spec B3 AC already requires content divergence ("file content is NOT a copy of `presets/study/.claude/skills/research-synthesis/SKILL.md` — a diff between the two files must show Research-specific content"). This ADR does NOT duplicate that requirement; content divergence is the author's responsibility and is verified by @qa in Phase 5 (E3 edge case) and by the PR review checklist. ADR-018's scope is the structural (path/CI/registry) isolation, not the content diff.
+
+### Naming Principle (generalized policy)
+
+**A skill slug MAY be reused across different presets when the two skills serve genuinely different user needs.** Preset-level isolation is sufficient; a shared slug across presets creates no technical coupling. Community contributors proposing a cross-preset slug reuse must:
+
+- Include a one-paragraph rationale in the PR description explaining why the two skills share a slug.
+- Confirm content divergence (per the B3-style diff requirement applied to their PR).
+
+CONTRIBUTING.md does NOT require a change for v1.3.1 — this principle is inherited from ADR-004's flat-preset isolation and ADR-012's per-preset registry model. If a future retrospective surfaces contributor confusion around skill-slug collision, revisit whether CONTRIBUTING.md needs an explicit paragraph.
+
+### Consequences
+
+- No repo-structure change. No CI change. No registry-schema change.
+- `research-synthesis` dual-file shipping in v1.3.1 is documented as policy-compliant.
+- Future presets may reuse any skill slug from a prior preset when justified by divergent user need.
+- `@qa` Phase 5 MUST still verify content divergence per spec AC B3 and edge case E3; this ADR does not override that verification.
+
+### Consequences NOT in scope for this ADR
+
+- Whether to add a "skill slug uniqueness across presets" CI check — rejected as over-engineering. Slug collision is not a failure mode given preset isolation.
+- Whether to rename one of the two files — rejected. Slugs match user-facing invocation phrasing (`/research-synthesis`); renaming for technical convenience would degrade UX.
+
+---
+
+## v1.3.1 Supporting Specs (H-items)
+
+### H1 — CLAUDE.md Trim (≤350 words) — architectural impact
+
+H1 is a mechanical content trim with NO architectural change. No ADR required.
+
+- **Scope:** CLAUDE.md only (385 → ≤350 words). No touch to any `presets/*/project-instructions-starter.txt`, `presets/*/global-instructions.md`, `presets/*/context/writing-profile.md`, or `templates/` files.
+- **Blast-radius guard:** CLAUDE.md is the universal dynamic-wizard entry point (ADR-010). ADR-011 specifies the wizard state machine. No state-machine step, branch, or word-budget allocation may be structurally removed by H1. Permitted changes are wordsmithing within existing steps only (condensing verbose conditional prose — spec identifies Phase 2–4 wizard state-machine section as highest-yield).
+- **Invariant to preserve:** All wizard branch logic (goal discovery, suggestion branch, writing profile questions, fast-track, safety rule, state machine check) must remain after trim. @qa verifies at Phase 5 via a before/after wizard-logic-preservation check.
+- **CI:** `claude-md-word-count-check` must pass at ≤350 (not merely at the ≤400 hard cap). Spec AC H1-4 and E5 reinforce this.
+
+### H2 — B10 Interview Pattern Documentation — architectural impact
+
+H2 is a process-documentation addition to CONTRIBUTING.md. No ADR required; ADR-017's user-input-schema decision is not modified.
+
+- **Location:** CONTRIBUTING.md, new `## Skill authoring — B10 interview pattern` heading, positioned after `## Skill content safety` (line ~72 anchor) and before `## Running CI checks locally` (line ~92 anchor). CONTRIBUTING.md currently ordered: Placeholder authoring rules (line 78) → Running CI checks locally (line 92). Verified anchors.
+- **Rule (authoritative phrasing):** "First skill in a preset = full 6-Q open session (user controls every dimension). Skills 2+ in the same preset = orchestrator proposes defaults based on the first skill's established patterns, then user expands any Q they want."
+- **Evidence reference:** v1.3.0 `research-synthesis` — one clarifying round needed vs. `flashcard-generation` full 6-Q session. Retro Section 2 Hardest AC.
+- **Out of scope:** This is NOT a per-PR checklist item. Does NOT modify the 17-item maintainer PR reviewer checklist. Spec AC H2-5 explicitly forbids adding a per-PR check.
+
+### H3 — Push-or-PR Cycle Checklist — architectural impact
+
+H3 is a new process section in CONTRIBUTING.md. No ADR required; existing pipeline-policy (The-Council) already documents the merge rule. H3 brings the project-local workflow into alignment.
+
+- **Location:** CONTRIBUTING.md, new `## Release cycle checklist` heading, positioned after `## Version management` (line ~135) and before `## Developer Certificate of Origin` (line ~141).
+- **Mandatory item (authoritative phrasing):** "After Phase 7 approval — push branch, open PR, wait for all CI checks to pass, then merge. Direct push to `main` is blocked by branch protection."
+- **Rationale reference:** v1.3.0 retro Section 4 (Phase 5 ~8h elapsed due to local-commits-lingering gap).
+- **Out of scope:** Does NOT add a new per-PR reviewer check. Spec AC H3-5 explicitly forbids adding to the 17-item maintainer PR checklist.
+
+---
+
+## v1.3.1 Dependency Graph for Phase 4 (@dev commit sequencing)
+
+Authoritative commit order for @dev implementation. Respects spec hard-sequencing constraints, pilot-first rule, CI-red-avoidance, and blast-radius ordering.
+
+### Commit Sequence
+
+```
+1. H1 — CLAUDE.md trim (≤350 words). Verify via `wc -w CLAUDE.md`. CI claude-md-word-count-check passes.
+2. H2 — CONTRIBUTING.md § "Skill authoring — B10 interview pattern" (inserted after § Skill content safety).
+3. H3 — CONTRIBUTING.md § "Release cycle checklist" (inserted after § Version management).
+   [H1+H2+H3 MAY ship as a single commit per spec — "single commit for all 3 hygiene items is acceptable."]
+   [USER REVIEW CHECKPOINT after hygiene commit, optional — user may choose to review before B-items begin.]
+
+4. B1 — `presets/research/.claude/skills/literature-review/SKILL.md` rewrite + corresponding input-session file at
+   `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/literature-review.md` (pipeline state path, NOT product-repo commit).
+   Full 6-Q B10 open session per ADR-017.
+   [USER REVIEW CHECKPOINT — MANDATORY per spec B1 AC: "literature-review is approved before source-analysis authoring begins (pilot-first order, same as v1.3.0)." DO NOT PROCEED TO B2 WITHOUT USER APPROVAL.]
+
+5. B2 — `presets/research/.claude/skills/source-analysis/SKILL.md` rewrite + input-session file. B10 "defaults + clarify" pattern (H2 rule).
+
+6. B3 — `presets/research/.claude/skills/research-synthesis/SKILL.md` rewrite (Research variant) + input-session file. B10 "defaults + clarify" pattern. Pre-commit diff vs. Study variant MUST show Research-specific content (peer-review status, citation network, research-gap section) — edge case E3.
+
+   [USER REVIEW CHECKPOINT after all 3 skills authored — optional; confirms no skill copied Study content.]
+
+7. B4 — `.github/workflows/quality.yml`: update BOTH occurrences of `ENFORCED_PRESETS="study"` → `ENFORCED_PRESETS="study research"` + update CI job comment per ADR-016 amendment. Lands AFTER B1+B2+B3 so CI passes on first run of the widened allowlist (avoids red-CI mid-cycle).
+
+8. B5 — `presets/research/skills-as-prompts.md` regeneration from the 3 new deep SKILL.md sources. Non-Research `skills-as-prompts.md` files untouched.
+
+9. B6 — `curated-skills-registry.md` review: update any Research rows whose `description` field changed during B1/B2/B3. Non-Research rows untouched. Verify `registry-cardinality-check` still passes (≥18 entries).
+
+10. B7 — `VERSION` → `1.3.1`, `CHANGELOG.md` `[1.3.1]` block under `[Unreleased]`. README version reference updated if present. Tag `v1.3.1` + GitHub Release after Phase 7 approval per H3 cycle checklist.
+```
+
+### Sequencing Rationale (by constraint)
+
+| Constraint | How this sequence satisfies it |
+|------------|-------------------------------|
+| Spec: "H-items complete before any B-item work begins" | H1, H2, H3 are steps 1–3 (or a single combined hygiene commit); B1 is step 4. |
+| Spec: `literature-review` approved before `source-analysis` begins | Step 4 pilot checkpoint is mandatory; step 5 blocked on user approval. |
+| Spec: "All 3 Research skills approved before B4 CI expansion" | B4 is step 7, after B1+B2+B3 at steps 4–6. Avoids red-CI: if B4 landed at step 4 before any skill rewrite, `skill-depth-check` would fail on the unmodified stub skills immediately. |
+| Spec: "B5 after all 3 skills approved; B6 after B5" | Steps 8 and 9 in order. |
+| CI-red-avoidance (blast-radius ordering) | B4 (CI allowlist) lands AFTER the 3 skills pass 60-line floor. Zero red-CI window during the cycle. |
+| Hygiene blast-radius (H-items first) | H1 touches CLAUDE.md — wizard entry point. If H1 accidentally broke wizard state-machine logic, catching it at step 1 (before 3+ commits of B-item work) minimizes unwinding cost. |
+| Pilot-first rule (B1 before B2/B3) | Explicit mandatory checkpoint after step 4. Non-negotiable per spec AC. |
+
+### Pre-Commit Gates (@dev self-check before each commit)
+
+- **Before B1 commit:** verify `literature-review/SKILL.md` has all 9 section headers, line count in 80–130, input file exists at `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/literature-review.md` (pipeline path, NOT in product-repo commit — `.gitignore` pattern `cycles/v1.3.*/` covers this per v1.3.0 Phase 4).
+- **Before B3 commit:** run `diff presets/study/.claude/skills/research-synthesis/SKILL.md presets/research/.claude/skills/research-synthesis/SKILL.md`. If >60% of `## Quality criteria` OR `## Anti-patterns` items are identical, STOP and flag to orchestrator (edge case E3).
+- **Before B4 commit:** `grep -c 'ENFORCED_PRESETS="study research"' .github/workflows/quality.yml` must equal 2 (one in enforcement block, one in advisory block).
+
+---
+
+## v1.3.1 Anti-Pattern Scan
+
+Applied per `.claude/skills/architect/A1-architect-framework.md` to v1.3.1 additions (H1, H2, H3, B1–B7 and the ADR-015/ADR-016 amendments + ADR-018).
+
+| # | Anti-Pattern | Applies to v1.3.1? | Notes |
+|---|-------------|--------------------|-------|
+| 1 | God Class/Module | No | CLAUDE.md trim reduces size; does not add responsibilities. CONTRIBUTING.md additions are scoped subsections. Template unchanged. |
+| 2 | Circular Dependencies | No | Same one-directional chain as v1.3.0: template → CI → skill files → skills-as-prompts → registry. v1.3.1 widens the CI allowlist only; no new edges. |
+| 3 | Leaky Abstraction | No | ADR-018 explicitly closes a potential leak: preset isolation is the authoritative boundary; no skill slug "leaks" across presets into shared state. |
+| 4 | Premature Optimization | No | Line-ceiling raise (120 → 130) is reactive (Research skills need qualifier prose), not speculative. |
+| 5 | Over-Engineering | No | Three ADRs are minimal: two amendments + one new. No new CI job, no new file formats, no new tools. H2/H3 are documentation-only; no machine enforcement (correctly — spec explicitly forbids adding per-PR checks). |
+| 6 | Tight Coupling | Watched (carry-forward from v1.3.0 flag #6) | `## Triggers` ↔ `global-instructions.md` coupling unchanged by v1.3.1. Research preset's `global-instructions.md` already ships from v1.1; Research skill `## Triggers` sections must stay consistent. @qa Phase 5 spot-check recommended but not CI-enforced. |
+| 7 | Missing Separation of Concerns | No | H1 (content trim) / H2, H3 (process docs) / B1–B3 (skill content) / B4 (CI) / B5, B6 (generated artifacts) / B7 (release metadata) — seven clean concerns, seven clear ownership boundaries in the commit sequence. |
+| 8 | N+1 Query Pattern | No | No queries. |
+| 9 | Destructive Migration | No | Three Research skill stubs (16-line) are replaced with deep skills. Old stubs remain in git history. No data loss. Study preset's `research-synthesis/SKILL.md` is NOT touched by v1.3.1 (ADR-018 isolation). |
+
+**Coupling carry-forward (#6):** Unchanged from v1.3.0 — acceptable trade-off with @qa Phase 5 spot-check. If Research-preset `global-instructions.md` drifts from the new `literature-review` / `source-analysis` / `research-synthesis` `## Triggers` sections, promote to a CI job in v1.3.2 retrospective.
+
+**Duplication check (research-synthesis dual-file):** Not duplication; documented as ADR-018 preset-isolation non-issue with content-divergence verification at AC B3 + E3 + @qa Phase 5. Zero code/content duplication shipped.
+
+**Speculative abstraction check:** None. Line-ceiling raise is evidence-driven (Research stress-test showed skills land 5–10 lines longer). No new file formats, no new template sections, no new CI primitives.
+
+No blocking anti-patterns detected for v1.3.1.
+
+---
+
+## v1.3.1 Open Issues for Phase 2 (@security)
+
+1. **CLAUDE.md trim — wizard state-machine preservation:** H1 trims 35 words. @security to confirm no wizard branch logic is structurally removed (only wordsmithing). Scan focus: Phase 2–4 state machine section + safety-rule verbatim preservation.
+2. **`ENFORCED_PRESETS="study research"` shell-injection surface:** The string is a hard-coded literal in a CI YAML file. No user input flows into `ENFORCED_PRESETS`. Still, @security to confirm no future-regression path where the variable could be populated from a PR-supplied source (e.g., if someone proposes `${{ github.event.pull_request.title }}`-style injection). Should never happen; confirm defensive posture.
+3. **Research skill `## Triggers` ↔ `global-instructions.md` alignment:** Research preset's `global-instructions.md` was authored in v1.1 against 16-line stubs. Now that the 3 skills will have rich `## Triggers` sections + optional `trigger_examples` YAML, @security to check whether any skill's trigger surface exceeds what `global-instructions.md` rules can match, creating a passive-skill scenario where users don't discover the skill despite its presence. This is an instruction-surface robustness check, not a security vulnerability per se.
+4. **Input-file path containment (carry-forward):** `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/` must remain outside the product repo. `.gitignore` pattern `cycles/v1.3.*/` (shipped v1.3.0 Phase 4) already covers v1.3.1. @security to re-confirm pattern still matches on re-test.
+5. **ADR-018 skill-slug collision policy — enforcement surface:** The policy permits future cross-preset slug reuse. @security to evaluate whether the absence of a uniqueness CI check creates any unexpected attack surface (e.g., a typosquat-adjacent scenario where two presets both offer `/delete-all-files` with different behaviours). Expected finding: non-issue given preset isolation, but worth an explicit Phase 2 pass.

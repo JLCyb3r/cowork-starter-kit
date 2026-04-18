@@ -729,3 +729,351 @@ B9 (README teaser) — already partially live (Milestone + Issue); README edit i
 | v1.3.5 | Business/Admin preset (3 skills) | + `presets/business-admin/**` |
 
 Each point release reuses B1 template unchanged. CI allowlist widens by one preset path. Non-rewritten presets are never gated by `skill-depth-check`.
+
+---
+
+# Product Spec — v1.3.1: Research Preset Depth + Carry-Forward Hygiene
+
+> **Cycle:** v1.3.1
+> **Status:** Phase 0 — Requirements
+> **Date:** 2026-04-18T00:00:00Z
+> **Mode:** revise (incremental — v1.3.0 template + CI architecture carry forward unchanged)
+> **Replaces section:** v1.3.1 appended to v1.3.0 spec
+
+---
+
+## v1.3.0 Retro Carry-Forwards (B8 process — surfaced at Phase 0)
+
+The following items were documented in `docs/retro.md` v1.3.0 Section 8 and have been evaluated for this cycle:
+
+| Item | Source | Priority | Disposition in v1.3.1 |
+|------|--------|----------|----------------------|
+| A3: CLAUDE.md trim to ≤350 words | Phase 5 WARN-1 (3rd consecutive) | MEDIUM (elevated) | **Accept** — H1 resolves |
+| B10 interview default pattern | Retro Section 2 Hardest AC | MEDIUM | **Accept** — H2 documents |
+| Session-freeze resilience | Retro Section 4 (Phase 4 event) | LOW | **Reject (deferred)** — requires The-Council agent change; external blocker |
+| Branch protection push-or-PR step | Retro Section 4 (Phase 5 delay) | LOW | **Accept** — H3 resolves |
+| Token metrics instrumentation | v1.1 carry-forward (5th deferral) | LOW | **Reject (deferred)** — same external blocker as prior cycles |
+
+**H1, H2, and H3 are in scope for v1.3.1 and resolve three carry-forward items above.**
+
+---
+
+## Problem (v1.3.1 increment)
+
+Two problems addressed in parallel:
+
+**1. Carry-forward hygiene (H-items).** Three carry-forwards from v1.3.0 that are mechanical, non-blocking, and independently completable: CLAUDE.md is 35 words over its ≤350 target (3 consecutive cycles of the same WARN); the B10 "propose defaults + clarify" interview pattern that improved v1.3.0 skills 2–3 is undocumented; and local commits after Phase 7 approval have lingered twice because the push-or-PR step is absent from the cycle checklist.
+
+**2. Research preset depth (B-items).** v1.3.0 proved the 9-section template works and that user-in-the-loop authoring produces measurably higher-quality skills. The Research preset is the natural next step: its 3 skills (`literature-review`, `source-analysis`, `research-synthesis`) are still 16-line stubs. The Research variant of `research-synthesis` has a distinct quality bar from the Study variant — peer-review evaluation, citation network analysis, and methodology critique are in scope here but were out of scope for the Study exam-prep variant.
+
+---
+
+## Goals (v1.3.1)
+
+1. Resolve three process carry-forwards (H1–H3) before any B-item work begins.
+2. Rewrite the 3 Research preset skills using the v1.3.0 ADR-015 template.
+3. Expand `skill-depth-check` CI allowlist from `study` to `study research`.
+4. Keep Research `research-synthesis` distinct from Study's version — different purpose, different quality bar.
+5. Update supporting artifacts: `skills-as-prompts.md`, registry entries, CHANGELOG, VERSION.
+
+## Non-Goals (v1.3.1)
+
+- Rewriting skills for Writing, Creative, PM, or Business/Admin presets (v1.3.2–v1.3.5).
+- Modifying the 9-section template structure (carry forward only).
+- Any changes to the v1.2 wizard flow, writing profile, or curated registry beyond B6 scope.
+- Multi-document writing profile (v1.4 candidate).
+- Automated community PR vetting (v1.4 candidate).
+- Token metrics instrumentation (deferred again — 5th deferral, external blocker).
+
+---
+
+## Core Features (v1.3.1)
+
+### H1 — CLAUDE.md Trim (≤350 words)
+
+**Context:** CLAUDE.md is at 385 words. Target ≤350. Hard cap is ≤400 (CI passes). This is the 3rd consecutive cycle in which this finding appears at WARN level. It will not self-resolve.
+
+**Approach:** Mechanical trim of approximately 35 words. Highest-yield section: the Phase 2–4 wizard state machine has verbose conditional prose that can be condensed without behavior change. No wizard logic may be removed — only wordsmithing. CI `claude-md-word-count-check` will confirm pass after trim.
+
+**AC:**
+- [ ] `CLAUDE.md` is ≤350 words after the edit (run `wc -w CLAUDE.md` to verify)
+- [ ] No wizard branch logic (goal discovery, suggestion branch, writing profile questions, fast-track, safety rule, state machine check) is removed or reordered
+- [ ] All 6 `presets/*/project-instructions-starter.txt` files are NOT modified by H1 — scope is CLAUDE.md only
+- [ ] CI `claude-md-word-count-check` passes at ≤350 (not just ≤400 hard cap)
+- [ ] This AC resolves the 3-cycle carry-forward flagged in v1.2 Phase 6 (A3) and v1.3.0 Phase 5 (WARN-1)
+
+### H2 — B10 Interview Pattern Documentation
+
+**Context:** v1.3.0 retro (Section 2 Hardest AC, Retrospective Verdict): "propose defaults + clarify Q6" worked materially better for skills 2+ in a preset than running a full 6-open-question session. `research-synthesis` B10 required one clarifying round vs. `flashcard-generation`'s full 6-Q open session. This pattern is worth codifying.
+
+**Approach:** Document in CONTRIBUTING.md skill-authoring guide. The rule is simple: first skill in a preset = full 6-Q open session (user controls every dimension); subsequent skills in the same preset = orchestrator proposes defaults based on the first skill's established patterns, then user expands any Q they want. Saves user effort without sacrificing quality.
+
+**File:** CONTRIBUTING.md — new subsection under a `## Skill authoring — B10 interview pattern` heading, positioned after the existing skill-content-safety section.
+
+**AC:**
+- [ ] CONTRIBUTING.md contains a new section titled `## Skill authoring — B10 interview pattern` (exact heading)
+- [ ] Section specifies: "First skill in a preset = full 6-Q open session. Skills 2+ in the same preset = orchestrator proposes defaults + user expands any Q they want."
+- [ ] Section references v1.3.0 `research-synthesis` as the concrete example that validated this pattern
+- [ ] Section is positioned after `## Skill content safety` and before `## Running CI checks locally`
+- [ ] PR checklist item in CONTRIBUTING.md is NOT added for this — H2 is skill-authoring guidance, not a per-PR check
+
+### H3 — Push-or-PR Cycle Checklist Step
+
+**Context:** After Phase 7 approval in v1.3.0, local commits lingered because the cycle checklist did not include a push-or-PR step. Phase 5 shows ~8h elapsed due to "push/verification gap." The rule "all work merges via PR" is documented in `docs/pipeline-policy.md` (The-Council) but not in the project's own cycle workflow.
+
+**Approach:** Add a numbered checklist item to CONTRIBUTING.md in the maintainer PR-review checklist (or in a new `## Release cycle checklist` section if no existing cycle checklist exists). The item must state: push the branch, open a PR, wait for CI, then merge — and note that direct push to `main` is blocked by branch protection.
+
+**File:** CONTRIBUTING.md — new section `## Release cycle checklist` positioned after `## Version management`.
+
+**AC:**
+- [ ] CONTRIBUTING.md contains a section titled `## Release cycle checklist` (exact heading)
+- [ ] Section includes as a numbered item: "After Phase 7 approval — push branch, open PR, wait for all CI checks to pass, then merge. Direct push to `main` is blocked by branch protection."
+- [ ] Section references that this is the step that closes the local-commits-lingering gap documented in v1.3.0 retro
+- [ ] Checklist is positioned after `## Version management`
+- [ ] This AC does NOT add a new per-PR maintainer check to the existing 17-item reviewer checklist — it is a cycle-level step, not a per-PR check
+
+### B1 — `literature-review` SKILL.md Rewrite (Pilot)
+
+**Pilot designation:** `literature-review` is the pilot for the Research preset, equivalent to `flashcard-generation` for Study. It gets the full 6-Q B10 input session. User approves before `source-analysis` authoring begins.
+
+**Current state:** 16-line stub — single `## Literature Review Assistant` heading, one paragraph of instructions, three example prompts. No quality criteria, no anti-patterns, no worked example.
+
+**Research-preset-specific scope:** Unlike the Study variant (exam prep context), Research `literature-review` is for academic research and professional research analysis. Instructions must address: thematic grouping over chronological ordering, identification of methodological consensus vs. contested findings, source quality signals (peer-reviewed vs. grey literature), and gap analysis for future research directions.
+
+**AC:**
+- [ ] `presets/research/.claude/skills/literature-review/SKILL.md` contains all 9 required section headers (`## When to use`, `## Triggers`, `## Instructions`, `## Output format`, `## Quality criteria`, `## Anti-patterns`, `## Example`, `## Writing-profile integration`, `## Example prompts`)
+- [ ] `## Instructions` uses numbered steps (not prose paragraph)
+- [ ] `## Example` contains exactly one worked input→output pair (not a hypothetical — a real academic/research example)
+- [ ] `## Quality criteria` contains 3–5 concrete, checkable criteria (e.g., "Themes are named by argument type, not by paper"; "At least one gap identified that no source addresses")
+- [ ] `## Anti-patterns` contains 3–5 items; each one line
+- [ ] `## Writing-profile integration` references `context/writing-profile.md` explicitly
+- [ ] File is 80–130 lines (Research skills may run slightly longer than Study due to academic rigor; ceiling raised from 120 to 130 for this preset)
+- [ ] User-input session file exists at `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/literature-review.md` with the full 6-Q session Q&A
+- [ ] `skill-depth-check` CI passes on the rewritten file (once B4 allowlist update lands)
+- [ ] `literature-review` is approved before `source-analysis` authoring begins (pilot-first order, same as v1.3.0)
+
+### B2 — `source-analysis` SKILL.md Rewrite
+
+**B10 pattern:** defaults + clarify (per H2). Orchestrator proposes defaults based on `literature-review`'s established Research-preset patterns; user expands any Q.
+
+**Current state:** 16-line stub — single `## Source Analysis` heading, one paragraph, three example prompts.
+
+**Research-preset-specific scope:** Peer-review evaluation (venue quality, impact factor awareness), citation network awareness (is this source foundational or derivative?), and methodology critique at a level appropriate for academic research — not just "is this credible?"
+
+**AC:**
+- [ ] `presets/research/.claude/skills/source-analysis/SKILL.md` contains all 9 required section headers
+- [ ] `## Instructions` uses numbered steps
+- [ ] `## Example` contains one worked input→output pair (an academic source analysis, not a generic article)
+- [ ] `## Quality criteria` contains 3–5 checkable criteria
+- [ ] `## Anti-patterns` contains 3–5 items
+- [ ] `## Writing-profile integration` references `context/writing-profile.md` explicitly
+- [ ] File is 80–130 lines
+- [ ] User-input session file exists at `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/source-analysis.md` with B10 defaults + user expansion Q&A
+- [ ] `skill-depth-check` CI passes on the rewritten file
+
+### B3 — `research-synthesis` SKILL.md Rewrite (Research Preset Variant)
+
+**Critical distinction:** The Study preset `research-synthesis` (shipped v1.3.0) auto-selects by source count for exam prep. It uses a matrix format with Zettelkasten-style atomic notes for single-source mode. The Research preset `research-synthesis` is a different skill for a different job: academic researchers and professional analysts synthesizing peer-reviewed literature. It should be more rigorous — peer-review evaluation, citation network analysis, methodology critique, and research-gap identification are in scope here and were not in scope for the Study variant.
+
+**Do NOT copy Study's content.** These are separate files serving different user needs. Duplication of section headers is expected (it's the same template), but contents must reflect the Research-preset context.
+
+**B10 pattern:** defaults + clarify (per H2). Orchestrator proposes defaults based on `literature-review`'s Research-preset patterns; user expands.
+
+**Research-preset-specific scope additions over Study variant:**
+- Peer-review status explicitly noted for each source (peer-reviewed, grey literature, preprint)
+- Citation network awareness: foundational vs. derivative sources distinguished
+- Methodology critique: incompatible study designs flagged; effect-size comparisons across different paradigms noted as unreliable
+- Research-gap analysis as a first-class output section (not an afterthought)
+- Academic citation format (APA/MLA/Chicago) as the default, not GitHub-flavored markdown tables
+
+**AC:**
+- [ ] `presets/research/.claude/skills/research-synthesis/SKILL.md` contains all 9 required section headers
+- [ ] `## Instructions` uses numbered steps
+- [ ] `## Example` contains one worked input→output pair appropriate for academic/professional research (not the cognitive-psychology working-memory example from Study's version)
+- [ ] `## Quality criteria` includes at minimum: peer-review status noted per source, methodology differences surfaced, research gaps identified as a distinct output section
+- [ ] `## Anti-patterns` contains 3–5 items distinct from Study variant's list (Research context: e.g., treating preprints identically to peer-reviewed studies; ignoring citation network; omitting research-gap section)
+- [ ] `## Writing-profile integration` references `context/writing-profile.md` explicitly
+- [ ] File is 80–130 lines
+- [ ] File content is NOT a copy of `presets/study/.claude/skills/research-synthesis/SKILL.md` — a diff between the two files must show Research-specific content (peer-review evaluation, citation network, research-gap section)
+- [ ] User-input session file exists at `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/research-synthesis.md` with B10 defaults + user expansion Q&A
+- [ ] `skill-depth-check` CI passes on the rewritten file
+
+### B4 — CI Allowlist Expansion
+
+**Change:** `.github/workflows/quality.yml` — expand `ENFORCED_PRESETS` from `"study"` to `"study research"` in both the enforcement block and the advisory-notice block.
+
+**AC:**
+- [ ] `ENFORCED_PRESETS` in `skill-depth-check` job reads `"study research"` (not `"study"`)
+- [ ] All 3 Research preset skills pass `skill-depth-check` after the allowlist update
+- [ ] Non-Research presets (writing, creative, project-management, business-admin) still pass CI at 16-line format
+- [ ] Advisory notice block is also updated to `ENFORCED_PRESETS="study research"` (both blocks must match)
+- [ ] CI job comment above `ENFORCED_PRESETS` is updated to reflect v1.3.1 rollout schedule (Research added)
+
+### B5 — `presets/research/skills-as-prompts.md` Regeneration
+
+**AC:**
+- [ ] `presets/research/skills-as-prompts.md` is regenerated from the 3 new deep SKILL.md sources after all 3 are approved
+- [ ] File reflects the new 9-section depth (not the old 16-line stub format)
+- [ ] Other 5 presets' `skills-as-prompts.md` files are unchanged
+
+### B6 — `curated-skills-registry.md` Research Entries Review
+
+**AC:**
+- [ ] All 3 Research skill entries in `curated-skills-registry.md` are reviewed
+- [ ] If frontmatter `description` fields changed during rewrite, registry entries are updated to match
+- [ ] No other registry entries (non-Research) are modified
+- [ ] Registry still passes `registry-cardinality-check` CI (≥18 entries total)
+
+### B7 — VERSION 1.3.1 + CHANGELOG
+
+**AC:**
+- [ ] `VERSION` file updated to `1.3.1`
+- [ ] `CHANGELOG.md` `[1.3.1]` block written under `[Unreleased]`
+- [ ] CHANGELOG block accurately lists all H-items (H1–H3) and B-items (B1–B6) with one-line descriptions
+- [ ] README version badge or version reference updated to 1.3.1 if present
+- [ ] Tag `v1.3.1` + GitHub Release created after Phase 7 approval (via push-or-PR cycle per H3)
+
+---
+
+## Out of Scope (v1.3.1)
+
+- Writing, Creative, PM, or Business/Admin preset skill rewrites (v1.3.2–v1.3.5)
+- Changes to the 9-section skill template structure (ADR-015 is stable)
+- Automated community PR vetting pipeline (v1.4 candidate)
+- Multi-document writing profile (v1.4 candidate)
+- Token metrics instrumentation (5th deferral — external blocker unchanged)
+- `/skill-creator` validation (awaiting Cowork API surface exposure — unchanged)
+- Any changes to wizard flow, writing profile, or skill discovery beyond B6 registry scope
+
+---
+
+## Technical Constraints (v1.3.1)
+
+- **Stack:** Static markdown repo — no runtime, no application code. Unchanged from v1.3.0.
+- **Template:** ADR-015 9-section template is authoritative. @pm specifies section names and count; @architect determines section contents in Phase 1.
+- **CI pattern:** No new tooling. `skill-depth-check` reuses same `awk`/`grep` pattern from v1.3.0. Only the `ENFORCED_PRESETS` variable changes.
+- **Research skill line ceiling:** 80–130 lines (5-line ceiling increase vs. Study's 80–120). Rationale: Research skills need academic-context precision and methodology-critique prose that Study's exam-prep context didn't require.
+- **research-synthesis dual-file constraint:** Two files named `research-synthesis/SKILL.md` exist — one under `presets/study/`, one under `presets/research/`. They share the same template structure but MUST diverge in content. @architect Phase 1 should explicitly confirm whether this dual-naming creates a dependency or coupling concern, or document it as a known non-issue per v1.2 curated-skills-registry design. This is the open ADR question flagged by the user.
+- **H1 scope isolation:** CLAUDE.md trim does NOT cascade to starter files. Only CLAUDE.md is modified.
+- **B10 interview files:** Saved under `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/` — pipeline state only, not committed to product repo. `.gitignore` `cycles/v1.3.*/` pattern already covers this (shipped v1.3.0 Phase 4).
+- **Pilot sequencing (H-items first):** H1, H2, H3 land before any B-item work begins. Single commit for all 3 hygiene items is acceptable.
+- **Pilot sequencing (B-items):** `literature-review` approved before `source-analysis` begins; all 3 skills approved before B4 CI expansion; B5 after all 3 skills approved; B6 after B5.
+- **Model floor:** Claude Sonnet 4.6 or better (unchanged from v1.2).
+
+---
+
+## Open Question for @architect Phase 1
+
+**ADR question — dual research-synthesis files:**
+
+`presets/study/.claude/skills/research-synthesis/SKILL.md` and `presets/research/.claude/skills/research-synthesis/SKILL.md` are two separate files with the same folder+filename under different preset paths. CI operates on each path independently. There is no shared import or dependency between them — they are entirely separate flat files.
+
+**Question:** Does this dual-naming create any dependency or coupling concern worth a new ADR? Or is this a documented non-issue given: (a) the curated-skills-registry.md treats each preset's skills as independent entries, (b) CI scopes to per-preset paths, and (c) the skills serve genuinely different user needs?
+
+**Expected Phase 1 output:** Either a brief ADR confirming "dual-naming is a non-issue — files are independent" OR a new ADR documenting a naming constraint to prevent future confusion. @pm's prior expectation: this is a non-issue, but it warrants a one-sentence documentation in the architecture record.
+
+---
+
+## User Stories (v1.3.1)
+
+- As a researcher using the Research preset, I can run `/literature-review` and get output that explicitly identifies thematic groupings, evidence quality signals, and research gaps — not just a flat summary per paper.
+- As a researcher, I can run `/source-analysis` on a paper and receive an evaluation that includes peer-review status, citation network position (foundational vs. derivative), and methodology critique — not just a credibility yes/no.
+- As a researcher using the Research preset's `/research-synthesis`, I can get a synthesis that flags peer-review status per source, identifies methodology incompatibilities, and surfaces research gaps as a named output section — not the Study-exam-prep variant of the same skill.
+- As a community contributor, I can read CONTRIBUTING.md and find the B10 interview pattern documented so I know how to run an efficient input session for a non-pilot skill.
+- As a maintainer, I can follow the `## Release cycle checklist` in CONTRIBUTING.md to remember to push the branch and open a PR after Phase 7 approval.
+
+---
+
+## Acceptance Criteria (v1.3.1 — summary, full ACs in feature sections above)
+
+- [ ] `CLAUDE.md` ≤350 words; no wizard logic removed; CI `claude-md-word-count-check` passes
+- [ ] CONTRIBUTING.md has `## Skill authoring — B10 interview pattern` section (H2)
+- [ ] CONTRIBUTING.md has `## Release cycle checklist` section with push-or-PR step (H3)
+- [ ] All 3 Research preset skills contain all 9 required section headers
+- [ ] All 3 Research preset skills are 80–130 lines
+- [ ] All 3 Research skills have: numbered `## Instructions`, one worked `## Example`, 3–5 checkable `## Quality criteria`, 3–5 `## Anti-patterns`, explicit `## Writing-profile integration` reference
+- [ ] User-input session files exist for all 3 Research skills under `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/`
+- [ ] `literature-review` approved before `source-analysis` authoring begins (pilot order)
+- [ ] `presets/research/.claude/skills/research-synthesis/SKILL.md` content differs materially from `presets/study/.claude/skills/research-synthesis/SKILL.md` — Research-specific: peer-review status, citation network, research-gap section
+- [ ] `ENFORCED_PRESETS` in `skill-depth-check` CI = `"study research"` (both blocks updated)
+- [ ] All 3 Research skills pass `skill-depth-check` CI
+- [ ] Non-Research presets (writing, creative, pm, business-admin) still pass CI at 16-line format
+- [ ] `presets/research/skills-as-prompts.md` regenerated from 3 new deep skills
+- [ ] Research entries in `curated-skills-registry.md` reviewed; updated if descriptions changed
+- [ ] Registry still passes `registry-cardinality-check` (≥18 entries)
+- [ ] `VERSION` → `1.3.1`, CHANGELOG `[1.3.1]` block written
+- [ ] Tag `v1.3.1` + GitHub Release created (after Phase 7, per H3 cycle checklist)
+
+---
+
+## Edge Cases (v1.3.1)
+
+**E1 — CLAUDE.md trim removes words from safety rule:** Not acceptable. The safety rule verbatim ("Always ask for explicit confirmation before deleting, moving, or overwriting any file or folder.") must survive the trim unchanged. CI `starter-safety-rule-check` does not scan CLAUDE.md, but @qa must verify the rule is still present.
+
+**E2 — User's B10 session for `literature-review` produces conflicting quality criteria between Research and Study context:** Research criteria take precedence in the Research file. Study file is not modified. If the user's input implies a shared quality criterion that would improve both, that's Phase 2 scope for v1.3.2 or later.
+
+**E3 — `research-synthesis` rewrite inadvertently copies Study content:** @dev must run a diff against the Study file before committing. If >60% of `## Quality criteria` or `## Anti-patterns` items are identical, flag to orchestrator before committing.
+
+**E4 — `skill-depth-check` CI allowlist expansion to `"study research"` causes a non-Research skill path to be picked up by the glob:** Glob is `presets/$preset/.claude/skills/**`, where `$preset` iterates `ENFORCED_PRESETS` word-by-word. No wildcard expansion risk. @dev must verify the split-word loop logic in the existing CI job handles the 2-word value correctly.
+
+**E5 — CLAUDE.md trim cuts to 348 words but CI hard-cap check uses ≤400:** The relevant check is `claude-md-word-count-check`. If the CI job only enforces ≤400, the H1 AC still requires ≤350 confirmed by running `wc -w CLAUDE.md` manually. @qa must verify the actual word count in Phase 5, not just CI pass.
+
+---
+
+## Success Metrics (v1.3.1)
+
+- **Primary:** All 3 Research skills pass `skill-depth-check` CI with 0 section-header failures — measurable at Phase 5.
+- **Secondary:** Rework rate ≤10% (v1.3.0 was 0%; maintaining that trend; two risk surfaces: H1 CLAUDE.md trim correctness and B4 CI allowlist two-word split-loop).
+- **Secondary:** H1 CLAUDE.md is confirmed at ≤350 words in Phase 5 (not just ≤400 CI pass).
+- **Secondary:** B10 user-input session completed for all 3 Research skills (no skill committed without a corresponding input file).
+- **Process:** Research `research-synthesis` content is confirmed distinct from Study's version by @qa diff check in Phase 5.
+
+---
+
+## Assumptions (v1.3.1) [confidence]
+
+See `docs/assumptions.md` for full register. No new assumptions required for v1.3.1:
+
+- [ESTIMATED] A-v1.3-4 (CI allowlist sustainability) carries forward unchanged — widening to `"study research"` is the planned next step per the v1.3.0 rollout table.
+- [CONFIRMED] v1.3.0 template and CI pattern work — no new structural risk for Research preset application.
+- [UNTESTED] B10 "propose defaults + clarify" pattern reduces session fatigue for skills 2+ — still observational; H2 documents it but no controlled validation yet.
+
+---
+
+## Dependencies Between v1.3.1 Deliverables
+
+```
+H1, H2, H3 (hygiene — land first, single commit acceptable)
+    ↓
+B1 (literature-review — pilot, full 6-Q B10 session)
+    ↓
+B2 (source-analysis — defaults + clarify B10)
+B3 (research-synthesis — defaults + clarify B10)
+    ↓
+B4 (CI allowlist expansion — after all 3 skills approved)
+    ↓
+B5 (regenerate skills-as-prompts.md)
+    ↓
+B6 (registry review)
+    ↓
+B7 (VERSION + CHANGELOG)
+```
+
+**Hard sequencing constraints:**
+1. H-items complete before any B-item work begins
+2. `literature-review` approved before `source-analysis` authoring begins
+3. All 3 Research skills approved before B4 CI expansion
+4. B5 runs after all 3 skills approved; B6 runs after B5
+
+---
+
+## Rollout Confirmation (Updated Table)
+
+| Release | Scope | CI allowlist |
+|---------|-------|-------------|
+| v1.3.0 | Study preset (3 skills) | `presets/study/**` |
+| **v1.3.1** | **Research preset (3 skills) + hygiene** | **`presets/study research/**`** |
+| v1.3.2 | Writing preset (3 skills) | + `presets/writing/**` |
+| v1.3.3 | Creative preset (3 skills) | + `presets/creative/**` |
+| v1.3.4 | Project Management preset (3 skills) | + `presets/project-management/**` |
+| v1.3.5 | Business/Admin preset (3 skills) | + `presets/business-admin/**` |

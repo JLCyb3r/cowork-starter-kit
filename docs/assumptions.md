@@ -196,3 +196,17 @@ _Added: 2026-04-17T21:00:00Z — v1.3.0 Preset Skills Depth cycle_
 **Risk:** If a preset is renamed or reorganized before its scheduled release, the allowlist entry must be updated manually. Missed update would silently skip enforcement for that preset.
 **Mitigation:** CI job comment documents the rollout schedule and next-preset path explicitly. Each v1.3.x spec revision confirms the path before Phase 4.
 **Validation path:** At v1.3.5, evaluate whether to consolidate to a global glob. If all 6 presets are on the new template format, replace the allowlist with `presets/**` and close the technical debt.
+
+---
+
+## v1.3.1 Assumptions
+
+_Added: 2026-04-18T00:00:00Z — v1.3.1 Research Preset Depth + Carry-Forward Hygiene cycle_
+
+No new assumptions for v1.3.1. Existing assumptions that carry forward and remain active:
+
+- **A-v1.3-2** ([ESTIMATED]) — The 9-section template fits all 18 preset skills. v1.3.1 is the second validation point (Research preset). Template is still provisional until all 6 presets have at least one skill approved; v1.3.1 extends validation from Study to Research. If Research skills reveal structural gaps in the template, @architect Phase 1 may make targeted amendments before skill authoring.
+- **A-v1.3-3** ([UNTESTED]) — Community contributors will accept the deeper template as the submission bar. v1.3.1 does not change this assumption; observable signal will arrive post-launch.
+- **A-v1.3-4** ([ESTIMATED]) — CI allowlist approach is sustainable through v1.3.5. v1.3.1 widens to `"study research"` — this is the planned next step and does not change the risk profile.
+
+**New observational signal (not a formal assumption):** The B10 "propose defaults + clarify" pattern validated in v1.3.0 for skills 2+ is being codified in H2 but remains [UNTESTED] as a controlled comparison. The v1.3.1 `source-analysis` and `research-synthesis` B10 sessions will be the second and third data points. If either session produces materially lower-quality skill output than the pilot, revisit whether the reduced-friction pattern sacrifices too much user input specificity.

@@ -33,8 +33,9 @@ Each entry includes:
 
 | name | description | source_url | vetting_date | tier | goal_tags |
 |------|-------------|------------|--------------|------|-----------|
-| literature-review | Searches and organizes academic literature into a structured review with themes and gaps | builtin | 2026-04-17 | 1 | research |
-| source-analysis | Evaluates a single paper or article for methodology, credibility, and relevance | builtin | 2026-04-17 | 1 | research,study |
+| literature-review | Organize multiple sources into a thematic matrix with cross-source synthesis and gap analysis, stating detected theme and source counts at the top of the output. | builtin | 2026-04-18 | 1 | research |
+| source-analysis | Evaluate a single source across 7 structured fields (source type, authority, methodology, evidence quality, limitations, bias, bottom line) with an explicit citation recommendation. | builtin | 2026-04-18 | 1 | research,study |
+| research-synthesis | Synthesize sources at peer-review rigor using a 7-column matrix (claim, method, evidence, limitations, authority, recency, citation-network) with structured Agreements, Disagreements, Gaps, and Synthesis sections. | builtin | 2026-04-18 | 1 | research |
 | citation-formatter | Formats references and citations in APA, MLA, Chicago, or Harvard style | builtin | 2026-04-17 | 1 | research,study,writing |
 
 ### Writing

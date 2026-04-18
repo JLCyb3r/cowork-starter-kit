@@ -37,6 +37,7 @@ Before merging a new preset PR, verify all 11 items:
 - [ ] **Placeholder authoring rules followed** — see `##Placeholder authoring rules` section below
 - [ ] **B10 skill-input file lives under the pipeline path** — if this PR proposes a new skill, any B10 skill-input file (session notes, Q&A responses) must live under `.claude/projects/<slug>/cycles/…` and NOT under any product repo path (presets/, docs/, templates/)
 - [ ] **Prior retro carry-forwards reviewed** — per `docs/retro-template.md` §Carry-Forward Review; every item from the previous cycle's Section 8 must have an explicit disposition before this PR closes
+- [ ] **Cross-preset slug-divergence check (community PRs)** — if this PR introduces or edits a skill whose `name:` frontmatter slug already exists in another preset (e.g., `research-synthesis` appears in both `study` and `research`), verify that `## Quality criteria` and `## Anti-patterns` content diverge meaningfully across the two files. ADR-018 permits duplicate slugs only when the two SKILL.md files implement genuinely distinct workflows. A reviewer who finds two files with >60% identical `## Instructions` content should block the PR and request a refactor. (Not CI-enforced per ADR-018 §Consequences.)
 
 ---
 
@@ -86,6 +87,60 @@ When writing placeholder text in SKILL.md files (the bracketed `[...]` tokens co
 5. **Example section placeholders must read as contributor-guidance, not Cowork-instructions.** Placeholder text inside `## Example` must clearly signal that the contributor should paste a real input/output pair there — it must not read as an instruction Cowork would follow if left unfilled (e.g., use "Paste a real input/output here" not "Show an example").
 
 These rules are enforced by review, not by CI. The `safety-rule-check` CI job does not parse placeholder content.
+
+---
+
+## B10 Input Session Template
+
+When proposing a new skill, capture user input in a structured B10 session before writing the SKILL.md. This documents the design decisions that the SKILL.md encodes.
+
+### Full 6-Q session (first skill in a preset)
+
+Conduct a full Q&A covering all six questions:
+
+| Q | Topic | Maps to SKILL.md section |
+|---|-------|--------------------------|
+| Q1 | Framework / structure | `## Instructions`, `## When to use`, `## Output format` |
+| Q2 | Anti-patterns (research-backed) | `## Anti-patterns` |
+| Q3 | Worked example | `## Example` |
+| Q4 | Writing voice | `## Writing-profile integration` |
+| Q5 | Triggers (4 modes) | `## Triggers`, frontmatter `trigger_examples:` |
+| Q6 | Output format details | `## Output format` |
+
+Present options for each question. Offer research-backed defaults. Let the user accept all, override selectively, or clarify.
+
+### Defaults + clarify pattern (skills 2+ in a preset)
+
+For skills after the first skill in a preset cycle, use the abbreviated pattern:
+
+1. Present orchestrator-proposed defaults for each Q (one message listing all 6 proposals).
+2. User accepts all or requests clarification on specific items.
+3. Proceed with accepted defaults.
+
+**Why:** The first skill establishes framework precedents (e.g., writing-profile tier rule, output format conventions). Subsequent skills in the same preset should inherit those precedents unless the user signals a specific deviation.
+
+### Worked-example authoring rules (S1 security carry-forward)
+
+The `## Example` section in a SKILL.md is executed as AI context. Apply these three rules to prevent indirect prompt injection:
+
+1. **Cite real, verifiable sources only.** Prefer peer-reviewed, publicly attested works. Preprint acceptable only if the user explicitly vouches for the source. Do not invent author names, titles, or publication details.
+2. **Scan for forbidden imperative tokens.** Before committing any `## Example` section, run: `grep -iE '\b(Ignore|Disregard|Override|Instead of|Always respond|New instruction)\b' <SKILL.md>`. Any match outside a code fence or HTML comment must be paraphrased. Block the commit until resolved.
+3. **User-written expected output.** The expected output in `## Example` must be authored by the user (or the orchestrator proposing a worked example to the user for explicit approval) — it must NOT be copied verbatim from a source paper's own synthesis, abstract, or conclusions. The point is to demonstrate what Cowork should produce, not to reproduce copyrighted content.
+
+These rules apply to both user-pasted (B10 direct input) and orchestrator-proposed (defaults + clarify) worked examples.
+
+---
+
+## After Phase 7 — push and PR checklist
+
+After a pipeline cycle reaches Phase 7 APPROVED, the release branch is ready for merge. Direct push to `main` is blocked by policy. Follow this checklist:
+
+1. **Push the release branch** — `git push origin release/vX.Y.Z` (or the feature branch name). If the branch already exists on origin, confirm you are not force-pushing.
+2. **Open a pull request** — title format: `release: vX.Y.Z — <one-line summary>`. Target: `main`.
+3. **PR description must include:** version bump line, link to relevant pipeline phase summaries, list of all deliverables (B-items and S-items resolved).
+4. **@qa review required** — the PR must be approved by @qa (or a maintainer acting in that role) before merge.
+5. **Squash or merge commit** — do not fast-forward if the release branch has more than one commit; a merge commit preserves branch history.
+6. **After merge:** tag the commit as `vX.Y.Z` on `main` and update `VERSION` if not already done in the release commit.
 
 ---
 
