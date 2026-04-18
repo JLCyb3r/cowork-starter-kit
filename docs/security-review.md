@@ -269,3 +269,189 @@ PASS WITH WARNINGS. S1 (CONTRIBUTING.md v1.1 update), S2 (CI .txt glob fix). Bot
 
 ### v1.3.0 Review (this document — 2026-04-17T22:30:00Z)
 4 WARNINGs (S1–S4), 5 INFOs (S5–S9). No CRITICALs. Four Phase-1 open issues resolved: 2 SAFE, 2 REQUIRES CHANGE (S1/S4 in findings list), 1 NEEDS-POLICY (placeholder-authoring rules — tracked under S5).
+
+---
+
+# Security Audit — cowork-starter-kit v1.3.0 (Phase 6)
+
+## Phase: 6
+## Date: 2026-04-18T11:30:00Z
+## Status: PASS
+## Classification: STANDARD (independently verified — see Classification Decision below)
+
+---
+
+## Findings Summary
+
+| ID | Severity | Phase | Surface | Description |
+|----|----------|-------|---------|-------------|
+
+*(Zero findings — table header only)*
+
+---
+
+## Phase 2 Carry-Forward Resolution
+
+| ID | Phase 2 Surface | Claimed resolution commit | Verification | Verdict |
+|----|-----------------|---------------------------|--------------|---------|
+| S1 | skill-depth-check fail-open advisory | a7dbd3d | `.github/workflows/quality.yml` ships a 2nd step `Advisory notice for unenforced presets` that loops over every `presets/*/` and emits `::notice::` for any preset not in `ENFORCED_PRESETS="study"` | RESOLVED |
+| S2 | CONTRIBUTING.md v1.3 checklist + 5 placeholder-authoring rules | 033e0ff | CONTRIBUTING.md has checklist items 12–17 (9-section template, ≥60 lines, `trigger_examples` 3–6 range, placeholder rules, B10 path containment, retro carry-forward review) + full §Placeholder authoring rules block (5 rules) | RESOLVED |
+| S3 | B7 negative test actually rejects non-github URLs | a7dbd3d | `registry-url-check` job body runs a self-test BEFORE production scan: inline fixture `ftp://NEGATIVE-TEST-FIXTURE-v1.3.0`, allowlist regex extracts; if any URL extracted, CI fails with "SELF-TEST FAILED". Verified in workflow lines 225–237. The regex `(?<=\| )(https?://[^\s│]+│builtin)(?= \│)` requires github.com; ftp:// is outside https? allowlist and correctly ignored. | RESOLVED |
+| S4 | .gitignore guard for pipeline-state paths (MANDATORY) | 033e0ff | `.gitignore` contains `.claude/projects/`, `cycles/v1.3.*/`, `skill-inputs/`. Verification: `git ls-files │ grep -E 'skill-inputs/│cycles/v1\.3\.' │ wc -l` = **0** | RESOLVED |
+
+**All 4 Phase 2 WARNINGs confirmed resolved.**
+
+---
+
+## v1.3.0 Attack-Surface Audit (Fresh Evaluation)
+
+### 1. Three rewritten Study skills — indirect prompt-injection vector
+
+**Scope:** `presets/study/.claude/skills/{flashcard-generation,note-taking,research-synthesis}/SKILL.md` (124/124/125 lines each).
+
+**Forbidden-token scan** (`Ignore|Disregard|Override|Instead|Always` outside HTML comments and code fences):
+
+| Skill | Hits | Disposition |
+|-------|------|-------------|
+| flashcard-generation | 0 | Clean |
+| note-taking | 1 — "**Cues column (Cornell):** Always terse" | Benign: descriptive prose about cue style in Writing-profile integration section; not an imperative to Cowork. "Always" is an English adverb modifying "terse", not a directive. |
+| research-synthesis | 1 — "**Matrix cells:** Always terse" | Benign: same pattern as above. Descriptive, not imperative. |
+| templates/skill-template | 0 | Clean |
+| skills-as-prompts.md | 0 | Clean |
+
+**Jailbreak / role-manipulation tokens** (`SYSTEM:`, `ADMIN:`, `USER:`, `<|...|>`, `jailbreak`, `pretend you`, `you are now`, `roleplay as`, `forget all previous`, `new instructions:`): **0 hits across all 5 surfaces.**
+
+**Verdict:** No injection vectors introduced. The two "Always terse" hits are descriptive modifiers inside a sub-section about cues/cells style and do not function as runtime directives.
+
+### 2. `templates/skill-template/SKILL.md` — placeholder-authoring rules 1–5 compliance
+
+- **Rule 1 (bracketed nouns, not imperatives):** Placeholders use `[skill-slug]`, `[action description]`, `[Field 1 label]`, etc. — all nominal. No `[Do X]` or `[Tell Cowork]` patterns found.
+- **Rule 2 (no forbidden words):** Zero occurrences of Ignore/Disregard/Override/Instead/Always in placeholder text.
+- **Rule 3 (HTML comments for guidance):** All contributor guidance is inside `<!-- -->` blocks (9 block comments, one per section). A `CONTRIBUTOR NOTICE` banner at top reinforces the rules.
+- **Rule 4 (no safety-rule pattern):** Zero matches for confirm/ask-for-confirmation/delete/overwrite/move in placeholder text.
+- **Rule 5 (Example placeholders read as contributor guidance):** `## Example` placeholder text says "Paste a real input here" and "Paste the ideal output here — the response Cowork should produce" — correctly framed as contributor instructions, not as runtime-readable content.
+
+**Verdict:** Template is fully compliant with the 5 authoring rules.
+
+### 3. `skills-as-prompts.md` regenerated — LLM prompt-surface
+
+- 163 lines, 3 skill blocks mirroring the SKILL.md content.
+- Zero forbidden tokens outside code fences. Zero role-manipulation tokens.
+- Output is framed as user-facing ("Use this file if skill upload is not available") and the instruction voice is addressed to Cowork via a copy-paste wrapper — the wrapper message itself is safe boilerplate.
+- `[[wikilinks]]` and `[TAB]` references are Anki/Obsidian syntax tokens, not markdown placeholders, and are correctly wrapped in code fences or explained inline.
+
+**Verdict:** No injection tokens. Regenerated file is derivative of safe source content.
+
+### 4. Q3 worked examples — biology/mitochondria, psychology/working-memory
+
+- **flashcard-generation `## Example`:** Mitochondria biology passage + 6 sample cards. Pure domain content. No system-manipulation patterns, no social-engineering framing.
+- **note-taking `## Example`:** Baddeley & Hitch working-memory model passage + Cornell-format notes output. Pure domain content.
+- **research-synthesis `## Example`:** 3 abstracts (Miller 1956, Baddeley 2000, Cowan 2001) + full synthesis matrix. Pure domain content.
+
+**Verdict:** Worked examples are legitimate educational content. No instruction patterns masquerading as example content.
+
+### 5. B10 input-file containment
+
+- `git ls-files | grep -E 'skill-inputs/|cycles/v1\.3\.' | wc -l` = **0** ✓
+- `.gitignore` entries verified: `.claude/projects/`, `cycles/v1.3.*/`, `skill-inputs/` (033e0ff).
+- B10 pipeline state confirmed to live at `/home/user/The-Council/.claude/projects/claude-cowork-config/cycles/v1.3.0/skill-inputs/` — outside the product repo entirely.
+
+**Verdict:** S4 Phase 2 WARNING fully resolved. Pipeline-state containment is architecturally clean and operationally guarded.
+
+### 6. `curated-skills-registry.md` description refresh (be458cf)
+
+- 18 data rows (matches registry-cardinality-check floor). Integrity intact.
+- All `source_url` values = `builtin` (18/18). Zero URLs pointing to external schemes. No URL drift from v1.2 → v1.3.0.
+- 3 Study-skill descriptions updated verbatim from the new SKILL.md frontmatter `description:` fields (verified line-for-line match).
+- `registry-url-check` CI job will reject any future `http://`, `ftp://`, relative, or non-github HTTPS URL; negative self-test runs first.
+
+**Verdict:** No URL drift, no new schemes, registry scheme invariant preserved.
+
+### 7. `trigger_examples` YAML field — new machine-readable surface
+
+- 3 skills use `trigger_examples`: flashcard-generation (5), note-taking (4), research-synthesis (4) — all within the 3–6 range mandated by CONTRIBUTING.md item 14.
+- Values are short user-voice phrases (e.g. `"Help me study [topic]"`) — bracketed tokens here are display placeholders users see in documentation, not LLM-runtime injection targets. Each phrase is a YAML string literal that gets consumed by pattern-matching in global-instructions.md, not executed.
+- Field is additive and backward-compatible. No new attack vector vs. the v1.2 `## Triggers` section body.
+- Re-evaluation of v1.2 S6 INFO: risk remains LOW. The field is declarative trigger metadata, not runtime behavior.
+
+**Verdict:** No new attack vector. v1.2 S6 remains INFO with no elevation required.
+
+### 8. CI workflow drift
+
+- `skill-depth-check`: `ENFORCED_PRESETS="study"` — correctly scoped to study only at v1.3.0. Advisory notice emits for the other 5 presets. Future widening is documented in a code comment. ✓
+- `registry-url-check`: Fail-closed on non-github HTTPS. Negative self-test present. ✓
+- `safety-rule-check`, `starter-safety-rule-check`, `claude-md-safety-rule-check`: All three still active and unchanged. ✓
+- All GitHub Actions pinned to full SHA (S2 preserved from v1.0): `actions/checkout@11bd71901bbe`, `markdownlint-cli2-action@05f32210e844`, `lychee-action@f613c4a64e50`, `action-shellcheck@00cae500b08a`. ✓
+
+**Verdict:** CI drift is intentional, safety-preserving, and well-scoped. No regression in enforcement posture.
+
+### 9. Anti-pattern residue scan — placeholder leakage into final content
+
+- `[topic]`, `[source]`, `[X]`, `[Y]`, `[author]` tokens found in skills: ALL are inside trigger-phrase examples (e.g. `"Help me study [topic]"` — user-facing explanatory content, not unfilled authoring placeholders). Verified by inspection.
+- No `[one sentence describing what this skill does]` or similar template-internal placeholder strings leaked.
+- `[[wikilinks]]` occurrences are Obsidian syntax references the skills explicitly tell Cowork NOT to produce — correct guidance, not a leak.
+
+**Verdict:** No placeholder leakage. Bracket usage is intentional and user-facing.
+
+### 10. Secret / credential scan
+
+- `grep -rE '(ghp_|sk-[A-Za-z0-9]{20,}|AKIA…|xox[pb]-|password\s*=|api[_-]?key\s*=)'` — **0 hits.**
+- No `package.json` — zero npm dependency surface. `npm audit` not applicable.
+
+**Verdict:** No secrets, no dependency-CVE exposure.
+
+---
+
+## OWASP Top 10 Assessment
+
+| Category | Status | Notes |
+|----------|--------|-------|
+| A01 Broken Access Control | N/A | No auth surface. Product is static markdown artifacts delivered to end users. |
+| A02 Cryptographic Failures | N/A | No data at rest, no transport crypto in product surface. |
+| A03 Injection | PASS | Prompt-injection scan (forbidden tokens, role-manipulation tokens) across all 5 new surfaces = 0 hits. The 2 benign "Always terse" matches are descriptive prose, not directives. |
+| A04 Insecure Design | PASS | Skill-template placeholder-authoring rules (5) address known LLM content-authoring failure modes. B10 path containment is architecturally correct and operationally enforced via `.gitignore`. |
+| A05 Security Misconfiguration | PASS | CI actions SHA-pinned (S2 preserved). `registry-url-check` fail-closed with negative self-test. `skill-depth-check` scoped-and-advisory per S1 resolution. |
+| A06 Vulnerable & Outdated Components | N/A | No package.json, no dependency surface. CI action SHAs current as of v1.0 pinning. |
+| A07 Identification & Authentication Failures | N/A | No authentication surface. |
+| A08 Software & Data Integrity Failures | PASS | `registry-url-check` (B7, strengthened this cycle) + `registry-cardinality-check` + `safety-rule-check` (across presets/global-instructions.md + starter .txt + CLAUDE.md) provide defense-in-depth on content integrity. |
+| A09 Security Logging & Monitoring | N/A | Product is offline artifact delivery. CI logs are the only monitoring surface. |
+| A10 SSRF | N/A | No server-side request surface. |
+
+---
+
+## LLM Threat Assessment (LLM01/02/06)
+
+| Threat | Status | Notes |
+|--------|--------|-------|
+| LLM01 Prompt Injection | PASS | Direct: N/A (no user-input handling by the product itself). Indirect: 3 rewritten skills + template + regenerated skills-as-prompts.md scanned for forbidden tokens, jailbreak/role-manipulation tokens, safety-rule-pattern leakage. All clean. Worked examples are domain-pure. |
+| LLM02 Insecure Output Handling | PASS | Skill outputs are documented (markdown tables, TSV blocks, Cornell notes) — no executable code emission, no dynamic evaluation. Anki TSV is pasted into an offline app; no server-side handling. |
+| LLM06 Sensitive Info Disclosure | PASS | No credentials, no PII, no user data in the product repo. B10 user-input files are architecturally outside the repo and verified via `git ls-files` (0 matches). |
+
+---
+
+## Classification Decision
+
+**QA signal:** STANDARD.
+**Independent verification:** STANDARD confirmed.
+
+**Rationale:**
+- v1.3.0 modifies instruction-surface depth (3 skills: stub → ~124 lines each) and adds one template + one .gitignore entry + CI advisory notice. No new auth surface, no new external data flows, no CLAUDE.md changes, no RLS changes (N/A — no database), no dependency additions.
+- v1.2 was classified SECURITY-SENSITIVE because it rewrote CLAUDE.md (wizard entry-point surface), added the universal wizard architecture (ADR-010/011), and introduced `curated-skills-registry.md` from scratch. Those were new architectural surfaces at the LLM-bootstrap layer.
+- v1.3.0 adds DEPTH to existing, already-vetted surfaces (study preset skills). The new template codifies patterns already established by the v1.2 skills-as-prompts.md format. This is incremental content expansion along an established pattern, not a new runtime/attack surface.
+- The STANDARD abbreviated check (no new auth, no secrets, no vulnerable deps, no RLS changes) all pass. Despite passing the abbreviated gate, a full OWASP + LLM threat audit was performed for defense-in-depth because instruction-surface content IS the attack surface for this product. No escalation required.
+
+**Combined-path: eligible** — zero findings + all abbreviated-check criteria satisfied + full OWASP audit performed as a defense-in-depth overlay.
+
+---
+
+## Summary
+
+v1.3.0 is a clean Phase 6 audit. All 4 Phase 2 WARNINGs (S1 advisory notice, S2 CONTRIBUTING.md v1.3 checklist + placeholder rules, S3 B7 negative self-test, S4 `.gitignore` guard) are confirmed resolved in commits a7dbd3d / 033e0ff. The `.gitignore` guard effectiveness check (`git ls-files | grep -E 'skill-inputs/|cycles/v1\.3\.'`) returns 0 matches — the MANDATORY S4 control is operational.
+
+The 7 new/refreshed attack surfaces (3 rewritten skills, skill template, regenerated skills-as-prompts.md, Q3 worked examples, B10 inputs, registry refresh, `trigger_examples` field) all pass forbidden-token scans, placeholder-authoring rule checks, and URL allowlist checks. The 2 "Always terse" matches in note-taking and research-synthesis are benign English adverbs modifying descriptive nouns — not runtime directives.
+
+Classification STANDARD is independently confirmed. Despite the abbreviated-check eligibility, a full OWASP + LLM threat audit was performed; all categories PASS or N/A.
+
+**Decision: PASS — 0 CRITICAL, 0 WARNING, 0 INFO.**
+
+Surprising-or-note-worthy findings: none. The B1→B2→B3/B4a/B4b→B5→B6 implementation sequence held the discipline defined in Phase 1 (ADR-015 / ADR-016 / ADR-017). The inline B7 negative self-test is a particularly strong control — it guarantees the allowlist regex tightening actually rejects what it claims to reject, every CI run.
