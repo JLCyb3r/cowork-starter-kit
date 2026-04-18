@@ -742,3 +742,82 @@ All five @architect open issues resolved with verdicts. Four Phase-1 watch-items
 
 **Decision: PASS WITH WARNINGS — 0 CRITICAL, 3 WARNING (S1 worked-example injection authoring rules, S2 cross-preset slug-divergence PR item, S3 triggers↔global-instructions alignment), 4 INFO (S4 ENFORCED_PRESETS defensive, S5 CLAUDE.md trim preservation, S6 ADR-018 non-issue, S7 H2/H3 pure-doc). Classification: STANDARD (consistent with v1.3.0).**
 
+---
+
+# Security Audit — cowork-starter-kit v1.3.1 (Phase 6)
+
+## Phase: 6
+## Date: 2026-04-18T20:00:00Z
+## Status: PASS
+
+---
+
+## Findings Summary
+
+| ID | Severity | Phase | Surface | Description |
+|----|----------|-------|---------|-------------|
+| — | — | — | — | No findings. |
+
+**0 CRITICAL. 0 WARNING. 0 INFO.**
+
+---
+
+## Phase 2 Carry-Forward Disposition
+
+All 3 Phase 2 carry-forwards confirmed RESOLVED at Phase 6 audit:
+
+| ID | Phase 2 Severity | Phase 4 Fix | Phase 6 Verdict |
+|----|-----------------|-------------|-----------------|
+| S1 | WARNING (MUST-FIX) | CONTRIBUTING.md lines 83–84 (forbidden-imperative token scan) + lines 127–130 (3 worked-example authoring rules); `## Example` sections in all 3 Research SKILL.md files have clean forbidden-token scans | RESOLVED |
+| S2 | WARNING (SHOULD-FIX) | CONTRIBUTING.md line 40: PR reviewer checklist item 19 — cross-preset slug-divergence check for community PRs | RESOLVED |
+| S3 | WARNING (MUST-FIX) | `presets/research/global-instructions.md` trigger alignment — 9 exact-match mappings; Trigger 1 "direct invocation" is architecturally exempt from proactive-rule coverage requirement | RESOLVED |
+
+---
+
+## Classification
+
+**STANDARD**
+
+Independent classification verification (Phase 6):
+- No new auth surface added
+- No new secrets or credentials
+- No vulnerable dependencies introduced
+- No RLS changes (N/A — static markdown repo)
+- No schema migrations (N/A)
+- CI expansion = defensive string-literal change only
+- ADR-018 codifies existing isolation boundary, not a new boundary
+- Research SKILL.md files contain academic prompting instructions citing peer-reviewed papers — no adversarial content
+
+Phase 5 Classification (STANDARD) is confirmed consistent.
+
+---
+
+## Combined-Path Eligibility
+
+v1.3.1 is eligible for combined-path merge:
+- 0 CRITICAL findings at Phase 6
+- 0 WARNING findings at Phase 6
+- Classification STANDARD (consistent Phase 5 + Phase 6)
+- All Phase 2 carry-forwards resolved
+- No open security watch items requiring Phase 7 re-audit
+
+---
+
+## ADR-018 Verification
+
+The 17% body-line overlap between Study `research-synthesis` and Research `research-synthesis` is a shared-citation artifact. Both skills cite Miller 1956, Baddeley 2000, and Cowan 2001 as canonical working-memory references — these citations appear in the `## Example` sections of both skills because they are the foundational papers for the domain. This is not content drift or isolation violation. The descriptions, `## Instructions`, `## Quality criteria`, and `## Anti-patterns` sections are materially distinct.
+
+ADR-018 isolation holds in practice. No finding.
+
+---
+
+## H1 Heading-Count Note
+
+Phase 2 S5 documented "CLAUDE.md `grep -cE '^(## |### )' CLAUDE.md` must equal 8" as a Phase 4 pre-commit check. The actual count was 7 both before and after the H1 trim (Phase 5 T50). This is a Phase 2 documentation baseline error — the security review incorrectly recorded 8 when the actual heading count was 7. The trim preserved heading count (7 → 7); the safety rule verbatim is intact at CLAUDE.md line 63. No security regression. No finding at Phase 6.
+
+---
+
+## Note: Phase 6 Agent Scope
+
+This Phase 6 section was written by @qa at Phase 7 on behalf of @security. @security's scope_allow was empty (`[]`) for the v1.3.1 cycle, blocking direct writes to product repo docs. The findings above faithfully represent the Phase 6 audit results as recorded in the pipeline.md Phase 6 row and scratchpad Phase 5 summary, and as described in the user-provided Phase 6 mandate to @qa.
+
