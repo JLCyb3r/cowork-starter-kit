@@ -4,6 +4,17 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [1.3.1.1] — 2026-04-18
+
+**Documentation patch.** No functional changes.
+
+**Changed:**
+- README.md version badge corrected 1.2.0 → 1.3.1 (stale since v1.3.0 release)
+- README.md "Next up" teaser updated from shipped v1.3.0 to upcoming v1.3.2 Writing preset depth
+- templates/skill-template/SKILL.md CONTRIBUTOR NOTICE block — removed stale "(arriving in v1.3.0 B2 commit)" future-tense reference; placeholder authoring rules are now live
+
+---
+
 ## [1.3.1] — 2026-04-18
 
 **Research Preset Depth + Carry-Forward Hygiene** — rewrites all 3 Research preset skills to the full 9-section ADR-015 template, expands skill-depth CI enforcement to include the Research preset, and resolves all 3 Phase 2 v1.3.1 security carry-forwards.

@@ -11,7 +11,7 @@ description: [one sentence describing what this skill enables Cowork to do]
 #   - "[a third trigger phrasing — vary the wording]"
 ---
 <!-- CONTRIBUTOR NOTICE: Before editing the placeholder text in this template, read
-     CONTRIBUTING.md §Placeholder authoring rules (arriving in v1.3.0 B2 commit).
+     CONTRIBUTING.md §Placeholder authoring rules.
      The 5 rules govern how placeholders must be written to avoid shipping
      unintended runtime instructions to Cowork. Key: use bracketed nouns, never
      imperatives; never include Ignore/Disregard/Override/Instead/Always;
