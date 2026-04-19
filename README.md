@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.3.1-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.4.0-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -88,9 +88,9 @@ The 6 presets (Study, Research, Writing, PM, Creative, Business/Admin) are accel
 
 ---
 
-## Six goal presets
+## Seven goal presets
 
-You don't pick — you describe your goal in plain language and the wizard picks the right preset (or builds from scratch if nothing fits). These are the 6 scaffolds it can use:
+You don't pick — you describe your goal in plain language and the wizard picks the right preset (or builds from scratch if nothing fits). These are the 7 scaffolds it can use:
 
 | Preset | Best for | What you get |
 |--------|----------|--------------|
@@ -100,6 +100,7 @@ You don't pick — you describe your goal in plain language and the wizard picks
 | **Project Management** | PMs, team leads, ops | Status updates, meeting notes, risk assessment |
 | **Creative** | Designers, storytellers, strategists | Ideation, creative brief, feedback synthesis |
 | **Business/Admin** | Executives, assistants, owners | Email drafting, report summary, action items |
+| **Personal Assistant** | Individuals managing daily life | Daily briefing, follow-up tracker, spend awareness |
 
 **Each preset includes:**
 
@@ -140,7 +141,7 @@ Every preset includes a non-negotiable rule: **Cowork will always ask for your c
 
 ## Next up — v1.3.2 Writing Preset Depth
 
-v1.3.1 shipped Research preset depth — all 3 Research skills (`literature-review`, `source-analysis`, `research-synthesis`) were rewritten to the full 9-section ADR-015 template with worked examples, quality criteria, and writing-profile integration. v1.3.2 applies the same treatment to the Writing preset: `voice-matching`, `editing-pass`, and `outline-generator` will each get the full depth upgrade, bringing the Writing preset up to the same production-grade standard as Study and Research.
+v1.4 shipped the Personal Assistant preset — a 7th preset for daily life management with a Data Locality Rule that keeps financial, calendar, contact, and health data local-only. v1.3.2 applies the full 9-section ADR-015 skill depth upgrade to the Writing preset: `voice-matching`, `editing-pass`, and `outline-generator` will each get worked examples, quality criteria, and writing-profile integration — bringing Writing up to the same production-grade standard as Study and Research.
 
 ---
 
