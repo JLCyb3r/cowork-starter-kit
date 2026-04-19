@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-1.4.0-green.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.3.2-green.svg)](CHANGELOG.md)
 
 ---
 
@@ -139,9 +139,9 @@ Every preset includes a non-negotiable rule: **Cowork will always ask for your c
 
 ---
 
-## Next up — v1.3.2 Writing Preset Depth
+## Next up — v1.3.3 Writing Preset Depth
 
-v1.4 shipped the Personal Assistant preset — a 7th preset for daily life management with a Data Locality Rule that keeps financial, calendar, contact, and health data local-only. v1.3.2 applies the full 9-section ADR-015 skill depth upgrade to the Writing preset: `voice-matching`, `editing-pass`, and `outline-generator` will each get worked examples, quality criteria, and writing-profile integration — bringing Writing up to the same production-grade standard as Study and Research.
+v1.3.2 shipped the Personal Assistant preset — a 7th preset for daily life management with a Data Locality Rule that keeps financial, calendar, contact, and health data local-only. v1.3.3 applies the full 9-section ADR-015 skill depth upgrade to the Writing preset: `voice-matching`, `editing-pass`, and `outline-generator` will each be rewritten with worked examples, quality criteria, writing-profile integration, and anti-pattern guidance — bringing Writing up to the same production-grade standard as Study and Research. Each skill will follow the 80–130 line target, use the ADR-015 9-section template (When to use, Triggers, Instructions, Output format, Quality criteria, Anti-patterns, Example, Writing-profile integration, Example prompts), and include a real worked example. Voice-matching gets a style-capture framework; editing-pass gets a multi-pass editorial checklist; outline-generator gets a structural hierarchy decision tree.
 
 ---
 
