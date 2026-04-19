@@ -1077,3 +1077,334 @@ B7 (VERSION + CHANGELOG)
 | v1.3.3 | Creative preset (3 skills) | + `presets/creative/**` |
 | v1.3.4 | Project Management preset (3 skills) | + `presets/project-management/**` |
 | v1.3.5 | Business/Admin preset (3 skills) | + `presets/business-admin/**` |
+
+---
+
+# Product Spec — v1.4: Personal Assistant Preset
+
+> **Cycle:** v1.4
+> **Status:** Phase 0 — Requirements
+> **Date:** 2026-04-19T00:00:00Z
+> **Mode:** revise (incremental preset addition on stable v1.3.x architecture; no new frameworks)
+> **Appended to:** existing spec.md (cumulative document)
+
+---
+
+## v1.3.1 Carry-Forwards (B8 process — surfaced at Phase 0)
+
+The following items were evaluated from the v1.3.1 retrospective and prior cycle records for disposition in v1.4:
+
+| Item | Source | Priority | Disposition in v1.4 |
+|------|--------|----------|---------------------|
+| CLAUDE.md ≤350 words | RESOLVED v1.3.1 (H1) | CLOSED | Verify not regressed by new `personal-assistant` alias addition. AC: `wc -w CLAUDE.md` ≤350 after alias added. |
+| B10 interview pattern | RESOLVED v1.3.1 (H2) | CLOSED | Apply to 3 new PA skill stub-level ACs: no B10 sessions required at 16-line stub depth. Document explicitly as "stub-level — depth-rewrite is a future cycle." |
+| Phase 2 S5 heading-count baseline "must equal 8" (actual = 7) | @security doc error carried 3 cycles | MUST CORRECT | Explicitly note in v1.4 Phase 2 brief: prior S5 heading-count assertion was a documentation error (actual heading count in global-instructions.md was 7 both pre- and post-edit, benign). Phase 2 must not repeat this doc error. |
+| Trigger 1 direct-invocation exempt from proactive mapping | v1.3.1 Phase 6 observation | FLAG FOR PHASE 1 | Document in ADR-015 amendment when Phase 1 runs (flagged here as v1.4 Phase 1 scope by user directive). |
+| Token metrics instrumentation | 5-cycle deferred | DEFER AGAIN | External blocker (The-Council scope, not cowork). No change. |
+| Registry drift recovery runbook | v1.3.1 incident | DEFER | The-Council meta concern. Out of v1.4 scope. |
+
+---
+
+## Problem (v1.4)
+
+Cowork-starter-kit ships 6 presets (Study, Research, Writing, Creative, Project Management, Business/Admin). All 6 are work-or-study focused. No preset addresses a user's personal life as a primary context — daily scheduling, relationship follow-ups, and basic spending awareness are common personal-life PA jobs that users currently either handle in a generic (non-personalized) Cowork session or in separate fragmented tools.
+
+This creates a gap: a user who wants to use Cowork to manage their morning, track commitments to family and friends, and stay aware of their spending has no preset scaffold. They either adapt the Business/Admin preset (wrong tone, wrong skills, wrong folder structure) or start from scratch with the dynamic wizard and an incomplete skill set.
+
+The gap is validated by 5+ research sources showing daily-briefing rituals, commitment-tracking labor, and spend-awareness as the highest-retention personal AI assistant behaviors. No existing Cowork configuration resource addresses this combination.
+
+**Hard constraint (commercial IP boundary):** This preset must NOT replicate or water-down Pillar OS (the user's separate commercial product with a 9-domain life taxonomy). No 9-pillar structure, no "Atlas notes," no "pillar reviews," no Pillar OS vocabulary. This is a generic, tactical personal assistant preset — not a life operating system.
+
+---
+
+## Goals (v1.4)
+
+1. Add a 7th preset (`personal-assistant`) completing cowork-starter-kit's preset coverage.
+2. Deliver 3 canonical skills as 16-line stubs: `daily-briefing`, `follow-up-tracker`, `spend-awareness`. Depth-rewrite lands in a future cycle (v1.4.1 or later).
+3. Introduce a data-locality rule as a first-class preset security posture: sensitive personal data (financial amounts, calendar events, contact details) stays in local files and is never echoed to external services/APIs.
+4. Integrate the new preset into the wizard (Q1 option 7) and CLAUDE.md alias list.
+5. Expand `curated-skills-registry.md` from 19 to 22 entries.
+6. Keep CLAUDE.md at ≤350 words after alias addition (carry-forward verification).
+
+## Non-Goals (v1.4)
+
+- Any word "Pillar" in user-facing content.
+- 9-domain life taxonomy or Pillar OS vocabulary (Atlas notes, pillar reviews, etc.).
+- Monthly/Quarterly/Annual structured review cadences with frontmatter schemas.
+- Dashboard or Canvas generation.
+- Any Pillar OS branding, positioning, or feature overlap.
+- Depth-rewrite of PA skills (16-line stubs are the v1.4 deliverable; `ENFORCED_PRESETS` is NOT expanded this cycle).
+- Banking connectors or live financial data integrations (finance feature is paste-only, local-first).
+- Investment or financial planning recommendations.
+- Expanding `ENFORCED_PRESETS` in CI (stays `"study research"` — PA skills ship as stubs per ADR-016 rollout posture).
+
+---
+
+## Core Features (v1.4)
+
+### F1 — `presets/personal-assistant/` Directory and Preset Files
+
+**Context:** Mirror the structure of existing presets (e.g., `presets/business-admin/`). Every preset ships: README.md, global-instructions.md, writing-profile.md, folder-structure.md, connector-checklist.md, skills-as-prompts.md, project-instructions-starter.txt, cowork-profile-starter.md, and a `context/` subdirectory. PA preset adds one new file: no other preset has a data-locality rule as a named section in global-instructions.md.
+
+**AC:**
+- [ ] `presets/personal-assistant/README.md` exists and contains a positioning statement: simple, tactical, local-first. One paragraph contrasting with business-admin (work-focused) and making clear this is for daily life management (mornings, follow-ups, spend awareness), NOT a life operating system. Includes a crosslink note that users wanting deeper life management may find a future life-vault resource helpful (does NOT name Pillar OS).
+- [ ] `presets/personal-assistant/global-instructions.md` exists and contains:
+  - 3 proactive trigger rules (same pattern as other presets' global-instructions.md trigger rule for writing profile)
+  - A named `## Data Locality Rule` section with exact content: "Never echo raw financial amounts, full calendar events, or contact details to external services or APIs. Keep all sensitive personal data in local files only."
+  - The canonical safety rule verbatim: "Always ask for explicit confirmation before deleting, moving, or overwriting any file or folder."
+- [ ] `presets/personal-assistant/writing-profile.md` exists with preset-appropriate voice defaults (warm, direct, personal — contrasting with business-admin's formal/authoritative defaults).
+- [ ] `presets/personal-assistant/folder-structure.md` exists and specifies 5 top-level folders: `Calendar/`, `Finances/`, `Tasks/`, `People/`, `Documents/`.
+- [ ] `presets/personal-assistant/connector-checklist.md` exists and lists Google Calendar + Gmail as recommended connectors (NOT required). Includes explicit note: "Finance inputs use paste-only — no banking connector is recommended or supported."
+- [ ] `presets/personal-assistant/context/` directory exists (may be empty or contain `about-me.md` stub per existing preset pattern).
+- [ ] `presets/personal-assistant/project-instructions-starter.txt` exists. Mirrors format from business-admin or writing preset starter file. ≤350 words.
+- [ ] `presets/personal-assistant/cowork-profile-starter.md` exists. Preset-specific starter with personal-context fields (not work-context fields).
+- [ ] `presets/personal-assistant/skills-as-prompts.md` exists and follows the regeneration pattern from other presets (includes all 3 PA skill stubs as prompt entries).
+- [ ] CI `starter-safety-rule-check` passes: the canonical safety rule is present in `presets/personal-assistant/global-instructions.md`.
+- [ ] No file in `presets/personal-assistant/` contains the words "Pillar", "Atlas notes", "pillar review", or any Pillar OS vocabulary.
+
+### F2 — 3 PA Skill Stubs
+
+**Context:** Skills ship as 16-line stubs per ADR-016 rollout posture. This matches how all non-Study, non-Research presets currently ship. Stub format: single skill heading + one paragraph of instructions + 3 example prompts. `ENFORCED_PRESETS` CI variable stays at `"study research"` — stubs are exempt from the 9-section depth check. CI emits `::notice::` for `personal-assistant` at 16-line stub format (normal rollout posture).
+
+**Skill 1: `daily-briefing`**
+
+Purpose: Morning ritual. User provides calendar/task list context; AI asks 3 intention questions; produces a structured day note with priorities, time blocks, and a one-line "why today matters" intention.
+
+**AC (daily-briefing):**
+- [ ] `presets/personal-assistant/.claude/skills/daily-briefing/SKILL.md` exists.
+- [ ] File is 14–20 lines (stub format — not subject to 9-section depth check).
+- [ ] File contains a frontmatter block with at minimum: `name`, `description`, `trigger` fields (or equivalent per existing stub pattern in other presets).
+- [ ] File is listed in `presets/personal-assistant/skills-as-prompts.md`.
+- [ ] Skill is discoverable via WIZARD.md (Q1 Personal Assistant path): when a user selects the Personal Assistant preset in the wizard, `daily-briefing` is among the suggested skills.
+
+**Skill 2: `follow-up-tracker`**
+
+Purpose: Relationship and commitment labor. User pastes context (inbox screenshot, meeting notes, call list); AI produces a triaged follow-up list surfacing missed commitments and pending items.
+
+**AC (follow-up-tracker):**
+- [ ] `presets/personal-assistant/.claude/skills/follow-up-tracker/SKILL.md` exists.
+- [ ] File is 14–20 lines (stub format).
+- [ ] File contains frontmatter with `name`, `description`, `trigger` fields.
+- [ ] File is listed in `presets/personal-assistant/skills-as-prompts.md`.
+- [ ] Skill is discoverable via WIZARD.md (Q1 Personal Assistant path).
+
+**Skill 3: `spend-awareness`**
+
+Purpose: Read-only finance summary. User pastes transactions/statements; AI produces a categorized summary with 1–2 proactive observations (subscription detection, unusual spend flag, or one budget trend). Explicitly: no financial planning, no investment recommendations, no deep budgeting.
+
+**AC (spend-awareness):**
+- [ ] `presets/personal-assistant/.claude/skills/spend-awareness/SKILL.md` exists.
+- [ ] File is 14–20 lines (stub format).
+- [ ] File contains frontmatter with `name`, `description`, `trigger` fields.
+- [ ] File explicitly notes in its instructions or description: "Read-only spend awareness only. No financial planning, investment, or budgeting recommendations."
+- [ ] File is listed in `presets/personal-assistant/skills-as-prompts.md`.
+- [ ] Skill is discoverable via WIZARD.md (Q1 Personal Assistant path).
+
+**Shared stub AC (all 3 skills):**
+- [ ] All 3 skills appear in `presets/personal-assistant/skills-as-prompts.md`.
+- [ ] CI `skill-depth-check` does NOT enforce 9-section depth on `personal-assistant` path (ENFORCED_PRESETS remains `"study research"`).
+- [ ] CI emits a `::notice::` advisory for `personal-assistant` at 16-line stub format — this is expected and documented as normal rollout posture per ADR-016.
+- [ ] No skill file contains the words "Pillar", "Atlas notes", or any Pillar OS vocabulary.
+
+### F3 — Wizard Integration
+
+**Context:** `WIZARD.md` Q1 asks "What's your goal?" and presents a numbered list of presets. Currently 6 options. v1.4 adds `Personal Assistant` as option 7. `CLAUDE.md` alias list currently covers 6 presets; v1.4 adds `personal-assistant` alias.
+
+**AC:**
+- [ ] `WIZARD.md` Q1 option list contains `Personal Assistant` as the 7th option (after the existing 6, maintaining their order).
+- [ ] `WIZARD.md` Personal Assistant path (when user selects option 7 or describes a personal-life context) routes to `presets/personal-assistant/` scaffold and suggests all 3 PA skills.
+- [ ] `CLAUDE.md` preset alias list includes `personal-assistant` as the 7th alias entry.
+- [ ] `CLAUDE.md` word count is ≤350 words after alias addition (run `wc -w CLAUDE.md` to verify — carry-forward verification from H1).
+- [ ] All 6 existing WIZARD.md Q1 options and their preset paths are unchanged.
+- [ ] CI `claude-md-word-count-check` passes (≤400 hard cap — the ≤350 target is verified manually by @qa).
+
+### F4 — Registry Expansion
+
+**Context:** `curated-skills-registry.md` currently has 19 rows after v1.3.1. v1.4 adds 3 new rows for the PA skills. Count goes 19 → 22.
+
+**AC:**
+- [ ] `curated-skills-registry.md` contains exactly 22 skill entries after v1.4 implementation.
+- [ ] 3 new rows added: `daily-briefing`, `follow-up-tracker`, `spend-awareness`.
+- [ ] Each new row has: `preset=personal-assistant`, `source_url=builtin`, description matching the SKILL.md frontmatter `description` field exactly.
+- [ ] All existing 19 rows are unchanged.
+- [ ] CI `registry-cardinality-check` passes (≥18 entries — now verifies ≥22 or remains at ≥18 threshold, whichever is current).
+- [ ] CI `registry-url-check` passes: `builtin` sentinel is the accepted value for all 3 new entries (no external URL validation required).
+
+### F5 — Data-Locality Rule (Security Surface)
+
+**Context:** This is the first time a cowork-starter-kit preset introduces a security posture enforced at the instruction level (via prompt wording in global-instructions.md). Prior presets have the safety rule (confirm before delete) but no data-category-specific locality constraint. The PA preset handles financial and calendar data that must not be sent to external services. This is a new security surface for Phase 2 to assess.
+
+**AC:**
+- [ ] `presets/personal-assistant/global-instructions.md` contains a section titled `## Data Locality Rule` (exact heading).
+- [ ] The section body contains: "Never echo raw financial amounts, full calendar events, or contact details to external services or APIs. Keep all sensitive personal data in local files only."
+- [ ] The data-locality rule appears BEFORE the 3 proactive trigger rules in the file (security posture first, operational rules second).
+- [ ] The rule is implementation-verifiable: @qa can grep for the exact phrase "Never echo raw financial amounts" to confirm presence.
+- [ ] `connector-checklist.md` explicitly states: "Finance inputs use paste-only — no banking connector is recommended or supported." This reinforces the data-locality rule at the user-facing setup level.
+- [ ] Phase 2 brief explicitly flags this as a new security surface requiring @security review: "First instruction-surface security posture in cowork-starter-kit — evaluate whether prompt wording is sufficient to enforce data locality, or whether an ADR is needed."
+
+---
+
+## Out of Scope (v1.4)
+
+- Any word "Pillar" in user-facing content.
+- 9-domain life taxonomy, Pillar OS vocabulary (Atlas notes, pillar reviews, pillar-specific schemas).
+- Monthly/Quarterly/Annual structured review cadences.
+- Dashboard or Canvas generation.
+- Depth-rewrite of the 3 PA skills (16-line stubs are the v1.4 deliverable; `v1.4.1` or later cycle handles depth-rewrite + B10 sessions).
+- Expanding `ENFORCED_PRESETS` CI variable (stays `"study research"` this cycle).
+- Banking connectors or live financial data integrations.
+- Investment, budgeting, or financial planning features.
+- Automated community PR vetting pipeline.
+- Token metrics instrumentation (6th deferral — external blocker unchanged).
+- Registry drift recovery runbook (The-Council meta concern).
+
+---
+
+## Technical Constraints (v1.4)
+
+- **Stack:** Static markdown repo — no runtime, no application code. Unchanged from v1.3.x.
+- **Preset structure:** All new files must mirror existing preset structure (use `presets/business-admin/` as the reference template). @dev must diff against business-admin structure before committing.
+- **Stub format:** 16-line skill stubs follow existing non-enforced preset format (see `presets/creative/.claude/skills/` as reference). Not subject to 9-section depth check.
+- **CLAUDE.md word budget:** Adding one alias takes approximately 3–5 words. CLAUDE.md was trimmed to 350 in v1.3.1 (H1). There is a small buffer. @dev must verify ≤350 after the alias addition. If the addition pushes past 350, trim elsewhere (not from wizard logic or safety rule).
+- **`ENFORCED_PRESETS` unchanged:** `.github/workflows/quality.yml` `ENFORCED_PRESETS` stays `"study research"`. Do NOT add `personal-assistant` this cycle.
+- **CI advisory notice:** The CI `skill-depth-check` advisory notice block should emit `::notice::` for `personal-assistant` stubs. This is normal rollout posture per ADR-016 and must NOT be suppressed or cause a CI failure.
+- **Data-locality rule heading:** The exact heading `## Data Locality Rule` must appear in `global-instructions.md`. @qa greps for this heading in Phase 5.
+- **Safety rule**: The canonical safety rule ("Always ask for explicit confirmation before deleting, moving, or overwriting any file or folder.") must appear verbatim in `presets/personal-assistant/global-instructions.md`. CI `starter-safety-rule-check` enforces this.
+- **IP boundary (hard):** No Pillar OS vocabulary anywhere in the preset. @dev must search for "Pillar", "Atlas notes", "pillar review" before committing.
+- **Model floor:** Claude Sonnet 4.6 or better (unchanged from prior cycles).
+
+---
+
+## Open Questions for @architect Phase 1
+
+1. **Data-locality rule ADR:** The data-locality rule in global-instructions.md is the first "security-posture-by-prompt-wording" instruction in cowork-starter-kit. Does this pattern warrant a new ADR (ADR-019 or similar) documenting the instruction-surface security posture design? Or is it adequately captured as global-instructions.md content with a Phase 2 review? @pm's expectation: a lightweight ADR documenting the pattern is warranted, since this establishes a precedent for future presets handling sensitive data categories.
+
+2. **Skill slug collision check:** `daily-briefing`, `follow-up-tracker`, and `spend-awareness` are all unique across the existing 6 presets. Confirm no ADR-018 (preset isolation) implications — these are new slugs, not duplicates of any existing skill name across all 6 preset folders.
+
+3. **ADR-015 Trigger 1 exempt rule (carry-forward):** The v1.3.1 Phase 6 observation that Trigger 1 direct-invocation is architecturally exempt from the proactive trigger mapping should be folded into an ADR-015 amendment this cycle. Is this a one-line amendment to the existing ADR-015 text, or a new sub-ADR?
+
+---
+
+## User Stories (v1.4)
+
+- As a user managing my personal life in Cowork, I can select "Personal Assistant" in the wizard and receive a pre-configured workspace with `Calendar/`, `Finances/`, `Tasks/`, `People/`, and `Documents/` folders — without having to design a folder structure from scratch.
+- As a user running a daily morning briefing, I can invoke `/daily-briefing` and receive a structured day note with priorities and a one-line intention — without re-explaining my context from scratch each session.
+- As a user tracking relationship commitments, I can paste meeting notes or inbox context to `/follow-up-tracker` and receive a triaged list of what I promised, what others owe me, and what is overdue.
+- As a user wanting basic spend awareness, I can paste my bank statement to `/spend-awareness` and receive a plain-language categorized summary with 1–2 actionable observations — without Cowork sending my financial data anywhere or making investment recommendations.
+- As a user concerned about privacy, I can read the Data Locality Rule in global-instructions.md and confirm that Cowork is configured to keep my financial, calendar, and contact data local.
+- As a community contributor, I can see `daily-briefing`, `follow-up-tracker`, and `spend-awareness` in `curated-skills-registry.md` with `preset=personal-assistant` and `source_url=builtin`.
+
+---
+
+## Acceptance Criteria (v1.4 — summary; full ACs in feature sections above)
+
+- [ ] `presets/personal-assistant/` directory exists with all required files: README.md, global-instructions.md, writing-profile.md, folder-structure.md, connector-checklist.md, skills-as-prompts.md, project-instructions-starter.txt, cowork-profile-starter.md, context/ directory.
+- [ ] `global-instructions.md` contains `## Data Locality Rule` section with exact required text, placed before proactive trigger rules.
+- [ ] `global-instructions.md` contains the canonical safety rule verbatim.
+- [ ] CI `starter-safety-rule-check` passes for `personal-assistant` preset.
+- [ ] All 3 skill stubs exist: `presets/personal-assistant/.claude/skills/daily-briefing/SKILL.md`, `follow-up-tracker/SKILL.md`, `spend-awareness/SKILL.md`.
+- [ ] All 3 stubs are 14–20 lines with frontmatter including `name`, `description`, `trigger`.
+- [ ] `spend-awareness` SKILL.md contains the read-only restriction: "No financial planning, investment, or budgeting recommendations."
+- [ ] `WIZARD.md` Q1 lists `Personal Assistant` as option 7; Personal Assistant path routes to `presets/personal-assistant/` and suggests all 3 PA skills.
+- [ ] `CLAUDE.md` includes `personal-assistant` alias and remains ≤350 words (verified by `wc -w CLAUDE.md`).
+- [ ] CI `claude-md-word-count-check` passes (≤400 hard cap).
+- [ ] `curated-skills-registry.md` has exactly 22 entries; 3 new rows have `preset=personal-assistant`, `source_url=builtin`, descriptions matching SKILL.md frontmatter.
+- [ ] CI `registry-cardinality-check` passes.
+- [ ] `ENFORCED_PRESETS` in `quality.yml` is still `"study research"` (unchanged).
+- [ ] No file in `presets/personal-assistant/` contains "Pillar", "Atlas notes", "pillar review", or Pillar OS vocabulary.
+- [ ] All 6 existing presets' files are unchanged (no regression).
+- [ ] `skills-as-prompts.md` in `presets/personal-assistant/` lists all 3 PA skills.
+- [ ] `VERSION` → `1.4.0`, CHANGELOG `[1.4.0]` block written.
+
+---
+
+## Edge Cases (v1.4)
+
+**E1 — `personal-assistant` alias addition pushes CLAUDE.md over 350 words:** @dev must check word count immediately after adding the alias. If count exceeds 350, trim from the least-critical prose in CLAUDE.md (never from wizard logic, safety rule, or state machine check). Escalate to orchestrator if no safe trim location found — do not silently exceed the target.
+
+**E2 — `spend-awareness` SKILL.md inadvertently implies financial planning or investment scope:** The stub's description must be reviewed against the IP boundary check. Any language implying advice (e.g., "optimize your budget," "recommend savings") must be removed. The stub is read-only awareness only.
+
+**E3 — Wizard Q1 option 7 path conflicts with an existing dynamic wizard flow for a novel goal:** If the wizard already handles "personal assistant" as a novel-goal branch, the new preset option must override or integrate cleanly. @dev must verify no wizard state-machine logic conflict before committing.
+
+**E4 — `curated-skills-registry.md` row count exceeds 22 due to a concurrent edit:** Registry is a flat file; concurrent edits in a multi-phase context could create row-count drift. @dev must count rows in the current file before adding new rows and confirm count is 19 before appending the 3 new PA rows (expected post-v1.3.1 count).
+
+**E5 — CI `skill-depth-check` advisory notice block is missing a case for `personal-assistant`:** If the advisory block only lists `"study research"` presets and does not emit `::notice::` for other paths, the absence of enforcement for PA stubs is silent (expected behavior). @qa must confirm that the CI advisory notice emits correctly for `personal-assistant` — absence of enforcement should produce the notice, not silence.
+
+**E6 — `connector-checklist.md` inadvertently implies a finance connector exists:** The text "Finance inputs use paste-only" must be the ONLY finance-related connector guidance. Any mention of a financial API, Plaid, bank connector, or third-party finance integration must be removed before committing.
+
+---
+
+## Success Metrics (v1.4)
+
+- **Primary:** Personal Assistant preset is fully functional as the wizard's 7th option — a user who selects it in WIZARD.md receives a complete, usable workspace configuration (preset is the deliverable; skill depth is a future cycle concern).
+- **Secondary:** CLAUDE.md ≤350 words confirmed — carry-forward from H1 does not regress.
+- **Secondary:** `curated-skills-registry.md` count = 22 (confirmed by registry-cardinality-check CI + manual count).
+- **Secondary:** Zero Pillar OS vocabulary in any PA preset file (confirmed by @qa grep in Phase 5).
+- **Secondary:** Data-locality rule text is present and implementation-verifiable in `global-instructions.md` (confirmed by `grep "Never echo raw financial amounts" presets/personal-assistant/global-instructions.md`).
+- **Process:** Phase 2 explicitly reviews the data-locality rule as a new security surface. No CRITICAL findings.
+- **Rework rate target:** ≤10% (consistent with v1.3.1's 0% trend; two risk surfaces: CLAUDE.md word count and IP boundary check on spend-awareness).
+
+---
+
+## Assumptions (v1.4) [confidence]
+
+- **A-v1.4-1** [ESTIMATED] — Users want a tactical personal-life PA preset separate from the business-admin work-life PA. Validated signal from 5+ research sources showing daily-briefing, follow-up tracking, and spend-awareness as the highest-retention personal AI assistant behaviors. Market gap for "relationship labor" and "financial what-next" is real and unserved by existing Cowork presets.
+- **A-v1.4-2** [CONFIRMED — user decision 2026-04-19] — A 3-skill stub preset is sufficient for v1.4; deeper skill development (B10 sessions, 9-section rewrites) is deferred to a separate cycle (v1.4.1 or later). This is a deliberate scope boundary, not a risk.
+- **A-v1.4-3** [UNTESTED — to be validated in Phase 2] — The data-locality rule is enforceable via instruction-surface wording in global-instructions.md. Users who read and internalize the rule will not connect Cowork to external financial services for raw data export. Validation: @security Phase 2 assesses whether instruction wording is sufficient, or whether additional tooling/UI surface is needed.
+- **A-v1.4-4** [ESTIMATED] — The 5-folder structure (`Calendar/`, `Finances/`, `Tasks/`, `People/`, `Documents/`) covers the common personal PA use cases without over-prescribing life taxonomy. Users who need a different structure can modify folder-structure.md.
+- **A-v1.4-5** [UNTESTED] — `spend-awareness` can deliver useful one-time observations from user-pasted transactions without needing persistent transaction history or a structured schema. The skill's value is in pattern recognition on a single paste, not longitudinal tracking.
+
+---
+
+## Dependencies Between v1.4 Deliverables
+
+```
+F1 (preset directory + all preset files) — foundational; must land first
+    ↓
+F2 (3 skill stubs) — depend on preset directory existing
+    ↓
+F3 (wizard integration) — depends on preset files existing to reference
+    ↓
+F4 (registry expansion) — depends on SKILL.md frontmatter descriptions being final
+    ↓
+F5 (data-locality rule verification) — AC embedded in F1/global-instructions.md; separate Phase 2 flagging
+    ↓
+VERSION 1.4.0 + CHANGELOG
+```
+
+**Hard sequencing constraints:**
+1. F1 (preset directory + all files) must be committed before F2 (skill stubs can be committed in same or subsequent commit, but directory must exist).
+2. F3 (wizard integration) and F4 (registry) can land in parallel after F1+F2 are complete.
+3. `CLAUDE.md` word count check (F3 AC) must be run AFTER the alias is added — not before.
+4. Registry row count check (F4 AC) must be run against the current file before appending (expected: 19 rows pre-v1.4).
+
+---
+
+## Phase 2 Security Surface Flag
+
+**For @security:** v1.4 introduces one new security surface not present in any prior preset:
+
+**New Surface: Instruction-level data locality constraint**
+
+`presets/personal-assistant/global-instructions.md` contains a `## Data Locality Rule` section instructing Cowork never to echo raw financial amounts, full calendar events, or contact details to external services or APIs. This is the first time a cowork-starter-kit preset attempts to enforce a security posture through prompt wording alone.
+
+**Assessment questions for Phase 2:**
+- Is "Never echo raw financial amounts, full calendar events, or contact details to external services or APIs" sufficient wording to prevent data exfiltration via Cowork connector integrations?
+- Does the connector-checklist.md "paste-only, no banking connector" instruction adequately reinforce the data-locality rule for non-technical users?
+- Should this pattern be documented in an ADR as a named design pattern ("instruction-surface security posture"), or is it adequately described in global-instructions.md?
+- Prior S5 heading-count assertion error: the v1.3.1 Phase 2 S5 finding stated that `global-instructions.md` "must equal 8 headings." This was a documentation error — actual heading count was 7 both before and after the edit (benign). Phase 2 reviewers must not repeat this specific assertion for any new preset files. Use actual counts, not carried-forward expectations.
+
+---
+
+## Rollout Table (Updated)
+
+| Release | Scope | CI allowlist |
+|---------|-------|-------------|
+| v1.3.0 | Study preset (3 skills) | `presets/study/**` |
+| v1.3.1 | Research preset (3 skills) + hygiene | `presets/study research/**` |
+| **v1.4** | **Personal Assistant preset (3 skills — stubs)** | **`"study research"` — unchanged** |
+| v1.3.2 | Writing preset (3 skills) | + `presets/writing/**` |
+| v1.3.3 | Creative preset (3 skills) | + `presets/creative/**` |
+| v1.3.4 | Project Management preset (3 skills) | + `presets/project-management/**` |
+| v1.3.5 | Business/Admin preset (3 skills) | + `presets/business-admin/**` |
+| v1.4.1 | Personal Assistant skill depth-rewrite | + `presets/personal-assistant/**` |

@@ -32,6 +32,8 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-015 (amendment v1.3.1) | Stress-test re-validation on Research preset shapes; 130-line ceiling for Research-preset skills | ACCEPTED |
 | ADR-016 (amendment v1.3.1) | `ENFORCED_PRESETS="study research"`; word-split-loop verification | ACCEPTED |
 | ADR-018 | Preset isolation for skill-slug collisions (research-synthesis dual-file disposition) | ACCEPTED |
+| ADR-019 | Instruction-Surface Security Posture (Data-Locality Rule Pattern) (v1.4) | ACCEPTED |
+| ADR-015 (amendment v1.4) | Trigger 1 direct-invocation exempt from proactive-mapping requirement with global-instructions.md | ACCEPTED |
 
 ---
 
@@ -2065,3 +2067,347 @@ No blocking anti-patterns detected for v1.3.1.
 3. **Research skill `## Triggers` ↔ `global-instructions.md` alignment:** Research preset's `global-instructions.md` was authored in v1.1 against 16-line stubs. Now that the 3 skills will have rich `## Triggers` sections + optional `trigger_examples` YAML, @security to check whether any skill's trigger surface exceeds what `global-instructions.md` rules can match, creating a passive-skill scenario where users don't discover the skill despite its presence. This is an instruction-surface robustness check, not a security vulnerability per se.
 4. **Input-file path containment (carry-forward):** `.claude/projects/claude-cowork-config/cycles/v1.3.1/skill-inputs/` must remain outside the product repo. `.gitignore` pattern `cycles/v1.3.*/` (shipped v1.3.0 Phase 4) already covers v1.3.1. @security to re-confirm pattern still matches on re-test.
 5. **ADR-018 skill-slug collision policy — enforcement surface:** The policy permits future cross-preset slug reuse. @security to evaluate whether the absence of a uniqueness CI check creates any unexpected attack surface (e.g., a typosquat-adjacent scenario where two presets both offer `/delete-all-files` with different behaviours). Expected finding: non-issue given preset isolation, but worth an explicit Phase 2 pass.
+
+---
+
+## ADR-019: Instruction-Surface Security Posture (Data-Locality Rule Pattern) (v1.4)
+
+**Date:** 2026-04-19
+**Status:** ACCEPTED
+
+### Context
+
+v1.4 introduces the Personal Assistant preset, which handles three categories of sensitive personal data: financial amounts (pasted from bank statements), full calendar events (including meeting attendees and locations), and contact details (surfaced by `follow-up-tracker`). Prior presets handled work-domain data with no formal data-category constraints — the only cross-preset security posture was the canonical safety rule (`confirm before delete`).
+
+The PA preset's `global-instructions.md` now introduces a `## Data Locality Rule` section that instructs Cowork never to echo these data categories to external services or APIs. This is the **first time** cowork-starter-kit enforces a security posture through prompt wording alone, with no supporting tooling, schema validation, or runtime guard.
+
+@pm flagged the open question: does this pattern warrant a named ADR, or is it adequately documented as free-form content inside `global-instructions.md`?
+
+### Options Considered
+
+**Option A — Name the pattern as ADR-019 "Instruction-Surface Security Posture"** (RECOMMENDED)
+
+Document that a preset MAY enforce a data-category constraint via a dedicated, exactly-named section in its `global-instructions.md` file. Establish the minimal contract: (a) an exact `## Data Locality Rule` heading, (b) a grep-verifiable phrase, (c) placement BEFORE proactive trigger rules (security-first reading order), (d) reinforcement at the setup-surface layer (`connector-checklist.md`).
+
+- Pros: Creates a named, reusable pattern for future presets handling sensitive data (health, legal, financial-planning, medical-records scenarios). Future authors get a template, not a blank page. The pattern becomes citable in security reviews. Distinguishes data-category constraints from generic safety rules.
+- Cons: Adds one ADR to the index. Risk of over-promising: the pattern is prompt-level only — Cowork's actual adherence depends on model alignment, not enforcement. ADR must state this limitation explicitly.
+
+**Option B — Leave as free-form content in `global-instructions.md`, no ADR**
+
+The spec text is unambiguous; @security can review it in Phase 2 without a named design pattern. Future presets can read PA's `global-instructions.md` as prior art.
+
+- Pros: Zero ADR overhead. Matches minimal-ceremony philosophy for a preset addition.
+- Cons: Pattern is invisible to future authors who don't already know to look at PA. Re-opens the "is this an ADR or content?" question every time a new preset adds a data-category constraint. Loses the contract (heading, grep phrase, placement rules, reinforcement layer) as a first-class artifact.
+
+**Option C — Defer to a post-v1.4 cycle after Phase 2 review confirms the pattern works**
+
+Ship PA with free-form content; if @security Phase 2 review confirms the pattern holds, promote to ADR in a later cycle.
+
+- Pros: Evidence-first — don't codify a pattern before @security has reviewed it in practice.
+- Cons: v1.4 Phase 2 review will naturally ask "is there an ADR for this?" and answer "no, pending" — forcing the question again next cycle. Inversion of normal ADR cadence (architectural decisions precede security review, not follow it). Defers institutional memory.
+
+### Decision
+
+**Option A — Name the pattern as ADR-019.**
+
+This establishes a first-class, reusable pattern for the growing class of sensitive-data presets and gives future authors a contract, not a blank page. The pattern is deliberately lightweight (four elements: heading, grep phrase, placement, reinforcement) and the ADR explicitly documents its limitation (prompt-level, not runtime-enforced).
+
+### Pattern Specification: Instruction-Surface Security Posture
+
+A preset MAY declare a data-category security constraint via the following four-element contract inside its `global-instructions.md`:
+
+| Element | Requirement | Rationale |
+|---------|-------------|-----------|
+| 1. Exact heading | `## Data Locality Rule` (or a future peer heading like `## Data Retention Rule`, `## External Service Rule`). Must be literal — grep-matchable. | @qa Phase 5 can verify presence via a single grep; CI can be extended later without text-normalization. |
+| 2. Grep-verifiable phrase | A fixed-string phrase unique enough to grep for with no false positives (e.g., `"Never echo raw financial amounts"` for PA). | Implementation-verifiable; no regex, no NLP, no text-normalization. |
+| 3. Placement order | The constraint section MUST appear BEFORE the proactive trigger rules section. | Security posture is a precondition for operational behavior. Reading top-down, the model encounters the constraint first; triggers are the "how" beneath the "must not." |
+| 4. Setup-surface reinforcement | The constraint MUST be reinforced at the user-facing setup layer (`connector-checklist.md` for connectors, `project-instructions-starter.txt` for wizard-authored constraints, or an equivalent user-visible surface). | Single-layer instructions depend on model adherence. Two-layer reinforcement (instruction + setup) reduces the chance a user configures a connector that violates the constraint. |
+
+### Scope and Limitation (explicit)
+
+- **What this pattern IS:** A prompt-level security posture enforced through (a) instruction wording the model reads at session start and (b) user-facing setup text that shapes which connectors/integrations the user configures.
+- **What this pattern is NOT:** A runtime-enforced boundary. Cowork's adherence depends on model alignment with the instruction. There is no schema validator, no tool-call firewall, no data-sanitization middleware. A sufficiently adversarial prompt or a different model deployment could bypass it.
+
+> **Scope limitation:** This pattern is appropriate for user-configured personal-use presets where the user and the model share an interest in data locality. It is **NOT appropriate as the sole control for regulated data** (HIPAA PHI, PCI cardholder data, GDPR Art. 9 special-category data). Presets handling regulated categories **require runtime controls documented separately**. Do not apply this pattern to health, financial-services, or legal presets as a substitute for compliance-grade controls.
+
+- **Consequence:** This pattern is appropriate for user-configured personal-use presets where the user and the model share an interest in data locality. It is NOT appropriate as the sole control for regulated data (HIPAA PHI, PCI cardholder data, GDPR Art. 9 special-category data). Presets handling regulated categories require runtime controls documented separately.
+
+### First Application: PA Preset Data-Locality Rule
+
+The v1.4 PA preset is the first application of this pattern. The four elements instantiated:
+
+1. **Heading:** `## Data Locality Rule` (exact, per spec AC F5).
+2. **Grep phrase:** `Never echo raw financial amounts` (exact, per spec AC F5).
+3. **Placement:** Before the three proactive trigger rules in `global-instructions.md` (per spec AC F5).
+4. **Setup-surface reinforcement:** `connector-checklist.md` contains `"Finance inputs use paste-only — no banking connector is recommended or supported."` (per spec AC F1).
+
+### Recommended Wording for `presets/personal-assistant/global-instructions.md` (for @dev verbatim use)
+
+The exact section to paste, placed BEFORE the proactive trigger rules:
+
+```markdown
+## Data Locality Rule
+
+Never echo raw financial amounts, full calendar events, or contact details to external services or APIs. Keep all sensitive personal data in local files only.
+
+If the user asks for analysis that would require sending sensitive data to an external service (for example, "run my transactions through an online categorizer"), decline and offer a local-only alternative instead. If a summary must be shared externally (e.g., a meeting agenda), redact amounts, full event details, and contact identifiers before producing the shareable version.
+```
+
+**Sentence-by-sentence rationale:**
+
+- Sentence 1 (the spec-mandated phrase) — the grep-verifiable anchor. @qa Phase 5 greps for `Never echo raw financial amounts`; @security Phase 2 verifies it addresses the three data categories in the threat model.
+- Sentence 2 (the locality-only directive) — establishes "local files only" as the affirmative default, not just a negation.
+- Sentence 3 (the decline-and-redirect rule) — makes the constraint *operationally enforceable* by the model. Without this, a user request "summarize my spend for online budgeting" creates ambiguity; with this, the model has a named protocol (decline + local alternative). This is the enforceability-via-instruction-semantics mechanism.
+- Sentence 4 (the redaction rule) — covers the legitimate case where the user genuinely wants to share a derived artifact (meeting agenda, not meeting details; spending summary, not amounts). Prevents the rule from being silently ignored as "obviously wrong in this case."
+
+All four sentences together satisfy the three verification criteria from the open question: enforceable (the model has a named decline/redact protocol, not just a prohibition), testable by @qa (the exact phrase `Never echo raw financial amounts` is grep-able), verifiable by @security (the three data categories are named; the two escape valves — decline and redact — cover the threat model's realistic exception cases).
+
+### Consequences
+
+- New ADR in the index: ADR-019.
+- `presets/personal-assistant/global-instructions.md` uses the wording specified above verbatim in the `## Data Locality Rule` section (per spec AC F5 + this ADR's recommendation).
+- @security Phase 2 v1.4 reviews the pattern as a first-class design artifact, not as free-form content.
+- Future presets handling data-category constraints (e.g., a future health preset with `## Health Data Locality Rule`) inherit the four-element contract from this ADR.
+- CONTRIBUTING.md does NOT require a change for v1.4 — the pattern is at the preset-authoring level, not the community-skill level. If a community contributor proposes a third-party preset with a new data-category constraint, CONTRIBUTING.md can gain a one-paragraph pointer in a later cycle.
+- No CI change required in v1.4. A future cycle MAY add a `data-locality-rule-check` CI job that greps for the canonical phrase in any preset matching a to-be-defined allowlist, but this is out of scope for v1.4 (single-application, no drift risk yet).
+- **S4 scope note (v1.4):** The redaction escape-valve (sentence 3 of the Data Locality Rule — "If a summary must be shared externally... redact amounts, full event details, and contact identifiers") is scoped to the Personal Assistant preset in v1.4. When ADR-019 opens to community preset authors, revisit whether this clause needs tightening to prevent adversarial framing abuse (e.g., a malicious community preset author crafting a legitimate-sounding external-summary scenario to extract data).
+
+---
+
+## ADR-015 Amendment (v1.4): Trigger 1 Direct-Invocation Exempt from Proactive Mapping
+
+**Date:** 2026-04-19
+**Status:** ACCEPTED (amendment — ADR-015 template body unchanged)
+**Amends:** ADR-015 (`## Triggers` section semantics; coupling with `global-instructions.md` proactive rules)
+**Source:** v1.3.1 Phase 6 observation (security-review.md — the 9-exact-match Triggers↔global-instructions mapping naturally excludes the direct-invocation bullet)
+
+### Context
+
+During v1.3.1 Phase 6 audit, @security observed that the first bullet in every skill's `## Triggers` section is a *direct-invocation trigger* — a literal user phrase like `"User says 'literature review'"` or `"User asks 'evaluate this paper'"`. This bullet does not require (and must not require) a corresponding rule in `global-instructions.md`, because direct invocation is universal: any user who explicitly names a skill invokes it, regardless of whether the preset has a proactive rule.
+
+The v1.3.1 Phase 6 report treated this as an implicit exemption and documented the mapping as 9 exact matches (3 skills × 3 proactive triggers), deliberately excluding the direct-invocation triggers from the match count. This exemption was never codified in ADR-015. @pm flagged it for a v1.4 amendment to prevent future cycles from re-opening the question ("do we need a global-instructions.md rule for `User says 'skill-name'`?").
+
+### Amendment
+
+Add the following clarification to ADR-015's `## Triggers` section semantics (row 2 of the Template Specification table):
+
+**ADR-015 row 2 — revised clarification (additive — existing guidance unchanged):**
+
+> Bullet list of signal phrases/situations that should auto-invoke. Must be consistent with the preset's `global-instructions.md` proactive rules — **with one structural exemption: the first bullet (Trigger 1) MAY be a direct-invocation phrase (e.g., `User says 'literature-review'`) and is exempt from the consistency requirement with `global-instructions.md` proactive rules. Direct invocation is universal across all skills and does not require, and must not require, a matching proactive rule. The consistency requirement applies to Trigger 2 through Trigger N (the situational/contextual triggers).**
+
+### Scope of Exemption
+
+- **Exempt:** Triggers whose bullet text begins with `User says '<skill-name>'`, `User asks for '<skill-name>'`, `User invokes /<skill-name>`, or any direct-naming variant. These are architectural primitives of the skill-invocation model.
+- **NOT exempt:** Triggers whose text describes a situation, pattern, or phrase that should cause *proactive* (unsolicited) skill invocation. Example: `User shares ≥3 sources with a topic` — this must appear in `global-instructions.md` as a proactive rule.
+- **Boundary test:** A trigger is exempt if and only if it requires the user to have already committed to invoking the skill. A trigger that requires the model to *infer* skill relevance from context is NOT exempt.
+
+### Consequences
+
+- ADR-015 row 2 clarification is the operative specification; @qa Phase 5 mapping check counts only Trigger 2…N bullets when verifying consistency with `global-instructions.md`.
+- v1.3.1 Phase 6's "9 exact matches" evidence is now consistent with ADR-015 (previously an implicit exemption; now explicit).
+- Future cycles' @security Phase 2 trigger-surface review must apply this exemption when assessing `global-instructions.md` ↔ `## Triggers` alignment — the direct-invocation bullet is NOT a passive-skill risk.
+- Future PA skill depth-rewrite (v1.4.1+) inherits this exemption: each of `daily-briefing`, `follow-up-tracker`, `spend-awareness` will carry a Trigger 1 like `User says 'daily briefing'` that does NOT require a PA `global-instructions.md` proactive rule. This clarifies scope of the future depth-rewrite without needing a further amendment.
+- No CI change. The exemption is a reviewer-side rule, not a machine-enforced constraint.
+
+---
+
+## v1.4 Supporting Architecture
+
+### Slug Uniqueness Check (spec Q2 — no ADR-018 amendment required)
+
+All three v1.4 PA skill slugs were grep-checked against every existing SKILL.md across the 6 existing presets. Result:
+
+| Proposed slug | Existing presets scanned | Collision? | Disposition |
+|---------------|--------------------------|------------|-------------|
+| `daily-briefing` | study, research, writing, creative, project-management, business-admin | None | New slug; no ADR-018 policy invocation required |
+| `follow-up-tracker` | (same 6) | None | New slug; no ADR-018 policy invocation required |
+| `spend-awareness` | (same 6) | None | New slug; no ADR-018 policy invocation required |
+
+Existing slugs for reference (18 total across 6 presets): `literature-review`, `source-analysis`, `research-synthesis` (research), `note-taking`, `flashcard-generation`, `research-synthesis` (study — ADR-018-permitted dual-file), `action-items`, `doc-summary`, `email-drafting` (business-admin), `status-update`, `risk-assessment`, `meeting-notes` (project-management), `creative-brief`, `feedback-synthesizer`, `ideation-partner` (creative), `editing-pass`, `outline-generator`, `voice-matching` (writing).
+
+**Verdict:** Zero slug collisions. ADR-018's dual-file preset-isolation policy is NOT invoked for v1.4. Registry will land cleanly with 3 new unique slugs (19 → 22 rows) — no dual-slug rows, no cardinality anomalies.
+
+### Stress-Test — 9-Section Template Fit for the 3 PA Skills (forward-look for v1.4.1 depth-rewrite)
+
+Per v1.3.0 / v1.3.1 precedent, the 9-section template (ADR-015) is stress-tested against any new skill shapes before they enter the `ENFORCED_PRESETS` allowlist. v1.4 ships the 3 PA skills as 16-line stubs (NOT subject to 9-section enforcement), but a future cycle (v1.4.1 or later) will depth-rewrite them — at that point, they must fit the template. This section performs the forward-look stress test now so v1.4.1 does not re-discover a mismatch.
+
+#### Skill 1 (full fit analysis) — `daily-briefing`
+
+Output shape: ritual / conversational structured-day-note. Exercises *conversational intention-elicitation output* — distinct from prior stress-test shapes (literature-review multi-source, voice-matching voice-overlay, status-update fixed-schema).
+
+| # | Section | Fits? | Note |
+|---|---------|-------|------|
+| 1 | When to use | Yes | "At the start of the user's day, when they want a structured intention-setting ritual with priorities and time-blocks. Edge case: when user has no calendar/tasks available, skill prompts for verbal context instead of declining." 3–5 lines. |
+| 2 | Triggers | Yes | Trigger 1 (direct-invocation, exempt per ADR-015 v1.4 amendment): `User says 'daily briefing'`. Trigger 2–N (proactive, must match PA `global-instructions.md`): `First session message of the day (before 11am local)`; `User greets with 'good morning' + mentions a meeting or deadline`; `User asks 'what should I focus on today'`. 4 bullets — within 4–8. |
+| 3 | Instructions | Yes | 5–7 numbered steps: (1) read today's calendar/tasks from local context; (2) ask 3 intention questions (energy, priority-one, one-thing-to-protect); (3) draft priority-ordered structure; (4) add time blocks; (5) write one-line "why today matters" intention; (6) present for user confirmation. Within 5–10. |
+| 4 | Output format | Yes | Schema: `(1) Intention — one line; (2) Priorities — 3 bullets, ranked; (3) Time blocks — table with time range + activity + priority-link; (4) Protect — one item to defend against interruption.` Within 4–10 lines. Fixed schema fits `## Output format` cleanly. |
+| 5 | Quality criteria | Yes | "Intention is one line, not a paragraph"; "Priorities are ≤3 (not a task dump)"; "Every time block links to a priority or Protect item"; "No moralizing / no productivity advice beyond user-named priorities." 4 checkable — within 3–5. |
+| 6 | Anti-patterns | Yes | "Generating a 10-item priority list (violates ≤3 focus)"; "Adding unsolicited productivity advice"; "Proposing time blocks without asking about user energy"; "Skipping the one-line intention (reduces skill to a to-do list)." 4 items — within 3–5. |
+| 7 | Example | Yes | ONE worked example: input = 4-event calendar + 6-task list + user's answer to 3 intention questions; output = 4-section briefing. Realistic personal-life scenario, not hypothetical. Estimated 20–30 lines — within 15–40. |
+| 8 | Writing-profile integration | Yes | 1–3 sentences: "Daily briefings are typically <200 words — writing-profile applies selectively for the intention line (the user's voice is most present here). Priorities and time-blocks remain terse and schematic regardless of voice profile." |
+| 9 | Example prompts | Yes | 3 bullets. "brief me on my day"; "what should I focus on this morning"; "help me set an intention for today." |
+
+**Verdict — `daily-briefing`: VALIDATED.** Template accommodates the ritual/conversational output shape without contortion. The `## Output format` section cleanly absorbs the 4-element briefing schema. The 3 intention-elicitation questions map to an `## Instructions` step, not a new template section. No template revision required.
+
+#### Skill 2 — `follow-up-tracker`
+
+Output shape: triaged commitment list. Exercises *triaged-list output with implicit priority* — different from `daily-briefing`'s ritual shape.
+
+| Section | Fit verdict | Key note |
+|---------|-------------|----------|
+| When to use | Fits | User needs to surface pending commitments from inbox/meeting notes. Edge case: when source material is ambiguous (no clear owner), skill flags ambiguity rather than guessing. |
+| Triggers | Fits | Trigger 1 (exempt): `User says 'follow-up tracker'`. Trigger 2–N: `User pastes inbox/email thread screenshot or meeting notes`; `User mentions 'what did I promise' / 'who owes me what'`; `User asks about overdue commitments`. |
+| Instructions | Fits | 6–8 steps: parse source → extract commitment statements → classify (I owe / they owe / mutual) → classify urgency (overdue / due-soon / open) → flag ambiguity → produce triaged list → offer next-action per item. Within 5–10. |
+| Output format | Fits (strong) | Fixed schema: `(1) Overdue — I owe; (2) Overdue — they owe; (3) Due soon; (4) Ambiguous / needs clarification.` Template's `## Output format` absorbs the triage table cleanly. |
+| Quality criteria | Fits | "Every item has an owner (me / them / ambiguous)"; "Every item has a source-citation (which email / which meeting)"; "Ambiguous items are separately listed, not silently guessed"; "No invented commitments that aren't in source material." |
+| Anti-patterns | Fits | "Inventing commitments not in source"; "Silently resolving ambiguous ownership"; "Omitting source citations"; "Merging 'I owe' and 'they owe' into a generic list (loses the relational labor signal)." |
+| Example | Fits | ONE worked example: input = 4-thread inbox excerpt + 1 meeting-notes block; output = 4-section triaged list with source citations. |
+| Writing-profile integration | Fits | Triaged lists are terse schematic output; writing-profile applies only to the "next-action" narrative clauses (if any). Mostly neutral-voice output. |
+| Example prompts | Fits | "what did I promise last week"; "who's waiting on me"; "follow-up check from my inbox." |
+
+**Verdict — `follow-up-tracker`: VALIDATED.** No template section is a stretch. The fixed-schema triage aligns with `## Output format` the same way `status-update` did in v1.3.0. Source-citation requirement is well-expressed as a `## Quality criteria` bullet, not a new template section.
+
+#### Skill 3 — `spend-awareness`
+
+Output shape: categorized summary + 1–2 proactive observations. Exercises *summary-with-bounded-observation-emission* — first skill to explicitly cap observations, testing whether `## Quality criteria` can express numeric bounds on output.
+
+| Section | Fit verdict | Key note |
+|---------|-------------|----------|
+| When to use | Fits | User wants plain-language awareness of recent spend, no advice. Edge case: when user's paste is too small for pattern detection (<10 transactions), skill offers categorical summary only and states that observation extraction requires more data. |
+| Triggers | Fits | Trigger 1 (exempt): `User says 'spend awareness'`. Trigger 2–N: `User pastes transaction list or bank statement`; `User asks 'where did my money go'` / `'what did I spend on'`; `User mentions wanting to notice patterns in spending`. |
+| Instructions | Fits | 6–8 steps: receive pasted transactions → categorize (essentials / discretionary / subscriptions / other) → total per category → compute % of total → detect 1–2 patterns (subscription duplication / unusual spike / category shift) → produce summary → STOP (no planning, no optimization, no investment recs). Within 5–10. |
+| Output format | Fits (strong) | Schema: `(1) Total — one line; (2) Category table — 4 rows with $ and %; (3) Observations — exactly 1–2 bullets, no more.` Fixed schema absorbed by `## Output format`. Observation cap is a structural constraint, not just a guideline. |
+| Quality criteria | Fits (primary fit for numeric bounds) | "Category table has exactly the 4 canonical categories"; "Observations bullet count is 1 or 2 (never 0, never ≥3)"; "Observations are descriptive patterns, not prescriptive advice"; "No investment, savings, or budgeting recommendations appear anywhere in output." 4 checkable — within 3–5. Observation-count bound is enforceable as a grep-able yes/no. |
+| Anti-patterns | Fits (must carry the IP-boundary anti-pattern explicitly) | "Emitting ≥3 observations (violates cap)"; "Suggesting a savings target or budget cut (violates read-only scope)"; "Recommending an investment / fund / account (violates scope)"; "Moralizing about spending categories"; "Silently forecasting future spend (violates read-only, requires longitudinal data user didn't paste)." 5 items — at cap, intentional. |
+| Example | Fits | ONE worked example: input = 20-transaction paste across 2 weeks; output = total + 4-row category table + exactly 2 observations (e.g., `"3 streaming subscriptions detected — likely duplicate"`, `"Dining category 40% above prior period"`). Real-looking scenario, not hypothetical. |
+| Writing-profile integration | Fits | Spend summaries are typically <200 words — writing-profile applies to the 1–2 observation bullets (where voice most shows). Category table remains neutral-voice regardless of profile. |
+| Example prompts | Fits | "take a look at my spending"; "where did my money go this month"; "spot anything unusual in these transactions." |
+
+**Verdict — `spend-awareness`: VALIDATED.** Template accommodates the bounded-observation output shape. The 1–2 observation cap is structurally expressible as both an `## Output format` schema element AND a `## Quality criteria` checkable bullet. The read-only / no-advice / no-investment restrictions are naturally expressed as `## Anti-patterns` bullets — the template's existing section absorbs them without requiring a new "scope limits" section. This is the most interesting of the three skills architecturally, because the numeric observation bound tests the template's expressiveness — and passes.
+
+#### Stress-Test Overall Result
+
+**All 3 PA skills: VALIDATED.** The 9-section template fits three new output shapes (ritual/conversational, triaged-list, categorized-summary-with-bounded-observations) without requiring section additions, removals, or order changes. No revisions to ADR-015's template specification are required before the v1.4.1 (or later) PA depth-rewrite cycle. When the depth-rewrite cycle begins, @architect can proceed directly to B1/B2/B3 authoring without re-running stress-test.
+
+Forward-look consequence: the v1.4.1 cycle MAY raise the per-skill target-line range for PA (currently 80–120; Research got 80–130 in v1.3.1). `spend-awareness` in particular is likely to land near 120 due to the IP-boundary anti-patterns (5 bullets instead of 3). This is a v1.4.1-cycle judgment call — NOT decided here.
+
+### Dependency Graph for @dev Phase 4 (v1.4)
+
+Commit sequence for v1.4 implementation. Each arrow is a hard sequencing constraint; parallelizable work is grouped under a single step.
+
+```
+STEP 1 — F1: preset directory scaffold (foundational)
+  Commit contents:
+    - presets/personal-assistant/ directory created
+    - README.md (positioning: simple, tactical, local-first; no Pillar vocabulary)
+    - global-instructions.md (with ## Data Locality Rule BEFORE proactive triggers;
+                              verbatim safety rule; 3 proactive trigger rules)
+    - writing-profile.md (warm/direct/personal voice defaults)
+    - folder-structure.md (Calendar/ Finances/ Tasks/ People/ Documents/)
+    - connector-checklist.md (Google Calendar + Gmail recommended;
+                              "Finance inputs use paste-only — no banking connector")
+    - context/ directory (with about-me.md stub per existing preset pattern)
+    - project-instructions-starter.txt (≤350 words; PA-specific wizard-author voice)
+    - cowork-profile-starter.md (personal-context fields, not work-context)
+    - skills-as-prompts.md (placeholder initially; populated in STEP 2)
+
+  Pre-commit verifications (@dev runs):
+    - grep -rn "Pillar" presets/personal-assistant/        → empty
+    - grep -rn "Atlas notes" presets/personal-assistant/   → empty
+    - grep -rn "pillar review" presets/personal-assistant/ → empty
+    - grep -n "## Data Locality Rule" presets/personal-assistant/global-instructions.md    → 1 match
+    - grep -n "Never echo raw financial amounts" presets/personal-assistant/global-instructions.md → 1 match
+    - grep -n "Always ask for explicit confirmation before deleting" presets/personal-assistant/global-instructions.md → 1 match
+    - ## Data Locality Rule line-number < proactive-triggers-section line-number
+         ↓
+STEP 2 — F2: 3 stub skills (in the directory created in STEP 1)
+  Commit contents:
+    - presets/personal-assistant/.claude/skills/daily-briefing/SKILL.md        (14–20 lines, frontmatter: name, description, trigger_examples)
+    - presets/personal-assistant/.claude/skills/follow-up-tracker/SKILL.md     (14–20 lines, frontmatter)
+    - presets/personal-assistant/.claude/skills/spend-awareness/SKILL.md       (14–20 lines, frontmatter;
+                                                                                MUST contain: "No financial planning, investment, or budgeting recommendations.")
+    - presets/personal-assistant/skills-as-prompts.md (now populated with all 3 skills)
+
+  Pre-commit verifications (@dev runs):
+    - wc -l on each SKILL.md is 14–20
+    - grep -l "^name:" on each SKILL.md returns the file
+    - grep "No financial planning" presets/personal-assistant/.claude/skills/spend-awareness/SKILL.md → 1 match
+    - grep -rn "Pillar" presets/personal-assistant/.claude/skills/ → empty
+         ↓
+STEP 3 — F3: wizard + CLAUDE.md alias (depends on STEP 1+2 files existing to reference)
+  Commit contents:
+    - WIZARD.md: add "Personal Assistant" as 7th Q1 option; route Q1=7 → presets/personal-assistant/; suggest 3 PA skills
+    - CLAUDE.md: add personal-assistant alias (7th in alias list)
+    - Verify all 6 existing WIZARD.md options are unchanged (diff check)
+
+  Pre-commit verifications (@dev runs):
+    - wc -w CLAUDE.md ≤ 350 (carry-forward verification; if >350, trim from least-critical prose per spec E1 — NEVER from wizard state-machine, safety rule, or alias list)
+    - diff of WIZARD.md Q1 options 1–6 against prior version: no changes outside the new option 7 addition
+         ↓
+STEP 4 — F4: registry expansion (depends on STEP 2 — SKILL.md frontmatter descriptions must be final before registry references them)
+  Commit contents:
+    - curated-skills-registry.md: append exactly 3 new rows
+      - daily-briefing       | preset=personal-assistant | source_url=builtin | description matches SKILL.md frontmatter verbatim
+      - follow-up-tracker    | preset=personal-assistant | source_url=builtin | description matches SKILL.md frontmatter verbatim
+      - spend-awareness      | preset=personal-assistant | source_url=builtin | description matches SKILL.md frontmatter verbatim
+
+  Pre-commit verifications (@dev runs):
+    - Row count before append: 19 (per spec E4)
+    - Row count after append:  22
+    - Each new row's description field is byte-identical to the matching SKILL.md frontmatter description field (diff check)
+    - Each new row's source_url is exactly the string "builtin"
+         ↓
+STEP 5 — VERSION + CHANGELOG (final commit of cycle)
+  Commit contents:
+    - VERSION: 1.3.1 → 1.4.0
+    - CHANGELOG.md: new [1.4.0] block — dated 2026-04-19 or Phase 4 commit date; summary: "Personal Assistant preset (7th preset) with 3 stub skills, data-locality rule, registry 19→22"
+
+  Pre-commit verifications (@dev runs):
+    - `ENFORCED_PRESETS` in .github/workflows/quality.yml is unchanged: `"study research"` (spec: must NOT be expanded this cycle)
+    - CI skill-depth-check advisory-notice block behaviour for personal-assistant: emits ::notice:: (expected; not a failure)
+```
+
+**Hard sequencing constraints (duplicated from spec Dependencies section for @dev convenience):**
+
+1. STEP 1 MUST commit before STEP 2 — the directory scaffold is referenced by stub skills.
+2. STEP 2 MUST commit before STEP 4 — registry descriptions are verbatim copies of SKILL.md frontmatter, so SKILL.md must be final first.
+3. STEP 3 MAY commit in parallel with STEP 4 after STEP 1+2 are complete (spec explicitly permits parallel).
+4. STEP 5 is always last — VERSION/CHANGELOG reflect the complete cycle.
+5. `wc -w CLAUDE.md` check is run AFTER the alias is added (STEP 3), not before.
+6. Registry row-count check (19 pre / 22 post) is run AGAINST the file in the current commit (STEP 4).
+
+**Rollback points:** STEP 1, STEP 2, STEP 3+4, STEP 5 are each clean rollback points. If @qa Phase 5 flags an issue, the cycle can be rewound to the last clean step without leaving the repo in a partial state. This matches v1.3.1's step-based commit sequence.
+
+### Anti-Pattern Scan (v1.4)
+
+Applied to the 9-category checklist (architect-framework.md) against the v1.4 cycle's architectural changes: ADR-019 new, ADR-015 amendment, preset directory addition, 3 stub skills, wizard integration, registry expansion.
+
+| # | Anti-pattern | Present in v1.4? | Notes |
+|---|--------------|------------------|-------|
+| 1 | God Class/Module | No | PA preset is a new sibling directory — same responsibility shape as existing 6 presets. No single file gains new responsibilities. `global-instructions.md` adds one section (`## Data Locality Rule`) — single responsibility preserved (session-start instruction surface). |
+| 2 | Circular Dependencies | No | Dependency chain is strictly one-directional: `global-instructions-base.md` → PA `global-instructions.md` → PA `## Data Locality Rule` section. Skills reference templates, not other skills. Wizard references preset directory, not the reverse. Registry reads SKILL.md frontmatter, not the reverse. |
+| 3 | Leaky Abstraction | No | ADR-019 explicitly documents the pattern's limitation (prompt-level, not runtime-enforced). The abstraction does NOT promise more than it delivers — its contract is exactly four elements, explicitly bounded. |
+| 4 | Premature Optimization | No | The four-element contract in ADR-019 is the minimum needed to make the pattern reusable, not speculative abstraction. Each element (heading, grep phrase, placement, reinforcement) solves a concrete verification need (@qa grep, @security review, reading-order invariant, single-layer-fragility mitigation). Rejected the optional CI `data-locality-rule-check` job as out-of-scope for single-application use. |
+| 5 | Over-Engineering | No | One new ADR + one amendment + one preset directory. Comparable cycle shape to v1.3.1 (three ADR artifacts). No new CI jobs, no new file formats, no new schema, no new tools. Skills ship as stubs (not deep) per ADR-016 rollout posture — maximum scope discipline. |
+| 6 | Tight Coupling | Watched (same carry-forward flag as v1.3.0 / v1.3.1) | PA skills' `## Triggers` sections will couple to PA `global-instructions.md` proactive rules (same as other presets). v1.4 ships stubs without full `## Triggers` sections, so the coupling is not yet active. v1.4.1 depth-rewrite inherits the coupling; ADR-015 v1.4 amendment (Trigger 1 exempt) reduces the coupling surface by one bullet per skill. |
+| 7 | Missing Separation of Concerns | No | Clean concern boundaries in the commit sequence: F1 (preset directory) / F2 (skills) / F3 (wizard routing + CLAUDE.md alias) / F4 (generated artifact — registry) / VERSION+CHANGELOG (release metadata). Five ownership boundaries, five steps. |
+| 8 | N+1 Query Pattern | No | No queries. Static markdown repo unchanged. |
+| 9 | Destructive Migration | No | Pure additive cycle. No file deleted, no section removed, no ALTER-equivalent. 6 existing presets' files are untouched (spec AC F3). `ENFORCED_PRESETS` unchanged. CLAUDE.md changes are additive (one alias line) with the ≤350 word-budget guardrail. |
+
+**Coupling carry-forward (#6):** Unchanged from v1.3.0 / v1.3.1. Not activated in v1.4 (stubs skip `## Triggers`). Re-evaluate at v1.4.1 depth-rewrite.
+
+**Duplication check:** None. All 3 PA slugs are unique across presets (see Slug Uniqueness Check above). No dual-file cases; ADR-018 not invoked.
+
+**Speculative abstraction check:** The ADR-019 pattern is named for reuse across future presets (health, legal, financial-planning). This is a one-ADR investment in naming a pattern that will plausibly be applied 3–5+ times over future cycles. Judgment call: justified. The alternative (re-deriving the four-element contract each time) is worse per DRY. The ADR explicitly documents scope limits (not appropriate for regulated data) to prevent over-application.
+
+**No blocking anti-patterns detected for v1.4.**
+
+### v1.4 Open Issues for Phase 2 (@security)
+
+1. **Data-locality rule sufficiency (primary Phase 2 focus):** Is the four-sentence wording in `presets/personal-assistant/global-instructions.md`'s `## Data Locality Rule` section sufficient to prevent data exfiltration via (a) user-requested external analysis, (b) connector-initiated external calls, (c) accidental echo in model-produced summaries? Assessment: evaluate whether the sentence-3 decline-and-redirect rule + sentence-4 redaction rule cover the realistic exception cases, or whether an additional "never send transaction data to any URL" rule is needed. Reference: ADR-019 Pattern Specification.
+2. **ADR-019 pattern limitation disclosure:** The ADR explicitly documents that the pattern is prompt-level only, not runtime-enforced. @security to confirm this limitation is stated clearly enough to prevent future presets from mis-applying the pattern to regulated data (HIPAA, PCI, GDPR Art. 9). If the limitation language is not strong enough, flag for amendment in v1.4 Phase 2 response.
+3. **`connector-checklist.md` setup-surface reinforcement:** The paste-only/no-banking-connector wording is the second-layer enforcement. @security to confirm it is unambiguous for non-technical users (the persona is personal-life, not technical). Specifically: does a user who reads `"Finance inputs use paste-only — no banking connector is recommended or supported."` understand that configuring Plaid / Yodlee / Google Drive auto-sync of bank statements would violate the preset's security posture? If not, propose explicit example-negation language.
+4. **ADR-015 v1.4 amendment scope (Trigger 1 exempt):** The amendment is additive and does not change existing skill `## Triggers` sections. @security to confirm no regression in the 9-exact-match evidence carried by v1.3.1 Phase 6 — the exemption was already implicitly applied, so documenting it should be no-op.
+5. **IP boundary preservation at instruction surface (non-security but flagged for Phase 2 pass):** No file in `presets/personal-assistant/` contains "Pillar", "Atlas notes", or "pillar review". @security to grep the directory as a final defensive check. Expected: zero matches. If any match found, it's a spec AC violation and MUST block Phase 2.
+6. **Prior S5 heading-count doc error (carry-forward note):** v1.3.1 Phase 2 S5 finding stated that `global-instructions.md` "must equal 8 headings" — a documentation error (actual heading count was 7 both pre- and post-edit, benign). v1.4 Phase 2 MUST NOT repeat this assertion. PA's `global-instructions.md` will have a heading count derived from its actual sections (likely: `# Global Instructions — Personal Assistant Preset`, `## Data Locality Rule`, `## Proactive skill behavior`, 3 sub-sections for each skill trigger, `## Session-start behavior`, `## Writing voice`, `## Safety`, and any additional sections @dev authors). @security uses actual counts from the delivered file, not carried-forward expectations.
+

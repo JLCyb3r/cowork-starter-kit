@@ -70,6 +70,14 @@ Each entry includes:
 | doc-summary | Summarizes long documents, reports, or proposals into executive-ready highlights | builtin | 2026-04-17 | 1 | business-admin,research,project-management |
 | action-items | Extracts clear, assigned, deadline-tagged action items from meeting notes or email threads | builtin | 2026-04-17 | 1 | business-admin,project-management |
 
+### Personal Assistant
+
+| name | description | source_url | vetting_date | tier | goal_tags |
+|------|-------------|------------|--------------|------|-----------|
+| daily-briefing | Summarize today's schedule, open tasks, and pending follow-ups into a concise morning brief from local files | builtin | 2026-04-19 | 1 | personal-assistant |
+| follow-up-tracker | Log and surface pending commitments — things you owe others and things others owe you — from conversations, notes, and inbox snippets | builtin | 2026-04-19 | 1 | personal-assistant |
+| spend-awareness | Summarize pasted transaction data by category in plain language to surface spending patterns — descriptive only, does not provide investment advice, budgeting recommendations, or savings plans | builtin | 2026-04-19 | 1 | personal-assistant |
+
 ---
 
 ## Tier 2 — Community Skills

@@ -25,7 +25,7 @@ Ask: "Welcome! What would you like to use this workspace for? Describe your goal
 3. Writing / Creating — articles, content, storytelling
 Which fits? Or describe your goal."
 
-**If goal matches a preset** (study, research, writing, project, creative, business):
+**If goal matches a preset** (study, research, writing, project, creative, business, personal-assistant):
 "That sounds like [Preset]. Want me to customize it?
 1. Yes — use [Preset] as a scaffold  2. No — build from scratch"
 
@@ -44,7 +44,7 @@ Say: "These questions help me write in your voice, not like generic AI."
 - Step 4: Audience — 1) Colleagues  2) Clients  3) Students/public  4) Personal
 - Step 5: Style — 1) Concise  2) Thorough  3) Domain jargon  4) S) Suggest
 - Step 6 (optional): "Paste a sentence from your own writing to calibrate your voice — or 'skip'."
-  If sample provided: extract 2+ patterns, state them. Do NOT store raw sample text.
+  If provided: extract 2+ patterns, state them. Do NOT store raw sample text.
 
 Generate `writing-profile.md` with Tone & Voice, Style Preferences, Anti-AI Guidance, Workspace-Specific Rules, Pet Peeves.
 

@@ -210,3 +210,47 @@ No new assumptions for v1.3.1. Existing assumptions that carry forward and remai
 - **A-v1.3-4** ([ESTIMATED]) — CI allowlist approach is sustainable through v1.3.5. v1.3.1 widens to `"study research"` — this is the planned next step and does not change the risk profile.
 
 **New observational signal (not a formal assumption):** The B10 "propose defaults + clarify" pattern validated in v1.3.0 for skills 2+ is being codified in H2 but remains [UNTESTED] as a controlled comparison. The v1.3.1 `source-analysis` and `research-synthesis` B10 sessions will be the second and third data points. If either session produces materially lower-quality skill output than the pilot, revisit whether the reduced-friction pattern sacrifices too much user input specificity.
+
+---
+
+## v1.4 Assumptions
+
+_Added: 2026-04-19T00:00:00Z — v1.4 Personal Assistant Preset cycle_
+
+### A-v1.4-1 — Users want a tactical personal-life PA separate from business-admin [NEW v1.4]
+**ID:** A-v1.4-1
+**Confidence:** [ESTIMATED]
+**Assumption:** A meaningful segment of cowork-starter-kit users wants a personal-life PA preset that is distinct from the business-admin (work-focused) preset. The desired use cases are tactical and daily: morning briefing, relationship/commitment follow-up tracking, basic spend awareness.
+**Evidence:** 5+ research sources (Superhuman blog, Copilot PA product surveys, Reclaim.ai user research, Motion feature prioritization data, Rabbit R1 post-mortem analysis) show daily-briefing rituals, commitment-tracking labor, and spend-awareness as the three highest-retention behaviors in personal AI assistant products. No current Cowork resource addresses this combination.
+**Risk:** If users are satisfied adapting the business-admin preset for personal use, the new preset sees low adoption. Risk is LOW — the folder structure, writing tone, and skill set of business-admin are demonstrably wrong for personal-life contexts (formal/authoritative tone vs. warm/direct; professional skills vs. personal-life skills).
+**Validation path:** After v1.4 launch, track wizard Q1 selection rate for Personal Assistant (option 7) vs. other options. If <5% of wizard completions select Personal Assistant in 60 days, evaluate whether the persona (Life Admin Juggler) is underserved or undiscoverable.
+
+### A-v1.4-2 — 3-skill stub preset is sufficient for v1.4 [NEW v1.4]
+**ID:** A-v1.4-2
+**Confidence:** [CONFIRMED — user decision 2026-04-19]
+**Assumption:** A 3-skill stub preset (daily-briefing, follow-up-tracker, spend-awareness as 16-line stubs) is a complete and shippable v1.4 deliverable. Deeper skill development (9-section rewrites, B10 input sessions) is deferred to v1.4.1 or later.
+**Risk:** LOW — this is a deliberate scope boundary decided by the product owner, not an untested hypothesis. The preset itself (folders, connectors, global-instructions, wizard integration) is the primary value; skill depth is a quality enhancement.
+**Validation path:** N/A — confirmed by user. Close this assumption at Phase 4 completion.
+
+### A-v1.4-3 — Data-locality rule is enforceable via instruction-surface wording [NEW v1.4]
+**ID:** A-v1.4-3
+**Confidence:** [UNTESTED — to be validated in Phase 2]
+**Assumption:** Including "Never echo raw financial amounts, full calendar events, or contact details to external services or APIs" in `global-instructions.md` is sufficient to prevent unintended data exfiltration when users connect Google Calendar or Gmail via the connector-checklist. The instruction wording creates an adequate behavioral constraint on Cowork's connector use.
+**Risk:** MEDIUM. LLM instruction surfaces are best-effort; a sufficiently complex connector workflow (e.g., "summarize my Gmail and post to Slack") might cause Cowork to transmit calendar or contact data to a third-party service despite the rule. The "paste-only" finance instruction is stronger (no connector exists to violate it) but the calendar/contact constraint depends on Cowork respecting the instruction in edge cases.
+**Mitigation:** Phase 2 (@security) is asked to explicitly evaluate whether the instruction wording is sufficient or whether a stronger control (e.g., connector allowlist, explicit Cowork connector guidance) is needed. The data-locality rule's heading (`## Data Locality Rule`) is implementation-verifiable by grep.
+**Validation path:** @security Phase 2 assessment determines whether [UNTESTED] status resolves to [ESTIMATED] (instruction is likely sufficient) or escalates to a CRITICAL finding requiring additional controls.
+
+### A-v1.4-4 — 5-folder structure covers common personal PA use cases [NEW v1.4]
+**ID:** A-v1.4-4
+**Confidence:** [ESTIMATED]
+**Assumption:** The `Calendar/`, `Finances/`, `Tasks/`, `People/`, `Documents/` folder structure is appropriate for the Life Admin Juggler persona and covers the common personal-life PA workflows without over-prescribing a life taxonomy.
+**Risk:** LOW. Users who need a different structure can modify `folder-structure.md`. The folder structure is guidance, not enforcement — Cowork does not create folders automatically (user follows the setup checklist). Worst case: a user ignores the suggested structure and creates their own.
+**Validation path:** Post-launch GitHub issue analysis. If >3 issues request a different default folder structure, revisit for v1.4.1.
+
+### A-v1.4-5 — spend-awareness delivers value from a single paste without persistent history [NEW v1.4]
+**ID:** A-v1.4-5
+**Confidence:** [UNTESTED]
+**Assumption:** The `spend-awareness` skill can deliver useful categorical observations and 1–2 proactive flags (subscription detection, unusual spend) from a single user-pasted transaction list, without needing a persistent transaction schema, historical comparison, or live bank feed.
+**Risk:** MEDIUM. "What's unusual?" requires some baseline. A single paste with no history limits the AI to intra-statement comparisons (e.g., "this category is larger than typical household ratios") rather than personal-baseline comparisons (e.g., "you spent 40% more on dining than last month"). The skill's value is real but is bounded by the single-paste constraint.
+**Mitigation:** Stub instructions explicitly scope the skill to "categorized summary + 1–2 proactive observations from the provided data." No claim of historical trend analysis is made. The limitation is surfaced in the README positioning statement ("tactical awareness only").
+**Validation path:** At v1.4.1 depth-rewrite, assess whether a structured input format (user pastes current month + prior month) would increase skill utility without introducing persistent storage. If yes, add as a v1.4.1 instruction enhancement.

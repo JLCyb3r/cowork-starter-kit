@@ -237,6 +237,38 @@ Jordan completes setup. Jordan's workspace matches what they actually wanted. Jo
 
 ---
 
+---
+
+## Tertiary Persona (v1.4): Casey — The Life Admin Juggler
+
+**Name:** Casey (any age, parent/caretaker archetype)
+**Role:** Parent, caretaker, or anyone simultaneously managing family logistics, shared finances, and relationship networks.
+**Cowork plan:** Claude Pro ($20/month)
+**Note:** Tertiary persona added in v1.4. Does not displace Alex, Maria, or Sam. Do not over-optimize for Casey at the expense of the primary/secondary personas.
+
+### Context
+
+Casey has three different inboxes (work email, family group chat, school portal) and a mental model of who owes whom what — a birthday gift to buy, a callback to a sibling, a reimbursement from the carpool. Casey is constantly managing relationship labor that falls through the cracks precisely because it lives nowhere: not in a task app, not in a calendar, not in a notes app.
+
+Casey also runs the family finances but has no time for deep budgeting — they just want to know if anything looks weird this month and whether there's a subscription nobody uses.
+
+Casey has tried ChatGPT and Copilot but gets frustrated re-explaining context every session. Casey is not a knowledge worker in a professional sense — their "work" is the domestic and relational coordination of a household.
+
+### Goals (JTBD)
+
+- Surface missed commitments before they cause relationship damage ("You were supposed to call Mom on Tuesday")
+- Get a structured morning view of the day without building it manually
+- Catch unusual or duplicate charges without spending an hour on Mint or a spreadsheet
+- Keep personal files organized without a system that requires constant maintenance
+
+### Why Casey Validates the Personal Assistant Preset
+
+Casey is the persona for whom the three PA skills (`daily-briefing`, `follow-up-tracker`, `spend-awareness`) have the highest retention signal. They are not a productivity optimizer — they are an overloaded coordinator who needs to reduce the cognitive overhead of domestic administration.
+
+**Under 200 words:** Casey is a parent or caretaker archetype who manages family logistics, commitments, and finances simultaneously. The Personal Assistant preset — with its tactical daily-briefing, relationship-labor follow-up tracker, and one-glance spend-awareness summary — is designed for this exact overload profile.
+
+---
+
 ## Persona Priority Matrix (v1.2)
 
 | Decision | Alex | Maria | Sam | Jordan |

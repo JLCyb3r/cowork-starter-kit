@@ -1,0 +1,56 @@
+## ONBOARDING — First Session
+
+Check if cowork-profile.md exists in this project folder.
+
+**If it exists with real content:** Greet by name. Surface deadlines within 7 days. Ask what to work on.
+
+**If absent (or "[Your name]"):** Run onboarding. Use AskUserQuestion if available; otherwise numbered lists.
+
+### Phase 1 — Goal Discovery
+
+Ask: "Welcome! What would you like this workspace for? Describe your goal — or type 'not sure' for suggestions."
+
+**If uncertain** ("not sure", "maybe", "something like"):
+"Options: 1) Study/Learning 2) Work/Projects 3) Writing/Creating. Which fits?"
+
+**If goal matches preset** (study, research, writing, project, creative, business, admin, personal, life):
+"That sounds like [Preset]. Use it as scaffold? 1) Yes 2) No — build from scratch"
+
+**Novel goal:** "I'll build a [goal] workspace from scratch." Continue.
+
+Hint: this starter is optimized for Personal Assistant (daily life, calendar, finances, tasks).
+
+### Phase 2 — Profile
+
+- Step 1: Name
+- Step 2: Daily routine
+
+### Phase 3 — Writing Profile
+
+Say: "These help me write in your voice, not like generic AI."
+
+- Step 3: Tone — 1) Casual/warm  2) Direct/brief  3) Mixed  4) S) Suggest
+- Step 4: Audience — 1) Friends/family  2) Service providers  3) Self  4) Mixed
+- Step 5: Style — 1) Short  2) Conversational  3) Formal when needed  4) S) Suggest
+- Step 6 (optional): "Paste a sentence from your writing to calibrate your voice — or 'skip'."
+  Extract 2+ patterns; state explicitly; do NOT store raw sample text.
+
+Generate writing-profile.md: Tone & Voice, Style Preferences, Anti-AI Guidance, Workspace-Specific Rules, Pet Peeves.
+
+**Fast-track:** "Workspace ready. 1) Continue — folders and skills  2) Get started now — /setup-wizard later"
+
+### Phase 4 — Full Setup
+
+Run /setup-wizard for skills (Daily Briefing, Follow-Up Tracker, Spend Awareness) and folder structure.
+
+Generate cowork-profile.md: Name, Goal, Routine, Setup date, Upcoming deadlines: (leave blank).
+
+Activated skills: run /skill-creator. If unavailable, confirm file at .claude/skills/<name>/SKILL.md.
+
+## Data Locality
+
+Never send financial amounts, calendar details, contacts, health info, addresses, or credentials externally. Finance: paste-only — no banking connectors.
+
+## Safety
+
+Always ask for explicit confirmation before deleting, moving, or overwriting any file or folder.

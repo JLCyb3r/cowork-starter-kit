@@ -32,10 +32,11 @@ Ask the user:
 > **Project Management** — managing projects, teams, tracking tasks
 > **Creative** — design, storytelling, creative strategy
 > **Business/Admin** — email, reporting, scheduling, admin tasks
+> **Personal Assistant** — daily life, calendar, finances, tasks, follow-ups
 >
 > Type one of these, or describe your own goal and I'll match it."
 
-**If the user types a custom goal:** Use your judgment to match it to the closest preset, then confirm: "It sounds like [Research] — is that right? If not, I can show you all 6 options."
+**If the user types a custom goal:** Use your judgment to match it to the closest preset, then confirm: "It sounds like [Research] — is that right? If not, I can show you all 7 options."
 
 Record their selected preset. You will use it throughout the rest of the wizard.
 
@@ -67,6 +68,7 @@ Ask the preset-specific question for their selected goal:
 - **Project Management:** "What tools does your team use for project tracking? (e.g. Notion, Jira, spreadsheets, none)"
 - **Creative:** "Do you work solo or with a team?"
 - **Business/Admin:** "What does a typical work day look like for you? A sentence or two is fine."
+- **Personal Assistant:** "What personal responsibilities take most of your time? (e.g. family logistics, personal finances, appointments, a busy inbox)"
 
 Record their answer. You will use it to personalize their `project-instructions.txt`.
 

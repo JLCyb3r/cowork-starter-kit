@@ -212,6 +212,145 @@ No competitor combines all seven dimensions. The whitespace is real, growing, an
 
 ---
 
+---
+
+## Part 3 — v1.4 Competitors: Personal AI Assistant Adjacent Products
+
+_Research date: 2026-04-19. Focus: personal-life PA tools, relationship-labor features, and finance read-only tools relevant to the Personal Assistant preset._
+
+### 10. Monarch Money — Personal Finance Read-Only Analysis
+
+**What it is:** A personal finance app with AI-powered spending summaries, subscription detection, and category analysis. Positioned as the post-Mint successor.
+**Target user:** Budget-conscious individuals who want visibility into spending without deep financial planning.
+
+| Dimension | Assessment |
+|-----------|-----------|
+| Spend categorization | Yes — automatic via bank feed |
+| Subscription detection | Yes — explicit feature |
+| AI narrative summaries | Yes (2025 feature) |
+| Local-first / paste-only | No — requires bank account connection |
+| Relationship / commitment labor | None |
+| Daily briefing / morning ritual | None |
+| Non-technical user fit | Moderate — requires account linking |
+
+**Key gap for v1.4:** Monarch requires live bank connectivity and account linking — a significant privacy/trust barrier for many users. `spend-awareness` serves the same categorical insight need via a paste-only, no-connection model. Monarch is stronger on historical trending; `spend-awareness` wins on zero-trust setup.
+
+**Caution (cautionary signal):** Monarch's AI narrative summaries are the closest feature analog to `spend-awareness`. If users who already use Monarch arrive at cowork-starter-kit, `spend-awareness` must provide clear differentiation (it does: no bank connection required, integrated with other personal PA skills, Cowork-native).
+
+---
+
+### 11. Microsoft Copilot — Finance Read-Only (365 Integration)
+
+**What it is:** Copilot in Microsoft 365 can read Excel/CSV transaction data and produce natural-language summaries if the user pastes or uploads a spreadsheet.
+**Target user:** Microsoft 365 users with Excel-based financial tracking.
+
+| Dimension | Assessment |
+|-----------|-----------|
+| Spend summarization from paste | Yes (via Excel/CSV upload) |
+| Subscription detection | Indirect (user must ask) |
+| Persistent personal PA configuration | Limited — no equivalent to cowork-starter-kit's global-instructions |
+| Relationship / commitment labor | No |
+| Daily briefing | No |
+| Non-technical user fit | Low — requires knowing to upload the right file format |
+
+**Key gap:** Copilot's finance read-only requires Microsoft 365 and Excel/CSV familiarity. `spend-awareness` works with any paste (bank statement text, screenshot description, transaction list in any format). The data-locality rule also differentiates: Copilot processes data on Microsoft servers; `spend-awareness` in a local Cowork session keeps data local to the conversation.
+
+---
+
+### 12. Motion — AI Calendar and Task Integration
+
+**What it is:** An AI scheduling tool that auto-prioritizes tasks and blocks calendar time based on deadlines and energy levels.
+**Target user:** Professionals who want AI to manage their schedule rather than having to manage it themselves.
+
+| Dimension | Assessment |
+|-----------|-----------|
+| Daily briefing / morning ritual | Partial — shows scheduled blocks, not an intention-setting ritual |
+| Commitment tracking | Task-based (not relationship-labor oriented) |
+| Cowork-native configuration | No |
+| Spend awareness | None |
+| Non-technical setup | Low — complex UI; requires calendar/task system integration |
+
+**Key gap for `daily-briefing`:** Motion's AI scheduling is powerful but requires full calendar and task system integration. `daily-briefing` is intentionally lighter: user pastes their current calendar/task list (no integration required) and receives a structured day note plus an intention. Motion solves the scheduling problem; `daily-briefing` solves the morning-clarity problem. Different job.
+
+---
+
+### 13. Reclaim.ai — Intelligent Calendar Blocking
+
+**What it is:** AI that automatically blocks focus time, habits, and tasks in Google Calendar based on priorities.
+**Target user:** Knowledge workers who want their calendar to reflect their priorities automatically.
+
+| Dimension | Assessment |
+|-----------|-----------|
+| Daily briefing | No — manages calendar, doesn't brief you on it |
+| Commitment / relationship labor | None |
+| Spend awareness | None |
+| Non-technical setup | Moderate — requires Google Calendar OAuth |
+| Local-first | No — cloud service |
+
+**Key gap:** Reclaim focuses entirely on calendar optimization for professionals. It has no relationship-labor or spend-awareness features. `daily-briefing` is complementary to Reclaim users (they may have Reclaim managing their schedule and use `daily-briefing` for the morning intention ritual on top of what Reclaim blocked).
+
+---
+
+### 14. Rabbit R1 — Personal AI Assistant (Cautionary)
+
+**What it is:** A dedicated hardware personal AI assistant device that promised to handle personal tasks (bookings, orders, information retrieval) via a "Large Action Model."
+**Status:** Effectively abandoned as of late 2025 — low adoption, unfulfilled promises, discontinued feature set.
+
+**Why it's relevant as a cautionary signal:**
+- Rabbit R1 attempted to be the "everything personal assistant" and failed because it over-promised on action-taking (making reservations, placing orders) without delivering reliable results.
+- The market signal from its failure: users distrust personal AI assistants that claim to take action on their behalf without explicit confirmation.
+- The lesson for `spend-awareness` specifically: do NOT promise that the skill will "optimize," "recommend," or "act on" financial data. The read-only, observation-only scope is exactly right.
+
+**Design implication:** The explicit "read-only awareness only" scope of `spend-awareness` is validated by the Rabbit R1 failure mode. Over-promising on action leads to loss of user trust in the personal PA space.
+
+---
+
+### 15. Personal AI Assistant Apps (General Survey: Dot, Rewind.ai, Claude for Personal Use)
+
+**Dot (New Computer):**
+- AI memory assistant that remembers personal facts across sessions.
+- Strong on relationship memory ("your sister's birthday is next week"); weak on task/calendar integration.
+- No spend awareness, no daily briefing ritual.
+- Key gap `follow-up-tracker` fills: Dot is passive memory; `follow-up-tracker` actively surfaces "you said you'd do X" — a commitment accountability layer Dot doesn't provide.
+
+**Rewind.ai:**
+- Records all screen/audio activity to enable recall ("what did I say in that meeting last Tuesday?").
+- Strong on retrospective recall; weak on proactive follow-up or morning structuring.
+- Privacy-maximalist angle (local processing) aligns with cowork-starter-kit's data-locality posture.
+- Key gap: Rewind is retrospective; `follow-up-tracker` is prospective.
+
+**Claude for Personal Use (unstructured):**
+- Generic Claude chat without a personal-life PA configuration.
+- Users can ask for a daily briefing or spend summary, but get no consistent structure, no context persistence, no proactive skill triggers.
+- This is the exact whitespace cowork-starter-kit's Personal Assistant preset fills.
+
+---
+
+## Competitive Gaps v1.4 Validates
+
+**Gap 1 — Relationship labor ("follow-up tracker") is the most unserved personal PA market segment.** No product listed above ships a dedicated relationship-commitment surfacing feature. Monarch, Motion, Reclaim, and Copilot are all task/calendar/finance tools. Dot remembers; it does not proactively surface commitments. `follow-up-tracker` is a genuine market gap.
+
+**Gap 2 — Spend awareness without bank connectivity.** Every finance tool (Monarch, Copilot, Mint) requires bank connection. `spend-awareness` via paste-only is the only zero-trust spend-awareness option in the landscape. Privacy-first positioning is differentiated.
+
+**Gap 3 — Cowork-native personal PA configuration.** All adjacent products are standalone apps. None of them configure a Cowork workspace. The Personal Assistant preset is the only structured Cowork configuration for personal-life users.
+
+---
+
+## Updated Feature Matrix (v1.4 addition)
+
+| Feature | Monarch | Copilot Finance | Motion | Reclaim | Personal Claude (generic) | Cowork PA Preset v1.4 |
+|---------|:---:|:---:|:---:|:---:|:---:|:---:|
+| Daily briefing / morning ritual | — | — | Partial | — | Manual | Yes |
+| Relationship / commitment labor | — | — | — | — | Manual | Yes (follow-up-tracker) |
+| Spend awareness (read-only) | Yes (bank-linked) | Yes (Excel) | — | — | Manual | Yes (paste-only) |
+| Zero bank-connection spend awareness | — | — | — | — | Manual | Yes |
+| Cowork-native configuration | — | — | — | — | — | Yes |
+| Local-first data-locality rule | — | — | — | Partial | Depends | Yes (explicit rule) |
+| Non-technical user path | Low | Low | Low | Low | Low | Primary design target |
+| Persistent personal PA instructions | — | — | — | — | — | Yes (global-instructions.md) |
+
+---
+
 ## Positioning Statement (v1.2)
 
 **Claude Cowork Config is the only guided workspace architect for Claude Cowork that builds a personalized, safety-configured AI workspace from any goal — even ones you can't name — and makes sure every output sounds like you, not like a chatbot.**
