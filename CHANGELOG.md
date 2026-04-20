@@ -4,6 +4,18 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [1.3.2.1] — 2026-04-20
+
+**Infra patch.** Automate release-asset uploads.
+
+**Added:**
+- `.github/workflows/release-assets.yml` — auto-builds `.zip` and `.tar.gz` source archives and attaches them to the GitHub Release when a `v*` tag is pushed. Uses SHA-pinned actions (checkout v4.2.2, softprops/action-gh-release v3.0.0).
+
+**Changed:**
+- Future releases automatically include trackable download assets. Prior releases (v1.1.0–v1.3.2) were backfilled manually on 2026-04-20.
+
+---
+
 ## [1.3.2] — 2026-04-19
 
 > **Note:** This release was initially tagged as v1.4.0 (2026-04-19) but was renamed to v1.3.2 to align with the v1.3.x preset-rollout versioning lane. Content is identical to the original v1.4.0 release.
