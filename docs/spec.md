@@ -1404,8 +1404,8 @@ VERSION 1.4.0 + CHANGELOG
 | v1.3.0 | Study preset (3 skills) | `presets/study/**` |
 | v1.3.1 | Research preset (3 skills) + hygiene | `presets/study research/**` |
 | **v1.3.2** | **Personal Assistant preset (3 skills — stubs)** | **`"study research"` — unchanged** |
-| v1.3.3 | Writing preset (3 skills) | + `presets/writing/**` |
-| v1.3.4 | Creative preset (3 skills) | + `presets/creative/**` |
-| v1.3.5 | Project Management preset (3 skills) | + `presets/project-management/**` |
+| v1.3.3 | Project Management preset (3 skills) | + `presets/project-management/**` |
+| v1.3.4 | Writing preset (3 skills) | + `presets/writing/**` |
+| v1.3.5 | Creative preset (3 skills) | + `presets/creative/**` |
 | v1.3.6 | Business/Admin preset (3 skills) | + `presets/business-admin/**` |
 | v1.4.1 | Personal Assistant skill depth-rewrite | + `presets/personal-assistant/**` |
