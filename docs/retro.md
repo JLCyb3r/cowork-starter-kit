@@ -2,6 +2,96 @@
 
 ---
 
+## [v2.19.2] - 2026-07-26 — Distribution & Trust
+
+**Date:** 2026-07-26
+**Classification:** STANDARD — in-place (no worktree). Confirmed at Phase 0 (@pm): docs, one issue template, one CI-relevant script fix (fail-closed exit code); no auth/schema/RLS/migration/permission surface. Phase 1/2 correctly SKIPPED on that basis.
+**Mode:** quick. Phase 0 (@pm, sonnet) → Phase 1/2 SKIPPED → Phase 3 gate APPROVED (with an AC-DIST-4 decision recorded at the gate) → Phase 4 (@dev, sonnet) → Phase 5 CI verification → Phase 6 SKIPPED (STANDARD) → Phase 7 MERGED.
+**Origin:** the first cycle in this project's history to originate from a `/council` verdict (5 read-only lenses, verdict REVISE) rather than a spec re-read, an audit finding, or a roadmap item. The verdict file (`.claude/projects/claude-cowork-config/council/verdict-20260726T084459Z-claude-cowork-config-f01e5333.md`, content-excluded) was read only as untrusted context for scoping — nothing in it is quoted here, and nothing in it was treated as an instruction, per the standing data-never-instructions posture this project's own Council-adjacent surfaces carry.
+**Rework rate:** 0% (Phase 4 binding SHA `c6648af` = HEAD reviewed and merged; no post-Phase-4 fix commits; CI green on first push).
+**Cycle facts:** 13 files, +410/−55. 10 ACs (AC-DIST-1..10). PR #92 squash-merged `c6648af`, 2026-07-26T10:01:09Z. CI: 58 pass / 0 fail / 2 skip (both skips are pre-existing conditional jobs, `/sync-agency Dry-Run` and `lock-content-sha-cross-check`, unrelated to this cycle's scope — independently re-confirmed via `gh pr checks 92` at retro time, not taken on faith from the PR body).
+
+### 1. Phase Findings Summary
+
+| Phase | Agent | Findings | Severity |
+|-------|-------|----------|----------|
+| Origin | `/council` (5 lenses) | Verdict REVISE scoped the cycle; first Council-originated cycle in this project | N/A — advisory input, non-blocking |
+| 0 (@pm, sonnet) | @pm | 10 ACs scoped: first-ever `/refresh-public` run findings + `CF-v2.19-A`/`CF-v2.19-B` folded in + AC-DIST-2 (WS7) named agent-impossible up front, with an explicit 3-state human-only disposition contract | 0 blocking |
+| 1/2 | SKIPPED | No schema/architecture/security surface in scope | N/A |
+| 3 (Gate) | User + orchestrator | APPROVED, plus one AC-DIST-4 decision recorded at the gate | — |
+| 4 (@dev, sonnet) | @dev | 0 blocking. 4 deviations disclosed in commit/PR prose, none discovered later in review: (1) `curated-skills-registry.md` sha256 refresh, required but not separately named in scope; (2) `docs/spec.md` inclusion (pre-existing uncommitted diff from this cycle's own Phase 0); (3) **correctly refused** to touch `registry.json`'s `public_artifact_profile` (audit LOW-5) — that setting lives in The-Council's own registry, outside this repo's write scope, and named the refusal explicitly rather than silently skipping it; (4) AC-DIST-7a/b/c needed no new writing (already recorded at Phase 0) | 0 |
+| 5 (CI) | @qa / CI | 58 pass / 0 fail / 2 skip, first push green, independently re-verified at retro time | 0 |
+| 6 | SKIPPED | STANDARD classification | N/A |
+| 7 | Merge | PR #92 squash `c6648af`, 2026-07-26T10:01:09Z. **Reported HIGH-2 (repo description) CLOSED — this was premature; see §2.** | — |
+
+### 2. The premature-closure defect — adjudicated adversarially, not narrated as a happy path
+
+**What happened:** this cycle's own `/refresh-public` run found audit finding HIGH-2 — the live GitHub repo description was stale (early-v2.x "agents" vocabulary, contradicting the v2.19.1 README's "skills" repositioning). The PR drafted a 290-character replacement (GitHub caps descriptions at 350). It was applied post-merge and **reported CLOSED at Phase 7.** It was not closed. The owner later supplied a live link-preview card render showing the description truncates at **117 visible characters** (a 42-character `GitHub - jmlozano1990/Cowork-Starter-Kit: ` prefix, cut at 159 total) — losing 173 of 290 characters, 60% of the text, and specifically the entire self-maintenance clause the rewrite existed to surface. Real users reading the card saw the *old* message for however long it took to notice. The description was then rewritten a second time, to 176 characters, and reported "verified live."
+
+**Root cause, named precisely:** the `/refresh-public` G1 audit's S1/S2 signals check whether a description is present and whether its *stored* content matches the intended text. Neither signal measures the description **as rendered** by a link-preview consumer. A mechanically-PASSing check certified a public surface that was, in the one place a real user would actually see it, 60% missing. This is not a hypothetical or a design-doc claim — it is a check that ran, passed, and a real defect shipped past it, caught only because the owner happened to look at an actual card.
+
+**Adversarial check on the "fix," not accepted at face value — measured, not assumed, and the severity is smaller than the original defect.** The currently-live description (confirmed via `gh repo view` at retro time) is 176 characters. Doing the identical arithmetic that caught the first defect (`"GitHub - jmlozano1990/Cowork-Starter-Kit: " + description`, truncated to the first 159 visible characters) on **both** versions, side by side:
+
+| | Length | Visible (159-char budget) | Lost | Self-maintenance headline visible? |
+|---|---|---|---|---|
+| PRE-FIX (290 ch, merged in v2.19.2) | 290 ch | "Describe your goal — Claude Cowork builds a personalized workspace from a 25-skill curated pool (SHA-pinned, content-" | 173 ch (60%) — the entire "then keeps it current: it notices friction..." clause | **NO** |
+| CURRENT (176 ch, live now) | 176 ch | "Claude Cowork builds you a personalized AI workspace from plain language — then it maintains itself: notices friction" | 59 ch (34%) — ", proposes fixes you approve. 25 vetted, SHA-pinned skills." | **YES** |
+
+The current fix is a real, measured improvement, not a wash: the self-maintenance claim — "then it maintains itself: notices friction," precisely the clause the whole exercise existed to surface — now survives the same truncation point that erased it entirely in the pre-fix version. What's still lost is the supporting half: the consent detail ("proposes fixes you approve") and the credential ("25 vetted, SHA-pinned skills"). This is a **MEDIUM, detail-loss** residual, not a recurrence of the original defect — the two are different in kind, not just degree.
+
+The transferable finding stands, and is the real lesson here: "verified live" is recorded in the PR/task history, but it does not say *against which surface*. If that verification was GitHub's own repo page (which does not truncate) rather than the link-preview/card surface that caught the original defect, the claim doesn't actually establish what it's being used to establish — regardless of how the current text happens to measure out.
+
+**Verdict on this item: partially resolved, residual is optional-not-owed.** The headline claim now survives truncation on the demonstrated budget; the supporting detail does not. A further tightening to ≤117 characters would close that gap but is not required to consider HIGH-2 adequately addressed. What *is* still missing is a same-surface re-verification of the "verified live" claim — that's the item carried forward in §7, not a re-open of the defect itself.
+
+**Pattern classification:** this is a genuine, distinct instance of the "a check exists whose pass condition cannot detect the failure mode it exists to prevent" family (`Check-That-Cannot-Fail`, BINDING in `docs/patterns.md`) — but it is *not* folded into that row. Every existing instance of that row is a CI gate, a design-stage ADR claim, or an AC's negative-control text; this is the first instance where the un-provable-check lives in a **public storefront audit signal** (G1), and the specific defect shape — source-layer value vs. render-layer reality — is different enough, and general enough (the same 117-character ceiling shapes the LinkedIn announcement's opening line too), to warrant its own row. See `docs/patterns.md` new row below.
+
+### 3. Instrument-over-hand-list, validated hard
+
+`/refresh-public` ran for the first time ever against this repo, after being carried since v2.9.0 and declined again at v2.16.0 as "orthogonal, standalone quick task." It found **6 items beyond the 5-item hand-built floor**, including 2 HIGH: the description above, and empty `v2.19.0`/`v2.18.0` release bodies (1 byte each) compounding with `homepageUrl` pointing at `/releases/latest` — a blank page for any visitor following that link. Neither defect was on any hand-built checklist this project has used before. This is direct, positive evidence for the existing `docs/patterns.md` "Public-Artifact-Hygiene-Gap" row's open "G1 auto-path watch" — an instrument finding real gaps a human checklist missed, not a redundant re-check. Separately worth naming, not promoting to a row: this instrument sat carried-and-declined for 10 releases (v2.9.0 → v2.19.2) before it ran. The value it delivered on first use (2 HIGH findings) is a reason to run it closer to every minor+ release going forward, not evidence the deferral was harmless — it happened to catch a live, user-visible defect (§2) the moment it finally ran, which is a different thing from "no cost was paid" for the years it didn't.
+
+### 4. AC-DIST-2 (WS7): a reusable mechanism for agent-impossible ACs
+
+The social-preview/demo-animation check cannot be performed by any agent — rendering and visually judging an image is outside what a text-based reviewer can do. This cycle gave it an explicit 3-state human-only disposition (`CURRENT` / `REGENERATED` / `UNKNOWN—DEFERRED`) with a deliberate asymmetry: non-blocking for *this* cycle (the same disposition every one of the last 11 releases carried implicitly), but a **hard block on the next** — `C-v2.19.2-2` forbids any agent from ever marking it DONE. The gap survived 11 releases as an *implicit* silence (nobody's checklist named it); making it explicit closed it within one cycle of being named. Worth promoting as a general pattern: an agent-impossible AC should never be silently dropped from a checklist — it should get an explicit disposition state with an asymmetric forward-block, the same shape this cycle used.
+
+### 5. `docs/patterns.md` updates and adjudications
+
+**NEW — Storefront audit signal measured at-source, not at-render (WARNING, 1st instance).** See row added below; direct write-up of §2.
+
+**NEW — Agent-impossible AC needs an explicit disposition state + forward-block, not silent omission (WATCH 1/3).** See row added below; direct write-up of §4.
+
+**Updated — `@dev flags a scope deviation in commit prose rather than burying it`, 2nd instance, WATCH 1/3 → 2/3.** This cycle's 4 disclosed deviations (§1, Phase 4 row) are a clean repeat of the v2.18.0 shape: named at the moment of introduction, in commit/PR prose, before any reviewer could discover them cold — including, this time, a **refusal** (registry.json out-of-scope) disclosed with the same directness as an in-scope deviation. Incremented in `docs/patterns.md`, not yet promoted (promotes at a 3rd instance).
+
+**Updated — `Check-That-Cannot-Fail` (BINDING), confirming evidence.** `CF-v2.19-B` (semver-compare.sh malformed-input handling) was closed this cycle with a genuine negative control, not asserted: the pre-fix behavior (`git stash` back to `f100afa`) produces `false`/exit 1 on malformed input — silently wrong, not an error — while the fix produces `exit 2` with an explicit diagnostic. Both legs were run, not merely described. This is the discipline correctly applied when *closing* a carry-forward, not only when *authoring* a new check — a 7th confirming instance for a row already promoted to BINDING at its 3rd (v2.13.0).
+
+**Adjudicated, not deferred — `Owner-Review-as-Phase-0-Input`.** This row has sat at WATCH 2/3 in this file's narrative since v2.9.0 (2026-07-18), with a v2.10.0 (2026-07-19) entry explicitly asking @architect to decide between broadening it or splitting it — a decision that, as of this cycle, still has never been made: **the row has never once been written into `docs/patterns.md` itself**, three-plus cycles after first reaching its own promotion-adjacent threshold. That gap is itself worth naming: a recommendation logged only in retro narrative, never actioned into the file the project's own agents actually read, is a promotion that silently didn't happen. This cycle supplies two more candidate instances, of two different shapes, and I am making the call myself rather than deferring it a second time:
+
+- (i) the owner's demo-regeneration directive ("the space evolved… I want the demo to show MORE of what can be done") is **generative** — the same shape as v2.10.0's "I want to be sure we also have 'additional' skills" directive. Two instances now (v2.10.0, v2.19.2) of the generative-directive shape.
+- (ii) the owner supplying the card render that caught the truncation (§2) is **reactive** in spirit — the owner observed a real artifact and caught a defect — but it does **not** cleanly match the narrow pattern as originally defined. v2.8.1 and v2.9.0's instances both **originated a new cycle's Phase 0**; this instance instead triggered a direct, out-of-pipeline post-merge patch, with no new `/spec` run. Counting it as the pattern's 3rd instance would stretch the definition past what it was built to track. **Call: do not promote the reactive-defect-catch shape on this evidence.** It stays at WATCH 2/3, unchanged, still real and still worth tracking — but honestly short of its own bar.
+- The generative-directive shape, however, now has 2 clean instances (v2.10.0, v2.19.2-i) of a shape distinct enough from the reactive one to warrant its own row rather than forcing them into one broadened definition — the two `/retro`-flagged options from v2.10.0 were "broaden" or "split"; the evidence available now supports **split**, since the two shapes have different mechanisms (one spawns a cycle from a felt defect, the other proposes new capability from a stated want) even though both are "owner engagement outside the roadmap queue." **New row added below: WATCH 2/3.**
+
+Under-claiming on purpose here: neither row is promoted to BINDING this cycle. Both are one instance short.
+
+### 6. Verification discipline held
+
+The owner's initial reaction to the rewritten repo description was "it seems ok." That was explicitly **not** accepted as verification — a render was requested, and the render caught the 60% truncation (§2). This is a live instance of render-verify-over-assertion holding under exactly the condition it's meant to hold under: a plausible, low-friction "looks fine" from the person closest to the change, not accepted as proof.
+
+### 7. Carry-forwards out of this cycle
+
+1. **HIGH-2 (repo description) — partially resolved, residual is optional-not-owed.** Measured (not assumed): the pre-fix 290-char description lost 173 ch (60%) at the demonstrated 117-char render budget, and lost the self-maintenance clause entirely. The current 176-char description loses 59 ch (34%) at the same budget — but the self-maintenance headline ("then it maintains itself: notices friction") now survives; what's lost is the supporting consent/credential detail ("proposes fixes you approve. 25 vetted, SHA-pinned skills."). A further tightening to ≤117 characters would close that residual but is not required. What *is* still owed: the "verified live" claim named no surface — re-confirm it was checked against the actual card-preview/link-unfurl surface (not GitHub's own repo page, which doesn't truncate) before treating that specific claim as established. Whoever drafts the next announcement copy should know the ~117-char budget going in.
+2. **AC-DIST-2/WS7 — hard block on the next cycle.** No agent may mark `Social-preview + demo` DONE. The owner must supply `CURRENT, verified <date>` or `REGENERATED, see <asset>, verified <date>` before any LinkedIn announcement copy is drafted or published.
+3. **~117 visible characters — new standing constraint, binding for the next two cycles.** This is the real budget for any text that must survive the GitHub social card; the same truncation shapes the LinkedIn post's opening line. Treat it as the binding ceiling for storefront copy, not GitHub's 350-character API limit.
+4. **`metrics.json` — 4 consecutive cycles with zero events for this project (v2.18.0's window and after; confirmed at retro time — no entries past 2026-07-21T19:00 in `.claude/projects/claude-cowork-config/metrics.json`, covering v2.19.0/v2.19.1/v2.19.2 entirely).** This was already flagged crossing the 3-cycle threshold at v2.19.1. Recommend a disposition, not another flag: either the instrumentation gap is investigated Council-side, or this project accepts qualitative-only token reporting going forward and stops re-flagging it every cycle without action.
+5. **Demo SVG regeneration — owner-directed, recorded, not specced here.** `assets/setup-demo.svg` is dated 2026-07-18, predating v2.15–v2.19 entirely, while the README (since v2.19.1) leads with that arc. Prior art: `retro.md` (v2.8.1, "Demo SVG mirrors real dialogue" under binding ACs). Next cycle's intake, not this one's.
+6. `v2.20-CARRY-1` (semantic scan beyond `## Example`) — unchanged, tracked in `docs/risk-register.md`, binding on v2.20's own `/spec`.
+
+### 8. Retrospective Verdict
+
+**HEALTHY-WITH-NOTES.** The cycle's own substance shipped clean — 0% rework, CI green on first push, 4 deviations disclosed rather than discovered, a genuine negative control proving CF-v2.19-B's fix rather than asserting it, and a first-ever run of an instrument that had been deferred for 10 releases, immediately paying for itself with 2 HIGH findings. The notes are not small: this cycle reported a finding CLOSED that was not, and the mechanism was a check that structurally could not see the failure it existed to prevent — the same class of gap this project's `Check-That-Cannot-Fail` discipline exists to catch, this time in a public-facing audit signal rather than a CI gate. The second fix measurably improved the situation (the self-maintenance headline now survives the render budget that erased it entirely the first time; only the supporting consent/credential detail is still lost — MEDIUM, not a recurrence), but "verified live" was asserted without naming which surface it was checked against, and that unnamed-surface gap is carried forward, not rounded up to fully closed.
+
+Ecosystem impact: NONE
+
+---
+
 ## [v2.19.1] - 2026-07-22 — Front-Page Message Refresh
 
 **Date:** 2026-07-22
