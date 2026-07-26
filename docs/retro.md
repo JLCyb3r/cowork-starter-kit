@@ -2,6 +2,26 @@
 
 ---
 
+## [v2.19.1] - 2026-07-22 — Front-Page Message Refresh
+
+**Date:** 2026-07-22
+**Classification:** STANDARD — docs-only (`README.md` + `CHANGELOG.md` + `VERSION` prose); no auth/schema/CI-workflow/guard/secret/permission surface touched.
+**Mode:** quick (docs-only cycle: messaging draft → Phase-3 exact-message gate → implementation applies the approved draft verbatim → CI → merge). No architecture or security phase — no such surface in scope.
+**Rework rate:** 0% (implementation commit `fc54319` = HEAD reviewed at merge; no post-implementation fix commits).
+**Cycle SHAs:** implementation `fc54319` (`README.md` + `CHANGELOG.md` + `VERSION`, 3 files, 1 commit) — applied the gate-approved README draft verbatim (byte-identical, independently verified). Merged (squash) `f100afa` via PR #91. CI: 58 pass / 0 fail / 2 skip (Markdown Lint, Link Check Internal + External, Version Consistency Check all pass).
+
+### Summary
+
+Reframed the README front page from "builds a personalized, skill-equipped workspace" (setup-only) to "builds a workspace that then keeps itself sharp" (setup + self-maintenance) — surfacing the v2.15–v2.19 living-workspace arc (friction-noticing, self-apply, self-archive, pull-updates, and the dormant self-upgrade contract) that had shipped but was invisible on the front page. Added a third, self-integrity threat class to "Why trust it," alongside the two existing supply-chain threats, carrying `TRUST.md`'s honest containment framing (inspection-class and human-boundary, not a structural guarantee). Replaced the 12-entry "What's new in vX.Y" version wall with a condensed "Recent releases" pointer to CHANGELOG/Releases, and refreshed the stale "Next up" teaser (v2.20 demand-gated intake, v3.0 spawn-only Engine). No functional change — message and positioning only.
+
+### Retrospective verdict
+
+**HEALTHY** (lightweight docs cycle). Rework 0%. 0 CRITICAL / 0 defect at any phase. Gate → implementation → CI → merge, ~24 min wall-clock. Recurring learning (3rd+ instance of the same pattern): feature cycles keep the version badge/CHANGELOG current but leave the README front-page *message* itself stale — here the living-workspace arc (v2.15–v2.19) had shipped but stayed invisible on the front page for two releases before this cycle caught and closed the gap.
+
+Ecosystem impact: NONE
+
+---
+
 ## [v2.19.0] - 2026-07-22 — Persistency Layer (Pull + Kit-Version Upgrade Contract)
 
 **Date:** 2026-07-22

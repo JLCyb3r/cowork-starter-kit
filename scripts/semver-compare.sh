@@ -30,24 +30,35 @@ set -euo pipefail
 UPGRADE_THRESHOLD="2.19.0"
 
 # parse_semver <version> -> prints "MAJOR MINOR PATCH" (space-separated integers).
-# Exits 2 if the string is not a strict x.y.z integer-triplet (never guesses a partial
+# Returns 2 if the string is not a strict x.y.z integer-triplet (never guesses a partial
 # or malformed version — mirrors AC-PULL-9's "never guess missing fields" discipline).
+# Uses `return`, not `exit`: this function is always invoked from inside a command
+# substitution (`$(parse_semver ...)`), which bash already runs in a subshell — an `exit`
+# there only kills that subshell, and CF-v2.19-B's malformed-input bug was exactly a
+# caller that never checked that subshell's exit status, so the return code went
+# unnoticed and malformed input fell through to the "well-formed but false" path instead
+# of failing closed. `semver_ge` below checks this exit status explicitly.
 parse_semver() {
   local v="$1"
   if ! [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
     echo "::error::not a valid x.y.z semver: '${v}'" >&2
-    exit 2
+    return 2
   fi
   echo "${BASH_REMATCH[1]} ${BASH_REMATCH[2]} ${BASH_REMATCH[3]}"
 }
 
-# semver_ge <a> <b> -> return 0 if a >= b, 1 otherwise. Integer comparison only, at
-# each of major/minor/patch in turn — never a string compare of the whole version.
+# semver_ge <a> <b> -> return 0 if a >= b, 1 if a < b, 2 if either input is malformed.
+# Malformed input is a DISTINCT return code from "false" (fail-closed, CF-v2.19-B) —
+# callers must not collapse 2 into 1. Integer comparison only, at each of
+# major/minor/patch in turn — never a string compare of the whole version.
 semver_ge() {
   local a="$1" b="$2"
+  local a_parsed b_parsed
+  a_parsed="$(parse_semver "$a")" || return 2
+  b_parsed="$(parse_semver "$b")" || return 2
   local a_major a_minor a_patch b_major b_minor b_patch
-  read -r a_major a_minor a_patch <<< "$(parse_semver "$a")"
-  read -r b_major b_minor b_patch <<< "$(parse_semver "$b")"
+  read -r a_major a_minor a_patch <<< "$a_parsed"
+  read -r b_major b_minor b_patch <<< "$b_parsed"
 
   if [ "$a_major" -gt "$b_major" ]; then return 0; fi
   if [ "$a_major" -lt "$b_major" ]; then return 1; fi
@@ -69,12 +80,15 @@ case "$cmd" in
       echo "false"
       exit 1
     fi
-    if semver_ge "$a" "$b"; then
-      echo "true"
-      exit 0
-    fi
-    echo "false"
-    exit 1
+    set +e
+    semver_ge "$a" "$b"
+    rc=$?
+    set -e
+    case "$rc" in
+      0) echo "true"; exit 0 ;;
+      1) echo "false"; exit 1 ;;
+      *) echo "::error::malformed semver input to 'ge' — failing closed, not defaulting to false" >&2; exit 2 ;;
+    esac
     ;;
   upgrade-ready)
     kv="${2:-}"
@@ -86,12 +100,15 @@ case "$cmd" in
       echo "not-ready"
       exit 1
     fi
-    if semver_ge "$kv" "$UPGRADE_THRESHOLD"; then
-      echo "ready"
-      exit 0
-    fi
-    echo "not-ready"
-    exit 1
+    set +e
+    semver_ge "$kv" "$UPGRADE_THRESHOLD"
+    rc=$?
+    set -e
+    case "$rc" in
+      0) echo "ready"; exit 0 ;;
+      1) echo "not-ready"; exit 1 ;;
+      *) echo "::error::malformed semver input to 'upgrade-ready' — failing closed, not defaulting to not-ready" >&2; exit 2 ;;
+    esac
     ;;
   *)
     echo "::error::unknown command '${cmd}' — expected 'ge' or 'upgrade-ready'" >&2

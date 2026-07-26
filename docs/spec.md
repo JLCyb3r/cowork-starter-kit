@@ -4962,3 +4962,208 @@ safety skills — *including the gate itself* — into the installed base. See �
 
 **End of v2.19 — Persistency Layer — Phase 1 FINAL SPEC.**
 
+---
+
+# Product Spec — Cowork Starter Kit v2.19.2 "Distribution & Trust" — 2026-07-26T09:09:46Z
+
+**Mode:** quick. **Classification:** STANDARD, in-place (no worktree) — CONFIRMED (see §Classification below). **Origin:** `/council` verdict `council/verdict-20260726T084459Z-claude-cowork-config-f01e5333.md` (content-excluded — summarized here, never quoted verbatim into this syncable doc). Verdict: **REVISE** — 5/5 adversarial lenses unanimously rejected the "post to LinkedIn now vs. hold for v3.0" binary the cycle was opened to answer, and converged on running this resurrected "Distribution & Trust" rung first.
+
+## Roadmap Context — claude-cowork-config — 2026-07-26T09:20:00Z
+
+⚠️ **ROADMAP CONTEXT — 1 conflict (already resolved by this cycle's own origin), 0 supersession risks**
+
+| Fact | Status |
+|---|---|
+| Sections rendered | ✅ 7/7 (+ Ecosystem-Context-Brief) |
+| Conflicts | ⚠️ 1 — this cycle's own name collides with a *stale* prior-cycle label; resolved below, not escalated |
+| Freeze gate | ✅ no ecosystem SoS umbrella resolves for `claude-cowork-config` (`sos-resolve.sh umbrella-of` → empty) — no constraint on this cycle |
+| Supersession | ✅ 0 — v2.20 (demand-gated intake) and v3.0 (Engine) are both queued, but neither rebuilds the storefront/release-hygiene surface this cycle touches |
+
+### Already Committed (near-term)
+
+- `docs/roadmap.md:19` — v2.20 community intake is **demand-gated**, not calendar-gated (~5 organic "how do I contribute?" issues).
+- `docs/roadmap.md:20` — v3.0 "THE ENGINE" is the **Q4 2026 headline**, needs its own dedicated `/spec` + `/plan`; least-designed rung; KDQ-SPAWN-SEC still open.
+- README.md:208 "Next up" teaser is **already accurate** (v2.20 demand-gated, v3.0 spawn-only Engine) — refreshed correctly at v2.19.1, no drift found here.
+- `docs/hld.md` §3.3 (binding design principle): "Each release delivers exactly one fully-working capability, publishes as a tag plus a Release."
+
+### Deferred / Carry-Forwards
+
+- **`v2.20-CARRY-1`** (`docs/retro.md:93`, `docs/patterns.md`): the `## Example`-only deterministic scan is structurally insufficient once untrusted content arrives at intake; the semantic LLM-judge that closes it is deferred to v2.20 itself. Untouched by this cycle (OUT of scope — confirmed correctly, see §Out of Scope).
+- **`CF-v2.19-A`** (INFO, `docs/security-audit-v2.19.0.md`): `self-apply/SKILL.md` line 130 carries a stale prose-summary; the operative deny-list is correct and CI-enforced. Labeled "next-patch non-blocking" at v2.19.0 close. **This cycle IS that next patch — folded in, see AC-DIST-8.**
+- **`CF-v2.19-B`** (INFO, same doc): malformed semver input to `scripts/semver-compare.sh` currently returns "not-ready" rather than a fail-closed `exit 2`. Same "next-patch non-blocking" label. **Folded in, see AC-DIST-9.**
+- **`/refresh-public`** — carried OUT of v2.9.0 ("now this can run", `docs/retro.md:1055`), declined again at v2.16.0 Phase 0. **This cycle is the third opportunity and the required instrument — see AC-DIST-1.**
+- **WS7 social-preview / demo-animation owner visual check** (`docs/spec.md:2044`, `:2153` above) — carried unclosed since v2.8.1, across 11 releases. **This cycle cannot close it (agent-impossible) but gives it an explicit, trackable disposition — see AC-DIST-2.**
+- Pre-existing, unpromoted and untouched by this cycle: `sync-agency-dry-run` PATTERN_COUNT gate (never fired since v2.0.0), link-sweep pre-push enforcement. Not re-opened here — no CI/workflow surface in scope.
+
+### Cross-Repo Dependencies
+
+None. `registry.json`: `claude-cowork-config` has `depends_on: []`, no `parents`, no ecosystem SoS membership (confirmed fresh this cycle via `sos-resolve.sh umbrella-of claude-cowork-config` → empty). The only standing external relationship is the MIT-licensed `agency-agents` vendoring pipeline — untouched by this cycle.
+
+### JIRA Open Items
+
+`jira.enabled=false` for this project — **JIRA Level 2 not unlocked — source skipped.**
+
+### GitHub Signals
+
+Live-queried this session (2026-07-26T09:09:46Z, reconfirmed via `git fetch origin main` at spec time — local `main` == `origin/main`, HEAD `f100afa`, clean): **0 open issues, 0 open PRs.** Most recent merged: #91 (v2.19.1 front-page refresh), #90 (v2.19.0 retro), #89 (v2.19.0 build). Latest published Release: **v2.19.0** — no `v2.19.1` tag exists despite VERSION/badge reading 2.19.1 (this is Scope Item 4, AC-DIST-4). Zero community-originated issues in repo history to date — load-bearing for Scope Item 6 (AC-DIST-6): the v2.20 demand-gate counts a signal type this repo currently has no form to receive.
+
+### Conflicts with Proposed Scope
+
+**One, already resolved by the cycle's own origin, not newly discovered.** The Council-internal `pipeline.md` "Current Task" line still reads, pre-this-cycle, "NEXT: Phase C v2.9.0 Distribution & Trust" as a *stale* label carried from the v2.8.1-era 4-phase roadmap (A "Truth & Release" v2.7.2 → B "Showcase" v2.8.0 → C "Distribution & Trust" v2.9.0 → D v2.10/v3.0). That phase-C slot's *content* was already re-scoped out of v2.9.0 (which shipped as "Dynamic Reclaim" instead, per the v2.9.0 spec's own Roadmap Context Summary at `docs/spec.md:2140` above) and the "Distribution & Trust" label sat unclaimed for 10 releases until the `/council` verdict resurrected it — under a new version number (v2.19.2, not v2.9.0 or v2.10) and a narrower, evidence-scoped set of 7 items rather than the original open-ended "Phase C" placeholder. **Resolution:** this is not a scope collision requiring escalation — it is the same label being formally re-claimed by the cycle that was always going to use it, at the version number where it actually became relevant (immediately pre-announcement). No user decision required; recorded for audit trail only.
+
+### Supersession Check
+
+| Queued item | Rebuilds/replaces the surface this spec modifies? | Basis |
+|---|---|---|
+| v2.20 — Community intake (curated mode) | NO | `docs/roadmap.md:19` — adds an intake *pipeline* (issue-form→bot→LLM-judge→queue); does not touch README/roadmap/retro/CHANGELOG prose, tag/Release mechanics, or issue-template *count* beyond one new form this cycle adds first |
+| v3.0 — THE ENGINE (spawn-only) | NO | `docs/roadmap.md:20` — space-spawning capability; no product surface overlaps storefront docs or release hygiene |
+| v3.x — Hub view (local filesystem) | NO | `docs/roadmap.md:22` — unscheduled, design-settled-but-untimed; no overlap |
+
+Supersession check: no queued item rebuilds this surface.
+
+### Ecosystem-Context-Brief
+
+`sos-resolve.sh umbrella-of claude-cowork-config` → empty (no registered SoS umbrella). Per ADR-203: **Ecosystem-Context-Brief = no constraint on this cycle.** **Decision-Propagation = no pending propagation obligations for `claude-cowork-config`** (same empty-umbrella basis). Freeze-Aware Scope Check: skipped, fail-open, same basis — no `sos-gates.json` applies.
+
+### Gate-Cycle Pre-Spec Check (Council-level, AC-06/ADR-140, extended ADR-199)
+
+- **Check A (queued gate-cycle):** `.claude/projects/claude-cowork-config/stack-profile.json` has no `planning.queued_cycles[]` — **fail-open, skipped.**
+- **Check B (security-debt lock):** ran `awk`-scoped-to-most-recent-cycle-section + line-shape grep for `NEXT-CYCLE-LOCKED` CF bullets against the target repo's own `docs/retro.md` (most recent section = v2.19.0) — **0 matches. Security-debt lock: none found.**
+
+---
+
+## Problem
+
+The kit's public storefront — README, GitHub Release history, repo roadmap doc, retrospective ledger, and issue-intake surface — has accumulated small, independently-caught truth gaps across 11 releases (v2.8.1 → v2.19.1) because no single instrument has ever swept the whole surface class at once. `/refresh-public` exists to be that instrument and has never run. The immediate forcing function is the owner's first public LinkedIn announcement: a post built on top of an unswept storefront risks being contradicted by the storefront itself within minutes of a reader clicking through (stale roadmap line, a version badge with no matching Release, a retro ledger missing the most recent entry, a "contribute" instinct with no landing form). This is evidence-based, not speculative — every item in scope below is an already-recorded, already-owed ledger entry (a prior carry-forward, a declined `/refresh-public` invocation, or a chairman-verified live-repo fact), not a newly invented one.
+
+## Target Users
+
+- **Primary:** a first-time visitor arriving from the owner's LinkedIn post — reads the README hero, may click "Releases," may notice the roadmap doc if linked. Needs every claim they can check to be true on first look; a single caught inconsistency reads as "is any of this real?" for a trust/safety-pitched project.
+- **Secondary:** the project owner, who needs the storefront's accumulated small gaps closed *before* investing social capital in a public post they cannot un-post, and who owns the one disposition (WS7) no agent can close on their behalf.
+- **Tertiary:** a future maintainer or the Council pipeline itself, which needs `docs/retro.md` and `docs/roadmap.md` to be internally consistent so future `/spec` cycles' roadmap-context audits don't inherit silent drift.
+
+## Scope (7 items — all pre-existing owed ledger entries)
+
+### AC-DIST-1 — Run `/refresh-public`, apply or disposition every finding
+
+The full public-artifact audit (release body vs. CHANGELOG, repo description accuracy, GitHub topics) runs against the live repo — the deterministic instrument, not a hand-re-enumeration of the two known-stale lines below (`patterns.md:30` names exactly this failure mode: a hand-enumerated surface list narrower than reality, requiring 3 successive widenings + CI to bottom out on a structurally similar prior incident).
+**Verify:** `/refresh-public` output is captured (scratchpad or PR description); every finding is either fixed in this cycle's diff or carries an explicit "carried to `<X>`, because `<Y>`" line — none silently dropped.
+
+### AC-DIST-2 — WS7 owner-only visual check (AGENT-IMPOSSIBLE — owner action item, not an AC any agent can close)
+
+Two sub-checks, both requiring a human eyeball, neither closable by any agent in this pipeline:
+(a) the demo animation renders correctly on the live README (github.com render, not local preview);
+(b) the social-preview card (`repository-images.githubusercontent.com/1211628530/...` — confirmed uploaded, asset exists) renders as intended when the repo link is shared.
+**Disposition contract (mirrors the existing `AC-WS7-1` shape at `docs/spec.md:2044`):** the owner or orchestrator records ONE of exactly three lines in the PR description or scratchpad — `"Social-preview + demo: CURRENT, verified <date>"` / `"Social-preview + demo: REGENERATED, see <asset>, verified <date>"` / `"Social-preview + demo: UNKNOWN — DEFERRED to owner, blocks next-cycle post"`. **This is the binding gate on the next cycle (the actual LinkedIn copy):** if the disposition is `UNKNOWN — DEFERRED`, the next cycle MUST NOT proceed to drafting or publishing announcement copy. This cycle (v2.19.2) itself is NOT blocked by this AC's disposition — it can close with `UNKNOWN — DEFERRED` recorded, same as it has for 11 releases; what changes is that the deferral is now an explicit, dated, re-checkable line instead of an implicit gap nobody re-reads.
+
+### AC-DIST-3 — `docs/roadmap.md` full-file staleness sweep
+
+Not just the two known lines — a full-file sweep for any version reference that no longer matches shipped reality. Two confirmed instances from this Phase 0's own read of the complete file (no others found on this pass, but the AC requires the sweep be *executed and verified*, not assumed complete from a single PM read):
+(a) line 5, "**Where we are:** mid-Q3 2026, at **v2.18.0**" → update to reflect v2.19.0 shipped (and v2.19.1/v2.19.2 patches, if the file's convention tracks patches — see disposition note below);
+(b) line 18, the v2.19 ladder row lacks the "**SHIPPED**" tag its three predecessors (lines 15–17) carry.
+**Verify:** `grep -n "v2.18.0" docs/roadmap.md` after the fix returns 0 hits in "where we are" framing (historical mentions inside rung descriptions are fine and must NOT be scrubbed — only the current-state framing is stale); `docs/roadmap.md:18` (or wherever the v2.19 row lands) contains "SHIPPED" matching the pattern of lines 15–17.
+
+### AC-DIST-4 — Resolve the v2.19.1 tag/Release gap (pick one, document the decision)
+
+`docs/hld.md` §3.3 is binding: "Each release delivers exactly one fully-working capability, publishes as a tag plus a Release." VERSION/badge read `2.19.1`; the latest GitHub Release is `v2.19.0`; `SETUP-CHECKLIST.md:165` actively sends users to the Releases tab to "check" the current version — where they will not find 2.19.1. This is not an accidental bug (`pipeline.md` records a deliberate "NO tag — docs patch" decision at v2.19.1's Phase 7) but the current state is neither "tagged" nor "documented as an exception" — it is silently inconsistent.
+**Recommendation (PM, not unilateral): (a) cut the `v2.19.1` tag + GitHub Release retroactively now** — PR #91 is already merged (`f100afa`) with CI green (58/0), so this is a zero-new-code, zero-risk action (git tag + `gh release create`, release body = the existing CHANGELOG `[2.19.1]` entry verbatim); **and adopt a forward policy that every VERSION bump gets a tag + Release going forward**, retiring the "docs-patch = no tag" exception entirely, since that exception is the direct cause of this gap and SETUP-CHECKLIST.md's Releases-tab guidance already assumes uniform tagging. **Alternative (b):** keep the no-tag-for-docs-patch policy, but then `SETUP-CHECKLIST.md:165` MUST be rewritten to state the CHANGELOG (not the Releases tab) is the authoritative version-history source for docs-only patches. Both close the gap; (a) is cheaper and removes a future recurring decision point, so it is the recommendation, but this is presented as a real choice for the user/gate to confirm — not decided unilaterally here.
+**Verify:** (a) `gh release view v2.19.1` succeeds and its body matches the CHANGELOG `[2.19.1]` entry; OR (b) `grep -n "CHANGELOG" SETUP-CHECKLIST.md` shows updated guidance, and a one-line policy statement exists in `CONTRIBUTING.md` or `docs/roadmap.md`.
+
+### AC-DIST-5 — Backfill the missing `docs/retro.md` v2.19.1 entry
+
+`docs/retro.md`'s most recent heading is `## [v2.19.0]`; the v2.19.1 retrospective exists only in Council-internal `pipeline.md` (never synced — correctly, per the Content Exclusion Policy — but the *public-safe summary* of what shipped should still exist in the repo's own public ledger, matching every other cycle's convention).
+**Verify:** `grep -c "^## \[v2.19.1\]" docs/retro.md` ≥ 1, positioned above `## [v2.19.0]` (newest-first convention); entry summarizes scope/classification/rework-rate/verdict in the same shape as the v2.8.1 and v2.18.0 entries, using only public-safe content (no internal-only Council pipeline detail, no security-review internals).
+
+### AC-DIST-6 — Add a lightweight contribute/question issue-template form
+
+`.github/ISSUE_TEMPLATE/` holds only `bug_report.md` and `preset_request.md` (confirmed via `ls`) — no channel exists for the "how do I contribute?" signal the v2.20 demand-gate counts (`roadmap.md:19,36`). Adding the channel is in scope; building v2.20's intake pipeline is explicitly not (see Out of Scope).
+**Verify:** a new `.github/ISSUE_TEMPLATE/question_or_contribute.md` (or equivalent name) exists, follows the same YAML-frontmatter shape as the two existing templates, and (if `.github/ISSUE_TEMPLATE/config.yml` exists) is registered there.
+
+### AC-DIST-7 — Bind announcement-copy constraints as ACs on the NEXT cycle (not written here)
+
+This cycle does not draft the LinkedIn post (explicitly out of scope — see below), but it binds three constraints the next cycle's Phase 0 MUST inherit, because a public post has no Phase 5, no Phase 6, and no revert path once published (`docs/patterns.md:13,25,33` — every prior public-copy truth defect in this project was caught only post-merge, by a gate or the owner):
+- **AC-DIST-7a — scope claims to SHIPPED functionality only** (v2.16.0 through v2.19.1/v2.19.2 as of the post's publish date).
+- **AC-DIST-7b — no v3.0/Q4 date claim.** `docs/hld.md:3`: "a design horizon, not a committed build"; `docs/roadmap.md:37`: least-designed rung; KDQ-SPAWN-SEC still open.
+- **AC-DIST-7c — no OSS/self-hostable or cross-tool/"sovereign" framing.** `docs/roadmap.md:58`: dial A (OSS/self-host) and dial B (cross-tool portability) "must not fuse," and neither has been picked yet.
+**Verify:** this spec section itself states all three constraints (done, above); the next cycle's `/spec` for the actual post explicitly restates and honors them — checked at that cycle's own Phase 0, not here.
+
+### AC-DIST-8 — Fold in `CF-v2.19-A` (self-apply stale prose-summary)
+
+`skills/self-apply/SKILL.md` line ~130 carries a stale prose-summary; the operative deny-list is correct and CI-enforced (cosmetic only, no security substance). Labeled "next-patch non-blocking" at v2.19.0 close — this is that patch.
+**Verify:** the prose-summary at the flagged line is updated to match the current `self-*` reserved-prefix deny-list (3 named siblings); no change to the enforced deny-list itself; CI (`self-apply-deny-completeness-check`) still passes unchanged.
+
+### AC-DIST-9 — Fold in `CF-v2.19-B` (semver malformed-input fail-closed)
+
+`scripts/semver-compare.sh` currently returns a "not-ready" result on malformed semver input rather than failing closed with `exit 2`. Same "next-patch non-blocking" label as AC-DIST-8.
+**Verify:** a fixture with malformed input (e.g. `ge foo 2.19.0`) exits `2` (not `0` or the current silent "not-ready" `1`); existing well-formed comparisons (`ge 2.9.0 2.19.0` → false; `ge 2.19.0 2.18.0` → true) are unchanged (regression check).
+
+### Risk-Register Recommendation (open question — answered, not just noted)
+
+`docs/risk-register.md` does not exist in this repo. The Contrarian `/council` lens ran without it and flagged the absence as decision-relevant for a project whose entire public pitch is trust/safety — "what did we knowingly accept, and under what condition" is currently reconstructible only by paging ~3,600 lines of `docs/retro.md`.
+**Recommendation: seed a minimal `docs/risk-register.md` in THIS cycle (AC-DIST-10), scoped to open items only** — not a full historical backfill. Populate it with the currently-open, currently-carried items already enumerated in this spec's Roadmap Context (`v2.20-CARRY-1`, and, if AC-DIST-8/9 are deferred for any reason, `CF-v2.19-A`/`CF-v2.19-B`) plus `SF-2/3/4` (the v2.19.0 Phase-6 SHOULD-FIX items deferred to v3.0/v3.x). A full historical backfill of every closed risk across 20+ retro entries is real, separate effort — explicitly out of scope for a 50–60-minute quick-mode cycle — and belongs to its own future cycle, noted as a carry-forward, not silently dropped.
+**AC-DIST-10 (NEW, conditional on user confirming the recommendation above):** `docs/risk-register.md` exists with a standard risk-register shape (ID / description / accepted-under-what-condition / status / source cycle), seeded with currently-open items only, and a header note stating historical backfill is intentionally deferred to a future cycle.
+**Verify:** file exists; each row cites a source (`retro.md:<line>` or `security-audit-v<X>.md`); no row claims a risk is closed without a citation.
+
+## Out of Scope (v1 — this cycle)
+
+- v2.20 community-intake pipeline (issue-form → bot → LLM-judge → maintainer queue) — AC-DIST-6 adds only the *issue-template channel*, not the pipeline behind it.
+- The LLM-judge that closes `v2.20-CARRY-1` — untouched, still deferred to v2.20 itself.
+- Any v3.0 design work (spawn ceremony, KDQ-SPAWN-SEC) — needs its own dedicated `/spec` + `/plan`.
+- Opening the community tier (v3.1).
+- **Writing the actual LinkedIn post copy** — that is the next cycle, gated on AC-DIST-2's disposition landing at CURRENT or REGENERATED (not UNKNOWN-DEFERRED).
+- A full historical backfill of `docs/risk-register.md` across all prior cycles — only the open-items seed (AC-DIST-10) is in scope this cycle.
+- Any change to `.github/workflows/`, `.claude/settings.json`, guard scripts, or `scope_allow:` frontmatter — none is needed for this scope; if Phase 4 discovers otherwise, STOP and escalate to SECURITY-SENSITIVE per the Worktree-Aware Phase 0 rule rather than proceeding in-place.
+
+## C-v2.19.2-N Binding Constraints
+
+- **C-v2.19.2-1** — this cycle ships zero product/feature surface; every file touched is documentation, release metadata, or a cosmetic/fail-closed fix explicitly labeled non-blocking by a prior cycle (CF-v2.19-A/B).
+- **C-v2.19.2-2** — AC-DIST-2 (WS7) is never marked DONE by an agent; only a human-authored disposition line closes it, and `UNKNOWN — DEFERRED` is an acceptable, non-blocking close for THIS cycle while being a hard block for the NEXT.
+- **C-v2.19.2-3** — AC-DIST-1 (`/refresh-public`) is the sole instrument for the "storefront truth" finding class this cycle; no hand-enumerated substitute list satisfies it (`patterns.md:30` precedent).
+- **C-v2.19.2-4** — announcement copy itself (AC-DIST-7's subject) is never drafted in this cycle, on any branch, in any scratchpad file intended for reuse — the constraints are bound now, the copy is written later.
+- **C-v2.19.2-5** — no `docs/risk-register.md` row may assert a risk "closed" without an inline citation to the cycle/doc that closed it; unclear status is recorded as `STATUS-UNCLEAR — needs owner confirmation`, never guessed.
+
+## Edge Cases (5 categories)
+
+1. **Empty/null (AC-DIST-1):** `/refresh-public` finds zero issues — still record an explicit "0 findings" disposition in the PR description; a clean audit must be visible as *evidence the instrument ran*, not silently absent.
+2. **Permission/capability boundary (AC-DIST-2, AC-DIST-4b):** no agent can render or view image content (social-preview card, demo animation) — degrades to the explicit `UNKNOWN — DEFERRED` disposition, never a silent skip or an assumed-fine pass. Similarly, if `gh release create` / `gh repo edit` fails on auth/permission grounds, that failure is surfaced explicitly, not swallowed.
+3. **Malformed/ambiguous input (AC-DIST-10):** if a carry-forward's current status can't be cleanly read from `retro.md` (ambiguous wording, superseded-but-not-marked), the risk-register row is marked `STATUS-UNCLEAR — needs owner confirmation` rather than guessed either way.
+4. **Maximum/overflow (AC-DIST-1):** if `/refresh-public` surfaces MORE findings than fit the quick-mode cadence budget (`patterns.md:17`, ~50–60 min), findings beyond the 7 already-scoped items are triaged: fix-now if trivial (≤1 file, no judgment call), else explicitly carried forward with a reason — never silently dropped to protect the cadence target.
+5. **Concurrent/state (all ACs):** re-verified at spec time that `origin/main` == local `main` (HEAD `f100afa`, clean) — if a parallel session merges before Phase 4 applies these fixes, re-diff against fresh `origin/main` before writing, per `[[check-cycle-shipped-parallel]]`.
+
+## Success Metrics
+
+- **Primary (user outcome):** a first-time visitor who arrives via the LinkedIn post and checks any of the 4 public storefront surfaces (README hero, repo description/topics, latest Release, roadmap doc) finds every checkable claim accurate — no stale version number, no dangling Releases-tab pointer, no missing retro entry.
+- **Secondary (business outcome):** the owner can move directly from "this cycle is closed" to "post to LinkedIn" with exactly one remaining gate — their own WS7 visual check — rather than discovering a new storefront inconsistency post-post that requires a reactive fix (the failure mode `docs/patterns.md:13,25,33` already recorded three times).
+
+## Assumptions
+
+- [CONFIRMED] `/refresh-public` is a real, working Council skill (`.claude/skills/pm/G1`, invoked via `/refresh-public`) — never run against this repo before.
+- [CONFIRMED] PR #91 (v2.19.1) is merged, CI-green, and available for a zero-risk retroactive tag if AC-DIST-4(a) is chosen.
+- [CONFIRMED] This repo has no ecosystem SoS umbrella membership and no queued gate-cycle — both re-verified fresh this cycle, not assumed from stale memory.
+- [ESTIMATED] The full `docs/roadmap.md` sweep (AC-DIST-3) surfaces no additional stale references beyond the two already found on this Phase 0's full-file read — Phase 4 must still execute the sweep mechanically, not trust this estimate.
+- [UNTESTED] Whether the owner will complete the WS7 visual check within this cycle's wall-clock or defer it again for an 12th release — this cycle's design deliberately does not depend on the answer (C-v2.19.2-2).
+
+## Technical Constraints
+
+- Stack: Markdown/YAML instruction kit (no application code, no database, no Next.js/Supabase surface). CI = GitHub Actions (`quality.yml`) — markdownlint, link-check, version-consistency, self-apply-deny-completeness, ShellCheck, registry sha256 drift-verify.
+- Two of ten items touch shipped non-docs files: `skills/self-apply/SKILL.md` (prose-only, AC-DIST-8) and `scripts/semver-compare.sh` (exit-code path, AC-DIST-9) — both additive/tightening, no deny-list surface narrowed, no new write channel.
+- No worktree required (STANDARD, in-place) — no guard, `.claude/settings.json`, `scope_allow:`, or self-modifying-skill surface enters scope under the current plan. If Phase 4 discovers otherwise (e.g., a `.github/workflows/` change beyond what's already scoped), STOP and escalate to SECURITY-SENSITIVE before proceeding, per the Worktree-Aware Phase 0 rule.
+
+## Classification
+
+**STANDARD, in-place (no worktree) — CONFIRMED.** Every item touches docs/README/CHANGELOG/roadmap/retro prose, one issue-template file, one release/tag action (metadata, not code), one cosmetic prose line, and one script exit-code path. None touches `scripts/guards/`, `.claude/settings.json`, `.claude/agents/*.md` `scope_allow:`, or any self-modifying-skill surface (all of those are The-Council's own surfaces, not this target repo's, and are untouched regardless). Re-confirmed against the Council-level Self-Improvement Guard Review trigger list (CLAUDE.md) — no match.
+
+## Version Bump
+
+**v2.19.2 — PATCH.** Rationale: storefront/release-hygiene truth-repair, zero product/feature surface, matches this project's own established precedent for docs-only truth-repair cycles (v2.8.1 "Demo Story Truthfulness," v2.19.1 "Front-Page Message Refresh" — both PATCH, both STANDARD, both zero-functional-change). Note: this repo's version-bump convention is its own (plain SemVer against `VERSION`/CHANGELOG), independent of The-Council's `docs/naming-conventions.md` `vNN.M` cycle-naming scheme (that scheme governs Council self-improve cycles only, not registered target-project version numbers) — no conflict, just two different numbering systems that happen to share a `.` separator.
+
+## PM Judgment — items I would flag as mis-scoped, or not
+
+Reviewing the 7 scope items plus the 2 folded-in carry-forwards and the risk-register question, I don't find anything that doesn't belong. Specifically:
+- **AC-DIST-6 (issue template)** is the smallest item and easy to mistake for scope creep toward v2.20, but it survives scrutiny: it is one file, adds a *channel*, not a *pipeline*, and without it AC-DIST-1's own audit would otherwise have to note "the demand-gate counts a signal with no way to arrive" as an unfixed finding — better to close the one-file gap now than carry it as a finding.
+- **AC-DIST-8/9 (CF-v2.19-A/B)** were explicitly labeled "next-patch non-blocking" at v2.19.0 close specifically so a future patch cycle would pick them up without re-litigation. This is that patch. Deferring them again would need a stated reason this cycle doesn't have one for.
+- **AC-DIST-10 (risk-register seed)** is the one item I actively narrowed rather than accepted as originally framed — the Contrarian's concern is real, but a full historical backfill is a different-sized cycle than this one. The open-items-only seed is the smallest honest response to the finding, not the largest possible one.
+- **Nothing in this cycle should be *expanded*.** In particular, resist any temptation to let AC-DIST-4's tag/Release decision cascade into "audit every prior release's tag/Release consistency" — that would be a second, larger cycle wearing this one's name.
+
+**End of v2.19.2 — Distribution & Trust — Phase 0 FINAL SPEC.**
+
