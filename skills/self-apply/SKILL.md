@@ -127,7 +127,7 @@ Three distinct outputs, depending on where in the flow this skill is invoked:
 
 ## Quality criteria
 
-1. The deny-list (`context/memory-of-use.md`, `context/.apply-backups/**`, `.claude/skills/self-apply/SKILL.md`) is checked FIRST, before any allow-list match, every time.
+1. The deny-list (`context/memory-of-use.md`, everything under `context/.apply-backups/`, everything under `context/.kit-migrations/`, every `.claude/skills/self-*/SKILL.md` file — the reserved-prefix set, `self-apply`/`self-archive`/`self-upgrade` — and `cowork.install.json`) is checked FIRST, before any allow-list match, every time.
 2. Every apply gets its own turn-two confirmation with a freshly re-derived diff; no diff is ever replayed from an earlier turn or from the ledger `Note`.
 3. A ledger bookkeeping write changes only `Status`, `Occurrences`, and `Last updated` for its own row; `Note` cells are byte-identical before and after, in every row.
 4. Every applied change passes both verifier checks (friction-resolved, non-regression) before `Status` becomes `APPLIED`; either FAIL routes to rollback, never a partial or silent land.

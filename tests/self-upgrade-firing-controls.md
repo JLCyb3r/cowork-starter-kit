@@ -156,6 +156,52 @@ real (the reason MF-6 exists):**
       incorrectly report a v2.18-born workspace as upgrade-ready. `scripts/semver-compare.sh`
       parses integers and gets this right (see the GREEN run above).
 
+### 3a. CF-v2.19-B — malformed semver input fails closed (`exit 2`, v2.19.2 fix)
+
+**Mechanism:** `parse_semver` used to signal a malformed `x.y.z` string via `exit 2` from
+inside a `$(...)` command substitution — a subshell whose exit status the caller never
+checked, so the failure was silently swallowed and control fell through to the ordinary
+"well-formed but false" path. Fixed at v2.19.2 (`CF-v2.19-B`/`AC-DIST-9`): `parse_semver`
+now uses `return 2`, and `semver_ge`/its two callers (`ge`, `upgrade-ready`) explicitly
+capture and branch on that exit status, so a malformed input is a distinct `exit 2`,
+never collapsed into `false`/`not-ready`.
+
+```bash
+bash scripts/semver-compare.sh ge foo 2.19.0
+```
+
+- [x] **RAN 2026-07-26.** Output: `::error::not a valid x.y.z semver: 'foo'` /
+      `::error::malformed semver input to 'ge' — failing closed, not defaulting to false`,
+      `exit 2`.
+
+**Negative control — the SAME check against the pre-fix (git `HEAD` `f100afa`) content:**
+
+```bash
+git stash push -- scripts/semver-compare.sh
+bash scripts/semver-compare.sh ge foo 2.19.0
+echo "exit: $?"
+git stash pop
+```
+
+- [x] **RAN 2026-07-26.** Pre-fix output: `false`, `exit 1` (plus 5 `integer expression
+      expected` stderr lines from the unset variables the swallowed `exit 2` left behind).
+      Confirmed RED against the real, unmodified pre-fix repo state — the malformed-input
+      case genuinely returned the wrong exit code before this fix, exactly as `CF-v2.19-B`
+      described. Fix restored and re-confirmed `exit 2` afterward.
+
+**Regression check — well-formed comparisons unchanged:**
+
+```bash
+for args in "ge 2.9.0 2.19.0" "ge 2.19.0 2.18.0" "upgrade-ready 2.19.0" "upgrade-ready absent"; do
+  out=$(bash scripts/semver-compare.sh $args); rc=$?
+  echo "$args -> $out (exit $rc)"
+done
+```
+
+- [x] **RAN 2026-07-26.** Output: `ge 2.9.0 2.19.0 -> false (exit 1)` · `ge 2.19.0 2.18.0 ->
+      true (exit 0)` · `upgrade-ready 2.19.0 -> ready (exit 0)` · `upgrade-ready absent ->
+      not-ready (exit 1)` — all four unchanged from the §3 GREEN run above.
+
 ---
 
 ## 4. AC-PULL-9 — malformed/schema-invalid manifest refusal

@@ -2,11 +2,40 @@
 
 > Describe your goal in plain language. Claude Cowork builds a personalized, skill-equipped workspace from vetted, SHA-pinned skills — no code, no template hunting, three quick turns, about 15 minutes (an estimate — see [methodology](tests/offline-smoke-test.md)). Then it keeps working: your workspace notices its own friction, proposes fixes you approve one at a time, and safely pulls skill updates — every change confirm-first, never silent, always reversible.
 
-[![CI](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/cowork-starter-kit/actions/workflows/quality.yml)
+[![CI](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.19.1-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.19.2-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
 [![GitHub stars](https://img.shields.io/github/stars/jmlozano1990/Cowork-Starter-Kit?style=social)](https://github.com/jmlozano1990/Cowork-Starter-Kit)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+---
+
+## Who is this for
+
+- **Students and exam preppers** — set up a study workspace with flashcard generation, note-taking, and research synthesis in one guided session
+- **Knowledge workers and analysts** — configure a research or project workspace tuned to your writing voice and goal — no template hunting required
+- **Project managers and team leads** — spin up a status-update, meeting-notes, and risk-tracking workspace without touching a config file
+
+---
+
+## Quick start
+
+- Toggle **Extended Thinking** ON in Cowork before you start
+- Select the most capable model available in your plan from the model dropdown
+
+1. **[Download ZIP](https://github.com/jmlozano1990/cowork-starter-kit/archive/refs/heads/main.zip)** — unzip anywhere on your computer
+2. Open Claude Cowork → create a new Project → point it at the unzipped folder
+3. Start talking — the wizard runs automatically
+
+That's it. Cowork reads the project instructions and walks you through personalized setup.
+
+**Setup ends with a clean handover.** When the wizard finishes, it replaces `CLAUDE.md` with your personalized workspace instructions and archives the entire installer into `_setup-kit/` (moved, never deleted) — your project folder contains your files, not setup machinery.
+
+**Setup works fully offline.** Everything the wizard installs ships inside the ZIP — skills are copied from the local `skills/` folder, never downloaded. If Claude mentions it can't reach github.com or the internet during setup, that's normal and blocks nothing (see the troubleshooting section in `SETUP-CHECKLIST.md`). Web access is only needed for optional web research features, never for setup.
+
+> **Alternative paths:** Type `/setup-wizard` to run or redo setup explicitly. Or paste `examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions for a fully self-contained onboarding from message one.
+>
+> **No Cowork yet?** Use the manual path: open `SETUP-CHECKLIST.md` and follow every step by hand.
 
 ---
 
@@ -44,14 +73,6 @@ This kit exists because the AI-agent skill ecosystem it plugs into has real, doc
 This kit's answer to the first two: every upstream skill is **SHA-pinned** in `cowork.lock.json` (not tracking a branch), **vendored inside this repo** so nothing is fetched at runtime, and **attribution-injected** (ADR-024) before it ever reaches your workspace — with human review and a 24-hour soak before any upstream update ships.
 
 Its answer to the third — **self-integrity**: every self-modifying path (proposing a fix, archiving a file, pulling a skill update, or the dormant engine-upgrade path) runs behind a fixed, named allow-list, requires an explicit confirmation showing the literal change before anything lands, is checked by an automated verifier, and rolls back automatically if that check fails. Changing the safety machinery itself is a stricter, separate step: the new machinery has to pass verification *under the old, still-active gate* before it's ever allowed to take over — never the reverse. This is inspection-class and human-boundary containment, not a claim that an out-of-scope write is physically impossible — read the honest version in **[TRUST.md](TRUST.md)**.
-
----
-
-## Who is this for
-
-- **Students and exam preppers** — set up a study workspace with flashcard generation, note-taking, and research synthesis in one guided session
-- **Knowledge workers and analysts** — configure a research or project workspace tuned to your writing voice and goal — no template hunting required
-- **Project managers and team leads** — spin up a status-update, meeting-notes, and risk-tracking workspace without touching a config file
 
 ---
 
@@ -97,27 +118,6 @@ You                                Cowork
 
 - Paste `examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions — a fully self-contained copy of the same interview, no folder access needed.
 - Type `/setup-wizard` inside any Cowork project to invoke the wizard explicitly.
-
----
-
-## Quick start
-
-- Toggle **Extended Thinking** ON in Cowork before you start
-- Select the most capable model available in your plan from the model dropdown
-
-1. **[Download ZIP](https://github.com/jmlozano1990/cowork-starter-kit/archive/refs/heads/main.zip)** — unzip anywhere on your computer
-2. Open Claude Cowork → create a new Project → point it at the unzipped folder
-3. Start talking — the wizard runs automatically
-
-That's it. Cowork reads the project instructions and walks you through personalized setup.
-
-**Setup ends with a clean handover.** When the wizard finishes, it replaces `CLAUDE.md` with your personalized workspace instructions and archives the entire installer into `_setup-kit/` (moved, never deleted) — your project folder contains your files, not setup machinery.
-
-**Setup works fully offline.** Everything the wizard installs ships inside the ZIP — skills are copied from the local `skills/` folder, never downloaded. If Claude mentions it can't reach github.com or the internet during setup, that's normal and blocks nothing (see the troubleshooting section in `SETUP-CHECKLIST.md`). Web access is only needed for optional web research features, never for setup.
-
-> **Alternative paths:** Type `/setup-wizard` to run or redo setup explicitly. Or paste `examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions for a fully self-contained onboarding from message one.
->
-> **No Cowork yet?** Use the manual path: open `SETUP-CHECKLIST.md` and follow every step by hand.
 
 ---
 

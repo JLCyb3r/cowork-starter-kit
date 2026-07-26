@@ -4,6 +4,32 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [2.19.2] - 2026-07-26
+
+**Documentation & release hygiene — "Distribution & Trust."** No functional change. First run of `/refresh-public`, the public-artifact audit instrument, against this repo (carried since v2.9.0). Closes the storefront truth-gaps it surfaced ahead of the owner's first public announcement of the kit.
+
+### Fixed
+
+- `docs/roadmap.md` — "Where we are" no longer reads a stale `v2.18.0`; now reflects the shipped v2.19.0 Persistency Layer and the v2.19.1/v2.19.2 patch releases on top of it. The v2.19 ladder row now carries a `SHIPPED` tag matching its predecessors.
+- `docs/hld.md` — "Baseline" no longer reads a stale `v2.18.0`; now reflects v2.19.0 shipped plus the v2.19.1/v2.19.2 patches (same staleness class as the roadmap fix, not previously caught).
+- `docs/retro.md` — backfilled the missing `[v2.19.1]` entry (the v2.19.1 docs-only cycle had shipped but was never recorded in the public retrospective ledger).
+- `skills/self-apply/SKILL.md` — the Quality-criteria prose summary of the apply deny-list was stale (named only 3 of the 5 protected paths). Updated to match the operative, CI-enforced deny-list unchanged since v2.19.0 (`self-*` reserved-prefix + `context/.kit-migrations/` + `cowork.install.json`). Cosmetic only — the enforced deny-list itself is unchanged (`CF-v2.19-A`).
+- `scripts/semver-compare.sh` — malformed semver input (e.g. a non-`x.y.z` string) previously fell through to a silent `false`/`not-ready` result (`exit 1`) instead of failing closed. Now returns `exit 2` distinctly from a genuine `false`/`not-ready`, for both the `ge` and `upgrade-ready` subcommands. Well-formed comparisons are unchanged (regression-checked). Root cause: the parse failure was signaled from inside an unchecked command-substitution subshell; the caller now checks that exit status explicitly (`CF-v2.19-B`).
+
+### Added
+
+- `.github/ISSUE_TEMPLATE/question_or_contribute.md` — a lightweight issue template so a "how do I contribute?" or general question has a landing form. Channel only — no automated triage or intake pipeline (that remains scoped to the demand-gated v2.20 community-intake rung).
+- `docs/risk-register.md` — new, seeded with currently-open items only (`v2.20-CARRY-1`, `SF-2`/`SF-3`/`SF-4`). A full historical backfill is intentionally deferred to a future cycle.
+
+### Changed
+
+- Repo description and the `v2.18.0`/`v2.19.0` GitHub Release bodies were found stale/empty by this cycle's audit; corrected release-metadata separately (repo settings and Release bodies are not tracked in this diff — see the PR description for the applied text).
+- README.md — "Who is this for" and "Quick start" hoisted near the top of the page (previously buried behind three sections, violating this repo's `how-to`-profile word budget); CI badge URL normalized to the canonical repo casing (`Cowork-Starter-Kit`). No content changes to any section — reorder + cosmetic only.
+- **Policy:** every `VERSION` bump now publishes a matching git tag + GitHub Release, per `docs/hld.md` §3.3 ("a tag plus a Release"). The `v2.19.1` no-tag exception is retired — see the PR description for the retroactive `v2.19.1` tag/Release decision.
+- `VERSION` — 2.19.1 → 2.19.2.
+
+---
+
 ## [2.19.1] - 2026-07-22
 
 **Documentation.** Front-page message refresh — no functional change. `README.md` repositioned from "builds a personalized, skill-equipped workspace" (setup-only) to "builds a workspace that then keeps itself sharp" (setup + self-maintenance), surfacing the v2.15–v2.19 living-workspace arc (mini-Council friction-noticing, self-apply, self-archive, pull-updates, and the dormant self-upgrade contract) that had shipped but was invisible on the front page. The README's "Why trust it" summary gains a third, self-integrity threat class alongside the two existing supply-chain threats, carrying TRUST.md's honest containment framing (inspection-class and human-boundary, not a structural guarantee). The 12-entry "What's new in vX.Y" version wall is replaced with a short "Recent releases" pointer to CHANGELOG/Releases. The stale "Next up" teaser is refreshed to the current roadmap: v2.20 demand-gated community intake, v3.0 spawn-only Engine.
