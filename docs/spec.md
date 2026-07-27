@@ -5167,3 +5167,424 @@ Reviewing the 7 scope items plus the 2 folded-in carry-forwards and the risk-reg
 
 **End of v2.19.2 — Distribution & Trust — Phase 0 FINAL SPEC.**
 
+---
+
+## v2.19.3 — Show the Real Breadth
+
+### Roadmap Context Summary (mandatory pre-spec audit — run before any version number below)
+
+✅ **ROADMAP CONTEXT — 0 conflicts, 0 supersession risks**
+
+| Fact | Status |
+|---|---|
+| Sections rendered | ✅ 8/8 (7 canonical + Ecosystem-Context-Brief) |
+| Conflicts | ✅ NONE — checked `docs/roadmap.md` (v2.20 demand-gated, zero surface overlap), `stack-profile.json` `planning.queued_cycles[]` (absent), Council memory `cowork-starter-kit-status` (NEXT = v2.20 intake or v3.0, neither claims README/demo/storefront-budget) |
+| Freeze gate | ✅ no SoS umbrella — `sos-resolve.sh umbrella-of claude-cowork-config` returns empty |
+| Supersession | ✅ NONE — see §7 below |
+
+---
+
+**1. Already Committed** — `docs/roadmap.md` "Where we are" (line 5) states v2.19.1/v2.19.2 are patch-level storefront/truth-repair releases on top of v2.19.0, "no ladder row of their own." This cycle (v2.19.3) is the same shape — a third patch-level storefront release, not a new ladder rung. Nothing in the ladder commits to touching `assets/setup-demo.svg`, the README "Who is this for" section, or a storefront character budget; this cycle does not collide with any already-committed ladder item.
+
+**2. Deferred / Carry-Forwards** — Four items carried from v2.19.2, each dispositioned below (§Carry-Forward Dispositions): HIGH-2 residual (owner render re-check), the 117-char budget (binding, reused here), `metrics.json` 0-events streak (disposition decided this cycle), and CF-v2.19-A/B (reconfirmed CLOSED, not re-carried).
+
+**3. Cross-Repo Dependencies** — None. This project has no registered `depends_on` entries and belongs to no SoS umbrella (confirmed live, see header table). No constituent-system fold-in applies.
+
+**4. JIRA Open Items** — JIRA is not enabled for this project (`registry.json` — no `jira` block under `claude-cowork-config`). N/A, not silently skipped.
+
+**5. GitHub Signals** — Per this cycle's own `pipeline.md` Phase 0 row (orchestrator-run at cycle open): `gh issue list` → `[]`, `gh pr list` → `[]`. Zero open issues, zero open PRs. Nothing pending that this spec must account for.
+
+**6. Conflicts with Proposed Scope** — None found. The 3 locked scope items (demo SVG, README audience section, 117-char budget) touch no surface any queued or committed item claims.
+
+**7. Supersession Check** — Queued/planned larger items enumerated: `stack-profile.json` `planning.queued_cycles[]` (absent — empty), Council memory `cowork-starter-kit-status` topic (NEXT = "v2.20 intake (DEMAND-GATED)" OR "v3.0 THE ENGINE").
+
+| Queued item | Rebuilds/replaces the surface this spec modifies? | Basis |
+|---|---|---|
+| v2.20 — Community intake (curated mode) | NO | `docs/roadmap.md` — issue-form → bot → LLM-judge → maintainer queue; zero overlap with `assets/setup-demo.svg`, README audience section, or storefront char budget. Also demand-gated, not scheduled. |
+| v3.0 — THE ENGINE (spawn-only) | NO | `docs/roadmap.md` — space-spawning mechanic; does not touch the demo asset, README "Who is this for," or storefront copy. Unscheduled Q4 headline. |
+
+Supersession check: no queued item rebuilds this surface.
+
+**Ecosystem-Context-Brief** — `sos-resolve.sh umbrella-of claude-cowork-config` returns empty → **Ecosystem-Context-Brief = no constraint on this cycle.** Same empty resolution also yields: **no pending propagation obligations for 'claude-cowork-config'.** Both reads skipped past this point per the umbrella-less fail-open path (AC-SOS-18-equivalent for a non-Council project).
+
+**Gate-Cycle Pre-Spec Check (independent A/B, both run):**
+- **Check A** (`stack-profile.json` `planning.queued_cycles[]`) — key absent → **fail-open, skipped** (steps 1–4 N/A).
+- **Check B** (`docs/retro.md` most-recent cycle section, `NEXT-CYCLE-LOCKED` CF-line shape) — ran the exact CF-line-shape command against the `## [v2.19.2]` section: 0 matches. **Security-debt lock: none found.**
+
+---
+
+### Version Confirmation
+
+**Candidate: v2.19.3 — PATCH.** Confirmed.
+
+This target repo maintains its **own** SemVer/CHANGELOG convention, independent of The-Council's `docs/naming-conventions.md` `vNN.M` cycle-naming scheme — that Council doc **does not exist as a file reachable from this repo** (`find` for `*naming*convention*` in `/home/user/claude-cowork-config` returns nothing); the repo's actual version-bump authority is its own established precedent, already stated explicitly at `docs/spec.md:5158` (v2.19.2's own Version Bump section): "this repo's version-bump convention is its own (plain SemVer against `VERSION`/CHANGELOG), independent of The-Council's `docs/naming-conventions.md`... no conflict, just two different numbering systems." This cycle reuses that same repo-internal precedent, not the Council doc.
+
+Repo precedent for storefront/asset-only patches, all PATCH: v2.8.1 ("Demo Story Truthfulness" — the demo SVG's own most recent revision), v2.19.1 ("Front-Page Message Refresh"), v2.19.2 ("Distribution & Trust"). This cycle is the same shape: zero product/feature surface, assets + README prose only, no new capability. **v2.19.2 → v2.19.3, PATCH, confirmed.**
+
+### Classification Re-Confirmation
+
+**STANDARD, in-place (no worktree) — RE-CONFIRMED.** Every file this cycle touches is an asset (`assets/setup-demo.svg`) or documentation prose (`README.md`). No `.github/workflows/`, no `scripts/guards/`, no `.claude/settings.json`, no `scope_allow:` frontmatter, no self-modifying skill surface enters scope under the locked plan. Re-checked against the Council-level Self-Improvement Guard Review trigger list (CLAUDE.md) — no match. If Phase 4 discovers a workflow or guard-adjacent file needs touching, STOP and escalate per the Worktree-Aware Phase 0 rule rather than proceeding in-place — no such need is visible from this Phase 0's file-level read.
+
+---
+
+### Core Features (v2.19.3) — 3 Locked Scope Items
+
+**1. Regenerate `assets/setup-demo.svg` — living-workspace arc, not setup-only**
+
+The current asset (6296 bytes, `viewBox 0 0 800 740`, 23 `<text>` nodes, dated 2026-07-18) shows only the setup wizard (7 beats: Q1 → bundle-proposal → run → Q2 → ready). It predates v2.15–v2.19 entirely. The regenerated asset extends to **10 beats** across a taller canvas (`viewBox 0 0 800 1046`): the original setup arc (compressed persona-wise, structure preserved) **plus 3 new beats** depicting the living-workspace loop the v2.19.1 README hero already leads with — notice friction, propose a fix (consent required), apply-verify-log (reversible, never silent) with a skill-content-update tease (pull, not silent fetch).
+
+**Owner-vocabulary bridge — decision + justification.** Owner said "MyVoice" and "Anti-slop"; the repo's actual skill slugs are `voice-matching` and `anti-ai-slop`. **Decision: the demo uses the real repo skill names as the primary label, with a short plain-English gloss beside each** (`✓ voice-matching (writes in your voice)`, `✓ anti-ai-slop (flags AI-ish phrasing)`) — placed at the "workspace ready" checklist beat (B7), not the earlier proposal beat (B3, which stays terse to match the original's proposal-beat density). **Reasoning:** inventing owner-facing labels that don't exist on disk (e.g., showing "MyVoice" in the demo) would create a *new* mismatch in the opposite direction — a visitor who later opens `skills/` looking for "MyVoice" would find nothing. Anchoring on the real slug (what ships, what a visitor will actually find) and glossing it in plain English is the only direction that stays true after the demo ends and the visitor starts exploring the repo.
+
+**Persona change.** The setup-flow persona changes from "biochem student" to a client-report writer ("Jordan") — chosen because it naturally motivates showing `voice-matching` + `anti-ai-slop` in the proposal beat (B3) without contradicting the LOCKED "shape of work" README axis (§2 below); this is a demo-content choice, not a re-opening of the audience-framing decision.
+
+**Geometry contract — SHIPPED VALUES, corrected at Phase 3 gate (round 2).** Beats b1-b7 are unchanged from the Phase 0 draft table below (b7's *text* changed — see beat 7 in the SVG block above — but not its geometry). Beats 8-10 were re-geometried at the gate to make room for a new "3 WEEKS LATER" time divider and @ux's rewritten dialogue; all values hand-verified against a 14px monospace 8.4px/char estimate, `(bubble_width − 72) / 8.4` = max chars per line; every one of the 17 shipped text lines across 10 beats (plus the divider label) fits its budget — see AC-BRDTH-5.
+
+| Beat | Speaker | Bubble x,y,w,h | Label x,y | Text x, y (per line) |
+|---|---|---|---|---|
+| b1 | COWORK | 30,72,460,68 | 30,66 | 52,98 / 52,120 |
+| b2 | YOU | 290,168,480,46 | 770,162 | 312,197 |
+| b3 | COWORK | 30,242,620,88 | 30,236 | 52,268 / 52,290 / 52,312 |
+| b4 | YOU | 470,358,300,46 | 770,352 | 492,387 |
+| b5 | COWORK | 30,432,500,66 | 30,426 | 52,458 / 52,480 |
+| b6 | YOU | 230,526,540,46 | 770,520 | 252,555 |
+| b7 | COWORK | 30,600,600,110 | 30,594 | 52,626 / 52,648 / 52,670 / 52,692 |
+| divider (NEW) | — | rect backing 340,716,120,20; line y=726 (x1=30, x2=770) | — | 400,730 (centered) |
+| b8 (NEW) | COWORK | 30,764,640,88 | 30,758 | 52,790 / 52,812 / 52,834 |
+| b9 (NEW) | YOU | 430,880,340,46 | 770,874 | 452,909 |
+| b10 (NEW) | COWORK | 30,954,640,88 | 30,948 | 52,980 / 52,1002 / 52,1024 |
+
+Vertical spacing rule preserved from the original asset: 22px gap between the previous bubble's bottom edge and the next beat's label — divider rect bottom 736 → b8 label 758 (22px); b8 bottom 852 → b9 label 874 (22px); b9 bottom 926 → b10 label 948 (22px); 8px card padding after the final bubble (b10 bottom 1042 + 8 = viewBox height **1050**, not 1046). b1-b7's *positions* are byte-identical to the original asset; only b2/b3/b6/b7's *text content* changes (persona + vocabulary bridge). b10 shrank from 4 lines/height 110 to 3 lines/height 88 — "Three weeks later" moved out of b8's dialogue into the new divider, which carries that meaning instead.
+
+**Full replacement file (apply verbatim — this is the entire new `assets/setup-demo.svg`):**
+
+**AMENDED AT PHASE 3 GATE (round 2) — the block below is the SHIPPED asset, not the Phase 0 draft. See `### Phase 3 Gate Decisions` below for what changed and why.**
+
+```svg
+<svg viewBox="0 0 800 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="demoTitle">
+  <title id="demoTitle">Cowork Starter Kit demo — describe your goal in plain language, get a personalized workspace with vetted skills like voice-matching and anti-ai-slop installed in about 15 minutes — then the workspace keeps evolving: it notices friction, proposes a fix you confirm, and offers skill content updates you approve, every change reversible and never silent</title>
+  <style>
+    .card { fill: #14141f; }
+    .header { fill: #1e1e2e; }
+    .headerText { font: 600 13px "SFMono-Regular", Consolas, monospace; fill: #8b8fa3; }
+    .bubbleUser { fill: #2b3a55; }
+    .bubbleAssistant { fill: #23232f; }
+    .textUser { font: 14px "SFMono-Regular", Consolas, monospace; fill: #e6ecff; }
+    .textAssistant { font: 14px "SFMono-Regular", Consolas, monospace; fill: #d7d9e6; }
+    .label { font: 600 11px "SFMono-Regular", Consolas, monospace; letter-spacing: 0.05em; }
+    .labelUser { fill: #7ea6ff; }
+    .labelAssistant { fill: #8fd6a8; }
+    .beat { opacity: 1; }
+    @media (prefers-reduced-motion: no-preference) {
+      .beat { opacity: 0; animation-duration: 30s; animation-iteration-count: infinite; animation-timing-function: ease-out; }
+      .b1 { animation-name: b1; }
+      .b2 { animation-name: b2; }
+      .b3 { animation-name: b3; }
+      .b4 { animation-name: b4; }
+      .b5 { animation-name: b5; }
+      .b6 { animation-name: b6; }
+      .b7 { animation-name: b7; }
+      .b8 { animation-name: b8; }
+      .b9 { animation-name: b9; }
+      .b10 { animation-name: b10; }
+    }
+    @keyframes b1 { 0% { opacity: 0; } 3% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b2 { 0% { opacity: 0; } 9% { opacity: 0; } 12% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b3 { 0% { opacity: 0; } 18% { opacity: 0; } 21% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b4 { 0% { opacity: 0; } 27% { opacity: 0; } 30% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b5 { 0% { opacity: 0; } 36% { opacity: 0; } 39% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b6 { 0% { opacity: 0; } 45% { opacity: 0; } 48% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b7 { 0% { opacity: 0; } 54% { opacity: 0; } 57% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b8 { 0% { opacity: 0; } 63% { opacity: 0; } 66% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b9 { 0% { opacity: 0; } 72% { opacity: 0; } 75% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes b10 { 0% { opacity: 0; } 81% { opacity: 0; } 84% { opacity: 1; } 94% { opacity: 1; } 98% { opacity: 0; } 100% { opacity: 0; } }
+  </style>
+
+  <rect class="card" x="0" y="0" width="800" height="1050" rx="12" />
+
+  <rect class="header" x="0" y="0" width="800" height="40" rx="12" />
+  <rect class="header" x="0" y="20" width="800" height="20" />
+  <circle cx="24" cy="20" r="6" fill="#ff5f56" />
+  <circle cx="46" cy="20" r="6" fill="#ffbd2e" />
+  <circle cx="68" cy="20" r="6" fill="#27c93f" />
+  <text class="headerText" x="400" y="24" text-anchor="middle">Cowork — setup, then self-maintenance</text>
+
+  <!-- Beat 1: Cowork opens the interview (unchanged) -->
+  <g class="beat b1">
+    <text class="label labelAssistant" x="30" y="66" text-anchor="start">COWORK</text>
+    <rect class="bubbleAssistant" x="30" y="72" width="460" height="68" rx="10" />
+    <text class="textAssistant" x="52" y="98" text-anchor="start">Welcome! What do you need help with?</text>
+    <text class="textAssistant" x="52" y="120" text-anchor="start">Describe your goal in your own words.</text>
+  </g>
+
+  <!-- Beat 2: user states their goal (unchanged) -->
+  <g class="beat b2">
+    <text class="label labelUser" x="770" y="162" text-anchor="end">YOU</text>
+    <rect class="bubbleUser" x="290" y="168" width="480" height="46" rx="10" />
+    <text class="textUser" x="312" y="197" text-anchor="start">I write client reports — need my own voice</text>
+  </g>
+
+  <!-- Beat 3: Cowork proposes a bundle naming real repo skills (unchanged) -->
+  <g class="beat b3">
+    <text class="label labelAssistant" x="30" y="236" text-anchor="start">COWORK</text>
+    <rect class="bubbleAssistant" x="30" y="242" width="620" height="88" rx="10" />
+    <text class="textAssistant" x="52" y="268" text-anchor="start">Here's a Writing draft built from your goal</text>
+    <text class="textAssistant" x="52" y="290" text-anchor="start">(matched: voice, reports): voice-matching,</text>
+    <text class="textAssistant" x="52" y="312" text-anchor="start">anti-ai-slop, editing-pass. Run or adjust?</text>
+  </g>
+
+  <!-- Beat 4: user runs with the draft (unchanged) -->
+  <g class="beat b4">
+    <text class="label labelUser" x="770" y="352" text-anchor="end">YOU</text>
+    <rect class="bubbleUser" x="470" y="358" width="300" height="46" rx="10" />
+    <text class="textUser" x="492" y="387" text-anchor="start">Run with it</text>
+  </g>
+
+  <!-- Beat 5: Q2 name / role / deadlines, one turn (unchanged) -->
+  <g class="beat b5">
+    <text class="label labelAssistant" x="30" y="426" text-anchor="start">COWORK</text>
+    <rect class="bubbleAssistant" x="30" y="432" width="500" height="66" rx="10" />
+    <text class="textAssistant" x="52" y="458" text-anchor="start">Saved. Last question — your name, what</text>
+    <text class="textAssistant" x="52" y="480" text-anchor="start">you're working toward, any deadlines?</text>
+  </g>
+
+  <!-- Beat 6: user answers Q2 (unchanged) -->
+  <g class="beat b6">
+    <text class="label labelUser" x="770" y="520" text-anchor="end">YOU</text>
+    <rect class="bubbleUser" x="230" y="526" width="540" height="46" rx="10" />
+    <text class="textUser" x="252" y="555" text-anchor="start">Jordan — client reports, biweekly deadlines</text>
+  </g>
+
+  <!-- Beat 7: closing + clean handover, with the owner-vocabulary bridge (gate-revised copy) -->
+  <g class="beat b7">
+    <text class="label labelAssistant" x="30" y="594" text-anchor="start">COWORK</text>
+    <rect class="bubbleAssistant" x="30" y="600" width="600" height="110" rx="10" />
+    <text class="textAssistant" x="52" y="626" text-anchor="start">Your workspace is ready.</text>
+    <text class="textAssistant" x="52" y="648" text-anchor="start">voice-matching keeps drafts sounding</text>
+    <text class="textAssistant" x="52" y="670" text-anchor="start">like you; anti-ai-slop flags AI-ish</text>
+    <text class="textAssistant" x="52" y="692" text-anchor="start">phrasing. Archived setup in _setup-kit/.</text>
+  </g>
+
+  <!-- Beat 8 (NEW — living-workspace arc, "notice"): time divider + friction notice, consent required -->
+  <g class="beat b8">
+    <line x1="30" y1="726" x2="770" y2="726" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="4 4" />
+    <rect x="340" y="716" width="120" height="20" fill="#14141f" />
+    <text x="400" y="730" text-anchor="middle" style="font: 600 10px 'SFMono-Regular', Consolas, monospace; fill:#8b8fa3; letter-spacing:0.08em">3 WEEKS LATER</text>
+    <text class="label labelAssistant" x="30" y="758" text-anchor="start">COWORK</text>
+    <rect class="bubbleAssistant" x="30" y="764" width="640" height="88" rx="10" />
+    <text class="textAssistant" x="52" y="790" text-anchor="start">I noticed you keep renaming report</text>
+    <text class="textAssistant" x="52" y="812" text-anchor="start">drafts by hand. Want me to propose</text>
+    <text class="textAssistant" x="52" y="834" text-anchor="start">a naming fix — your call to confirm?</text>
+  </g>
+
+  <!-- Beat 9 (NEW — "consent"): user approves the proposed fix, nothing applies without this -->
+  <g class="beat b9">
+    <text class="label labelUser" x="770" y="874" text-anchor="end">YOU</text>
+    <rect class="bubbleUser" x="430" y="880" width="340" height="46" rx="10" />
+    <text class="textUser" x="452" y="909" text-anchor="start">Yes, show me what changes</text>
+  </g>
+
+  <!-- Beat 10 (NEW — "apply, verify, and stay current"): confirm-first apply is reversible; skill-content pull update offered, never auto-fetched -->
+  <g class="beat b10">
+    <text class="label labelAssistant" x="30" y="948" text-anchor="start">COWORK</text>
+    <rect class="bubbleAssistant" x="30" y="954" width="640" height="88" rx="10" />
+    <text class="textAssistant" x="52" y="980" text-anchor="start">Done — you can undo this any time from</text>
+    <text class="textAssistant" x="52" y="1002" text-anchor="start">the log. voice-matching also has an</text>
+    <text class="textAssistant" x="52" y="1024" text-anchor="start">update ready — pull it whenever you want.</text>
+  </g>
+</svg>
+```
+
+**README caption for the demo (FIX — added at Phase 0 revision, coordinator-directed; same defect, same screen, still inside the locked demo item).** `README.md:44` (alt text) and `README.md:46` (caption) both currently promise a "3-turn setup" story. Shipping the new 10-beat living-workspace demo under old setup-only alt/caption text reproduces this cycle's own defect on the very same screen — and the alt text is the accessible name a screen reader announces for a Markdown `![]()` embed, not the SVG's internal `<title>` (which AC-BRDTH-4 already covers). Both lines are in scope alongside the SVG itself.
+
+**Exact replacement bytes (apply in place of `README.md:44` and `README.md:46`):**
+
+**AMENDED AT PHASE 3 GATE (round 2): the alt text below is the SHIPPED 134-character version, shortened from the original ~222-character draft on the reasoning that W3C's complex-image guidance treats alt as a short identifier and the long description as the caption paragraph immediately below it (read next by a screen reader with no extra navigation) — not a duplicate of the caption's job. The caption paragraph is unchanged from the original draft below.**
+
+```markdown
+![Animated demo of Cowork building a personalized workspace, then proposing fixes to its own friction that you confirm before they apply](assets/setup-demo.svg)
+
+A synthetic demo of the real interview — describe a goal, confirm a skill bundle, answer one quick turn, and land on a personalized workspace with skills already installed — then keep watching: the workspace notices recurring friction, proposes a fix you confirm, and applies it only with your consent, logged and reversible. **In a hurry?** One open-ended question is enough to get a working bundle — everything else is optional customization or can be answered later.
+```
+
+The "In a hurry?" fast-lane sentence is preserved **byte-for-byte** — it is still true and unrelated to this fix, so it is not touched. The `## See it in action` heading is **kept** — it is `docs/public-artifact-strategy.md`'s `how-to` profile section #3 ("Demo / screenshot / GIF"), carries no character budget, and still accurately labels the section.
+
+**`docs/architecture.md:9102` carries a copy of the old alt string, inside an append-only ADR history entry — LEAVE IT UNCHANGED.** That file is historical record (architecture decisions as shipped, at the time they shipped), not live copy; @qa should not treat its unchanged old string as a miss.
+
+**2. Rewrite README `## Who is this for` (README.md:13-17) onto a shape-of-work axis — LOCKED**
+
+Owner-locked framing: lead with what the reader's WORK looks like, never a job title; never "for anyone." Binding budget: `docs/public-artifact-strategy.md:34` `how-to` profile, **3 bullets max, ≤200 words.**
+
+**SUPERSEDED AT PHASE 3 GATE (round 2) — owner rejected this Direction 1 draft as insufficiently human/researched and directed a redo (verbatim: "Be sure to humanize the text and actually do some research or use /council to find the best communication, tone and visual ideas."). The block below is the SHIPPED Direction 2 replacement, approved verbatim at the round-2 gate. See `### Phase 3 Gate Decisions` below.**
+
+**Exact shipped bytes (applied in place of README.md:13-17, between the `## Who is this for` heading and the following `---`):**
+
+```markdown
+## Who is this for
+
+- **Words, sources, and deadlines** — writing, research, or client work where the output has to sound like you, not like a template
+- **More threads than one inbox can hold** — status updates, meeting notes, and follow-ups that stay organized without a weekly rebuild
+- **The business of running a life alongside the work** — budgets, routines, and the small recurring tasks that are easier to hand off than to keep remembering
+
+Cowork builds around the shape you bring — no persona to pick, no template to hunt for.
+```
+
+Measured against the shipped bytes with AC-BRDTH-6's own verify command (`sed -n '/## Who is this for/,/^---$/p' README.md | wc -w`): **96 words** (heading through the trailing `---` delimiter), well inside the ≤200-word budget; **3 bullets** (`grep -c '^- \*\*'` = 3); **0 hits** for "for anyone" / "anyone can" / "for everyone"; **0 bullets** lead with a named role (`Student`, `Knowledge worker`, `Project manager`, `Consultant`, `Founder`, `Researcher`, `Job seeker` all absent as bullet-leading tokens, `grep -qiE` exits 1 = no match). Bolded noun-phrase leads (not "If your work..." framing) matches this README's own shipped construction elsewhere, per the round-2 gate decision record.
+
+**Breadth evidence — which bullet covers which real skill, none named:**
+
+| Bullet | Skills it silently covers |
+|---|---|
+| 1 (words, sources, deadlines) | `voice-matching`, `anti-ai-slop`, `editing-pass`, `creative-brief`, `doc-summary`, `citation-formatter`, `literature-review`, `source-analysis`, `research-synthesis` |
+| 2 (juggling threads) | `status-update`, `meeting-notes`, `action-items`, `follow-up-tracker`, `list-tracker`, `feedback-synthesizer`, `risk-assessment` |
+| 3 (business of running your life) | `spend-awareness`, `daily-briefing`, `weekly-review`, `ideation-partner` (thinking-through fits "focused work") |
+
+All 29 skills map to one of the three bullets without any of them being named — the original 3-job-title framing left the `spend-awareness` / `daily-briefing` / `weekly-review` / `citation-formatter` / `literature-review` cluster with no bullet that plausibly covered it.
+
+**3. Apply the ~117-character storefront budget as a standing constraint**
+
+No new social-card-facing copy is produced by this cycle (the README body isn't card-rendered; the repo description itself is untouched — that was v2.19.2's item, already closed). This item is therefore **carried forward as a binding constraint on future copy** (any repo-description rewrite, any LinkedIn announcement opening line) rather than applied to a concrete string this cycle — see AC-BRDTH-9.
+
+---
+
+### Out of Scope (v1 — this cycle)
+
+- v2.20 community-intake pipeline (issue-form → bot → LLM-judge → maintainer queue) — untouched.
+- The LLM-judge — untouched, still deferred to v2.20.
+- Any v3.0 design work (spawn ceremony) — needs its own `/spec` + `/plan`.
+- Opening the community tier (v3.1).
+- Writing the actual LinkedIn announcement copy — gated on AC-BRDTH-10 (AC-DIST-2 disposition) landing at `CURRENT` or `REGENERATED`, never on `UNKNOWN — DEFERRED`.
+- A full README restructure — this cycle changes the "Who is this for" section's content and axis only; v2.19.2 already fixed section ordering (`how-to`-profile compliant) and is not re-touched.
+- Any change to `.github/workflows/`, `.claude/settings.json`, guard scripts, or `scope_allow:` frontmatter.
+
+### C-v2.19.3-N Binding Constraints
+
+- **C-v2.19.3-1** — `AC-DIST-2` (carried from v2.19.2, `docs/spec.md:5052`) is **never marked DONE, CURRENT, or REGENERATED by any agent**; only the owner, after viewing the live-rendered new demo, writes the terminal disposition line. This cycle regenerating the asset does **not** itself close AC-DIST-2 — regeneration is necessary but not sufficient; the owner's visual confirmation is the closing act. The next cycle (LinkedIn announcement) remains hard-blocked until that line reads `REGENERATED, see assets/setup-demo.svg, verified <date>` or `CURRENT, verified <date>`.
+- **C-v2.19.3-2** — the README "Who is this for" rewrite is a content/axis change only; no reordering of README sections, no new H2, no expansion beyond 3 bullets / 200 words.
+- **C-v2.19.3-3** — no bullet, heading, or closing line in the rewritten section may contain "for anyone," "anyone can," or name any of the three retired job titles as a bullet's lead subject.
+- **C-v2.19.3-4** — the demo SVG's beat count only grows by the 3 new living-workspace beats (b8–b10); no beat may be silently dropped, and the original 7-beat setup structure (Q1 → bundle-proposal → run → Q2 → ready) must remain recognizable, per the AC-STORE-2 precedent (`docs/retro.md:1080`) that beat-count changes require an explicit disposition, not a silent count drift.
+- **C-v2.19.3-5** — the ~117-character storefront budget binds any future copy this repo produces that must survive a social-card render (repo description, LinkedIn opening line); it is not discharged by this cycle since no such copy is produced here.
+- **C-v2.19.3-6** — this cycle ships zero product/feature surface; every file touched is an asset or documentation prose.
+
+### Acceptance Criteria
+
+- [ ] **AC-BRDTH-1 (demo regenerated, 10 beats, correct viewBox) — viewBox corrected at Phase 3 gate (round 2)** from `1046` to `1050` (canvas grew to fit the new time-divider + rewritten beats 8-10 geometry — see `### Phase 3 Gate Decisions` below). Verify: `grep -c 'viewBox="0 0 800 1050"' assets/setup-demo.svg` = 1; `grep -c 'class="beat b' assets/setup-demo.svg` = 10; `grep -c "@keyframes b" assets/setup-demo.svg` = 10.
+- [ ] **AC-BRDTH-2 (both new skills named by their real repo slug):** Verify: `grep -c "voice-matching" assets/setup-demo.svg` >= 3 (beats 3, 7, 10); `grep -c "anti-ai-slop" assets/setup-demo.svg` >= 2 (beats 3, 7).
+- [ ] **AC-BRDTH-3 (owner-vocabulary bridge present as a plain-English gloss, not a substitute label) — RE-POINTED AT PHASE 3 GATE (round 2).** The original verify (`grep -c "writes in your voice"` / `grep -c "flags AI-ish phrasing"`) targeted the Phase 0 draft's b7 copy (`✓ voice-matching (writes in your voice)` / `✓ anti-ai-slop (flags AI-ish phrasing)`), which the round-2 gate replaced with humanized prose (`voice-matching keeps drafts sounding like you; anti-ai-slop flags AI-ish phrasing.`) split across two `<text>` nodes — the original two legs can never match the shipped copy on a single line. Corrected to two legs that actually appear in the shipped strings, each pre-verified against the PRE-change (currently shipped, HEAD `26b8783`) asset to prove the check can fail:
+  - **Verify A:** `grep -c "keeps drafts sounding" assets/setup-demo.svg` — expected **= 1**. Pre-change count (against HEAD `26b8783`'s asset): **0**.
+  - **Verify B:** `grep -c "anti-ai-slop flags AI-ish" assets/setup-demo.svg` — expected **= 1**. Pre-change count (against HEAD `26b8783`'s asset): **0**.
+  - **Verify C (unchanged, still correct):** `grep -ic "MyVoice\|Anti-slop\b" assets/setup-demo.svg` — expected **= 0** (the owner's colloquial names never appear literally in shipped copy — only the real slugs + gloss do).
+- [ ] **AC-BRDTH-4 (demoTitle accessibility text describes the living-workspace arc, not setup-only) — CORRECTED at Phase 0 revision.** The original verify's second leg was a **check-that-cannot-fail**: a stray trailing `\"` after "files" meant the pattern could never match any file, before or after the edit (confirmed by running it verbatim against the currently shipped SVG — returns 0 either way, i.e. it would return 0 even if @dev did nothing). Corrected to two separately-stated verifies, each with an explicit expected value:
+  - **Verify A (new title present):** `grep -A1 'id="demoTitle"' assets/setup-demo.svg | grep -c "evolving\|notices\|update"` — expected **>= 1**.
+  - **Verify B (old title/closing-line phrase retired — a real negative control):** `grep -c "holds only your files" assets/setup-demo.svg` — expected **= 0**. Confirmed against the currently shipped (pre-change) file: this pattern returns **2** (the old `<title>` AND the old beat-7 closing text line both contain the phrase), so a post-change `0` is a genuine signal, not a check that cannot fail.
+- [ ] **AC-BRDTH-5 (no bubble text overflows its bubble):** Verify: for each of the 17 text lines across 10 beats, `len(line) <= (bubble_width - 72) / 8.4`. All 17 lines pre-verified in this spec's geometry table at 38–86% fill (script-checked, see Assumptions); @qa re-runs the same check against the applied file, not just this spec's table, before Phase 5 sign-off. Direct instance of `docs/patterns.md`'s Check-That-Cannot-Fail discipline, applied to the exact defect class the prior cycle's beat-3 bubble caught.
+- [ ] **AC-BRDTH-6 (README section rewritten, budget-compliant):** Verify: section between `## Who is this for` and the next `---` has exactly 3 lines matching `^- \*\*` (`grep -c '^- \*\*'`); word count of the full section (heading through closing sentence) <= 200 (`wc -w`); `grep -ic "for anyone\|anyone can\|for everyone" README.md` = 0.
+- [ ] **AC-BRDTH-7 (no bullet leads with a retired job title):** Verify: `grep -qiE '^\- \*\*(Student|Knowledge worker|Project manager|Consultant|Founder|Researcher|Job.?seeker)' README.md` returns no match (exit 1) within the "Who is this for" section.
+- [ ] **AC-BRDTH-8 (breadth evidenced — all 29 skills map to one of the 3 bullets):** Verify: manual disposition, recorded in the Phase 4 commit message, cross-referencing this spec's breadth-evidence table against the live `skills/` directory listing (`ls skills/`) — confirms no skill is orphaned from all 3 bullets' scope. Agent-executable as a table-comparison, not a silent claim.
+- [ ] **AC-BRDTH-9 (117-char budget — standing constraint, not-applicable-this-cycle disposition):** Verify: this cycle produces no new social-card-facing copy (`git diff` on `README.md`'s first 300 chars and on any repo-description-adjacent file shows no change) — disposition recorded as `117-char budget: N/A this cycle — no new social-card-facing copy produced; binding on any future repo-description or announcement-copy cycle`.
+- [ ] **AC-BRDTH-10 (AC-DIST-2 hard-block disposition — OWNER-ONLY, agent-impossible):** the owner, after viewing the live-rendered regenerated demo, records exactly one of the three canonical lines (`CURRENT, verified <date>` / `REGENERATED, see assets/setup-demo.svg, verified <date>` / `UNKNOWN — DEFERRED to owner, blocks next-cycle post`) in the PR description or `pipeline.md`. No agent may write `DONE`. Verify: PR description or `pipeline.md` v2.19.3 row contains exactly one canonical line, authored by the owner.
+- [ ] **AC-BRDTH-11 (all 4 v2.19.2 carry-forwards dispositioned, none silently dropped):** Verify: this spec's Carry-Forward Dispositions section (below) contains all 4 items (HIGH-2 residual, 117-char budget, `metrics.json`, CF-v2.19-A/B), each with an explicit disposition line.
+- [ ] **AC-BRDTH-12 (version-consistency triple match, post-Phase-4):** Verify: `VERSION` reads `2.19.3`; README badge reads `2.19.3`; `CHANGELOG.md` top header reads `## [2.19.3]`; this repo's existing `version-consistency-check` CI job (ADR-035) passes — reused, not reinvented, per `docs/patterns.md`'s "Recurring Version Artifact Miss — STRUCTURALLY CLOSED" row.
+- [ ] **AC-BRDTH-13 (README demo alt-text + caption describe the living-workspace arc, not setup-only) — NEW at Phase 0 revision.** Verify (three legs):
+  - `grep -c "answer three quick turns, and get a working, personalized workspace with installed skills" README.md` — expected **= 0** (the old alt string is retired from the live README; `docs/architecture.md:9102`'s copy is deliberately UNCHANGED — append-only ADR history, not a miss, per the note above).
+  - `sed -n '/## See it in action/,/^---$/p' README.md | grep -c "evolving\|notices\|consent"` — expected **>= 1** (the new caption names the living-workspace loop, not just setup).
+  - `grep -c "One open-ended question is enough to get a working bundle" README.md` — expected **= 1** (fast-lane sentence preserved). Corrected at Phase 0 revision: the original pattern included the literal `In a hurry?` prefix, but the live README wraps that phrase in markdown bold markers (`**In a hurry?**`), so the un-bolded substring never exists in the file — the original leg was a check that could never *pass* (same class as the original AC-BRDTH-4 defect, inverted), which would record a false Phase 5 failure on correct work. The corrected pattern targets only the substantive clause, deliberately omitting the bold markers so the check survives any future re-formatting of the emphasis (bold, italic, or removed) rather than being brittle to it.
+- [ ] **AC-BRDTH-14 (SVG inertness, with a real negative control) — NEW at Phase 0 revision, closing a dropped 3-cycle precedent** (`docs/internal/security/security-review-v2.8.0.md:36` S5 "Phase 4 MUST-VERIFY"; `security-review-v2.9.0.md:30` S6 "re-run after the beat-3/4 edit"; `docs/internal/qa/qa-report-v2.8.1.md:69-92` and `qa-report-v2.9.0.md:111`, both run with an explicit negative control). This is a public-facing asset that renders on the storefront; dropping this precedent silently is not a scope decision an agent gets to make. Verify (three legs):
+  - **Positive check:** `grep -icE '<script|<foreignObject|on[a-z]+=|xlink:href|<image|<use|@import|url\(http|href="(https?:|//|data:|file:)' assets/setup-demo.svg` — expected **0**. Pre-verified against the drafted replacement file at Phase 0: **0 hits**; the only non-xmlns URI present is the mandatory `xmlns="http://www.w3.org/2000/svg"` namespace declaration.
+  - **Negative control (proves the check can fail, per `docs/patterns.md`'s Check-That-Cannot-Fail discipline):** append `<script>alert(1)</script>` to a SCRATCH COPY only (never the committed file, never touching the repo) and re-run the identical grep — expected **>= 1**. Pre-verified at Phase 0: returns **1**.
+  - **XML well-formedness:** `python3 -c "import xml.dom.minidom as m; m.parse('assets/setup-demo.svg')"` exits 0 (no exception). Pre-verified at Phase 0: well-formed.
+- [ ] **AC-BRDTH-15 (`docs/roadmap.md` "Where we are" freshness) — NEW at Phase 0 revision.** Left off the original file list; shipping v2.19.3 while `docs/roadmap.md:5` still reads "at **v2.19.2**" recreates the exact `version-bump-completeness` staleness class this cycle exists to fix (repo precedent: the v2.19.2 Phase 4 verification recorded `roadmap.md:5 now reads v2.19.2` as a checked deliverable — this is that same check, one version later). **Exact replacement — two substring edits inside the existing `docs/roadmap.md:5` paragraph, not a rewrite of the whole line:**
+  1. `at **v2.19.2** (patch)` → `at **v2.19.3** (patch)`
+  2. `**v2.19.1 and v2.19.2 are patch-level storefront/truth-repair releases on top of v2.19.0**` → `**v2.19.1, v2.19.2, and v2.19.3 are patch-level storefront/truth-repair releases on top of v2.19.0**`
+
+  Verify: `grep -c "v2.19.3" docs/roadmap.md` — expected **>= 1**; `grep -c "at \*\*v2.19.2\*\* (patch)" docs/roadmap.md` — expected **= 0** (confirms the stale "Where we are" framing is gone). A full-file re-read at this revision (all 66 lines) confirms no other line in `docs/roadmap.md` claims a surface this cycle touches — the ladder table's `v2.19.1`/`v2.19.2` mentions elsewhere are historical rung-shipped notes, not "where we are now" framing, and are correctly left alone.
+
+### Carry-Forward Dispositions (from v2.19.2 — all 4, none silently dropped)
+
+1. **HIGH-2 residual (render re-check)** — **Disposition: owner action item, unresolved, carried again with no new deadline.** The live 176-char repo description was verified via `gh repo view` (repo page, does not truncate) but never against an actual social-card render. Arithmetically the self-maintenance clause survives at 176 chars (loses 59 of the demonstrated 117-char budget, not the clause itself) — the residual is real but non-blocking. **Owed:** the owner pastes the repo link into any link-preview surface once and reports back; no agent can perform this check. Not re-scoped as an AC this cycle (it is orthogonal to the 3 locked items) but explicitly not dropped.
+2. **~117-char storefront budget** — **Disposition: binding, reused.** See C-v2.19.3-5 / AC-BRDTH-9. No new copy to check it against this cycle; stays binding for the next.
+3. **`metrics.json` — 4 consecutive cycles, 0 events past 2026-07-21** — **Disposition (PM recommendation): accept qualitative-only reporting for this project's quick-mode docs cycles, and stop re-flagging it as a `claude-cowork-config`-side carry-forward.** Reasoning: the file that would carry these events lives in **The-Council's own project state** (`.claude/projects/claude-cowork-config/metrics.json`), not in this target repo — the gap, if it is a gap, is a Council-side telemetry/hook-firing issue, not a defect in Cowork Starter Kit. Four consecutive quick-mode, docs-only cycles (v2.19.0/.1/.2/.3) producing few or no Agent-tool-boundary events is also plausibly **expected** behavior for lightweight cycles, not necessarily broken instrumentation. Re-flagging this every cycle in `claude-cowork-config`'s own retro produces no actionable movement, since the fix (if one is needed) is in Council's own metrics hook, not this repo. **Recommend:** the orchestrator log this once as a Council-side observation (`observations.md` / a Council self-improve candidate) rather than a recurring `claude-cowork-config` carry-forward, and this project's future retros report cycle health qualitatively (rework rate, CI pass/fail, phase count) without depending on `metrics.json` events. Not fabricating data either way — this is a reporting-method decision, not a data decision.
+4. **CF-v2.19-A / CF-v2.19-B** — **Disposition: reconfirmed CLOSED** (v2.19.2 AC-DIST-8/9). Not re-carried. `grep` re-check: both fixes (skill-content Quality-criteria prose match, `semver-compare.sh` fail-closed exit code) remain applied in the current tree per `docs/retro.md`'s v2.19.2 entry; no regression found in this Phase 0's read.
+
+### Edge Cases (5 categories)
+
+1. **Empty/null (AC-BRDTH-8):** if a future skill is added to `skills/` that doesn't cleanly map to any of the 3 bullets, that is a signal the section needs revisiting — not silently ignored. Recorded as a standing note for the next README-touching cycle, not an open item this cycle.
+2. **Permission/capability boundary (AC-BRDTH-10):** no agent can render or view the live demo SVG as a human would — degrades to the explicit `UNKNOWN — DEFERRED` disposition, exactly the AC-DIST-2 shape, never a silent skip or an assumed-fine pass.
+3. **Malformed/ambiguous input (AC-BRDTH-5):** if any future edit to the demo SVG changes a bubble's width without re-running the geometry check, the check must fail loudly (character count over budget) rather than silently rendering clipped text — this spec's per-line table is the baseline for that re-check.
+4. **Maximum/overflow (AC-BRDTH-6):** if a future edit pushes the "Who is this for" section past 200 words or past 3 bullets, that is a hard budget violation per `docs/public-artifact-strategy.md:34` — must be caught before merge, not discovered post-ship (this is the same failure class HIGH-2 already demonstrated once for a different field).
+5. **Concurrent/state (all ACs):** re-verified at spec time that `origin/main` == local `main` (`26b8783`, clean, 0 ahead/0 behind, VERSION `2.19.2`) — if a parallel session merges before Phase 4 applies these fixes, re-diff against fresh `origin/main` before writing, per `[[check-cycle-shipped-parallel]]`.
+
+### Risk Table
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| New demo SVG text overflows its bubble on real rendering, repeating the exact beat-3-too-narrow defect this repo already shipped once | Low | Medium (visual clipping, same defect class the prior art warns about) | AC-BRDTH-5 binds a per-line, per-bubble character-budget check; every one of the 17 lines in this spec is pre-verified at 38–86% fill (vs. the original's up-to-96%-fill lines that caused the prior overflow) |
+| Owner-vocabulary bridge reads as cluttered or confusing in the actual rendered demo (gloss text feels tacked-on) | Low | Low (cosmetic; the underlying names are still correct) | Gloss placed at the natural "here's what you got" checklist beat (B7), not crammed into the denser proposal beat (B3); owner's Phase-4/visual-review pass (AC-BRDTH-10) is the natural point to catch this before it ships |
+| README rewrite is read as still-too-narrow or still-implicitly-excluding a real user segment | Low | Medium (repeats the exact defect this cycle exists to fix) | Breadth-evidence table maps all 29 skills to one of 3 bullets; owner reviews the exact bytes at the gate (WYSIWYG, per v2.19.1 precedent), not a description of the copy |
+| `metrics.json` disposition (accept qualitative-only) is later found to mask a real Council-side hook bug | Low | Low (reporting-method risk, not a product risk to Cowork Starter Kit) | Recommendation, not a unilateral close — the orchestrator/user makes the final call at the gate, and it is presented as a reasoned recommendation, not a silent drop |
+| Demo asset's owner-only visual-check disposition (AC-BRDTH-10) is deferred again, extending the LinkedIn-post block past this cycle | Medium | Low (does not block this cycle's own merge — only blocks the *next* cycle, per C-v2.19.3-1, exactly as designed) | This is a known, accepted, asymmetric-block design (the `agent-impossible AC` pattern) — not a defect, a deliberate non-blocking-now/blocking-later disposition |
+
+### Success Metrics
+
+- **Primary (user outcome):** a first-time visitor who watches the demo and reads "Who is this for" forms an accurate mental model of the kit's actual breadth (setup + self-maintenance; more than 3 job archetypes) within the same 5-second read the public-artifact strategy's 5-Second Test requires — not a narrower one that a subsequent visit to `skills/` would contradict.
+- **Secondary (business outcome):** the owner can move from "the storefront now shows the real breadth" directly to their own visual-check gate (AC-BRDTH-10) with no further copy-accuracy concern outstanding, closing the narrative gap the theme names without opening a new one.
+
+### Assumptions
+
+- [CONFIRMED] `assets/setup-demo.svg` is the repo's only asset; no other file references its old beat count or dimensions in a way that would break on regeneration (`grep -rn "setup-demo.svg\|740\b" README.md SETUP-CHECKLIST.md` — only the README `<img>`/link reference exists, no dimension-dependent embed).
+- [CONFIRMED] The 14px monospace / 8.4px-per-character estimate is a conservative approximation (0.6em ratio for "SFMono-Regular, Consolas, monospace" at 14px) validated against all 23 original lines (all fit within budget, all originally authored below 96% fill) and all 17 new lines (all fit below 86% fill) using an independent script re-run against the drafted file, not just hand-counted.
+- [CONFIRMED] `origin/main` == local `main`, clean tree, 0 ahead/0 behind, at spec time (`26b8783`).
+- [ESTIMATED] The persona change (biochem student → client-report writer) reads as a natural, non-jarring edit to anyone comparing old vs. new demo side-by-side — not independently user-tested this cycle (no user-testing surface exists for a docs/asset quick cycle).
+- [UNTESTED] Whether the owner completes the AC-BRDTH-10 visual check within this cycle's wall-clock or defers again for a 12th+ release — this cycle's design deliberately does not depend on the answer (C-v2.19.3-1), matching the C-v2.19.2-2 precedent.
+
+### Technical Constraints
+
+- Stack: Markdown/SVG/YAML instruction kit — no application code, no database. CI = GitHub Actions (`quality.yml`): markdownlint, link-check, version-consistency, self-apply-deny-completeness, ShellCheck, registry sha256 drift-verify. None of these gates inspect SVG content beyond file presence/link-validity, so AC-BRDTH-1/2/3/4/5 have no CI-automated equivalent — they are Phase-5 manual/scripted checks, not new CI jobs (no CI change is in scope this cycle).
+- `assets/setup-demo.svg` grows from 6296 bytes / 23 `<text>` nodes / `viewBox 0 0 800 740` to **8949 bytes / 33 `<text>` nodes / `viewBox 0 0 800 1050`** (re-measured at Phase 4 against the actual shipped file, `wc -c` and `grep -o '<text' | wc -l` — 8949, not 8903 as estimated at Phase 0; 1.42x byte growth; 21 of the 23 original beat-1-through-7 nodes retained in structure with beats b2/b3/b6/b7's text content updated, plus 1 new divider `<text>` node and exactly 10 new nodes for beats 8-10: b8 = 1 label + 3 text, b9 = 1 label + 1 text, b10 = 1 label + 3 text) — well within any reasonable repo asset-size norm (no `.gitattributes` LFS threshold in this repo is approached).
+- **`animation-duration` and rendering mechanic — SUPERSEDED at Phase 3 gate (round 2).** The Phase 0 draft proposed a single always-animating 42s loop (itself already a revision from the shipped asset's 32s). At the gate, @ux flagged that even a 42s→30s tightening still left beat 8 — the first living-workspace beat, i.e. this cycle's entire point — not appearing until ~19.8s into the loop, so roughly 72% of arrivals would see zero living-workspace content at the instant they land on the page, directly undermining this cycle's own Success Metric (the 5-Second Test). **Owner decision: STATIC-FIRST.** All 10 beats render immediately and simultaneously by default (`.beat { opacity: 1; }`); the looping reveal becomes a `prefers-reduced-motion: no-preference` progressive enhancement only, at a **30s** loop (not 42s — see the CSS block above). No JS; still a single inert SVG. See `### Phase 3 Gate Decisions` below for the full rationale.
+- No worktree required (STANDARD, in-place) — reconfirmed above.
+
+### Phase 3 Gate Decisions
+
+The Phase 0 spec above (Core Features, geometry contract, "Who is this for," alt/caption text, AC-BRDTH-1/3, Technical Constraints) reflects the Phase 0 draft in narrative form but has been amended in place, wherever it conflicts, to the SHIPPED bytes decided at the round-2 gate. Three owner decisions, recorded here per `docs/pipeline.md`'s Phase 3 (round 2) row:
+
+1. **Copy = Direction 2.** The Phase 0 draft's "Who is this for" bullets and demo alt text were rejected at the first gate pass as insufficiently human/researched (owner, verbatim: *"Be sure to humanize the text and actually do some research or use /council to find the best communication, tone and visual ideas."*). @pm and @ux returned revised copy; the owner approved Direction 2 (95-word target, bolded noun-phrase bullet leads matching this README's own shipped construction elsewhere; 3 bullets, 0 "for anyone," 0 job-title leads) at the round-2 gate. Applied verbatim, no further improvisation.
+2. **Demo mechanic = static-first.** @ux's pacing analysis showed that even a tightened 30s loop leaves beat 8 (the first living-workspace beat) unseen for ~19.8s — roughly 72% of arrivals would see no living-workspace content at the instant they land. Static-first (all 10 beats visible immediately, animation as a `prefers-reduced-motion: no-preference` enhancement only) is the only option that actually discharges this cycle's own Success Metric. Still a single inert SVG, no JS.
+3. **Build approved.** All @ux must-fixes F1-F4 bound, each independently re-verified: the divider label color corrected from `#6b6f85` (3.69:1, fails WCAG AA) to `#8b8fa3` (5.70:1, passes); a "project's own skill" citation withdrawn after `ls skills/` found no match; F2/F3's geometry conflict resolved into the one integrated table above; `_setup-kit/` restored after an earlier draft dropped it. **F9** (em-dash trim) was withdrawn — it contradicted this repo's own `skills/anti-ai-slop/SKILL.md:47`, which names an em dash as the canonical example of a device never to flag when it's the writer's established style. **F8** (b2/b6 telegraphic tone) is **deferred, not dropped** — no exact replacement text was supplied, and this repo's discipline forbids leaving @dev to improvise dialogue, so b2/b6 ship unchanged and the concern is carried to the owner's post-merge visual check (AC-BRDTH-10).
+
+### Classification
+
+**STANDARD, in-place (no worktree) — CONFIRMED.** See Classification Re-Confirmation above.
+
+### Version Bump
+
+**v2.19.2 → v2.19.3 — PATCH.** See Version Confirmation above.
+
+### PM Judgment — items I would flag as mis-scoped, or not
+
+- **The persona change in the demo (biochem student → client-report writer)** is the one place I made a judgment call beyond literal instruction-following. It is defensible (ties the demo to the same "words, sources, deadlines" axis as the new README section, and motivates naming `voice-matching`/`anti-ai-slop` in-context rather than bolting them onto an unrelated persona) but it is a real content decision, not a mechanical one — flagged here so the owner can reject it at the gate without re-opening the rest of the spec.
+- **The `metrics.json` disposition (§Carry-Forward Dispositions, item 3)** is a recommendation, not a unilateral resolution — presented with reasoning, decided by the user at the gate, per the task's own instruction not to adjudicate it silently.
+- **Nothing in this cycle should be expanded.** In particular, resist any temptation to let the demo regeneration grow into a full "showcase reel" covering every one of the 29 skills, or to let the README rewrite grow past 3 bullets because the breadth evidence "wants" a 4th — both would blow the quick-mode cadence target and re-open LOCKED scope.
+
+### Phase 1 Recommendation
+
+**SKIP Phase 1 (@architect).** This spec itself carries the exact replacement bytes for both deliverables — the full `assets/setup-demo.svg` file content (geometry contract table + verbatim SVG source) and the full README section (exact markdown, word/bullet-count verified). The prior demo revision (v2.9.0, `docs/retro.md:1079`) authored exact copy + bubble dimensions as a Phase 1 design step specifically because @dev should not improvise; this spec discharges that same obligation directly at Phase 0, so a separate Phase 1 pass would only re-derive numbers already computed and verified here (via an independent script re-run against the drafted file, not just hand-arithmetic). @dev's Phase 4 job is to apply the two blocks verbatim and run the stated verify commands — no open design question remains for @architect to resolve.
+
+### Gate Change-Summary (for the owner — ~5-second read)
+
+**✅ APPROVE-ABLE — 2 storefront surfaces rewritten, 0 product/code change, 1 owner action still owed after merge**
+
+| Fact | Status |
+|---|---|
+| What changes | ✅ demo SVG (7→10 beats, living-workspace arc) + README "Who is this for" (3 new bullets) + README demo alt-text/caption + `docs/roadmap.md` "Where we are" bump |
+| Product/code surface touched | ✅ NONE — assets + docs prose only |
+| New CI risk | ✅ NONE — reuses existing `version-consistency-check`; no new job |
+| Still owed after merge | ⚠️ owner must view the live-rendered demo and write the AC-BRDTH-10 disposition line — this does NOT block this cycle's merge, only the *next* cycle's LinkedIn post |
+| Carry-forwards | ✅ all 4 from v2.19.2 dispositioned (2 binding-forward, 1 owner action, 1 recommended-close — see above) |
+| Scope discipline | ✅ v2.20/v3.0 confirmed zero-overlap; nothing expanded beyond the 3 owner-locked items |
+| Phase 0 revision (coordinator-directed independent re-verification) | ✅ 5 precision fixes applied in place — README alt+caption now arc-accurate (AC-BRDTH-13), AC-BRDTH-4's check-that-cannot-fail corrected, SVG inertness AC added with negative control closing a 3-cycle-dropped precedent (AC-BRDTH-14), `animation-duration` 32s→42s disclosed and justified, `docs/roadmap.md` staleness fix added (AC-BRDTH-15) |
+
+**What you're approving:** replacing the setup-only demo with a 10-beat living-workspace demo, and rewriting the audience section onto a shape-of-work framing — both as exact, pre-written bytes, no improvisation left to Phase 4.
+**What you're accepting:** the LinkedIn-post gate (AC-DIST-2/AC-BRDTH-10) stays open until you personally view the new demo and write one of the 3 canonical disposition lines — this cycle does not and cannot close that for you.
+
+**End of v2.19.3 — Show the Real Breadth — Phase 0 FINAL SPEC.**
+

@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.19.2-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.19.3-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
 [![GitHub stars](https://img.shields.io/github/stars/jmlozano1990/Cowork-Starter-Kit?style=social)](https://github.com/jmlozano1990/Cowork-Starter-Kit)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -12,9 +12,11 @@
 
 ## Who is this for
 
-- **Students and exam preppers** — set up a study workspace with flashcard generation, note-taking, and research synthesis in one guided session
-- **Knowledge workers and analysts** — configure a research or project workspace tuned to your writing voice and goal — no template hunting required
-- **Project managers and team leads** — spin up a status-update, meeting-notes, and risk-tracking workspace without touching a config file
+- **Words, sources, and deadlines** — writing, research, or client work where the output has to sound like you, not like a template
+- **More threads than one inbox can hold** — status updates, meeting notes, and follow-ups that stay organized without a weekly rebuild
+- **The business of running a life alongside the work** — budgets, routines, and the small recurring tasks that are easier to hand off than to keep remembering
+
+Cowork builds around the shape you bring — no persona to pick, no template to hunt for.
 
 ---
 
@@ -41,9 +43,9 @@ That's it. Cowork reads the project instructions and walks you through personali
 
 ## See it in action
 
-![Cowork Starter Kit setup demo — describe your goal in plain language, answer three quick turns, and get a working, personalized workspace with installed skills](assets/setup-demo.svg)
+![Animated demo of Cowork building a personalized workspace, then proposing fixes to its own friction that you confirm before they apply](assets/setup-demo.svg)
 
-A synthetic demo of the real 3-turn interview: describe a goal, confirm a skill bundle, answer one quick turn, and land on a personalized workspace with skills already installed. **In a hurry?** One open-ended question is enough to get a working bundle — everything else is optional customization or can be answered later.
+A synthetic demo of the real interview — describe a goal, confirm a skill bundle, answer one quick turn, and land on a personalized workspace with skills already installed — then keep watching: the workspace notices recurring friction, proposes a fix you confirm, and applies it only with your consent, logged and reversible. **In a hurry?** One open-ended question is enough to get a working bundle — everything else is optional customization or can be answered later.
 
 ---
 

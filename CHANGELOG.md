@@ -4,6 +4,18 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [2.19.3] - 2026-07-27
+
+**Documentation & storefront breadth — "Show the Real Breadth."** No functional change. Regenerates the repo's only public-facing demo and rewrites the audience-framing section so the storefront finally shows the living-workspace kit the repo has shipped since v2.15, not just the setup wizard it was in 2026-07-18.
+
+### Changed
+
+- `assets/setup-demo.svg` — regenerated from 7 beats (setup-only) to **10 beats** (setup + the living-workspace loop: notice friction → propose a fix → confirm → apply, verify, and log — reversible, never silent — plus a skill-content-update tease). Rendering is now **static-first**: all 10 beats are visible immediately by default, with the looping animation applied only as a `prefers-reduced-motion: no-preference` progressive enhancement at a **30s loop** (previously a single always-animating 32s loop with nothing visible until CSS kicked in). Adds a "3 WEEKS LATER" time divider between the setup arc and the living-workspace arc. Beat 7's closing text and beats 8-10 use the repo's real skill slugs (`voice-matching`, `anti-ai-slop`) with a plain-English gloss, not the owner's colloquial names. `viewBox` grows from `0 0 800 740` to `0 0 800 1050`.
+- `README.md` — "Who is this for" rewritten onto a shape-of-work axis (what the reader's work looks like, not a job title), so a student, consultant, founder, researcher, or job-seeker can all self-identify without any being named. Demo alt text and caption rewritten to describe the living-workspace arc instead of the retired setup-only story.
+- `docs/roadmap.md` — "Where we are" no longer reads a stale `v2.19.2`; now reflects this patch release on top of v2.19.0.
+
+---
+
 ## [2.19.2] - 2026-07-26
 
 **Documentation & release hygiene — "Distribution & Trust."** No functional change. First run of `/refresh-public`, the public-artifact audit instrument, against this repo (carried since v2.9.0). Closes the storefront truth-gaps it surfaced ahead of the owner's first public announcement of the kit.
