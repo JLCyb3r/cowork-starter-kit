@@ -2,6 +2,121 @@
 
 ---
 
+## [v2.19.3] - 2026-07-27 — Show the Real Breadth
+
+**Date:** 2026-07-27
+**Classification:** STANDARD — in-place (no worktree). Confirmed at Phase 0 (@pm) and re-confirmed after the Phase 3 rework round: assets + README/roadmap prose only, no auth/schema/RLS/migration/permission surface, no guard/`.claude/settings.json`/`scope_allow` change.
+**Mode:** quick, but the ~50–60 min cadence target was **knowingly forfeited by owner decision**, recorded live in the pipeline row so this section does not score it as a miss (see §4).
+**Origin:** owner directive folded at v2.19.2 close ("the space evolved… I want the demo to show MORE of what can be done") — this is the SAME directive `docs/patterns.md`'s `Owner-directive-as-generative-Phase-0-trigger` row already counted as its 2nd instance at v2.19.2; this cycle is that directive's execution, not a fresh occurrence (see §5).
+**Rework rate:** 0% at the code layer (Phase 4 SHA `f995aeb` = HEAD reviewed and merged; 1 commit, 0 post-Phase-4 fix commits, CI green on first push) — but this number is honest only if read next to the substantial *pre-code* rework the code-layer figure cannot see. See §6 for the full accounting; reporting only the 0% would materially understate what this cycle cost.
+**Cycle facts:** 6 files, +515/−44 (independently re-diffed `26b8783..f995aeb`, matches the pipeline record exactly). 15 ACs (AC-BRDTH-1..15). PR #94 squash-merged `f995aeb`, 2026-07-27T09:23:08Z. CI: re-run via `gh pr checks 94` at retro time — every check `pass`, 0 failures, confirming the pipeline record rather than trusting it. Tag `v2.19.3` published as `--latest`; release body verified non-empty and CHANGELOG-linked via `gh release view`.
+
+### 1. Phase Findings Summary
+
+| Phase | Agent | Findings | Severity |
+|-------|-------|----------|----------|
+| 0 (@pm, sonnet) | @pm + orchestrator | 15 ACs scoped. **2 coordinator-directed revision passes** before Phase 3: pass 1 found 3 omissions (README alt+caption still setup-only → new AC-BRDTH-13; SVG inertness MUST-VERIFY dropped despite 3-cycle precedent → new AC-BRDTH-14; `docs/roadmap.md` off the file list → new AC-BRDTH-15) plus 2 check-integrity defects (AC-BRDTH-4 = check-that-cannot-fail; AC-BRDTH-13 leg 3 = check-that-cannot-pass); pass 2 corrected the second defect | 5 findings, 0 blocking-at-merge (all closed before Phase 1 opened) |
+| 1/2 | SKIPPED | No architecture/security surface; the one historically security-relevant surface (SVG inertness) bound as AC-BRDTH-14 with a firing negative control instead | N/A |
+| 3 (Gate, round 1) | User | **REJECTED.** "Be sure to humanize the text and actually do some research or use /council" — against a spec that was budget-compliant and fully AC'd. Triggered parallel @pm research + @ux visual review | Cycle-level, not AC-level — no AC in the spec could have caught either resulting finding (see §7 new pattern) |
+| 3 (Gate, round 2) | User | **APPROVED**, after sending back **5 defects in @ux's own first fix-set** (WCAG-failing new color, a cited skill that does not exist in the repo, a finding contradicted by the repo's own anti-ai-slop skill, 2 self-conflicting geometry fixes) and independently re-verifying the corrections | 5 findings in a reviewer's own remedy, all fixed pre-build |
+| 4 (@dev, sonnet) | @dev | 1 commit, 6 files, +515/−44, 0 CI-fix commits. 4 deviations disclosed in-commit (none discovered later in review), incl. catching that AC-BRDTH-3 as written targeted retired draft strings and needed re-pointing to the shipped copy | 0 blocking |
+| 5 | CI + orchestrator AC sweep | CI 0 failures; **all 15 ACs re-verified with pre-change negative controls** on 4 of them (AC-BRDTH-3, -4, -13, -15), each proven able to fail | 0 |
+| 6 | SKIPPED | STANDARD, zero product/feature surface; SVG inertness independently probed by the orchestrator beyond the AC (DOCTYPE/ENTITY/`data:`/`base64`/numeric-entity, all 0 hits) | N/A |
+| 7 | Merge | PR #94 squash `f995aeb`. Tag + Release published; release body populated by hand (again — see CF-v2.19.3-A). AC-BRDTH-10/AC-DIST-2 correctly left `UNKNOWN — DEFERRED`, not flipped by any agent | New CF opened (§8) |
+
+### 2. AC Difficulty Assessment
+
+| AC | Class | Basis |
+|---|---|---|
+| AC-BRDTH-1, -2, -5, -6, -7, -8, -9, -11, -12 | **Easy** | Implemented at Phase 4 without rework once their content target was fixed at the gate; each independently re-verified against the shipped files with 0 discrepancies |
+| AC-BRDTH-4 | **Hard** | Authored with a check-that-cannot-fail defect (stray escaped quote broke the pattern); caught and corrected at Phase 0, before Phase 1 opened — hard in the sense that the AC's *own construction* needed rework, not the feature it verifies |
+| AC-BRDTH-13 | **Hard** | Two-layer rework: (a) its own leg 3 was a check-that-cannot-pass (an unbolded substring of a bolded sentence), corrected at Phase 0; (b) its target CONTENT (the "Who is this for" bullets + alt/caption) was fully rewritten between gate round 1 and round 2 following the REJECT |
+| AC-BRDTH-3 | **Hard** | Not touched at Phase 0/1, but the gate-round-2 copy decision retroactively broke its literal verify (it greps retired draft strings); @dev caught and re-pointed it at Phase 4, independently negative-controlled (0→1 against the pre-change blob) |
+| AC-BRDTH-14, -15 | **Hard, but caught early** | Both did not exist in the original draft at all — added at the Phase 0 coordinator-directed revision pass in response to a dropped 3-cycle precedent (SVG inertness) and a stale roadmap reference respectively. "Hard" because the spec-author's first pass missed them; "caught early" because they were fixed before any code existed, so their difficulty never reached @dev |
+| AC-BRDTH-10 | **Not-Verified** | Owner-only, agent-impossible by design; remains `UNKNOWN — DEFERRED to owner` at merge, exactly as intended — this is a correct disposition, not an open defect |
+
+**The honest summary this table can't fully convey:** every AC above, including the "Hard" ones, is a check on CORRECTNESS or STRUCTURE. None of them — not one of 15 — could have caught either of the two defects that actually triggered the gate's REJECT (repetitive bullet-stem phrasing; a demo whose living-workspace content doesn't appear until 19.8s against a 5-second Success Metric). See §7's new pattern.
+
+### 3. Token Cost Actuals
+
+`metrics.json` shows **0 events for this cycle** (last entry 2026-07-21T19:00, before this cycle opened 2026-07-27). This is not a fresh gap — it is the SAME 4-consecutive-cycle instrumentation gap carried since v2.19.1, and the owner explicitly **closed** it at this cycle's Phase 3 gate (Q3: "accept qualitative-only reporting, stop re-flagging as a `claude-cowork-config` carry-forward... logged once to `.claude/projects/self/observations.md` as a Council self-improve candidate"). Per that disposition, this section reports qualitatively rather than re-flagging the same gap a 5th time: mode=quick with one full gate-reject-and-rework round (2 additional agent invocations — @pm research pass, @ux visual pass — both on top of the baseline @pm spec pass and @dev implementation pass), 0 CI-fix commits. No dollar-cost figure is available at the Council-tool level for this project; that is the accepted state, not a new finding.
+
+### 4. Phase Durations
+
+| Phase | Start | End | Duration |
+|---|---|---|---|
+| 0 (incl. 2 revision passes) | 04:28:22Z | 04:58:00Z | ~30 min |
+| 1/2 (SKIPPED) | 04:58:00Z | 04:58:00Z | 0 min |
+| 3 (gate round 1 → REJECT) | 04:58:00Z | 05:05:00Z | ~7 min |
+| 3 (rework: @pm research + @ux visual, round 2 → APPROVE) | 05:05:00Z | 05:45:00Z | ~40 min |
+| 4 (@dev) | 05:45:00Z | 06:20:00Z | ~35 min |
+| 5/6 (concurrent with 4's tail / SKIPPED) | 06:20:00Z | 06:20:00Z | 0 min |
+| 7 (merge) | 06:20:00Z | 06:35:00Z | ~15 min |
+| **Total** | 04:28:22Z | 06:35:00Z | **~127 min** |
+
+**Outlier flag:** 127 min is ~2.3x the ~50–60 min Quick-Mode cadence target — technically an outlier by the >2x rule. **Not scored as a process miss**: the entire overage sits in the 40-minute rework block (§1, gate round 1→2), which pipeline.md records as a *knowing* forfeit made by the owner in favor of copy/visual quality, not a runaway or a missed estimate. The pre-rework and post-rework segments (Phase 0 ~30 min, Phase 4 ~35 min, Phase 7 ~15 min) sum to ~80 min — inside or near the target on their own.
+
+### 5. Phases Abbreviated
+
+Quick mode. Phase 1 (Design) and Phase 2 (Security Review) SKIPPED with explicit, evidence-backed dispositions (not silent) — no architecture surface, and the one historically security-relevant surface (SVG inertness, carried since @security's v2.8.0/v2.9.0 findings) was bound as AC-BRDTH-14 with a firing negative control rather than routed through a full Phase 2. Phase 6 (Audit) SKIPPED on the same STANDARD/zero-product-surface basis. **Notable ordering deviation, not an abbreviation:** @ux ran at Phase 3 (gate) instead of Phase 5, deliberately — its findings were gate-relevant (they redirected the whole cycle), and a Phase-5 @ux would have arrived after the decision it needed to inform. This is the right call for a storefront/copy cycle and is worth normalizing rather than treating as a one-off (see §7).
+
+### 6. Rework Rate and Causes
+
+**Two numbers are needed here, not one, or the record misleads.**
+
+- **Code-layer rework: 0%.** @dev ran exactly once, after the gate had already settled on final copy and demo mechanic. 1 commit, 0 CI-fix commits, PR merged as authored. By the standard git-diff-against-Phase-4-SHA metric, this cycle is as clean as it gets.
+- **Pre-code rework: substantial, and it is where this cycle's real cost lived.** Phase 0 needed 2 coordinator-directed revision passes to reach a spec free of check-integrity defects (5 findings against 15 authored ACs — a ~33% first-draft defect rate on the AC set, all caught before Phase 1 opened, none reaching @dev). The Phase 3 gate then REJECTED the entire draft once, in full, triggering two parallel agent re-runs (@pm research, @ux visual review) and, within @ux's own output, a second internal correction round (5 defects in @ux's first fix-set, sent back and independently re-verified before the gate could re-open).
+
+**Is this the system working, or a sign the earlier phases are under-specified? Both, and they are not in tension.** The MECHANICAL layer worked essentially as designed: it caught its own internal defects (2 check-integrity issues) before any code existed, it caught an AC quietly invalidated by a later content decision (AC-BRDTH-3) before merge, and it shipped 0% code rework. But the mechanical layer is exactly what COULDN'T catch either of the two defects that actually forced the gate reject — repetitive phrasing and demo pacing are voice/craft properties, not correctness properties, and nothing in a 15-AC spec was built to check for either. The 40-minute rework block is not evidence the pipeline failed; it is evidence that this cycle's *spec-writing phase* had no input channel for craft quality at all, so the owner had to BE that channel, at the gate, the most expensive place to be one. §7 proposes closing that gap upstream.
+
+**Verification note:** the pre-code rework, unlike the code-layer 0%, is real work that would not show up in any `git diff <phase4_sha> HEAD` calculation — it happened entirely before @dev's one commit. Reporting only the 0% figure without this section would be a materially incomplete rework rate for this cycle, regardless of how the number technically satisfies the standard formula.
+
+### 7. NEW pattern — mechanical completeness is not the same claim as shippability
+
+`docs/patterns.md` gets a new row this cycle (full text below): **every one of this cycle's 15 ACs passed against the gate-round-1 draft, and the draft was still correctly rejected.** Both real defects — the repeated "If your…" bullet stem, and the demo's living-workspace content not appearing until 19.8s against the spec's own 5-second Success Metric — are quality-of-communication failures no grep, cardinality check, or negative control in this spec's vocabulary could have named, because none of them read for monotony of phrasing or judge felt pacing against a stated metric. This is distinct from `Check-That-Cannot-Fail` (a check exists but can't produce its claimed FAIL) and from `Storefront audit signal measured at-source, not at-render` (a check runs but checks the wrong layer): here, for both defects, **no check existed to run at all.** The missing thing is a check CLASS, not a broken instance of an existing one.
+
+**What worked, worth preserving as a positive counter-signal:** @ux running at Phase 3 rather than Phase 5 is exactly the shape of fix this finding calls for — a craft/visual read positioned to inform the decision instead of arriving after it. This cycle did it once, reactively (after a REJECT already happened). The pattern's recommended discipline is to make that positioning the STANDARD Phase-0 input for any storefront/copy/demo cycle, not a gate-triggered contingency that depends on the owner noticing the gap first.
+
+### 8. `docs/patterns.md` adjudications (full reasoning; edits applied below)
+
+- **`Check-That-Cannot-Fail` (BINDING) — 7th confirming instance.** AC-BRDTH-4's stray escaped-quote defect is a clean repeat of the row's own shape, caught at the same earliest-catch-point (before Phase 1 opens) this project has established since v2.13.0. Appended.
+- **`Verifier-that-cannot-PASS / unearned-RED` (WATCH 1/3 → **2/3**).** AC-BRDTH-13 leg 3 (grepping an unbolded substring of a `**bold**` sentence) is a genuine 2nd instance of the mirror-image failure this row exists to track — independently confirmed by reading the actual corrected verify in `docs/spec.md:5490`, not taken from narrative alone. Incremented, not promoted (needs a 3rd instance).
+- **`Storefront audit signal measured at-source, not at-render` (WATCH 1/3 → **2/3**, judgment call — argued, not asserted).** @ux's demo-pacing finding (all 10 beats present in the SOURCE; the living-workspace content is not PERCEPTIBLE within the stated 5-second window because of animation timing) shares the row's core shape — source-completeness does not equal consumption-experience — but differs from the 1st instance on two axes at once: the discovery mechanism (a proactive design-time computation, not a mechanical G1 audit signal that falsely passed) and the concrete failure (temporal reveal delay, not character truncation). Counted as a 2nd instance on balance, because the underlying question ("does the stored/authored artifact actually deliver its message at the point of consumption?") is the same question, asked of a different artifact type — but flagged explicitly, in the row text itself, as differing on two dimensions so a future adjudicator has the material to split it at a 3rd instance rather than inheriting an unexamined merge. This is also, notably, a POSITIVE trend versus the 1st instance: this time the gap was caught pre-merge by a design review, not post-merge by an owner rendering a card.
+- **`Agent-impossible AC needs an explicit disposition state` (WATCH 1/3 — NOT incremented).** AC-BRDTH-10 reuses the identical AC-DIST-2 obligation (the same social-preview/demo-animation human check), re-pointed at this cycle's regenerated asset — this is the SAME call site reused, not a new agent-impossible AC discovered, mirroring this project's own precedent for not counting same-call-site reuse (`Observe-at-intent`, v2.14.0). Not incremented; a confirming note added instead, since the owner's considered deferral this cycle ("I can't see in the phone, I would only see when merged") is real evidence the mechanism holds durably a 2nd time, even though it doesn't advance the counter.
+- **`Owner-directive-as-generative-Phase-0-trigger` (WATCH 2/3 — NOT incremented, both candidates examined and rejected on the record).** (a) This cycle's origin directive is the SAME directive already counted as v2.19.2's 2nd instance — this cycle is its execution, not a fresh occurrence; counting it again would double-count one event. (b) The gate-round-1 REJECT ("humanize the text and actually do some research") is a genuinely different shape from both halves of this row's existing split: it does not originate a new Phase 0 (the reactive test) and it does not propose new capability unprompted by an observed defect (the generative test) — it is a mid-cycle, in-flight corrective objection with no named artifact defect. **Explicitly not promoted, and explicitly not silently dropped into narrative-only limbo either** (the prior adjudication of this row's sibling sat unwritten in retro prose for 3+ cycles before v2.19.2 finally wrote it into the file — see that entry's §5 — this entry does the same discipline in the same cycle it's found, not a cycle later). A genuinely NEW 3rd instance of either existing shape is still required to promote; the corrective shape is named here for future reference but not split into its own row on n=1.
+- **`@dev flags a scope deviation in commit prose rather than burying it` (WATCH 2/3 → **PROMOTED TO BINDING, 3rd instance**).** This cycle's 4 disclosed deviations (§1, Phase 4) are a clean 3rd occurrence of the exact shape (v2.18.0 1st, v2.19.2 2nd): named at the moment of introduction, in commit prose, before any reviewer could discover them cold — including catching, in-commit, that the cycle's own gate decision had retroactively invalidated one of its own ACs. Per the row's own stated promotion rule ("Promote at 3rd instance"), promoted.
+- **NEW row added** — see §7.
+
+### 9. Carry-forwards out of this cycle
+
+1. **`CF-v2.19.3-A` (NEW, real, Tier B — needs its own PR cycle).** `.github/workflows/release-assets.yml` triggers `on: push: tags` using `softprops/action-gh-release@b430933` with no `body:`/`body_path:`/`generate_release_notes:` input (independently confirmed by reading the workflow file directly) — it CREATES the GitHub Release with an empty body whenever no release exists for the tag yet. This is the generator behind v2.19.2's audit HIGH-1 (empty v2.18.0/v2.19.0 release bodies); that cycle backfilled the bodies by hand and reported the finding CLOSED without touching the producer, so it regenerated on this cycle's tag push and had to be hand-populated again. **Fix (out of scope here, `.github/workflows/` is PR-only):** publish the Release before pushing the tag, or give the action a `body_path` pointing at the CHANGELOG section. Until fixed, every future tag push will reproduce this defect.
+2. **`AC-DIST-2` / `AC-BRDTH-10` — still `UNKNOWN — DEFERRED to owner`, correctly not flipped.** Blocks the next (announcement) cycle by design (`C-v2.19.3-1`). Owner statement on record: "I can't see in the phone, I would only see when merged."
+3. **@ux F8 (b2/b6 telegraphic dialogue tone) — deferred, not dropped.** No exact replacement text was supplied at the gate, and this repo's discipline forbids leaving @dev to improvise dialogue; b2/b6 ship unchanged, carried to the owner's post-merge visual check alongside AC-BRDTH-10.
+4. **`metrics.json` — CLOSED, not carried.** Owner decision at this cycle's gate: accept qualitative-only reporting for this project going forward; the 4-cycle 0-event streak was logged once, to `.claude/projects/self/observations.md`, as a Council-side self-improve candidate, not a `claude-cowork-config` defect. Do not re-flag here in future retros.
+5. CF-v2.19-A / CF-v2.19-B remain closed (unchanged, not re-opened by this cycle).
+
+### 10. Session Observation Log — first-consumer disposition
+
+`.claude/projects/claude-cowork-config/observations.md` (Council-side state) carried its first-ever 6 rows into this retro. Read as untrusted data throughout, per ADR-212 — none treated as a binding instruction, all weighed as reported observations. Disposition (recorded here for the record; the source file's own `Status` column is updated by the orchestrator, which owns writes to Council state from outside this worktree):
+
+| Row (Phase / Signal) | Disposition | Basis |
+|---|---|---|
+| Phase 0, @pm, simplification (AC-BRDTH-4/-13 check-integrity defects) | **archived** | Evidence folded directly into `docs/patterns.md` rows `Check-That-Cannot-Fail` (7th instance) and `Verifier-that-cannot-PASS` (WATCH 1/3→2/3) this cycle — see §8. First instance for both counters; not yet a 3-cycle Council-wide promotion candidate on its own. |
+| Phase 0, @pm, manual-work (MUST-VERIFY carry-forward gap) | **archived** | Single instance, genuinely distinct from any existing `docs/patterns.md` row (not folded into row 30, which is about removal/relocation, not in-place regeneration). Worth a WATCH row of its own if a 2nd instance appears in a future cycle; not created on n=1. |
+| Phase 0, @pm, manual-work (co-located caption sweep) | **archived** | Correctly self-identified in the source row as a "regeneration-shaped sibling" of the BINDING `File-Removal/Relocation KEEP-DROP Cross-Check Gap` row, not the same instance — independently confirmed by reading that row's actual scope (removal/relocation, not in-place content regeneration). Not counted toward that row's evidence. |
+| Phase 3, @ux, manual-work (authority-laundered "impeccable" skill citation) | **archived** | Single instance, novel shape (claims about a REVIEWER's authority, not about an artifact) explicitly distinguished from `verify-artifact-not-agent-narrative` in the source row's own text. Candidate for a future WATCH row if recurrence is observed; not created on n=1. |
+| Phase 3, @ux, manual-work (reviewer's own remedy unreviewed: WCAG-failing color + conflicting geometry) | **archived** | Consistent with, and effectively a fresh in-project instantiation of, the already-captured Council-wide `fix-pass-needs-same-review` principle — not a novel signal needing its own `docs/patterns.md` promotion track. |
+| Phase 7, orchestrator, simplification (release-body symptom vs. generator) | **archived** | Graduated into `CF-v2.19.3-A` (§9.1), a concrete, actionable carry-forward — its durable home is now the carry-forward ledger, not a pending observation. |
+| Phase 3, orchestrator, user-correction (rigorous spec rejected; AC-blind craft failures) | **archived** | Directly fed this retro's new `docs/patterns.md` row (§7) as its founding single instance. |
+
+### 11. Retrospective Verdict
+
+**HEALTHY-WITH-NOTES.** The mechanical spine of this cycle is as clean as this project's retros get: 0% code-layer rework, 1 commit, 0 CI-fix commits, CI green on first push, every AC independently re-verified with firing negative controls, and a `Check-That-Cannot-Fail`-class defect caught in the AC set itself before any code existed — the pipeline's self-correction discipline is holding, confirmed by direct re-derivation, not narrative trust. The notes are real, not decorative: this cycle's actual cost was a full gate-level REJECT that neither the AC set nor any Phase 1/2 ceremony could have prevented, because the two defects that triggered it are craft/communication failures outside the vocabulary any AC in this project currently speaks. That gap gets a new named row this cycle (§7) rather than being absorbed into the "0% rework" headline, because reporting only the clean number would misstate what actually happened. Separately, a real, recurring infrastructure defect (`CF-v2.19.3-A`) was caught at its true root cause this time, not symptom-patched a second time — a genuine improvement in diagnostic discipline over v2.19.2's own closure of the same underlying release-body defect.
+
+Ecosystem impact: NONE
+
+---
+
 ## [v2.19.2] - 2026-07-26 — Distribution & Trust
 
 **Date:** 2026-07-26
