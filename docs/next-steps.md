@@ -12,7 +12,7 @@
 
 | # | Step | Owner | Canonical row | State |
 |---|---|---|---|---|
-| 1 | Post the announcement to LinkedIn + Telegram | **Owner** | `owner-tasks.md` OT-1 | Unblocked — copy approved, no dependencies remaining |
+| 1 | ~~Post the announcement to LinkedIn + Telegram~~ | **Owner** | `owner-tasks.md` OT-1 | **HELD 2026-08-03** — owner decision, pending the upstream-integration question below. No task blocks it; the copy is approved and its prerequisites are closed. |
 | 2 | Ship Rung 1 (`v2.19.5`) | Pipeline | `spec.md` v2.19.4 §Roadmap Context | Not started — hard deadline, cron re-fires **2026-09-01** |
 | 3 | Close the `v2.19.4` retro | Pipeline | pipeline Phase 8 | Owed |
 | 4 | Catalog submissions | **Owner** (one browser check) | `owner-tasks.md` OT-3 | `ComposioHQ` clear; `travisvn` blocked by its own rules; `claudepluginhub` needs a human look |
