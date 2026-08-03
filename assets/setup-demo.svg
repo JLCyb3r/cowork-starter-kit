@@ -1,5 +1,5 @@
 <svg viewBox="0 0 800 1050" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="demoTitle">
-  <title id="demoTitle">Cowork Starter Kit demo — describe your goal in plain language, get a personalized workspace with vetted skills like voice-matching and anti-ai-slop installed in about 15 minutes — then the workspace keeps evolving: it notices friction, proposes a fix you confirm, and offers skill content updates you approve, every change reversible and never silent</title>
+  <title id="demoTitle">Cowork Starter Kit demo. Describe your goal in plain language, get a personalized workspace with vetted skills like voice-matching and anti-ai-slop installed in about 15 minutes. Then the workspace keeps evolving: it notices friction, proposes a fix you confirm, and offers skill content updates you approve, every change reversible and never silent.</title>
   <style>
     .card { fill: #14141f; }
     .header { fill: #1e1e2e; }
@@ -58,7 +58,7 @@
   <g class="beat b2">
     <text class="label labelUser" x="770" y="162" text-anchor="end">YOU</text>
     <rect class="bubbleUser" x="290" y="168" width="480" height="46" rx="10" />
-    <text class="textUser" x="312" y="197" text-anchor="start">I write client reports — need my own voice</text>
+    <text class="textUser" x="312" y="197" text-anchor="start">I write client reports, need my own voice</text>
   </g>
 
   <!-- Beat 3: Cowork proposes a bundle naming real repo skills (unchanged) -->
@@ -81,7 +81,7 @@
   <g class="beat b5">
     <text class="label labelAssistant" x="30" y="426" text-anchor="start">COWORK</text>
     <rect class="bubbleAssistant" x="30" y="432" width="500" height="66" rx="10" />
-    <text class="textAssistant" x="52" y="458" text-anchor="start">Saved. Last question — your name, what</text>
+    <text class="textAssistant" x="52" y="458" text-anchor="start">Saved. Last question: your name, what</text>
     <text class="textAssistant" x="52" y="480" text-anchor="start">you're working toward, any deadlines?</text>
   </g>
 
@@ -89,7 +89,7 @@
   <g class="beat b6">
     <text class="label labelUser" x="770" y="520" text-anchor="end">YOU</text>
     <rect class="bubbleUser" x="230" y="526" width="540" height="46" rx="10" />
-    <text class="textUser" x="252" y="555" text-anchor="start">Jordan — client reports, biweekly deadlines</text>
+    <text class="textUser" x="252" y="555" text-anchor="start">Jordan: client reports, biweekly deadlines</text>
   </g>
 
   <!-- Beat 7: closing + clean handover, with the owner-vocabulary bridge (gate-revised copy) -->
@@ -102,7 +102,7 @@
     <text class="textAssistant" x="52" y="692" text-anchor="start">phrasing. Archived setup in _setup-kit/.</text>
   </g>
 
-  <!-- Beat 8 (NEW — living-workspace arc, "notice"): time divider + friction notice, consent required -->
+  <!-- Beat 8 (NEW: living-workspace arc, "notice"): time divider + friction notice, consent required -->
   <g class="beat b8">
     <line x1="30" y1="726" x2="770" y2="726" stroke="#3a3a4a" stroke-width="1" stroke-dasharray="4 4" />
     <rect x="340" y="716" width="120" height="20" fill="#14141f" />
@@ -111,22 +111,22 @@
     <rect class="bubbleAssistant" x="30" y="764" width="640" height="88" rx="10" />
     <text class="textAssistant" x="52" y="790" text-anchor="start">I noticed you keep renaming report</text>
     <text class="textAssistant" x="52" y="812" text-anchor="start">drafts by hand. Want me to propose</text>
-    <text class="textAssistant" x="52" y="834" text-anchor="start">a naming fix — your call to confirm?</text>
+    <text class="textAssistant" x="52" y="834" text-anchor="start">a naming fix, your call to confirm?</text>
   </g>
 
-  <!-- Beat 9 (NEW — "consent"): user approves the proposed fix, nothing applies without this -->
+  <!-- Beat 9 (NEW: "consent"): user approves the proposed fix, nothing applies without this -->
   <g class="beat b9">
     <text class="label labelUser" x="770" y="874" text-anchor="end">YOU</text>
     <rect class="bubbleUser" x="430" y="880" width="340" height="46" rx="10" />
     <text class="textUser" x="452" y="909" text-anchor="start">Yes, show me what changes</text>
   </g>
 
-  <!-- Beat 10 (NEW — "apply, verify, and stay current"): confirm-first apply is reversible; skill-content pull update offered, never auto-fetched -->
+  <!-- Beat 10 (NEW: "apply, verify, and stay current"): confirm-first apply is reversible; skill-content pull update offered, never auto-fetched -->
   <g class="beat b10">
     <text class="label labelAssistant" x="30" y="948" text-anchor="start">COWORK</text>
     <rect class="bubbleAssistant" x="30" y="954" width="640" height="88" rx="10" />
-    <text class="textAssistant" x="52" y="980" text-anchor="start">Done — you can undo this any time from</text>
+    <text class="textAssistant" x="52" y="980" text-anchor="start">Done. You can undo this any time from</text>
     <text class="textAssistant" x="52" y="1002" text-anchor="start">the log. voice-matching also has an</text>
-    <text class="textAssistant" x="52" y="1024" text-anchor="start">update ready — pull it whenever you want.</text>
+    <text class="textAssistant" x="52" y="1024" text-anchor="start">update ready, pull it whenever you want.</text>
   </g>
 </svg>

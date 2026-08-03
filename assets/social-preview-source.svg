@@ -1,0 +1,37 @@
+<svg viewBox="0 0 1280 640" width="1280" height="640" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cardTitle">
+  <title id="cardTitle">Cowork Starter Kit: describe your goal, get a personalized workspace with vetted skills that keeps evolving, confirm-first, fully local</title>
+  <style>
+    .eyebrow { font: 600 16px "SFMono-Regular", Consolas, monospace; letter-spacing: 0.08em; fill: #8b8fa3; }
+    .title { font: 700 42px "SFMono-Regular", Consolas, monospace; fill: #e6ecff; }
+    .tagline { font: 400 24px "SFMono-Regular", Consolas, monospace; fill: #d7d9e6; }
+    .chipText { font: 600 18px "SFMono-Regular", Consolas, monospace; }
+    .footer { font: 400 16px "SFMono-Regular", Consolas, monospace; fill: #8b8fa3; }
+  </style>
+
+  <rect x="0" y="0" width="1280" height="640" fill="#14141f" />
+
+  <!-- decorative echo of assets/setup-demo.svg's window-chrome dots (non-essential, no text) -->
+  <circle cx="44" cy="32" r="8" fill="#ff5f56" />
+  <circle cx="74" cy="32" r="8" fill="#ffbd2e" />
+  <circle cx="104" cy="32" r="8" fill="#27c93f" />
+
+  <!-- safe area: 1000x500 centered (x 140-1140, y 70-570); all essential text sits inside it -->
+  <text class="eyebrow" x="180" y="118" text-anchor="start">COWORK STARTER KIT</text>
+
+  <text class="title" x="180" y="190" text-anchor="start">Describe your goal.</text>
+  <text class="title" x="180" y="244" text-anchor="start">Get a workspace that evolves.</text>
+
+  <text class="tagline" x="180" y="300" text-anchor="start">Vetted skills. Confirm-first changes. Fully local.</text>
+
+  <!-- three feature chips, reusing setup-demo.svg's own bubble fills + label colors -->
+  <rect x="180" y="340" width="230" height="44" rx="10" fill="#23232f" />
+  <text class="chipText" x="200" y="368" text-anchor="start" fill="#8fd6a8">self-maintaining</text>
+
+  <rect x="434" y="340" width="200" height="44" rx="10" fill="#2b3a55" />
+  <text class="chipText" x="454" y="368" text-anchor="start" fill="#7ea6ff">vetted skills</text>
+
+  <rect x="658" y="340" width="180" height="44" rx="10" fill="#23232f" />
+  <text class="chipText" x="678" y="368" text-anchor="start" fill="#8fd6a8">fully local</text>
+
+  <text class="footer" x="180" y="545" text-anchor="start">github.com/jmlozano1990/Cowork-Starter-Kit</text>
+</svg>
