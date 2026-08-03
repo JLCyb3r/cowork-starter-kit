@@ -14,11 +14,11 @@ A column tracking when a row was last touched was deliberately left out at desig
 
 | ID | task | created (version) | what it blocks | status | age (releases) | deferral count |
 |---|---|---|---|---|---|---|
-| OT-1 | Post the public announcement (LinkedIn + Telegram, copy approved) | v2.19.3 | intake demand-gate clock; all organic discovery signal | OPEN — blocked by OT-2 + OT-5 | 1 release | 0 |
-| OT-2 | De-slop `assets/setup-demo.svg` | v2.8.1 | OT-1 | mechanical de-slop done *this cycle* (v2.19.4); **owner visual disposition still pending** — see `docs/spec.md` v2.19.4 Scope 1's AC (no agent may write DONE) | 12 releases | 1 |
+| OT-1 | Post the public announcement (LinkedIn + Telegram, copy approved) | v2.19.3 | intake demand-gate clock; all organic discovery signal | OPEN — copy approved, **no blockers remaining** (OT-2 `REGENERATED, verified 2026-08-03`; OT-5 `SET, verified 2026-08-03`) — **awaiting the owner to post** to LinkedIn + Telegram | 1 release | 0 |
+| OT-2 | De-slop `assets/setup-demo.svg` | v2.8.1 | OT-1 | `REGENERATED, see assets/setup-demo.svg, verified 2026-08-03` — owner: *"Demo is good to go,"* a fresh visual check on the v2.19.4 regenerated asset. Mechanical de-slop shipped *this cycle* (v2.19.4); the owner's prior check had **rejected** the pre-regeneration asset ("too many —"), and per the `AC-BRDTH-10` precedent (v2.19.3, `C-v2.19.3-1`) the regenerated asset re-inherited the same visual-check obligation rather than the prior rejection's fix counting as sign-off — which is why the shipped fix alone did not auto-close this row. **Closes an item carried since v2.8.1 — 12 releases.** | 12 releases | 1 |
 | OT-3 | Catalog submissions (3 targets researched, 0 submitted) | v2.19.3 | discovery breadth | OPEN — drafts pending, rules verification in progress (see below) | 1 release | 0 |
 | OT-4 | Review/merge any sync-agency PR the repaired cron opens | (arms when Rung 1 ships — not yet numbered; do not hardcode v2.19.4/.5 here, see the version-collision note in `docs/spec.md` v2.19.4 Roadmap Context Summary §6) | upstream currency | OPEN — dormant until Rung 1 ships | n/a | 0 |
-| OT-5 | Upload the social preview image in repo Settings | v2.19.4 | OT-1 | asset created + owner-approved *this cycle*; **the Settings upload itself is still pending** — see AC-SOCIAL-4 disposition below | 0 releases | 0 |
+| OT-5 | Upload the social preview image in repo Settings | v2.19.4 | OT-1 | `SET, verified 2026-08-03` — see AC-SOCIAL-4 disposition below | 0 releases | 0 |
 | OT-6 | `@ux` F8 — b2/b6 telegraphic dialogue tone | v2.19.3 | v2.21's voice-pass AC (`AC-BRIDGE-5`) | DEFERRED-UNTIL-v2.21-Phase-0 (milestone-conditioned, not calendar-conditioned — see Edge Cases note in `docs/spec.md` v2.19.4) | 1 release | 1 |
 
 ## Tracked candidates (no action forced yet)
@@ -31,11 +31,15 @@ A column tracking when a row was last touched was deliberately left out at desig
 
 Uploading `assets/social-preview.png` as the repo's GitHub social preview image is an **owner-only action** — GitHub exposes no API for this (`gh api` has no endpoint for `open_graph_image_url`; the only path is Settings → General → Social preview → Upload an image, in the web UI). No agent may mark this row `SET`, and no agent may script or automate the Settings UI to route around that boundary.
 
-**Disposition: `ASSET-READY — DEFERRED, owner has not yet uploaded it.`**
+**Disposition: `SET, verified 2026-08-03`.**
 
-The owner records one of the following once they act on it:
-- `SET, verified <date>` — uploaded and confirmed rendering on a real link-preview surface.
-- `ASSET-READY — DEFERRED, owner has not yet uploaded it` — current state.
+Verification performed (owner-reported, not agent-executed — GitHub's Settings UI is the only upload path and remains outside any agent's reach): the repo page's `og:image` meta tag now resolves to `repository-images.githubusercontent.com/...` — GitHub's custom-uploaded-image CDN, not the `opengraph.githubassets.com` auto-generated fallback. The served image was downloaded and byte-compared against `assets/social-preview.png`: identical — 1280×640, 56,042 bytes, `cmp` clean. The live card is the authored asset, not a stale or regenerated substitute.
+
+Noted for future cycles so the same bad check isn't re-run: the REST API's `open_graph_image_url` field reads empty regardless of upload state — it is simply never populated in REST responses on this repo, an unreliable probe rather than evidence of failure. The `og:image` meta tag is the correct ground truth.
+
+The owner recorded one of the following once they acted on it:
+- `SET, verified <date>` — uploaded and confirmed rendering on a real link-preview surface. **(this row's outcome — 2026-08-03)**
+- `ASSET-READY — DEFERRED, owner has not yet uploaded it` — prior state, now superseded.
 - `REJECTED, needs rework` — the card doesn't represent the kit well; asset needs another pass.
 
 ## OT-2 disposition (AC-DEMO-3 / owner visual check)
