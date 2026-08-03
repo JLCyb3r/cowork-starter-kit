@@ -5588,3 +5588,225 @@ The Phase 0 spec above (Core Features, geometry contract, "Who is this for," alt
 
 **End of v2.19.3 — Show the Real Breadth — Phase 0 FINAL SPEC.**
 
+---
+
+## v2.19.4 — Rung 0: Announcement Prerequisites
+
+> **Cycle:** Rung 0 — Announcement Prerequisites (from `next-rungs-plan-v2-2026-08-02.md` §1, revised by `rung0-dispositions-2026-08-02.md` from a docs-only PR into a 3-scope cycle)
+> **Version:** v2.19.3 → **v2.19.4 (patch)** — confirmed below in the Roadmap Context Summary, including a number collision this spec flags rather than resolves silently.
+> **Mode:** quick (Phase 0.D SKIPPED per quick-mode gate)
+> **Classification:** **STANDARD, in-place** for write-scope purposes (assets + docs; no guard/settings/`scope_allow`/workflow/self-modifying-skill surface — confirmed below) **+ COMPLIANCE-SENSITIVE** for routing purposes (External Content Detection tripped — see note below). Two independent classifications, not a contradiction: STANDARD governs where @dev writes; COMPLIANCE-SENSITIVE only adds a Phase 2 stop before `/design`.
+> **Date:** 2026-08-03
+> **Target repo:** `/Users/macbookpro/claude-cowork-config` @ `2180beb`, clean, 0 ahead/0 behind `origin/main`, VERSION `2.19.3`.
+
+**External Content Detection (pm.md, mandatory scan) — TRIPPED, and here is exactly why.** Scope 3 below (OT-3 catalog verification) names and researches four external URLs the source documents already cite verbatim: `github.com/ComposioHQ/awesome-claude-skills`, `github.com/travisvn/awesome-claude-skills`, `claudepluginhub.com`, `guildskills.com`/`oneskill.dev`. None of these are named on pm.md's explicit author/framework list (pskoett, Löwy, OWASP, addyosmani, etc.) and nothing in this cycle imports, vendors, or derives content from them — the direction of travel is outbound (this repo submitting *to* them, later, not this cycle), not inbound. That said, the rule as written is a bare URL-presence tripwire ("any HTTP/HTTPS URL"), not a derivation-intent test, and I'm honoring its letter rather than adjudicating intent myself. **Routing: run `/legal` (Phase 2 @compliance) before `/design`** — a cheap, fast check given there's no code and no submission happening yet; @compliance's job here is narrow (ToS of the two auto-indexing registries if OT-3's fit question is ever acted on, and a sanity pass on the "no competitor named" constraint already respected in the approved copy), not a full review.
+
+---
+
+### Roadmap Context Summary — claude-cowork-config — 2026-08-03T00:00:00Z
+
+⚠ **ROADMAP CONTEXT — 1 conflict, 0 supersession risks**
+
+| Fact | Status |
+|---|---|
+| Sections rendered | ✅ 8/8 (Ecosystem-Context-Brief + Decision-Propagation both render "no constraint" below) |
+| Conflicts | ⚠ 1 — **version-number collision with planned Rung 1** (see below) |
+| Freeze gate | ✅ N/A — no SoS umbrella |
+| Supersession | ✅ NONE — no queued item rebuilds this surface |
+
+**1. Already Committed (near-term).** `README.md:210`'s only forward-looking commitment is the intake rung (community skill submissions, demand-gated) and v3.0 "The Engine" — neither touches assets, the social preview, or an owner-tasks ledger. `docs/roadmap.md`'s ladder commits nothing to this surface either; its nearest planned item is the demand-gated intake rung. `CHANGELOG.md` carries no "Next up" teaser block (the repo's teaser lives in README, already checked). No committed item collides with this cycle's 3 scopes.
+
+**2. Deferred / Carry-Forwards.** `docs/retro.md` v2.19.3 §9 carries: (a) the AC-DIST-2 owner-only visual-check disposition (this cycle's OT-2 IS that carry-forward, now re-opened by owner finding — see Scope 1); (b) `@ux F8` b2/b6 telegraphic dialogue tone — **not** touched this cycle; owner explicitly deferred it to v2.21 Phase 0 per `rung0-dispositions-2026-08-02.md`, recorded here as OT-6 rather than re-litigated. Council memory (`project_cowork_starter_kit_status.md`) shows no other open deferral against this surface.
+
+**3. Cross-Repo Dependencies.** None. `registry.json` `"parents": []`, `"depends_on": []` — re-verified this session.
+
+**4. JIRA Open Items.** N/A — no JIRA integration block configured for this project.
+
+**5. GitHub Signals.** Per the orchestrator's disclosed pre-spawn enrichment (`scratchpad.md`, 2026-08-02T17:52:00Z, this session): `gh issue list --state open` → `[]`, `gh pr list --state open` → `[]`. Both queues verified empty, live. 5 stars, 1 fork, 0 watchers, 14 unique visitors/14 days, 0 external issues ever, 3 dormant discussion threads. No release "Next up" section names this scope.
+
+**6. Conflicts with Proposed Scope — 1 found, escalated, not silently resolved.**
+
+`next-rungs-plan-v2-2026-08-02.md` §1 assigns the number **v2.19.4** to **Rung 1** ("The automation tells the truth" — the `sync-agency.yml`/`release-assets.yml` fixes), and `rung0-dispositions-2026-08-02.md`'s own ledger table pre-fills OT-4/OT-5's `created` column as `v2.19.4` on that same assumption. But Rung 1 is explicitly **out of scope for this cycle** (per the task brief) and has not shipped — it is a separate, deliberately-not-bundled, parallel-track cycle with its own hard deadline (cron re-fires 2026-09-01). This cycle (Rung 0, now sized as real asset + doc work, not the original "no version" docs-only framing) is the one actually executing *now*, against a tree that is still at v2.19.3. Two cycles cannot both claim v2.19.4.
+
+**Resolution proposed, not silently applied:** this cycle claims **v2.19.4** (it is the one shipping first, by construction — it's the one being spec'd right now), and Rung 1 becomes **v2.19.5** when it runs, confirmed by its own `/spec`-time roadmap-context audit (the same mechanism that caught this collision will catch it again and settle it definitively at that time, since VERSION will by then read 2.19.4). This is presented as a recommendation for the user to confirm at `/gate`, not a unilateral renumbering — per P3, I am not resolving this silently. If the user instead wants Rung 1 to run first, this cycle should renumber to v2.19.5 and hold until Rung 1 merges. **The `docs/roadmap.md` and `rung0-dispositions-2026-08-02.md` version placeholders that assumed the opposite order are a real, if minor, planning-artifact staleness — not this spec's mistake to silently paper over.**
+
+**7. Supersession Check.**
+
+| Queued item | Rebuilds/replaces the surface this spec modifies? | Basis |
+|---|---|---|
+| Rung 1 (v2.19.4/.5 — sync-agency/release-assets fix) | NO — touches `.github/workflows/`, never `assets/`, `docs/owner-tasks.md`, or repo Settings | `next-rungs-plan-v2-2026-08-02.md` §1 file list |
+| Rung 2 (v2.20 — owner lane / ledger CI gate) | NO — Rung 2 *consumes* the ledger this cycle seeds (adds an expiry-check CI job on top of it); it does not rebuild or replace the ledger doc itself | `next-rungs-plan-v2-2026-08-02.md` §1 Rung 2 + the council verdict's ledger critique (both target the *gate*, not the seed doc) |
+| Rung 3 (v3.0 design, PURE-DOC) | NO — unrelated surface | plan §1 |
+| Rung 4 (v2.21 — bridge) | NO, but **consumes OT-6's disposition** as its voice standard (AC-BRIDGE-5) — a dependency, not a rebuild | `rung0-dispositions-2026-08-02.md` |
+
+`stack-profile.json` has no `planning.queued_cycles[]` key (confirmed this session — minimal placeholder file). Supersession check: no queued item rebuilds this surface.
+
+**Ecosystem-Context-Brief.** `claude-cowork-config` resolves to no registered SoS umbrella (`registry.json` `"parents": []`). **Ecosystem-Context-Brief = no constraint on this cycle.**
+
+**Decision-Propagation.** No umbrella → **no pending propagation obligations for `claude-cowork-config`.**
+
+**Gate-Cycle Pre-Spec Check A (queued gate-cycle).** `stack-profile.json` has no `planning` key at all. **Fail-open — no gate-cycle warning.**
+
+**Gate-Cycle Pre-Spec Check B (security-debt lock).** `docs/retro.md`'s most recent cycle section (`## [v2.19.3] - 2026-07-27`) contains 0 lines matching `^- \*\*CF-[A-Za-z0-9._-]+ \(HIGH, deferrals: [0-9]+\)\*\*.*\*\*NEXT-CYCLE-LOCKED\*\*` (confirmed this session via the exact awk+grep recipe; repo-wide `NEXT-CYCLE-LOCKED` count is also 0). **Security-debt lock: none found.**
+
+---
+
+### Problem
+
+The kit has real, differentiated capability (self-maintenance loop, content-hashed skills, a generative Skill Studio, fully local operation) and zero organic discovery path: a direct web search for the project returns no result, and in 9 releases and 9 days of activity it has accumulated 0 external issues and 14 visitors in 14 days. `announcement-FINAL-approved-2026-08-02.md` and `positioning-and-hook-2026-08-02.md` already solved the *what to say* problem — copy is owner-approved. What remains is not a writing problem, it's that **the two surfaces the announcement will actually render on are not ready**: the repo's only public asset (`assets/setup-demo.svg`) reads as AI slop by the owner's own judgment (12 em dashes in a ~30-second demo), and the repo has no social preview image at all, so any link share falls back to GitHub's generic auto-generated card. Posting into that state undercuts the differentiation work already done. This spec exists to close those two gaps, plus give the several owner-only decisions this cycle surfaces (and two more that were about to age silently) a durable home instead of disappearing into prose.
+
+### Target Users (JTBD)
+
+**Primary — the project owner, in the role of "the one person who can actually post this."** Job: post an announcement they're not embarrassed by, to LinkedIn (public) and Telegram (friends), and have the link render something that represents what the kit actually does. They are also the sole actor for two things no agent can do: judge whether a regenerated demo still reads as their voice, and click "Save" in GitHub repo Settings.
+
+**Secondary — the first-time visitor who clicks the announcement link.** Job: in the 2-3 seconds before deciding whether to open the repo, see a social-card image and (if they do open it) a demo that make the differentiated claims (self-maintains, generates missing skills, fully local) credible rather than generic.
+
+### Core Features (MVP)
+
+#### Scope 1 — De-slop `assets/setup-demo.svg` (OT-2, REGENERATED per owner decision)
+
+Reduce em-dash density from the current 12 instances (2 in the accessibility `<title>`, 6 in dialogue balloons, 4 elsewhere) to a level that reads as varied, human punctuation — not zero-tolerance, since `skills/anti-ai-slop/SKILL.md:45`'s own rule ("never flag a device the writer establishes as their real, intentional style") is *satisfied*, not violated, once the writer states it isn't their style. Vary punctuation (commas, periods, parenthetical asides) in place of em dashes. Preserve: the literal meaning of every beat, the accessibility `<title>` content's substance (it may be re-punctuated, not re-narrated), the existing 10-beat static-first structure, and the v2.19.3 `viewBox="0 0 800 1050"` geometry contract (no new/removed beats).
+
+- AC: em-dash count in `assets/setup-demo.svg` drops from 12 to ≤2, and the `<title>` element specifically drops from 2 to ≤1.
+- AC: every one of the 10 `<!-- Beat N` structural comments remains present, unchanged in count and order (structure untouched — only prose within beats is edited).
+- AC: the accessibility `<title>` still communicates, in substance, everything the current string does (goal-driven setup in ~15 min, vetted skills named by real slug, the notice → propose → confirm loop, reversible/never-silent) — a human-judgment AC, not mechanically provable, explicitly flagged as such (see Assumptions).
+- AC: every one of the demo's 17 text lines (all 10 beats) still fits its bubble at the same character-budget discipline `AC-BRDTH-5` established (≤ (bubble_width − 72) / 8.4 chars) — re-run, not assumed to still hold after re-punctuation.
+- AC (re-verified invariant #1 — XML well-formedness): `python3 -c "import xml.dom.minidom as m; m.parse('assets/setup-demo.svg')"` exits 0.
+- AC (re-verified invariant #2 — inertness, reusing the hardened v2.19.3 `AC-BRDTH-14` check, not the simplified version this cycle's brief sketched): `grep -icE '<script|<foreignObject|on[a-z]+=|xlink:href|<image|<use|@import|url\(http|href="(https?:|//|data:|file:)' assets/setup-demo.svg` = 0. **Negative control (proves the check can fail):** append `<script>alert(1)</script>` to a scratch copy only, re-run — expected ≥1.
+- AC (re-verified invariant #3 — geometry): `grep -c 'viewBox="0 0 800 1050"' assets/setup-demo.svg` = 1 (unchanged — this cycle adds no beats).
+- AC (element-vocabulary note, a correction to this cycle's own task brief): the brief's stated allow-list — `svg, style, rect, circle, text, g, title` — **omits `line`**, which the current, already-shipped file legitimately uses (the dashed divider at line 107). The correct invariant is: no element outside `{svg, style, rect, circle, text, g, title, line}` appears. Verify: `grep -oE "<[a-zA-Z]+" assets/setup-demo.svg | sort -u` yields exactly that 8-element set, no more.
+
+#### Scope 2 — Social preview image (OT-5, NEW)
+
+Design a GitHub social-preview image from the demo's existing visual language and palette (`#14141f` card background, `#1e1e2e` header, `#e6ecff`/`#d7d9e6` text, `#7ea6ff`/`#8fd6a8` accent labels, the traffic-light dots `#ff5f56`/`#ffbd2e`/`#27c93f`) so the LinkedIn/Telegram card matches the demo a click-through will land on next.
+
+**Confirmed technical constraints (GitHub docs, fetched live this session, not assumed):** format PNG, JPG, or GIF; under 1 MB; minimum 640×320 px; **recommended 1280×640 px for best display**; GitHub's own guidance additionally recommends considering transparency for viewers in dark/light mode (not applicable here — a fixed dark-palette card is the correct choice, matching the demo it represents, not a transparency requirement to satisfy).
+
+**Setting it is a GitHub repo-Settings action, not an API call — confirmed, not merely policy.** There is no `gh api`/CLI path to set `open_graph_image_url`; GitHub only exposes this via Settings → General → Social preview → Upload an image in the web UI. This makes "owner-only" a technical fact here, not just a process rule, and strengthens the disposition AC below beyond the AC-DIST-2/AC-BRDTH-10 precedent (which was policy-only).
+
+- AC: a new image asset exists at `assets/social-preview.png` (or `.png` derived from an authored `.svg` source, agent's implementation choice), 1280×640 px, PNG, under 1 MB, using only colors already present in `assets/setup-demo.svg`'s `<style>` block or traffic-light dots (no new palette introduced).
+- AC (WCAG contrast — binding per `docs/retro.md:21`'s own prior WCAG-failing-color incident in this exact review family): every text/background pairing on the card meets WCAG AA contrast (≥4.5:1 for body text, ≥3:1 for large/bold text ≥24px). Verify: compute contrast ratio for each used pairing (e.g., `#e6ecff` on `#14141f`) via the standard relative-luminance formula; record the computed ratios in the Phase 4 commit message. **Negative control:** the specific WCAG-failing color from the incident `docs/retro.md:21` references (whatever `@ux`'s originally-rejected fix color was) must independently fail this same computation — proving the check isn't vacuous.
+- AC: safe-area discipline — no essential text sits outside the center 1000×500 px of the 1280×640 canvas (edges crop on some platforms per GitHub's own guidance).
+- AC (owner-only disposition, agent-impossible — mirrors `AC-BRDTH-10`'s shape, stronger because it's a technical fact not just policy): the owner, after viewing the rendered card and this cycle's asset, records exactly one of: `SET, verified <date>` / `ASSET-READY — DEFERRED, owner has not yet uploaded it` / `REJECTED, needs rework`, in the PR description or `pipeline.md`. No agent may write `SET` or `DONE`, and no agent script may attempt to call any GitHub API to set this value (there isn't one) or to script browser automation against repo Settings.
+
+#### Scope 3 — Seed `docs/owner-tasks.md` (doc only, no CI gate this cycle)
+
+Schema (exactly, per the brief and `next-rungs-plan-v2-2026-08-02.md` §3 — **deliberately no `last_reviewed` column**, since that was the rubber-stamp generator the council's verdict rejected in Rung 2's design; a `deferral count` column exists specifically as input to a *future* escalation rule, not enforced by anything this cycle ships):
+
+`ID | task | created (version) | what it blocks | status (OPEN/DONE/DROPPED/DEFERRED-UNTIL-<date>) | age (releases) | deferral count`
+
+Seed rows:
+
+| ID | task | created | blocks | status | age | deferrals |
+|---|---|---|---|---|---|---|
+| OT-1 | Post the public announcement (LinkedIn + Telegram, copy approved) | v2.19.3 | intake demand-gate clock; all organic discovery signal | OPEN — blocked by OT-2 + OT-5 | 1 release | 0 |
+| OT-2 | De-slop `assets/setup-demo.svg` | v2.8.1 | OT-1 | mechanical de-slop done *this cycle*; **owner visual disposition still pending** — see Scope 1's AC (agent may not write DONE) | 12 releases | 1 |
+| OT-3 | Catalog submissions (3 targets researched, 0 submitted) | v2.19.3 | discovery breadth | OPEN — drafts pending, rules verification in progress (see below) | 1 release | 0 |
+| OT-4 | Review/merge any sync-agency PR the repaired cron opens | (arms when Rung 1 ships — **not yet numbered; do not hardcode v2.19.4/.5 here given the §6 collision above**) | upstream currency | OPEN — dormant until Rung 1 ships | n/a | 0 |
+| OT-5 | Upload the social preview image in repo Settings | v2.19.4 | OT-1 | asset created + owner-approved *this cycle*; **the Settings upload itself is still pending** | 0 releases | 0 |
+| OT-6 | `@ux` F8 — b2/b6 telegraphic dialogue tone | v2.19.3 | v2.21's voice-pass AC (`AC-BRIDGE-5`) | DEFERRED-UNTIL-v2.21-Phase-0 (see edge case below — this is a milestone, not a calendar date) | 1 release | 1 |
+
+Plus two tracked candidates (per the brief — recorded so they can't age silently, no decision forced now):
+
+- **NAMING** — "Cowork starter" is contested vocabulary across ≥4 GitHub projects (`ot3-catalog-research-2026-08-02.md` Finding 2). Renaming is **not recommended now** (burns the URL, docs, and 5 existing stars for a cosmetic gain); revisit only if traction data justifies the migration cost. `created: v2.19.4, blocks: nothing yet, status: OPEN (tracked, no action)`.
+- **SKILL.md ECOSYSTEM SOURCING** — intake idea passed a novelty gate; disposition is its own `/spec` cycle after Rung 1. `created: v2.19.4, blocks: nothing yet, status: OPEN (tracked, no action)`. Also add one bullet under `docs/roadmap.md`'s existing `## Later (not yet versioned)` section: *"SKILL.md ecosystem sourcing — pulling curated content from the broader SKILL.md-standard ecosystem, beyond this kit's own authored pool. Idea passed intake; full disposition is its own `/spec` cycle, timing open."*
+
+- AC: `docs/owner-tasks.md` exists with the exact 7-column schema above (no `last_reviewed` column), all 6 OT rows + both tracked candidates present.
+- AC: `grep -c "last_reviewed" docs/owner-tasks.md` = 0 (proves the deliberate omission, not an accidental one — a real, if unusual, positive-via-negative AC).
+- AC: `docs/roadmap.md`'s `## Later` section gains the SKILL.md ecosystem sourcing bullet. Verify: `grep -c "SKILL.md ecosystem sourcing" docs/roadmap.md` ≥1.
+- AC (explicit non-goal, stated so it reads as a decision, not an oversight): no CI job enforces this doc's freshness this cycle. The enforcing gate (`owner-task-expiry-check`) is Rung 2's scope, not this one's — and per the council's verdict, that gate's own design (rubber-stamp-proof expiry logic) still needs to survive its own Check-That-Cannot-Fail proof before it ships, which is exactly why it's a separate, later cycle rather than rushed in here.
+
+### Also In Scope — OT-3 catalog research (research only, no submissions)
+
+Verify **current** submission requirements for `ComposioHQ/awesome-claude-skills`, `travisvn/awesome-claude-skills`, and `claudepluginhub.com` (each has a stated PR/form submission route per `ot3-catalog-research-2026-08-02.md`, but exact current rules are unverified). Resolve the kit-vs-individual-skill taxonomy question for the two auto-indexed registries (GuildSkills, OneSkill) before recommending submission to either — submitting a 25-skill kit into a per-skill taxonomy risks a listing that's hard to undo. **Output is a findings note appended to `ot3-catalog-research-2026-08-02.md` (Council-side state, not the target repo) — no target-repo file changes, no submissions.**
+
+- AC: for each of the 3 curated targets, the current submission mechanism (PR template vs. issue form vs. web form) and any stated content requirements are recorded, dated, with a source link.
+- AC: the Class A kit-vs-skill question is answered for at least GuildSkills (does a 25-skill pool register as 1 entry, 25 entries, or 0) before any recommendation to submit there is made.
+- AC (hard boundary): 0 submissions made, 0 PRs opened against any of the 5 named external repos/sites, this cycle.
+
+### Out of Scope (v1)
+
+- Posting the announcement itself — owner action (OT-1).
+- Submitting to any catalog — research only this cycle (OT-3).
+- The owner-task CI expiry gate — Rung 2 (v2.20), not this cycle; deliberately not rushed (Scope 3's non-goal AC above).
+- `sync-agency.yml` and `release-assets.yml` fixes — Rung 1, a separate, deliberately-not-bundled cycle (the council's verdict on the prior plan explicitly rejected 3-scope bundling here; `patterns.md:24`'s own cited precedent is WATCH-tier, 2-scope-only, "not a recommended default").
+- Any skill import from `addyosmani/agent-skills` or any other external repo.
+- Rewriting the approved LinkedIn/Telegram announcement copy — it's owner-approved; `positioning-and-hook-2026-08-02.md`'s hook-refresh recommendation (leading with differentiation over the commodity "sets up a workspace" claim) is a flagged owner decision, not actioned this cycle.
+- `@ux` F8 b2/b6 dialogue tone — deferred to v2.21 per owner decision (OT-6), not re-litigated here.
+- Any change to `.claude/settings.json`, guard scripts, `scope_allow`, or `.github/workflows/` — none of this cycle's 3 scopes touch those surfaces.
+
+### Technical Constraints
+
+- Stack: static assets (SVG, PNG) + markdown docs. No application code, no schema, no CI workflow changes.
+- GitHub social preview: PNG/JPG/GIF, <1MB, 1280×640px recommended (confirmed live via `docs.github.com`, this session), settable only via repo Settings web UI (no API).
+- `version-consistency-check` CI (ADR-035) asserts `VERSION` == README badge == CHANGELOG top header — this cycle must satisfy it at v2.19.4.
+- No worktree required (STANDARD/in-place); direct commit to a feature branch + PR, per the merge rule.
+
+### User Stories
+
+- As the project owner, I can post an announcement whose linked demo doesn't read as AI-generated, so that the kit's first impression matches the differentiated product it actually is.
+- As the project owner, I can post a link that renders a real, on-brand social card, so that the announcement doesn't fall back to GitHub's generic auto-card.
+- As the project owner, I can see every task that only I can act on in one place, with its age and blocking relationships, so that owner-only work stops disappearing into retro prose (the exact failure mode that let OT-2 sit for 12 releases).
+- As a first-time visitor from the announcement link, I can see a social card and a demo that both credibly represent what makes this kit different, so that I have a reason to click through and star/try it.
+
+### Acceptance Criteria
+
+(Consolidated list — each already stated inline above under its Scope; repeated here per the Output Contract so `@qa` has one flat checklist.)
+
+- [ ] AC-DEMO-1: em-dash count in `assets/setup-demo.svg` ≤2 total, ≤1 in `<title>` (down from 12/2). Negative control: current file fails this (12/2).
+- [ ] AC-DEMO-2: all 10 `<!-- Beat N` comments present, unchanged count/order.
+- [ ] AC-DEMO-3: `<title>` substance preserved (human-judgment AC, flagged non-mechanical).
+- [ ] AC-DEMO-4: all 17 text lines still fit their bubble budget (≤ (width−72)/8.4 chars), re-verified post-edit.
+- [ ] AC-DEMO-5: XML well-formed (`xml.dom.minidom` parse exits 0).
+- [ ] AC-DEMO-6: inertness — hardened `AC-BRDTH-14` grep = 0; negative control (scratch-copy `<script>` injection) ≥1.
+- [ ] AC-DEMO-7: geometry unchanged, `viewBox="0 0 800 1050"` count = 1.
+- [ ] AC-DEMO-8: element vocabulary = exactly `{svg, style, rect, circle, text, g, title, line}` (corrects the brief's incomplete 7-element list).
+- [ ] AC-SOCIAL-1: `assets/social-preview.png` exists, 1280×640px, PNG, <1MB, palette-restricted to existing demo colors.
+- [ ] AC-SOCIAL-2: WCAG AA contrast on every text/background pairing, computed and recorded; negative control against the known-failing prior color independently fails.
+- [ ] AC-SOCIAL-3: safe-area — essential text within center 1000×500px.
+- [ ] AC-SOCIAL-4: owner-only 3-state disposition recorded (`SET, verified <date>` / `ASSET-READY — DEFERRED` / `REJECTED, needs rework`); no agent writes `SET`; no agent scripts the Settings UI or calls a nonexistent API.
+- [ ] AC-LEDGER-1: `docs/owner-tasks.md` exists, 7-column schema, no `last_reviewed`, all 6 OT rows + 2 tracked candidates present.
+- [ ] AC-LEDGER-2: `grep -c "last_reviewed" docs/owner-tasks.md` = 0.
+- [ ] AC-LEDGER-3: `docs/roadmap.md` `## Later` section gains the SKILL.md ecosystem sourcing bullet (`grep -c` ≥1).
+- [ ] AC-LEDGER-4: explicit non-goal statement present — no CI gate shipped this cycle.
+- [ ] AC-OT3-1: current submission mechanism + requirements recorded, dated, sourced, for all 3 curated catalog targets.
+- [ ] AC-OT3-2: GuildSkills kit-vs-skill fit question answered before any submission recommendation.
+- [ ] AC-OT3-3: 0 submissions, 0 PRs opened against any named external target this cycle.
+- [ ] AC-VERSION-1: `VERSION` = `2.19.4`; README badge = `2.19.4`; `CHANGELOG.md` top header = `## [2.19.4]`; `version-consistency-check` CI passes.
+- [ ] AC-VERSION-2: `docs/roadmap.md:5` "Where we are" line updated from v2.19.3 to v2.19.4 (same substring-edit pattern as `AC-BRDTH-15`).
+- [ ] AC-COMPLIANCE-1: `/legal` (Phase 2 @compliance) runs before `/design`, per the External Content Detection trip above, and its scope is recorded as narrow (ToS sanity check + competitor-naming re-confirmation), not a full review.
+
+### Edge Cases (5 categories)
+
+1. **Empty/null:** if the owner's live view of the regenerated demo (AC-SOCIAL-4/OT-2's visual disposition) finds it still reads wrong, the disposition is `REJECTED — needs rework`, not a silent pass; this blocks OT-1 exactly as `AC-BRDTH-10` already established as acceptable, non-blocking-to-this-cycle behavior.
+2. **Permission/capability boundary:** no agent can render the SVG or PNG as a human sees it, and no agent can call an API to set the social preview (none exists) — both degrade to the explicit owner-disposition ACs above, never a silent skip or an assumed-fine pass.
+3. **Malformed/ambiguous input (ledger schema gap, found this session, not blocking):** the `DEFERRED-UNTIL-<date>` status value is calendar-date-shaped, but OT-4 ("arms after Rung 1 ships") and OT-6 ("deferred to v2.21 Phase 0") are both milestone-conditioned, not date-conditioned. This doesn't block Scope 3 (no CI gate reads this column yet), but Rung 2's `AC-LANE-2` expiry gate will need either a milestone-aware variant or an approximated date translation before it can enforce these two rows — flagged here so Rung 2's own `/spec` inherits it rather than rediscovering it.
+4. **Maximum/overflow:** if the social preview PNG export exceeds 1MB or falls outside 640×320–1280×640, that's a hard GitHub-side rejection at upload time, not a soft warning — the AC-SOCIAL-1 size/format check must catch it pre-PR.
+5. **Concurrent/state:** re-verified this session that `origin/main` == local `main` (`2180beb`, clean, 0 ahead/0 behind, VERSION `2.19.3`) — if a parallel session merges before this spec's fixes land, re-diff against fresh `origin/main` before writing, per `[[check-cycle-shipped-parallel]]`.
+
+### Success Metrics
+
+- Primary: the owner posts the announcement (OT-1 flips to `DONE`) within a small number of releases of this cycle shipping, because both blockers (OT-2, OT-5) closed cleanly rather than stalling — a real user/business outcome, not a system behavior.
+- Secondary: at least one of the ~3 organic contribution-intent signals the intake demand-gate needs (per `docs/roadmap.md`) arrives within a few retro cycles of the announcement posting — the instrument this whole rung exists to enable.
+- Secondary: no owner-only task seeded in `docs/owner-tasks.md` this cycle silently ages past 3 releases without a recorded disposition (qualitative check at the next 2-3 retros, since the enforcing gate doesn't exist yet).
+
+### Assumptions [confidence]
+
+- [CONFIRMED] GitHub social preview specs (format, size, no-API constraint) — fetched live from `docs.github.com` this session.
+- [CONFIRMED] 12 em dashes in the current SVG, 0 social preview image set, both independently re-verified this session (not carried from the brief).
+- [CONFIRMED] `patterns.md:24`'s "Two-scope bundle" precedent text and its WATCH/1-of-3/"not a recommended default" status — re-read directly this session.
+- [ESTIMATED] "≤2 em dashes total, ≤1 in the title" as the de-slop target — a reasonable reduction consistent with the announcement copy's own held-low precedent (LinkedIn 2, Telegram 1), not an owner-dictated exact number; the owner's live-view disposition (AC-SOCIAL-4/OT-2) is the real gate, this AC is the mechanical floor beneath it.
+- [UNTESTED] Whether the regenerated demo and new social card, once posted, actually move the needle on organic discovery (0 external issues today) — this cycle can't test that; it can only remove the two concrete blockers standing in front of the attempt.
+- [UNTESTED] The version-number resolution proposed in Roadmap Context Summary §6 (this cycle = v2.19.4, Rung 1 becomes v2.19.5) — presented as a recommendation for `/gate` confirmation, not asserted as already decided.
+
+### Carry-Forward Dispositions (from v2.19.3 — both re-checked, none silently dropped)
+
+1. **`@ux F8` (b2/b6 telegraphic tone)** — **Disposition: reconfirmed DEFERRED to v2.21 Phase 0**, per owner decision recorded in `rung0-dispositions-2026-08-02.md` and seeded as ledger row OT-6. Not re-litigated this cycle.
+2. **AC-DIST-2 / AC-BRDTH-10 (demo owner-only visual disposition)** — **Disposition: this is the re-opened OT-2.** The prior `CURRENT, verified <date>` framing is superseded by the owner's new finding (it reads as slop); this cycle's mechanical de-slop work is the fix, but the disposition itself remains owner-only per Scope 1/2's ACs above — not closed by this spec.
+
+---
+
+*Sources for this spec: `next-rungs-plan-v2-2026-08-02.md`, `rung0-dispositions-2026-08-02.md`, `announcement-FINAL-approved-2026-08-02.md`, `positioning-and-hook-2026-08-02.md`, `ot3-catalog-research-2026-08-02.md`, `council/verdict-20260802T170907Z-claude-cowork-config-c0c3e309.md` (all Council-side, `.claude/projects/claude-cowork-config/`) — treated as DATA throughout, per the standing forward-only trust-boundary rule for Decision Council verdict files. Live re-verification performed this session, not carried on trust: em-dash counts, inertness/geometry greps, `docs.github.com` social-preview specs, `patterns.md`/`retro.md` citations, `gh` queue state, registry/stack-profile contents.*
+
+**End of v2.19.4 — Rung 0: Announcement Prerequisites — Phase 0 FINAL SPEC.**
+

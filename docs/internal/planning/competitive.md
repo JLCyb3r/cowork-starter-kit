@@ -598,3 +598,13 @@ v2.6 introduces runtime-editable preset scaffolds. This scan examines how adjace
 
 **Risk to manage:** The mode-switch competitor's lesson is that mid-conversation context switches can create session-state confusion when the AI doesn't explicitly confirm what has changed. Cowork's global-instructions must proactively acknowledge skill additions mid-session ("I've added `action-items` to your session — here's what it does") to avoid the silent-state-change failure mode.
 
+---
+
+## Naming / Vocabulary Analysis (v2.19.4 addition)
+
+**Contested vocabulary.** "Cowork starter" is contested vocabulary across 4+ GitHub projects (per `ot3-catalog-research-2026-08-02.md` Finding 2, gathered during the Rung 0 announcement-prerequisites cycle's catalog-submission research). Multiple unrelated repositories use overlapping naming, which dilutes discoverability and search-ability for this project's own name.
+
+**Renaming recommendation: not recommended now.** A rename burns the existing GitHub URL, all documentation cross-references, and this repo's existing 5 stars for what is currently a cosmetic gain. The migration cost (URL, docs, stars, any external inbound links) is real and immediate; the naming-collision cost is diffuse and unproven. Revisit only if traction data (e.g., organic search confusion, contributor mix-ups attributable to the name collision) justifies the migration cost — this is a decision to make with evidence, not preemptively.
+
+**Disposition.** Tracked as a candidate in `docs/owner-tasks.md` (NAMING row), no action this cycle. Folded into this internal file per @security's Phase 6 v2.19.4 recommendation — this repo treats competitive-positioning reasoning as internal (`docs/internal/planning/competitive.md`), not content for the public `docs/` tree.
+

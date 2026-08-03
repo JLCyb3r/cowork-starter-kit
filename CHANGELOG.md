@@ -4,6 +4,12 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [2.19.4] - 2026-08-03
+
+**Announcement prerequisites — "Rung 0."** No functional change. De-slops the repo's only public demo (`assets/setup-demo.svg`, em-dash density cut from 12 to 1 while preserving every beat's meaning and the accessibility title's substance), adds a first-ever social preview image (`assets/social-preview.png`, authored from the demo's own palette, no stock or third-party imagery) for the LinkedIn/Telegram announcement link to render correctly, and seeds `docs/owner-tasks.md` — a durable ledger for the owner-only decisions this repo had previously been losing to retro prose. The enforcing CI gate for that ledger is a later rung (v2.20), not this cycle.
+
+---
+
 ## [2.19.3] - 2026-07-27
 
 **Documentation & storefront breadth — "Show the Real Breadth."** No functional change. Regenerates the repo's only public-facing demo and rewrites the audience-framing section so the storefront finally shows the living-workspace kit the repo has shipped since v2.15, not just the setup wizard it was in 2026-07-18.
