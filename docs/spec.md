@@ -6082,11 +6082,30 @@ I am not escalating this as a CRITICAL/DP-4 conflict — the orchestrator alread
 > its numeral came from the same stale source. Nothing downstream catches this: the AC's pass
 > condition counts labels, it does not check that a label points at what it names.
 >
-> **Binding rule: use no numeral written in this spec.** Re-derive every anchor by running the AC's
-> own `awk`/`grep` script immediately before each write, and re-derive again after each insertion —
-> including the numerals inside the mandated `CORRECTION (v2.19.5) [...:NNNN]` labels, which are
-> re-derived values, never spec literals. This is AC-SYNC-4's content-over-line-number discipline
-> applied to the two ACs that still carry literals.
+> **Binding rule 1: use no numeral written in this spec.** Re-derive every anchor by running the
+> AC's own `awk`/`grep` script immediately before each write, and re-derive again after each
+> insertion — including the numerals inside the mandated `CORRECTION (v2.19.5) [...:NNNN]` labels,
+> which are re-derived values, never spec literals. This is AC-SYNC-4's content-over-line-number
+> discipline applied to the two ACs that still carry literals.
+>
+> **Binding rule 2 (added at Phase 2 — AC-ARCH-SCHEMA-1's locator is a `Verifier-that-cannot-PASS`
+> as written; see `docs/architecture.md` ADR-075 §D13).** The locator matches its tokens *anywhere*
+> in the file — including in prose that discusses them and, decisively, inside the correction-block
+> labels the AC itself mandates: `[field-rationale: files[].category, :NNNN]` contains
+> `files[].category`. **Every correction block written raises the passage count it is measured
+> against**, so `NAMED_BLOCKS >= PASSAGES` becomes unsatisfiable. **All three scripts — passage
+> derivation, `UNCORRECTED:` discovery, and `NAMED_BLOCKS` extraction — MUST be bounded to the
+> pre-v2.19.5 body of the file**, with the same bound on all three so numerator and denominator
+> share a range:
+>
+> ```bash
+> END=$(grep -n '^# v2.19.5 — Rung 1 — Phase 1 Design' docs/architecture.md | head -1 | cut -d: -f1)
+> awk -v end="$END" 'NR >= end { exit } { ...existing script body... }' docs/architecture.md
+> ```
+>
+> Re-derive `END` on every run. **Measured this session: unbounded → 11 anchors and rising;
+> bounded → exactly 7.** The unbounded form is known-wrong and its output must not be used for any
+> threshold.
 
 Every item below is a change to an AC as written, discovered by executing the AC's own claims rather
 than reading them. No AC is dropped; five are sharpened and one premise is corrected.
@@ -6111,10 +6130,22 @@ than reading them. No AC is dropped; five are sharpened and one premise is corre
   'refuses to merge if it changes'` → **2**; `grep -cF 'compares per-file SPDX between bumps'` → **2**.
   The second occurrence of each is this cycle's own ADR-075 §Pre-existing-defects text, which quotes
   the false claims in order to name them. — **Reason:** architectural constraint — the ADR must
-  quote the claim it corrects. **Consequence:** @dev's discovery grep must select the occurrence
-  inside the ADR-020 field-rationale bullet list (the one beginning `- \`license_file_sha256\`:` /
-  `- \`files[].spdx\`:`), never the ADR-075 occurrence. The AC's label-based existence check is
-  unaffected; only discovery is.
+  quote the claim it corrects. The AC's label-based existence check is unaffected; only *discovery*
+  is. **The disambiguator is mechanical, not advisory** — both target lines are field-rationale
+  bullets, so anchor on the bullet prefix and take the first (lowest-numbered) hit, then assert
+  exactly one match:
+
+  ```bash
+  # LICENSE claim — ADR-020 field-rationale bullet, NOT the ADR-075 quotation
+  grep -n '^- `license_file_sha256`:.*refuses to merge if it changes' docs/architecture.md
+  # SPDX claim — ADR-020 field-rationale bullet, NOT the ADR-075 quotation
+  grep -n '^- `files\[\]\.spdx`:.*compares per-file SPDX between bumps' docs/architecture.md
+  ```
+
+  Each MUST return **exactly one** line. If either returns 0 or ≥2, STOP and re-derive — do not
+  fall back to the bare-phrase grep, which returns 2 for each and whose second hit is inside
+  ADR-075. The `^- ` anchor is what excludes the ADR-075 occurrence, since that text quotes the
+  phrase mid-paragraph and never at the start of a bullet.
 - **AC-SYNC-8: the two "confirmed 404 / removed upstream" paths are RENAMES, not deletions** →
   `gh api .../compare/783f6a7...c89557f` reports `status=renamed`:
   `engineering/engineering-security-engineer.md → security/security-architect.md` and
