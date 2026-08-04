@@ -12497,7 +12497,7 @@ Commit 5 = doc-truth corrections (items 4a–4e + S7 item 3); Commit 6 = release
 | 11 | `docs/owner-tasks.md` | **MODIFIED** — **NEW OT row** (next free number): *enable an enforced review gate on PRs touching `cowork.lock.json`*, as an **open owner decision**. Per D11's S5 correction, option (a) is **TWO steps in order**: (1) re-point the six supply-chain CODEOWNERS rows to `@jmlozano1990` — **the current `@msitarzewski` rows are INERT**, ignored by GitHub because that user is not a collaborator; (2) *then* enable branch protection. The row must say **inert**, not merely "unenforced" — enabling protection against inert rows deadlocks or silently no-ops. Must also carry the Phase-3 fact from condition 3 (this cycle re-arms a dormant external-content ingestion path into a repo with no enforced review gate). | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only), **S5** |
 | 12 | `docs/risk-register.md` | **MODIFIED** — **NEW row**: unenforced-review-gate-over-ingested-content. Must state all four enforcement facts from ADR-028 §(d): no step gates on `requires_review`; the only post-PR `exit 1` is structurally unreachable; **no CI runs on a sync PR** (PR #27/#31, `statusCheckRollup`=0); `approvals=0`/`codeowners=false`/`rulesets=0` — **plus the fifth (S5): the six supply-chain CODEOWNERS rows name a non-collaborator and are therefore inert, so the review gate is absent at two independent layers, not one.** | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only), **S5** |
 | 13 | `docs/roadmap.md` | **MODIFIED** — `:55` count `73`→ re-derived live (81); sum-consistency check; "kept current by sync-agency.yml" claim corrected **only after** the AC-SYNC set verifies | AC-ROADMAP-COUNT-1/2, AC-ROADMAP-SYNC-CLAIM-1 |
-| 14 | `docs/architecture.md` | **MODIFIED** — 7 fence-adjacent NAMED correction blocks (AC-ARCH-SCHEMA-1) + 2 (AC-ARCH-LICENSE-1). **⛔ Re-derive every anchor by script immediately before each write and again after each insertion — use no numeral from the spec or from this table.** **⛔ All three AC scripts MUST be run in the `END`-bounded form (D13) — the unbounded form is known-wrong.** Use the two anchored one-hit greps in `docs/spec.md` §Architectural Modifications for LICENSE/SPDX discovery. | AC-ARCH-SCHEMA-1, AC-ARCH-LICENSE-1, **D13** |
+| 14 | `docs/architecture.md` | **MODIFIED** — 7 fence-adjacent NAMED correction blocks (AC-ARCH-SCHEMA-1) + 2 (AC-ARCH-LICENSE-1). **⛔ Re-derive every anchor by script immediately before each write and again after each insertion — use no numeral from the spec or from this table.** **⛔ All three AC scripts MUST be run in the `END`-bounded form (D13), with the §D13a `END` guard AND the §D13b correction-block exclusion — any earlier variant is known-wrong (unbounded inflates; unguarded fails open to 0; without D13b's `inCorr` the count check cannot pass against a correct implementation).** Use the two anchored one-hit greps in `docs/spec.md` §Architectural Modifications for LICENSE/SPDX discovery. | AC-ARCH-SCHEMA-1, AC-ARCH-LICENSE-1, **D13 / D13a / D13b** |
 | 15 | `WIZARD.md` | **MODIFIED (conditional)** — `:26`'s *"hash-verified against the lock by CI"* claim checked for truth against the orphan case; corrected if false | **S7 item 3** |
 | 16 | `CONTRIBUTING.md` | **MODIFIED** — `:304` §Pre-release checklist gains the `scripts/publish-release.sh` procedure (pre-publish, then tag) | ADR-076 D1 |
 | 17 | `docs/next-steps.md` | **MODIFIED (best-effort)** — `:17` stale "close the v2.19.4 retro — Owed" line; do not block the cycle on it | T-NEXTSTEPS-1 (non-AC) |
@@ -12554,3 +12554,97 @@ combined audit+approve path, branch + PR on the main checkout, no sibling worktr
 Summary. No upward flip; Phase 2 is not skippable and was never proposed to be.
 
 End of v2.19.5 — Rung 1 — Phase 1 Design (ADR-075, ADR-076 + ADR-028 v2.19.5 amendment).
+
+---
+
+## ADR-075 §D13b — Correction blocks are excluded from passage derivation (Phase 4 amendment, 2026-08-04)
+
+> Append-only amendment to ADR-075 §D13 / §D13a. @dev's Phase-4 finding is recorded as written and
+> is **not** rewritten here; this block resolves it. Eighth instance of the defect family this
+> cycle, and the third minted inside the fix for a previous one.
+
+**The defect @dev found while implementing AC-ARCH-SCHEMA-1.** §D13's `END` bound excludes the
+design section's own narrative. It **cannot** exclude the correction blocks, because the AC requires
+each block to sit *inside* the bounded region — fence-adjacent to the text it fixes — and to NAME
+its target field. Every honestly-labeled correction block therefore mints a fresh locator hit inside
+the measured range. Measured on the implemented branch (`END=11544`):
+
+| Quantity | Value |
+|---|---|
+| raw locator hits, bounded region | **19** (was 12 pre-implementation) |
+| `PASSAGES` under §D13 as written | **14** |
+| `NAMED_BLOCKS`, scoped to this AC's subject | **7** |
+| `NAMED_BLOCKS >= PASSAGES` | **7 ≥ 14 → FALSE** |
+
+A substantively complete, correctly-placed, honestly-labeled implementation fails the count check
+**by construction**. Any correct fix fails it. That is `docs/patterns.md:32`
+`Verifier-that-cannot-PASS`.
+
+**What did NOT fail, and this drives the diagnosis.** The **primary** check — the `UNCORRECTED:`
+discovery script — returns **empty**, 19/19 resolved. The corrections themselves are complete and
+correctly fence-adjacent. Only the secondary *count* check is broken, so the fix must touch the
+count's derivation and nothing else.
+
+**Decision.** A locator hit that sits *inside* a `CORRECTION (v2.19.5)` block is not a passage
+requiring correction — **it is the correction**. Exclude such hits before computing `PASSAGES`,
+reusing the existing line-state tracking rather than adding a second mechanism: one extra state
+variable, `inCorr`, alongside the existing `inFence`.
+
+```awk
+NR >= end { exit }
+/^>/  { if ($0 ~ /CORRECTION \(v2\.19\.5\)/) inCorr = 1; if (inCorr) next }
+!/^>/ { inCorr = 0 }
+/^```/ { inFence = !inFence; if (inFence) fenceStart = NR; next }
+/"category":|files\[\]\.category|upstream_repo|upstream_url/ { if (inFence) print fenceStart; else print NR }
+```
+
+`inCorr` latches on a blockquote line carrying the token and clears on the first non-blockquote
+line, so it handles a multi-line blockquote as well as the single-line form @dev used. **Apply the
+identical exclusion to the `UNCORRECTED:` discovery script and to the `NAMED_BLOCKS` extraction** —
+§D13's same-range rule: numerator and denominator must be computed over the same filtered stream.
+The §D13a `END` guard is unchanged and still runs first.
+
+### Both legs proven — the RED leg is the one that matters
+
+The count check exists solely to catch the masking case @security found at Phase 0.D round 2. **A
+fix that made it pass by weakening it would be strictly worse than the defect** — it would trade
+`Verifier-that-cannot-PASS` for `Check-That-Cannot-Fail`, the exact error §D13 itself made and
+§D13a had to repair. RED was therefore executed, not reasoned:
+
+| Leg | Construction | Result |
+|---|---|---|
+| **GREEN** | the complete implementation on the branch | `PASSAGES=7`, `NAMED_BLOCKS=7` → **7 ≥ 7 PASS**; `UNCORRECTED:` still **empty** |
+| **RED** | delete one correction block (`field-rationale: files[].category`), leaving 6 blocks for 7 subject passages | `PASSAGES=7` (**unchanged** — the deleted block's own hits were never counted), `NAMED_BLOCKS=6` → **6 ≥ 7 → FAIL** |
+| **§D13a guard** | grep a non-existent heading | **fires**, exits 1 naming the missing anchor |
+
+**Why RED still fires is a property of the fix, not an accident.** Excluding correction-block hits
+removes them from **`PASSAGES` only**, while `NAMED_BLOCKS` counts the blocks themselves. Deleting a
+block therefore decrements the numerator and leaves the denominator pinned at the true number of
+passages needing correction. Under-coverage is caught with exactly the sensitivity it had before —
+one missing block out of seven still fails.
+
+The seven derived anchors under the fixed script (`2822 2845 2862 2886 3514 3665 5610`) are the same
+seven the pre-implementation bound returned, shifted by the corrections inserted above them.
+**Re-derive them; do not reuse these numerals** — §D13's rule is unchanged and this table is not an
+exception to it.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** (i) replace the token-substring locator with a structural one — parse
+  the fenced JSON examples and diff their key sets against `jq -r 'keys' cowork.lock.json` — which
+  would make the check immune to prose and labels entirely rather than filtering them out one class
+  at a time; (ii) lift the three-script family into `scripts/` as one shell function with the `END`
+  guard, correction-exclusion and same-range rule built in, so a future AC cannot re-derive a subtly
+  different variant; (iii) retire the count check outright if (i) lands, since a structural locator
+  makes the masking case unrepresentable rather than merely detectable.
+- **Concrete revisit triggers:** any future cycle that adds `CORRECTION (v<version>)` blocks under a
+  different version token — the exclusion is hardcoded to `v2.19.5` and will not match `v2.20.0`, so
+  the defect returns at the next cycle that corrects this file; any edit to the locator regex; a
+  ninth instance of either pattern-family row inside a single cycle.
+- **Risk knowingly accepted:** the exclusion is **token-scoped to `CORRECTION (v2.19.5)`**, correct
+  today and rotting at the next version that corrects this document — accepted because generalizing
+  the token at a Phase-4 gate is unreviewable scope, and the revisit trigger above names the exact
+  condition that re-arms it; and the check remains a *count* paired with human fence-adjacency
+  judgement (this repo's `AC-PROV-1`/`AC-PROV-4` inspection-class precedent), never a proof that
+  each block corrects the passage it names.
+
+End of v2.19.5 §D13b amendment.
