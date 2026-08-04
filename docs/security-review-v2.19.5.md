@@ -288,3 +288,346 @@ The following is the exact text the Phase 3 gate displayed, unchanged from the v
 ---
 
 *End of Phase 2 Re-Review. Discharge verified against the live `docs/architecture.md`/`docs/owner-tasks.md`/`docs/risk-register.md`/`.github/workflows/sync-agency.yml`/`.github/CODEOWNERS` diffs at Phase 4, not accepted from the pipeline.md summary alone.*
+
+---
+
+## Phase 6 Audit + Re-Audit — v2.19.5 "Rung 1"
+
+**Appended by @dev at Phase 7, on the guard's own named route** (`orchestrator-guard.sh` fails closed on the same Council-side `CLASS unresolved` regex defect recorded in `pipeline.md`'s "2.G Guard defect" row — it blocked both @security's own append attempt and the orchestrator's; neither routed around it). Content below is @security's Phase 6 audit and Phase 6 re-audit, reproduced verbatim from its own returned text, not paraphrased. Per @security's explicit instruction, the audit's original `## Status:` line is amended below to record supersession rather than being silently rewritten — the FAIL was real; the rest of the audit body is untouched.
+
+---
+
+Audit complete. Returning as text per the guard's named route.
+
+---
+
+# Security Audit — v2.19.5 "Rung 1"
+
+## Phase: 6 (Code Audit — REQUIRED, SECURITY-SENSITIVE)
+## Date: 2026-08-04T14:05:00Z
+## Scope: `claude-cowork-config` @ `bbd75a4`, branch `v2.19.5-rung-1`, 11 commits from `281eaa0`
+## Status: FAIL (superseded — see Phase 6 Re-Audit below, PASS at 7fcb77d)
+
+The blocker is narrow and one line. **The cycle's core — ADR-075 sync integrity — passes cleanly and is the strongest work I have audited in this repo.** The blocker is in ADR-076's release path.
+
+## Findings Summary
+
+| ID | Severity | Phase | Surface | Description |
+|----|----------|-------|---------|-------------|
+| S1 | **CRITICAL** | 6 | configuration | `publish-release.sh:86-89` post-condition cannot pass for v2.19.5 — script creates tag+Release then exits 1; re-run exits 0 skipping the asset check entirely |
+| S2 | WARNING | 6 | external-api | `sync-verify-ratchet` Leg 3(c) becomes a permanent false-RED from the next sync onward (proven empirically) |
+| S3 | WARNING | 6 | schema | `vendored-integrity-check` has no `CHECKED>0` floor — tenth instance of the family, 60 lines from the sibling that got one this cycle |
+| S4 | WARNING | 6 | external-api | `CF-v2.19.5-E`'s documented impact understates the reachable consequence: output injection can suppress the `security-review-required` label |
+| S5 | INFO | 6 | configuration | `quality.yml:425-426` cites the job this cycle retired as an existing model |
+| S6 | INFO | 6 | permissions | `sync-verify-ratchet` declares no `permissions:` block (repo default is `read`, so effective posture is fine) |
+| S7 | INFO | 6 | external-api | `sync-agency.yml:431` interpolates an upstream-controlled path into an unescaped `grep` regex |
+
+---
+
+## CRITICAL
+
+### S1 — BLOCKER: `scripts/publish-release.sh` post-condition cannot pass
+
+The awk at `:43-51` deliberately excludes the `## [x.y.z]` header — documented at `:41-42`: *"excluding the header line itself — gh release create's `--title` already carries the version."* The header is the only line carrying the version string. Then `:86-89` asserts the **body** contains `$VERSION`.
+
+**The script's own stated rationale and its post-condition directly contradict each other.**
+
+Measured (`awk` extraction piped to `grep -cF <version>`):
+
+| Version | Version-string hits in extracted body |
+|---|---|
+| **2.19.5** | **0** |
+| 2.19.4 | 0 |
+| 2.19.3 | 0 |
+| 2.19.2 | 3 (incidental — the prose happened to cite it) |
+
+Execution trace for v2.19.5:
+1. `:31` semver OK. `:53` non-empty OK (5 lines).
+2. `:74-77` `gh release create` — **tag and Release are created.**
+3. `:86` `grep -qF "2.19.5"` on body → no match → `:88` **exit 1.** Asset poll at `:102-129` never runs.
+4. Operator re-runs → `:62-68` finds a non-empty body → `exit 0` *"nothing to do (idempotent)"* — **skipping the asset post-condition entirely.**
+
+Net: run 1 fails after creating the tag; run 2 reports success without ever verifying the 2 assets. This is a check-that-cannot-pass followed by a check-that-cannot-fail, in new code, on the exact surface where `CF-v2.19.3-A` was *"reported closed once at v2.19.2 without touching this producer, and regenerated on the very next tag push."*
+
+**Fix (choose one):** assert on the tag/title rather than the body; or include the header line in the extraction; or drop the `:86-89` assertion, which `:41-42` already explains is unnecessary. Additionally, the `:62-68` idempotence branch should fall through to the asset poll rather than `exit 0`.
+
+I verified this entirely offline — **no destructive operation required.** That matters for the verdict on AC-REL-BODY below.
+
+## WARNING
+
+### S2 — Leg 3(c) self-destructs on the next sync
+
+Upstream HEAD **is** `RATCHET_SHA` (`gh api repos/msitarzewski/agency-agents/commits/main` → `c89557f7…`). Leg 3(c) poisons using `OLD_HASH` read from `cowork.lock.json`. Once the lock advances to `c89557f7` — which the very next sync does — `OLD_HASH` equals the ratchet-pin hash, the poison becomes a no-op, the verifier correctly passes, and `quality.yml:1531` reads that as *"verifier PASSED against a poisoned post-advance lock."*
+
+Proven by running the shipped Leg 3 text against a simulated post-advance lock:
+```
+::error::Leg 3(c) FAILED — verifier PASSED against a poisoned post-advance lock; it must fail closed
+LEG3-POSTADVANCE EXIT=1
+```
+This persists for **all** future pins until upstream edits `marketing-content-creator.md` again. Direction is **fail-closed (false RED), never false GREEN** — so not an integrity hole. But a permanently-red job in a repo where nothing gates on CI is a signal that trains the maintainer to ignore it, which erodes the durability rationale at `quality.yml:1427-1428`.
+
+**Fix:** assert `OLD_HASH != produced_hash` before poisoning and fail with a *fixture-setup* diagnostic — the house pattern already in this file at `quality.yml:434-437`.
+
+### S3 — Tenth instance: `vendored-integrity-check` has no `CHECKED>0` floor
+
+D10 added the floor to `lock-content-sha-cross-check` (`quality.yml:1588`). Its structural sibling 60 lines later did not get one. Ran the shipped body against a zero-`files[]` lock:
+```
+vendored-integrity-check PASSED — 0 files + LICENSE verified offline.
+VIC-ZERO EXIT=0
+```
+**Severity capped at WARNING because I verified the compensating controls fire on the same input:** `lock-content-sha-cross-check` → exit 1; `verify-lock-content-sha.sh` → exit 1 (and therefore ratchet Leg 1, which covers the push path the cross-check's `if: pull_request` does not). A zero-files lock cannot reach `main` green. The controls that catch it were both hardened *this cycle* — the cycle's own new job closes the gap it left elsewhere.
+
+### S4 — `CF-v2.19.5-E`'s impact is understated
+
+`sync-agency.yml:312` writes `flagged_files=${FLAGGED_FILES}` as a bare `KEY=value`, where `FLAGGED_FILES` accumulates upstream-controlled paths (`:274`). A newline in an upstream filename injects arbitrary `$GITHUB_OUTPUT` lines. Because `requires_review` is written at `:311` — **before** `:312` — an injected `requires_review=false` overrides it, and that value gates the warning banner (`:551`) and the `security-review-required` label (`:581`).
+
+The trigger requires a file that *already tripped the content scan* (that is the only way into `FLAGGED_FILES`), so the same path both raises and suppresses the alarm. Under ADR-075's own threat model (upstream compromise) this is in scope.
+
+Correctly deferred and honestly named at `architecture.md:11791-11793`. **My finding is the impact statement, not the deferral** — the CF describes it as a transport-safety defect without noting it can suppress the review label. `CF-v2.19.5-E` should carry that sentence. **My Phase-2 S6 ask was satisfied:** the new code used the heredoc form (`:394-399`) and did not copy the unsafe shape.
+
+## INFO
+
+- **S5** — `quality.yml:425-426` cites `lock-content-sha-fault-injection` as *"the house model … (`.github/workflows/quality.yml` `lock-content-sha-fault-injection` job)"*. That job was deleted this cycle; the 30 job names contain no such job. Comment only, no logic impact. The deleted fixture `tests/fixtures/sha-fault-injection.json` has **zero** executable references — that part is clean.
+- **S6** — `sync-verify-ratchet` (`:1417`) declares no `permissions:`, unlike siblings at `:1332`/`:1724`. Repo default is `read` (`gh api …/actions/permissions/workflow` → `default_workflow_permissions: "read"`), so effective posture is correct; consistency nit only.
+- **S7** — `sync-agency.yml:431` `grep "^${new_path}="` interpolates an upstream path into a regex unescaped. Reachable only via SPDX comparison, which is itself unreachable. Pre-existing.
+
+---
+
+## The two known-open gaps, answered plainly
+
+**AC-REL-BODY-1/2/3 — NOT acceptable to ship as "honestly UNTESTED."** This is the direct answer you asked for. The gap was framed as needing a real tag on the live public repo — the destructive boundary I drew at Phase 2, correctly. But **the failing half is testable offline in thirty seconds**, and it fails. @qa's "UNTESTED" was honest about the destructive path and wrong about the scope of what was testable without it. That is S1.
+
+**ShellCheck — gap CLOSED, not accepted. I ran it.** The binary was obtainable via `npx --yes shellcheck@latest` (~90 seconds, network already in use for the verifier's fetches). All 9 scripts under `scripts/` — the exact `scandir: "./scripts"` set from `quality.yml:130-132` — pass **clean, zero findings**, including both new files. @qa was right to report rather than fabricate; the reach was one command short.
+
+---
+
+## Verified clean — claims I checked and found correct
+
+**Priority 1 — `verify-lock-content-sha.sh` has no skip branches.** My Phase-2 concern was that it would inherit the vacuity paths from `quality.yml:1476-1483`. **It did not.** Seven negative controls, all exit 1: literal `MISSING`, empty string, absent key, zero `files[]`, unfetchable pin, missing `.upstream`, missing file. Three positive controls, all exit 0 — including the real production invocation: `verified=110`, 110/110 against pin `783f6a72…` in 35s. Lock has 0 blank and 0 missing `content_sha256`.
+
+**Priority 2 — the ratchet is real, not fixture-satisfiable.** Ran the shipped Leg 3 verbatim with its env: real writer via `.github/jq/lock-entry.jq` → `COUNT=3, BLANK=0` → `verified=3` → poison → exit 1 naming the path. Confirmed the poison is a genuine differential: old-pin `676c536d…` ≠ ratchet-pin `26ddce44…`. The RED fixture is a real-hash-of-real-content at the wrong pin — the correct design, not a fabricated hash. (See S2 for its future fragility.)
+
+**Priority 3 — CODEOWNERS.** `gh api repos/:owner/:repo/collaborators` → `jmlozano1990` is the **sole** collaborator (admin+push); `msitarzewski` is not a collaborator. The "every row was INERT" claim is **true**. Current state verified exactly as `owner-tasks.md` OT-7 describes: `required_approving_review_count: 0`, `require_code_owner_reviews: false`, `required_status_checks: null`, `rulesets: []`. The rows are now **capable of binding**. The two ordered steps are stated truthfully, including why step 2 without step 1 would have deadlocked.
+
+**Priority 4 — the five corrections are TRUE as written, not merely changed.**
+- `sync-agency.yml:401`/`:409` — corrected in the PR-body checklist.
+- LICENSE "refuses to merge" → `:125-143` shows `::error::` + `license_changed=true`, **no `exit 1`**; sole consumer is the PR-body table at `:537`. Correction TRUE.
+- The same block's contrastive claim that the SPDX step *"does have a real `exit 1`"* — **I nearly minted a false finding here.** My first grep scoped to the `spdx_check` step (only `exit 0` at `:413`) and I had it written up as the cycle's own defect class. It is at `:594`, in the separate "Fail CI if SPDX changed" step. Claim TRUE. Reporting the near-miss because it is exactly the failure mode this cycle is about.
+- SPDX "compares per-file" → `--arg spdx "MIT"` hardcoded; 110/110 entries `MIT`. Unreachable. Correction TRUE.
+- `WIZARD.md:26` → `vendored-integrity-check` iterates `.files[]` from the lock (`quality.yml:1632`), never scans the filesystem. An orphan is genuinely invisible. Correction TRUE.
+- ADR-020 schema corrections → `jq -r 'keys'` returns exactly the six claimed keys; `files[]` with a `category` field: **0**. TRUE.
+- 9 correction blocks present (11 grep hits = 9 blocks + 2 prose mentions).
+
+**Priority 5 — `--arg spdx "MIT"` left alone.** Present at all three sites (`sync-agency.yml:292`, `quality.yml:1393`, `:1487`). Not "fixed." Doc corrects it instead. Correct call.
+
+**Priority 6 — S9 and S6 both shipped.** `jq -e 'type == "array" and length > 0'` at `:218`, fail-closed at `:220`; 404 handled as a distinct legitimate branch. Removed-path transport uses `ghadelim_$(openssl rand -hex 8)` heredoc with paths in code spans (`:394-399`). The unsafe shape was **not** copied. Per-file fetch failures accumulate and abort at `:306-309` before any lock rewrite. D12 attest step hoisted to `:100-111`, before the advance loop.
+
+**Priority 7 — rename accounting, verified against live upstream.** Real compare `783f6a72…c89557f7` → 104 added, 41 modified, 4 renamed, **0 removed**. Exactly 2 renamed paths are in the lock, both `engineering/` → `security/`. Ran the shipped classifier jq on the real payload: `renamed|security/security-architect.md` and `renamed|security/security-threat-detection-engineer.md` — **never "removed."** `security` is not allowlisted (verified), so both render with the `(category 'security' not in .cowork-allowlist.json)` suffix. Orphan disposition at `:571` is exactly the two-part remedy: delete the orphan **AND** decide the allowlist question.
+
+**D13c reproducibility — both legs run, not read.** `END=11544` (matches `:12719`). Bounded `NAMED_BLOCKS=7`. RED leg: deleted the `files[].category` block, `END` re-derived to **11543** by the same command → `NAMED_BLOCKS=6` → `6 ≥ 7` **FAIL**. The check can fail. Unbounded also returns 7 today, exactly as `:12728` honestly admits ("a trap, not a reprieve"). `docs/spec.md:5968` correctly ships the superseded form commented out with `⛔ DO NOT RUN THIS FORM`.
+
+**Other:** roadmap's `81 of 110` re-derived live — marketing 30, design 8, sales 8, testing 8, project-management 6, support 6, academic 5, finance 5, product 5 = **81**; engineering 29; total 110. Exact, including every sub-count. All three workflows parse (`yaml.safe_load`). No hardcoded credentials in the diff. `VERSION`/README badge/CHANGELOG header all `2.19.5`.
+
+---
+
+## OWASP Top 10 Assessment
+
+| Category | Status | Notes |
+|---|---|---|
+| A01 Broken Access Control | **IMPROVED** | CODEOWNERS rows moved from inert → capable of binding. Still unenforced by design (OT-7 step 2), disclosed at the gate and accepted by the owner. |
+| A02 Cryptographic Failures | **PASS** | SHA-256 throughout; no weak primitives. `content_sha256` structurally cannot diverge from `sha256` (`lock-entry.jq`, one compute two fields). |
+| A03 Injection | **WARNING (S4, S7)** | New code uses safe heredoc transport. Pre-existing `flagged_files` output injection carried as `CF-v2.19.5-E`; impact understated. |
+| A04 Insecure Design | **IMPROVED** | Attest/advance split is the correct decomposition and removes the root cause of the 2026-07/08 failures. |
+| A05 Security Misconfiguration | **WARNING (S3, S6)** | One un-floored vacuity path; compensating controls verified firing. Effective workflow permissions are `read`. |
+| A06 Vulnerable Components | **PASS** | All actions SHA-pinned (`checkout@11bd719…`, `action-gh-release@b4309332…`, `action-shellcheck@00cae500…`). |
+| A07 Auth Failures | **N/A** | No authentication surface. |
+| A08 Data/Software Integrity | **STRONGLY IMPROVED** | The cycle's core. Skip-free verifier, fail-closed fetches, standing 3-leg ratchet, D2 release precondition. This is the axis that mattered and it moved decisively. |
+| A09 Logging & Monitoring | **WARNING (S2)** | Ratchet will go permanently red after the next sync — a monitoring-signal degradation, not an integrity one. |
+| A10 SSRF | **PASS** | All fetch URLs built from the lock's own `.upstream` + pinned SHA, or hardcoded literals. The fixture lane is documented and cannot reach the production fetch path (`verify-lock-content-sha.sh:21-27`). |
+
+**LLM threat (LLM01 prompt injection):** unchanged and correctly characterized. The S1 content scan flags but does not gate; no CI runs on a `GITHUB_TOKEN`-raised sync PR; `main` requires 0 approvals and 0 checks. All three re-verified this phase. The owner accepted this explicitly at the Phase 3 gate with the numbers in front of them.
+
+---
+
+## The gate sentence, re-applied to shipped code
+
+> *Do the shipped bytes leave the repo in a worse integrity posture than today's fail-closed state?*
+
+**No — decisively better.** The verifier has no skip branches (7 negative controls prove it), fetches fail closed, the ratchet is real and exercises the real writer, the D10 floor closed a live vacuity, the release producer now refuses rather than minting an empty body, and CODEOWNERS moved from inert to capable. Every one of my Phase-2 asks shipped, two exceeding the ask.
+
+**S1 does not fail that sentence** — it is a broken self-check on a manual operator action, not an ingestion path, and the artifacts it produces are correct. I am blocking on it anyway, for one reason: this surface has already been declared fixed once while broken, and shipping a release script that cannot succeed on its first run repeats that history. The fix is one line, so blocking costs almost nothing and the precedent is worth more.
+
+## Verdict: **FAIL → return to @dev**
+
+**Required before Phase 7:**
+1. **S1 (BLOCKER)** — make `publish-release.sh`'s post-condition satisfiable, and make the idempotence branch fall through to the asset check.
+
+**Strongly recommended in-cycle (one line each, same file):**
+2. **S2** — fixture-setup guard on Leg 3(c), matching `quality.yml:434-437`.
+3. **S3** — `CHECKED>0` floor on `vendored-integrity-check`, matching `:1588`.
+
+**Fold into docs, non-blocking:** S4 (sharpen `CF-v2.19.5-E`'s impact), S5, S6, S7.
+
+Given ShellCheck now passes clean and the ADR-075 core is verified end-to-end, a re-audit after these fixes should be narrow.
+
+## Phase-3 gate copy: accurate, with one disclosed change
+
+Every factual claim re-verified against live systems this phase:
+
+| Gate-copy claim | Verified |
+|---|---|
+| "43 new agent persona files" | **Exactly 43** — added files in allowlisted categories: engineering 31 + marketing 6 + design 2 + academic 1 + project-management 1 + sales 1 + testing 1 |
+| "plus 15 updated" | **Exactly 15** — modified files present in the current lock |
+| "`main` requires no approvals and no passing checks" | `approvals: 0`, `required_status_checks: null`, `rulesets: []` |
+| "scan flags exactly one, and that one is a false alarm" | Verified at Phase 2; upstream HEAD is still `c89557f7`, so the 43-file input set is byte-identical — basis unchanged |
+| "no CI at all on automation PRs (#27, #31)" | Verified at Phase 2; branch-protection state re-confirmed unchanged |
+
+**One clause is now stale, in the safer direction:** the copy says CODEOWNERS *"currently names the upstream project's owner."* True at gate time; the cycle then re-pointed all six rows to `@jmlozano1990` (Ruling 2), which was disclosed in the Phase-2 re-review **before** the owner approved. The owner did not approve on a claim that later became false in a way that would have changed their decision — the change strictly reduced the risk they accepted.
+
+**Nothing shipped that the owner was not shown.** The gate copy remained accurate.
+
+---
+
+**Files referenced (absolute):**
+- `/Users/macbookpro/claude-cowork-config/scripts/publish-release.sh` — S1, lines 41-51 and 62-68, 86-89
+- `/Users/macbookpro/claude-cowork-config/scripts/verify-lock-content-sha.sh` — clean, 10/10 controls
+- `/Users/macbookpro/claude-cowork-config/.github/workflows/quality.yml` — S2 (1519-1541), S3 (1645-1649), S5 (425-426), S6 (1417)
+- `/Users/macbookpro/claude-cowork-config/.github/workflows/sync-agency.yml` — S4 (311-312), S7 (431); verified clean at 100-111, 218-221, 306-309, 362-385, 394-399
+- `/Users/macbookpro/claude-cowork-config/.github/CODEOWNERS`, `/Users/macbookpro/claude-cowork-config/docs/owner-tasks.md` — verified truthful
+
+No Council-side state written. No Guard Change Summary required — this is an external-project cycle, and `.github/workflows/` is Tier B (worktree+PR, GCS not required) per `CLAUDE.md`.
+
+---
+
+Re-audit complete. All three discharged, verified by execution.
+
+---
+
+# Security Re-Audit — v2.19.5 "Rung 1"
+
+## Phase: 6 (re-audit) · Date: 2026-08-04T14:48:00Z
+## Scope: `7fcb77d`, clean tree, 3 files vs `bbd75a4`
+## Status: **PASS → Phase 7** — 1 new WARNING logged, no blocker remains
+
+## Discharge table
+
+| ID | Was | Now | Proven by |
+|----|-----|-----|-----------|
+| **S1** | CRITICAL / BLOCKER | **DISCHARGED** (residual → S8) | execution, below |
+| **S2** | WARNING | **DISCHARGED** | my exact `LEG3-POSTADVANCE` reproduction |
+| **S3** | WARNING | **DISCHARGED** | both legs run |
+| **S4** | WARNING | **FOLDED** | `CF-v2.19.5-E` rewritten |
+| **S5** | INFO | **FOLDED** | model citation repointed |
+| S6, S7 | INFO | unchanged, non-blocking | — |
+| **S8** | — | **NEW WARNING** | execution against a live release |
+
+---
+
+## S1 — DISCHARGED, with a residual I am logging rather than blocking on
+
+@dev's reasoning for choosing header-inclusion over the alternatives is correct and I want it on the record: **asserting on the tag/title would have been vacuous with respect to the very thing the check exists to catch.** That is the exact defect family this cycle is about, and rejecting my own suggested alternative on those grounds was the right call. Better than the option I offered.
+
+**Verified by execution:**
+
+| Check | Result |
+|---|---|
+| Extraction for 2.19.5 contains version | `1` (was `0`) — the header line `## [2.19.5] - 2026-08-04` |
+| Section boundary intact | `grep -c "2.19.4"` on the 2.19.5 extraction → `0`, no bleed |
+| RED leg (`9.9.9`) | `ERROR: … no non-empty '## [9.9.9]' section — refusing` · exit 1 |
+| `"nothing to do (idempotent)"` | `0` occurrences |
+| `exit 0` in the idempotence region (lines 60-80) | none |
+| ShellCheck, both scripts | exit 0, clean |
+
+**Your specific question — is the poll genuinely reachable, or merely un-`exit`-ed?** I ran the real second-run path read-only. I first probed that both write branches were provably not taken (`v2.19.3` body = 1733 bytes non-empty → `gh release edit` skipped; release exists → `gh release create` skipped), so nothing could touch the live repo:
+
+```
+Extracted CHANGELOG section for 2.19.3 (12 lines).
+Release v2.19.3 already exists with a non-empty body — skipping publish (idempotent), still verifying post-conditions.
+ERROR: post-condition failed — Release v2.19.3 body does not contain the version string '2.19.3'.
+EXIT=1
+```
+
+**The fall-through is real** — the new message prints and execution continues into step 4, which the old `exit 0` prevented. **But your warning was well-aimed:** for this input the poll is still not reached, because the fall-through lands on the body assertion. That is S8 below.
+
+**Why this is not still a blocker.** The dangerous half of S1 was *run 1 creates the tag then fails; run 2 falsely reports success*. That half is definitively gone — there is no path that reports success without evaluating both post-conditions. For the forward case this cycle actually uses (no `v2.19.5` release exists; `gh release list` confirms max is `v2.19.3`), the create path runs with a header-included body, the assertion passes, and the poll is reached. A subsequent re-run after an asset timeout now genuinely re-polls — the behaviour you wanted.
+
+**COULD-NOT-VERIFY:** that `gh release create --notes-file` sets the body verbatim, and therefore that the forward-path assertion passes. Proving it requires creating a real tag on the live public repo — the destructive boundary I drew at Phase 2 and will not cross. It is well-established `gh` behaviour and the extraction side is proven, but I did not run that link and will not claim I did.
+
+## S8 — NEW WARNING: a non-empty-but-wrong body is unverifiable and unrepairable
+
+Proven above against a real release. Two coupled gaps at `publish-release.sh:62-70` and `:86-89`:
+
+1. The `gh release edit` repair branch fires only when the body is **empty**. A body that is non-empty but lacks the version string is never repaired.
+2. That same body then fails the post-condition, so the asset poll at `:102-129` is never reached.
+
+Net: for all five pre-existing releases (`v2.18.0`–`v2.19.3`), the script can neither verify assets nor repair the body, permanently — it exits 1 every time with no path forward. Fails **loudly and closed**, never a false pass, and does not affect the `v2.19.5` publish. **Fix when convenient:** make the repair branch condition `empty OR missing-version`, so the script can heal what it diagnoses.
+
+## S2 — DISCHARGED
+
+GREEN unchanged: `verified=3` · `Leg 3 PASSED` · exit 0. On my exact post-advance reproduction the guard fires **first**, before the misleading verifier message:
+
+```
+::error::FIXTURE SETUP FAILED — Leg 3(c)'s poison would be a no-op: … stored hash for
+marketing/marketing-content-creator.md already equals the ratchet-pin (c89557f7…) hash.
+Upstream HEAD has caught up to RATCHET_SHA — pick a different RATCHET_SHA/path pair
+still behind the live lock's pin.
+```
+
+It points at the **fixture**, names the remedy, and no longer libels the verifier. Matches the house pattern at `:434-437`. Exactly as asked.
+
+## S3 — DISCHARGED, both legs
+
+- **RED** — zero-`files[]` lock → `::error::… CHECKED=0 …` · exit 1. (Was `PASSED — 0 files` · exit 0.)
+- **GREEN** — real 110-entry lock → `vendored-integrity-check PASSED — 110 files + LICENSE verified offline` · exit 0. No false-fire.
+
+**One environmental note, flagged so it is not mistaken for a finding:** the GREEN leg initially failed locally with `sed: 1: "1{/^$/d}": extra characters at the end of d command`. That is BSD sed at `quality.yml:1626`; GNU sed accepts the form, and the job runs on `ubuntu-latest`. I re-ran with a one-character local-only compat change to confirm. **The shipped line is correct — no change wanted.**
+
+## S4 / S5 — folded correctly
+
+- **S4** — `CF-v2.19.5-E` now carries `:311`/`:312`, the last-write-wins mechanism, and both suppressed consumers (`:551` banner, `:581` label). This is the impact statement I asked for, stated more precisely than I did.
+- **S5** — `:425-426` repointed to `sync-verify-ratchet` Leg 2/Leg 3(c). The sole remaining mention at `:1423` is the retirement record itself, which is correct and should stay.
+
+## No regressions
+
+Diff touches exactly 3 files, none of them gate-copy surfaces. All three workflows parse (`yaml.safe_load`, 30/1/1 jobs). ShellCheck clean. `.github/CODEOWNERS`, `sync-agency.yml`, `verify-lock-content-sha.sh` byte-identical to what I passed. I did not re-audit the ADR-075 core, per your scope.
+
+## Gate copy — still accurate
+
+Re-verified against live systems after the fix commit:
+
+| Claim | Status |
+|---|---|
+| "43 new … plus 15 updated" | Still exact — upstream HEAD unchanged at `c89557f7…`, so the input set is byte-identical |
+| "no approvals and no passing checks" | `approvals: 0`, `required_status_checks: null`, `codeowners: false` |
+| "scan flags exactly one, a false alarm" | Basis unchanged (same 43 files) |
+| CODEOWNERS clause | Stale in the safer direction, as reported — disclosed in the Phase-2 re-review **before** the owner approved |
+
+**Nothing in the fix commit changes anything the owner was shown.** The gate copy holds.
+
+---
+
+## Verdict: **PASS → Phase 7**
+
+Zero CRITICAL. Two WARNING carried forward (S8 new, S6/S7 informational). The eleventh instance was real — S8 is the fall-through landing where the poll is skipped for another reason, exactly the shape you named — but it fails closed, fails loudly, and cannot affect the v2.19.5 publish. That is a residual, not a gate.
+
+On your process notes: the fixes I verified were authored by a second @dev instance, and I verified them by running the shipped bytes rather than reading either instance's account — so the pin incident does not weaken the evidence. That the first instance proved four fixes read-only rather than tunnelling is the behaviour the guard exists to produce, and fixing the pin ancestry rather than the symptom was the right root-cause call.
+
+---
+
+## Artifacts for @dev to place
+
+**1. `docs/security-review-v2.19.5.md`** — append two sections, in order: my Phase-6 audit (the full text I returned previously, verbatim) followed by this re-audit. The Phase-6 audit's `## Status:` line must be amended from `FAIL` to:
+
+```
+## Status: FAIL (superseded — see Phase 6 Re-Audit below, PASS at 7fcb77d)
+```
+
+so the durable record shows the FAIL was real and how it was cleared, rather than silently rewriting it.
+
+**2. The still-unplaced Phase-2 re-review append** — already committed at `9dd2fa4`; I re-read it this phase and it is accurate against what shipped, including the two Rulings. No amendment needed.
+
+**3. New carry-forward to register:**
+
+> **`CF-v2.19.5-F`** — `scripts/publish-release.sh` cannot verify or repair a Release whose body is non-empty but lacks the version string. The `gh release edit` repair branch (`:69-70`) fires only on an *empty* body, while the post-condition (`:86-89`) rejects any body without the version — so all five pre-existing releases (`v2.18.0`–`v2.19.3`) fail permanently with no remedy path, and the asset poll (`:102-129`) is never reached for them. Fails closed and loud; does not affect the v2.19.5 publish. **Fix:** widen the repair-branch condition to `empty OR missing-version`. Found at Phase 6 re-audit by running the script read-only against the live `v2.19.3` release.
+
+No Guard Change Summary required — external project, and `.github/workflows/` is Tier B per `CLAUDE.md`. No Council-side state written by me.

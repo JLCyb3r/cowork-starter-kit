@@ -255,6 +255,8 @@ for skills_dir in examples/*/.claude/skills; do
 done
 ```
 
+**macOS note:** `quality.yml`'s `vendored-integrity-check` job (`:1626`) uses `sed '1{/^$/d}'`, which GNU sed accepts and BSD/macOS sed rejects (`extra characters at the end of d command`). The job runs on `ubuntu-latest` in CI, so the shipped line is correct as-is — this only affects trying to replicate that one step locally on a Mac. Not a defect; flagged here so it isn't mistaken for one (found at v2.19.5 Phase 6 re-audit).
+
 ---
 
 ## CI Workflow Quality Baseline (v2.0.1+)
