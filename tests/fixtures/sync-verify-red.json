@@ -1,0 +1,15 @@
+{
+  "$schema_version": "1.0",
+  "upstream": "msitarzewski/agency-agents",
+  "pinned_commit_sha": "783f6a72bfd7f3135700ac273c619d92821b419a",
+  "pinned_at": "2026-05-07T12:32:06Z",
+  "files": [
+    {
+      "path": "marketing/marketing-content-creator.md",
+      "sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5",
+      "content_sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5",
+      "spdx": "MIT",
+      "requires_review": false
+    }
+  ]
+}

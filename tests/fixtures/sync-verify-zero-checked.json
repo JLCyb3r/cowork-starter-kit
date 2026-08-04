@@ -1,0 +1,22 @@
+{
+  "$schema_version": "1.0",
+  "upstream": "msitarzewski/agency-agents",
+  "pinned_commit_sha": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+  "pinned_at": "2026-08-04T00:00:00Z",
+  "files": [
+    {
+      "path": "academic/academic-anthropologist.md",
+      "sha256": "2668602164abf574cb4e432a0cd40727a943de0b59864abb5b73956a0eb26146",
+      "content_sha256": "2668602164abf574cb4e432a0cd40727a943de0b59864abb5b73956a0eb26146",
+      "spdx": "MIT",
+      "requires_review": false
+    },
+    {
+      "path": "marketing/marketing-content-creator.md",
+      "sha256": "676c536de09bd37195d5761ab4806037116cb5a03ffd41be152736b359d99e35",
+      "content_sha256": "676c536de09bd37195d5761ab4806037116cb5a03ffd41be152736b359d99e35",
+      "spdx": "MIT",
+      "requires_review": false
+    }
+  ]
+}
