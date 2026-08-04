@@ -12042,7 +12042,9 @@ document that corrects the false claims is itself scanned for them.
 
 **The prose hit is the mild version. The severe version is structural and would have blocked
 Phase 5:** AC-ARCH-SCHEMA-1 *mandates* that each correction block NAME its target field, e.g.
-`CORRECTION (v2.19.5) [field-rationale: files[].category, :2851]`. That label contains the literal
+`CORRECTION (v<VERSION>) [field-rationale: files[].category, :2851]` — **the version token is a
+placeholder here deliberately, so that this illustration cannot itself be counted as a correction
+block; see §D13c, where this exact line was the phantom.** That label contains the literal
 string `files[].category`, which the locator matches, outside any fence, therefore **its own new
 passage**. Every correction block @dev writes raises the passage count it is being measured
 against. Seven correction blocks → up to 14 passages → `NAMED_BLOCKS >= PASSAGES` can never be
@@ -12648,3 +12650,106 @@ exception to it.
   each block corrects the passage it names.
 
 End of v2.19.5 §D13b amendment.
+
+---
+
+## ADR-075 §D13c — The bounded `NAMED_BLOCKS` command is written down (Phase 5 amendment, 2026-08-04)
+
+> Append-only amendment to §D13 / §D13a / §D13b. @qa's Phase-5 BLOCKER, recorded as found.
+> **Ninth instance of the defect family this cycle, and the fourth minted inside the fix for a
+> previous one.** This one is mine: the defect is in my own check, and my own reported figure was
+> right only by an unwritten mental step.
+
+**The defect @qa found.** §D13 and §D13b *instruct* that the identical bound be applied to the
+`NAMED_BLOCKS` extraction. **That instruction was never cashed out as runnable code anywhere in the
+repo.** The only literal, copy-pasteable command was the **unbounded** one at `docs/spec.md:5968`.
+And `:12045` of this file carried — as prose inside §D13's own explanatory paragraph — an
+*illustrative* label of the mandated shape, below the bound, which the unbounded extraction counted
+as if it were a real correction block. Measured before the fix:
+
+| Command as a reader could actually run it | `NAMED_BLOCKS` |
+|---|---|
+| unbounded (the only literal that shipped) | **8** |
+| bounded (instructed in prose, written nowhere) | **7** |
+
+A fixed **+1 phantom offset** — and @qa proved it lands exactly where it does the most damage:
+
+| Variant | `PASSAGES` | `NAMED_BLOCKS` | Verdict |
+|---|---|---|---|
+| bounded (correct) | 7 | 6 | 6 ≥ 7 → **FAIL** ✓ catches the masking regression |
+| **unbounded — the shipped literal** | 7 | 7 | 7 ≥ 7 → **PASS** ✗ misses it |
+
+The offset **exactly cancels a one-block deletion**, so the check as any reader could run it was a
+`Check-That-Cannot-Fail` against precisely the masking regression it was built to catch
+(`docs/patterns.md:31`, BINDING). My reported `NAMED_BLOCKS=7` was numerically correct and
+*epistemically* wrong: correct only via a bound I applied in my head and never wrote down.
+**Invisible correctness is the thing this cycle's discipline exists to eliminate**, and @qa was
+right to name it that way rather than soften it to a documentation gap.
+
+**Not a defect in the shipped corrections.** All 7 passages verified present, correctly labeled,
+fence-adjacent; `UNCORRECTED:` empty; anchors `2822 2845 2862 2886 3514 3665 5610`. The defect is in
+the **reproducibility of the verifier**, not in what it verifies.
+
+**Decision — the literal ships.** This is the command, in full, bound and guarded. It replaces the
+unbounded form at `docs/spec.md:5968`, which is corrected in place with the superseded version left
+visible:
+
+```bash
+END=$(grep -n '^# v2.19.5 — Rung 1 — Phase 1 Design' docs/architecture.md | head -1 | cut -d: -f1)
+[ -n "$END" ] && [ "$END" -gt 0 ] || { echo "::error::END anchor not found — refusing to run unbounded"; exit 1; }
+
+NAMED_BLOCKS=$(sed -n "1,$((END-1))p" docs/architecture.md \
+  | grep -oE 'CORRECTION \(v2\.19\.5\) \[.*\]' \
+  | grep -iE 'category|upstream_repo|upstream_url' | sort -u | wc -l)
+```
+
+**Why `sort -u` is load-bearing, since @qa asked it be stated.** The extraction emits one line per
+*label occurrence*, not per block. Two blocks may legitimately name the same passage — the AC's own
+fence-adjacency rule can require a fenced example and its field-rationale bullet to be corrected
+separately with near-identical labels — and a label may also be quoted elsewhere in the bounded
+region. Without `sort -u`, duplicate or quoted labels inflate the numerator and re-create exactly
+the slack this amendment exists to remove: the count would pass while a passage went uncorrected.
+`sort -u` makes the numerator count *distinct named passages*, which is the quantity the threshold
+is actually about. It is not defensive tidying; removing it re-opens the masking hole.
+
+### Both legs re-proven with the new literal command
+
+| Leg | Construction | Result |
+|---|---|---|
+| **GREEN** | branch as committed, literal bounded command | `END=11544`, `NAMED_BLOCKS=7`, `PASSAGES=7` → **7 ≥ 7 PASS**; `UNCORRECTED:` **empty** |
+| **RED** | delete the real block naming the `files[].category` field-rationale bullet; `END` re-derived to **11543** by the same command, not assumed | `NAMED_BLOCKS=6`, `PASSAGES=7` → **6 ≥ 7 FAIL** ✓ |
+| **RED under the superseded unbounded literal** | same deletion | `NAMED_BLOCKS=7` vs `PASSAGES=7` → **PASS** ✗ — the defect, reproduced |
+
+The third row is the one that matters: it is the same fixture under the two commands, and it is why
+the fix is "write the bound down," not "recount."
+
+**Phantom neutralised as belt, not braces.** `:12045`'s illustrative label now uses a `v<VERSION>`
+placeholder, so it cannot be extracted, with an inline note saying why. **The bound remains the
+fix.** After neutralisation the unbounded form happens to return 7 as well — which is a trap, not a
+reprieve: it is accidentally correct today and breaks again at the next illustrative label anyone
+writes. Nothing may depend on it. Requirement stands: run the bounded, guarded literal above.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** the durable answer is already named in §D13b Maturation Path (i) and is
+  **explicitly promoted here from an option to the recommendation**: replace token-substring
+  counting with a **structural locator** — parse the fenced JSON examples and diff their key sets
+  against `jq -r 'keys' cowork.lock.json`. That makes the masking case *unrepresentable* rather than
+  detectable, needs no bound, no correction-block exclusion, no phantom neutralisation and no
+  `sort -u`, because it never counts labels at all. Secondary: lift the three-script family into
+  `scripts/` as one function (§D13b (ii)) so the literal cannot diverge from the instruction again —
+  which is the specific failure this amendment repairs.
+- **Concrete revisit triggers:** **the strongest trigger is the amendment history itself.** §D13a
+  closed a fail-open in §D13; §D13b closed a cannot-pass in §D13a; §D13c closes a cannot-fail in
+  §D13b. **Three consecutive fixes to one check, each minting the inverse defect of the last, is the
+  evidence that token-counting is at its limit** — the next cycle that touches this document should
+  read that as the trigger and adopt the structural locator, not rediscover the pattern a fourth
+  time. Also: any cycle adding `CORRECTION (v<version>)` blocks under a new version token (§D13b's
+  hardcoded-token rot); any edit to the locator regex.
+- **Risk knowingly accepted:** the check remains a *count* over labels, so it can still only prove
+  that as many distinct named blocks exist as there are passages — never that each block corrects the
+  passage it names. That half stays human/agent fence-adjacency judgement, honestly labeled
+  inspection-class per this repo's `AC-PROV-1`/`AC-PROV-4` precedent. Accepted for this cycle
+  because the structural locator is a design change, not a Phase-5 fix, and shipping it under a
+  BLOCKER would be the fourth un-reviewed change to this check in one cycle.
+
+End of v2.19.5 §D13c amendment.

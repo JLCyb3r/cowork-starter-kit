@@ -5965,10 +5965,40 @@ Same as the repo's standing personas (`docs/spec.md` early sections) — this cy
 
 **Pass-condition bug found and fixed at Phase 0.D round 3 (@architect, graded "not a new blocker" but folded in anyway, not deferred): `grep -c "CORRECTION (v2.19.5)"` counts the token FILE-WIDE.** `AC-ARCH-LICENSE-1` mandates two more blocks carrying the identical token (`:2843`/`:2847`, LICENSE/SPDX). A masking implementation could write only 6 of this AC's 7 passages, and the file-wide count would still read `6 + 2 = 8 ≥ 7` — passing while the exact defect this check exists to catch is present, the +2 slack silently absorbing the 1-block deficit. Fixed: **scope the count to labels naming THIS AC's own subject** — `category`/`upstream_repo`/`upstream_url` — which `AC-ARCH-LICENSE-1`'s labels never mention, so its blocks cannot contribute to this threshold:
 ```
-NAMED_BLOCKS=$(grep -oE 'CORRECTION \(v2\.19\.5\) \[.*\]' docs/architecture.md | grep -iE 'category|upstream_repo|upstream_url' | sort -u | wc -l)
-PASSAGES=$(<the passage-derivation awk script above> | wc -l)
+# ⛔ SUPERSEDED at Phase 5 by docs/architecture.md ADR-075 §D13c. DO NOT RUN THIS FORM.
+# It is UNBOUNDED, so it also counts illustrative labels written below the design-section
+# heading. Measured: unbounded 8 vs bounded 7 — a fixed +1 phantom that EXACTLY cancels a
+# one-block deletion, making this check unable to FAIL against the masking regression it
+# exists to catch. Kept visible as the record of what shipped, not as a runnable command:
+#   NAMED_BLOCKS=$(grep -oE 'CORRECTION \(v2\.19\.5\) \[.*\]' docs/architecture.md | grep -iE 'category|upstream_repo|upstream_url' | sort -u | wc -l)
+
+# ✅ CORRECT form — bounded + guarded. This is the literal to run (ADR-075 §D13 / §D13a / §D13c).
+END=$(grep -n '^# v2.19.5 — Rung 1 — Phase 1 Design' docs/architecture.md | head -1 | cut -d: -f1)
+[ -n "$END" ] && [ "$END" -gt 0 ] || { echo "::error::END anchor not found — refusing to run unbounded"; exit 1; }
+
+NAMED_BLOCKS=$(sed -n "1,$((END-1))p" docs/architecture.md \
+  | grep -oE 'CORRECTION \(v2\.19\.5\) \[.*\]' \
+  | grep -iE 'category|upstream_repo|upstream_url' | sort -u | wc -l)
+
+# PASSAGES uses the SAME END bound plus the §D13b correction-block exclusion (inCorr): a locator
+# hit inside a CORRECTION block is the correction, not a passage needing one. Numerator and
+# denominator must be computed over the same filtered range.
+PASSAGES=$(awk -v end="$END" '
+  NR>=end{exit}
+  /^>/  { if ($0 ~ /CORRECTION \(v2\.19\.5\)/) inCorr=1; if (inCorr) next }
+  !/^>/ { inCorr=0 }
+  /^```/ { inFence=!inFence; if(inFence) fenceStart=NR; next }
+  /"category":|files\[\]\.category|upstream_repo|upstream_url/ { if(inFence) print fenceStart; else print NR }
+' docs/architecture.md | sort -nu | wc -l)
+
 [ "$NAMED_BLOCKS" -ge "$PASSAGES" ]
 ```
+
+**`sort -u` is load-bearing, not tidying.** The extraction emits one line per label *occurrence*,
+not per block; two blocks may legitimately name the same passage, and a label may be quoted
+elsewhere inside the bounded region. Without `sort -u` the numerator inflates and the check passes
+while a passage goes uncorrected — the same slack the subject-scoping fix above removed. It makes
+the numerator count *distinct named passages*, which is the quantity the threshold is about.
 **Note the extraction pattern itself: `\[.*\]` (greedy), not `\[[^]]*\]`.** The narrower, more obvious-looking form breaks on this AC's own subject matter — a label naming `files[].category` contains an embedded `]` (from `files[]`) that a `[^]]*` character class stops at, truncating the match before the label's actual content and causing the category filter to miss it. Found by constructing synthetic fixtures and running the corrected command against them, not by inspection: **GREEN fixture (all 7 passages + both LICENSE-1 blocks present) → 7 ≥ 7, PASSES**; **MASKED fixture (6 of 7 passages, LICENSE-1 blocks still present) → 6 < 7, FAILS** — both legs verified this session, not assumed. The threshold is whatever the live passage-derivation script currently returns (7 today; re-run, not assumed, if this AC's own locator regex is ever edited), applying to this AC the identical discipline AC-ROADMAP-COUNT-1 already applies to "81 of 110." @qa's Phase 5 verification additionally reads each locator hit's surrounding context to confirm its correction is fence-adjacent to the SPECIFIC passage it names — this half is human/agent judgment paired with the mechanical count check, stated as such rather than disguised as fully mechanical (per this repo's own `AC-PROV-1`/`AC-PROV-4` "inspection-class, honestly labeled" precedent, `docs/architecture.md:10121`).
   Per this doc's own append-only convention (ADRs are never rewritten or deleted — this doc already uses "amendment block" as its correction mechanism, e.g. ADR-007's `tools:` amendment), each fix is a dated, NAMED correction block. **Do NOT add `category`/`upstream_repo`/`upstream_url` to `cowork.lock.json`** — that is net-new schema work, explicitly out of scope this cycle; the real field is `upstream` (a single string), already shipped.
   **Discovery bug found and fixed at Phase 0.D round 2 (@architect, verified directly, not re-litigated): the original discovery script anchored its 20-line search window on the raw HIT line, not the PASSAGE.** For P5 (`:3521`) that window was `3521-3541` — but this AC's own fence-adjacency rule (§(ii) above) mandates the correction land after the closing fence at `:3580`, outside that window. A compliant implementation (correction placed correctly, after `:3580`) would therefore print `UNCORRECTED:3521` **forever**, and the only way to silence it would be to place the correction inline inside the unlabeled fence — exactly what the fence-adjacency rule exists to forbid. **This is `AC-F1-3`'s own shape, one level up: a check that punishes obeying the rule it was written to enforce, inside the AC written to fix a masking hole.** Fixed by reusing the fence-tracking already built for the passage-count script (§(i) above) so the search window anchors on the PASSAGE's correction point, not the hit:
