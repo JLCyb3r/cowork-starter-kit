@@ -422,8 +422,8 @@ jobs:
         run: |
           set -euo pipefail
           # v2.18.0 F5/MF-S-1: prove the drift-verify logic below CAN fail before trusting
-          # it on real data — matches the house lock-content-sha-fault-injection model
-          # (.github/workflows/quality.yml lock-content-sha-fault-injection job).
+          # it on real data — matches the house fault-injection model
+          # (.github/workflows/quality.yml sync-verify-ratchet job, Leg 2/Leg 3(c)).
           POISON_FILE="$(mktemp)"
           trap 'rm -f "$POISON_FILE"' EXIT
           cp curated-skills-registry.md "$POISON_FILE"
@@ -1524,6 +1524,11 @@ jobs:
           # branches — but this leg proves it empirically, not by
           # assertion).
           OLD_HASH=$(jq -r '.files[] | select(.path == "marketing/marketing-content-creator.md") | .content_sha256' cowork.lock.json)
+          PRODUCED_HASH=$(jq -r '.files[] | select(.path == "marketing/marketing-content-creator.md") | .content_sha256' /tmp/ratchet-lock.json)
+          if [ "$OLD_HASH" = "$PRODUCED_HASH" ]; then
+            echo "::error::FIXTURE SETUP FAILED — Leg 3(c)'s poison would be a no-op: cowork.lock.json's stored hash for marketing/marketing-content-creator.md already equals the ratchet-pin (${RATCHET_SHA}) hash. Upstream HEAD has caught up to RATCHET_SHA — pick a different RATCHET_SHA/path pair still behind the live lock's pin."
+            exit 1
+          fi
           jq --arg h "$OLD_HASH" \
             '(.files[] | select(.path == "marketing/marketing-content-creator.md") | .content_sha256) = $h' \
             /tmp/ratchet-lock.json > /tmp/ratchet-lock-poisoned.json
@@ -1644,6 +1649,10 @@ jobs:
           fi
           if [ "$FAIL" -eq 1 ]; then
             echo "::error::vendored-integrity-check FAILED."
+            exit 1
+          fi
+          if [ "$CHECKED" -eq 0 ]; then
+            echo "::error::vendored-integrity-check FAILED — CHECKED=0, cowork.lock.json's files[] array is empty or every entry was skipped. A zero-entry run must never report success."
             exit 1
           fi
           echo "vendored-integrity-check PASSED — ${CHECKED} files + LICENSE verified offline."

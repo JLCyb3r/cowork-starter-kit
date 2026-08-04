@@ -37,14 +37,14 @@ fi
 NOTES_FILE="$(mktemp)"
 trap 'rm -f "$NOTES_FILE"' EXIT
 
-# The section runs from its own "## [x.y.z] - date" header to the next
-# "## [" header (or EOF), excluding the header line itself — gh release
-# create's --title already carries the version.
+# The section runs from its own "## [x.y.z] - date" header (included, so the
+# post-condition assertion at step 4 has a version string to match against)
+# to the next "## [" header (or EOF).
 awk -v ver="$VERSION" '
   BEGIN { insection = 0 }
   /^## \[/ {
     if (insection) exit
-    if ($0 ~ "^## \\[" ver "\\]") { insection = 1 }
+    if ($0 ~ "^## \\[" ver "\\]") { insection = 1; print; next }
     next
   }
   insection { print }
@@ -63,11 +63,11 @@ if gh release view "$TAG" --json body -q '.body' > /tmp/publish-release-existing
   EXISTING_BODY="$(cat /tmp/publish-release-existing-body.txt)"
   rm -f /tmp/publish-release-existing-body.txt
   if [ -n "$EXISTING_BODY" ] && [ "$EXISTING_BODY" != "null" ]; then
-    echo "Release ${TAG} already exists with a non-empty body — nothing to do (idempotent)."
-    exit 0
+    echo "Release ${TAG} already exists with a non-empty body — skipping publish (idempotent), still verifying post-conditions."
+  else
+    echo "Release ${TAG} exists with an empty body — repairing via 'gh release edit'."
+    gh release edit "$TAG" --notes-file "$NOTES_FILE"
   fi
-  echo "Release ${TAG} exists with an empty body — repairing via 'gh release edit'."
-  gh release edit "$TAG" --notes-file "$NOTES_FILE"
 else
   # --- 3. Create the tag AND the populated Release in one call. ---
   echo "Creating ${TAG} at ${TARGET_SHA} with a populated body..."

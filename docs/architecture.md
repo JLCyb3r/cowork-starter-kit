@@ -12458,14 +12458,24 @@ for regressions introduced here. Item 1 is **fixed in this cycle** (Phase 1 gate
    `.github/`, `tests/`, `upstream-contribution/`, `docs/internal/` and three named docs; and
    `release-assets.yml:93` positively requires `vendored/agency-agents/LICENSE` in the archive), so
    an orphan ships in **every release ZIP and tarball**. See §D7's S7 disposition.
-5. **`sync-agency.yml:259` — upstream-controlled data on an unsafe transport.**
-   `echo "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"` interpolates upstream `${file_path}`
-   values into a bare `KEY=value` step-output line, expanded into the PR body at `:399`. A path
-   containing a newline, a `::`-prefixed sequence, or a second `KEY=` breaks out of the line.
-   **Not retrofitted this cycle** — it is a different variable on a path this design does not
-   otherwise touch — but §D7's S6 transport rule exists precisely so the new removed-path list does
-   not copy this shape. **`CF-v2.19.5-E`**. Phase 6 must not read the new code's correctness as a
-   claim about `flagged_files`.
+5. **`sync-agency.yml:311-312` — upstream-controlled data on an unsafe transport, with a
+   suppression path, not just a corruption path.** `:311` `echo
+   "requires_review=${REQUIRES_REVIEW}" >> "$GITHUB_OUTPUT"` and `:312` `echo
+   "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"` both interpolate upstream-controlled values
+   into bare `KEY=value` step-output lines. `$GITHUB_OUTPUT` takes the **last** write of a given key
+   within a step, so an injected `requires_review=false` payload appended after `:311`'s own write
+   overrides it — and that single override **silences both downstream consumers**: the warning
+   banner at `:551` (`requires_review == 'true' && '**WARNING: ...**' || 'No content-scan hits
+   detected.'`) and the `security-review-required` label at `:581` (`requires_review == 'true' &&
+   'security-review-required' || ''`). The same signal that is supposed to raise the alarm is the
+   one an attacker-controlled path can use to silence it — a strictly worse failure mode than
+   `flagged_files`' line-injection, which corrupts a display string but does not flip a
+   PASS/FAIL-shaped boolean two other steps gate on. **Not retrofitted this cycle** — it is a
+   different variable pair on a path this design does not otherwise touch — but §D7's S6 transport
+   rule exists precisely so the new removed-path list does not copy this shape, and Phase 4's
+   removed-path output correctly used the `$GITHUB_OUTPUT` heredoc-delimiter form rather than
+   `requires_review`/`flagged_files`'s bare `KEY=value` shape. **`CF-v2.19.5-E`**. Phase 6 must not
+   read the new code's correctness as a claim about `requires_review`/`flagged_files`.
 
 ---
 
