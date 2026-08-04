@@ -11851,9 +11851,18 @@ upstream bytes and a merged lock. The two checks are complementary and both are 
 
 **Second consequence — every `quality.yml` job in this design is a post-merge detector on the sync
 path, not a gate.** `sync-verify-ratchet` still earns its place: it runs on every *human* PR
-(including this cycle's own), where it is a genuine gate, and on the post-merge push to `main`,
-where it is detection. But no design document may describe it as blocking a sync PR. This is
-recorded so Phase 4 and Phase 6 do not restate the claim the first draft got wrong.
+(including this cycle's own), where it is a **visible red/green signal a human sees before merging
+— not a mechanical gate, since `required_status_checks` is not enabled**, and on the post-merge
+push to `main`, where it is detection.
+
+**Exactly what AC-SYNC-9 buys — less than it intended at 0.D, stated in three parts:** (i) on human
+PRs, a standing visible signal that the verifier is still armed, re-run forever — **the durability
+property, delivered**, and the reason it earns its place; (ii) on the sync path, nothing at PR
+time, detection on the post-merge push; (iii) **it gates nothing, anywhere**, because nothing in
+this repo gates on CI (`required_status_checks` not enabled, `required_approving_review_count` = 0)
+— a red `sync-verify-ratchet` blocks no merge on any path. No design document may describe it as
+blocking a sync PR, and none may call it a gate on a human PR either. Recorded because this
+paragraph's own first draft re-introduced the overstatement one clause after correcting it.
 
 **D9 — The ratchet (AC-SYNC-9) lands as a standing CI job, `sync-verify-ratchet` in `quality.yml`,
 with three legs.**
@@ -11944,10 +11953,39 @@ linter, no schema check — which is a second, independent reason its CODEOWNERS
 **Honest limit, stated rather than implied:** CODEOWNERS is presently **unenforced** on this repo
 (`codeowners=false`, `approvals=0` — the same live finding that drives AC-SYNC-CODEOWNERS-1). These
 rows therefore restore *parity* with the surfaces the logic left; they do not create a gate that
-was working before. **Refinement to AC-SYNC-CODEOWNERS-1's option (a):** the spec frames (a) as
-"CODEOWNERS file + branch-protection rule." The file already exists and is substantive — so (a)
-reduces to *enabling branch protection alone*, which makes the owner task materially cheaper than
-the spec implies. That correction belongs in the owner-task row (§D item 11).
+was working before.
+
+> **CORRECTED at Phase 2 (S5 — this decision's own first draft minted a fresh instance of the
+> defect class this cycle exists to remove; the error is left visible).** The first draft called
+> AC-SYNC-CODEOWNERS-1's option (a) "cheaper than the spec implies," reducing it to *enabling
+> branch protection alone* because `.github/CODEOWNERS` already exists. **That is wrong, and it is
+> wrong in the worst available direction.** Verified this session:
+>
+> ```
+> gh api repos/:owner/:repo/collaborators --jq '.[].login'  →  jmlozano1990   (sole collaborator)
+> .github/CODEOWNERS:11  cowork.lock.json                   @msitarzewski
+> .github/CODEOWNERS:14  .github/workflows/sync-agency.yml  @msitarzewski
+> .github/CODEOWNERS:15  .github/workflows/quality.yml      @msitarzewski
+> ```
+>
+> **`@msitarzewski` is not a collaborator on this repo, and GitHub ignores CODEOWNERS entries for
+> users without write access. All six supply-chain rows (`:11-16`) are inert.** Enabling branch
+> protection against them yields either a permanent deadlock — a required reviewer who cannot
+> review — or, worse, **a silent no-op: a control that reads as enabled in the settings UI and
+> enforces nothing.** Routing the owner to that would have been a newly-minted false control claim,
+> written into the very artifact @security's CRITICAL made binding.
+>
+> **Corrected: option (a) is TWO steps, in order.** (1) Re-point the supply-chain CODEOWNERS rows
+> to `@jmlozano1990`, the sole collaborator — without this the rows do nothing. (2) *Then* enable
+> branch protection requiring CODEOWNERS approval. The owner-task row (§D item 11) and the
+> risk-register row (§D item 12) must both state plainly that **the current rows are inert**, not
+> merely unenforced — those are different failures and only one of them is fixed by a settings
+> toggle.
+>
+> Whether the second maintainer's rows (`skills/`, `curated-skills-registry.md`, `@jmlozano1990`)
+> are affected: they are not — that owner *is* the sole collaborator. Only the six
+> `@msitarzewski` rows are inert. Re-pointing them is a `.github/CODEOWNERS` edit already in §D
+> row 3, so it costs no new file.
 
 **D12 — `sync-agency.yml:409` is a FOURTH false claim, and it is corrected in this cycle.**
 
@@ -12004,6 +12042,25 @@ Apply the identical `NR >= end { exit }` bound to **both** the passage-derivatio
 `UNCORRECTED:` discovery script, and to the `NAMED_BLOCKS` extraction — otherwise the numerator and
 denominator are computed over different ranges, which is its own defect. Re-derive `END` on every
 run: it moves with every insertion, like everything else in this file.
+
+**D13a — the bound has a live rot mode, and it fails OPEN. Guard it (Phase 2, @security — tested,
+not asserted).** `END` is derived by grepping a heading that contains an **em-dash**. If that grep
+ever returns empty — the heading gets reworded, or a Phase-4 transcription turns `—` into `--` —
+then `END=""`, and `awk -v end="" 'NR >= end { exit }'` exits on the first line and yields **zero
+passages**. Not an error. Zero. `NAMED_BLOCKS >= PASSAGES` becomes `N >= 0`, trivially true, and
+the `UNCORRECTED:` script finds nothing to report. **The fix for a `Verifier-that-cannot-PASS`
+would fail open into a `Check-That-Cannot-Fail`** — `docs/patterns.md:31`, BINDING — which would
+be this cycle's seventh instance of that family, minted inside the fix for the sixth.
+
+**Binding, on all three scripts, immediately after deriving `END`:**
+
+```bash
+[ -n "$END" ] && [ "$END" -gt 0 ] || { echo "::error::END anchor not found — AC-ARCH-SCHEMA-1 scripts cannot run unbounded or unanchored"; exit 1; }
+```
+
+**Negative control, free:** delete or reword the heading and re-run — the scripts must fail loudly
+naming the missing anchor, where without the guard they print `0` and pass. Neither leg is
+hypothetical: the RED leg is one em-dash away at every future edit to this file.
 
 **Negative control:** with the bound, the script returns **7** against the current file (verified
 this session, both before and after the `upstream_repo`-token removal at `:12260`); without it, it
@@ -12219,8 +12276,9 @@ two describe different moments:
 
 - **Detected:** retroactive alteration of content that was **already pinned and already reviewed**.
   The old-pin comparison is a *re-attestation* of prior review, enforced in CI at ingestion time
-  (`sync-agency.yml`, gating the advance) and, for the current pin, on every PR
-  (`quality.yml:1458-1495`) and offline against the vendored tree (`quality.yml:1497-1552`).
+  (`sync-agency.yml`, gating the advance) and, for the current pin, on every **human** PR
+  (`quality.yml:1458-1495` — *not* on a sync PR, per fact 3 below) and offline against the vendored
+  tree (`quality.yml:1497-1552`).
 - **NOT detected:** whether **newly pinned** content was ever read by a human. The advance path
   computes a fresh hash over whatever upstream serves at `NEW_SHA`; the hash attests *what* was
   ingested, never *that anyone looked at it*. The S1 content-scan (`sync-agency.yml:143-152`,
@@ -12255,7 +12313,8 @@ buying, is any review of the new content.
   protection reports `approvals=0`, `codeowners=false`, `rulesets=0`. Per `AC-SYNC-CODEOWNERS-1`,
   option (b) was chosen: the checklist is corrected to state the actual enforced state plainly —
   **there is no enforced approval requirement on PRs touching `cowork.lock.json`** — while enabling
-  the control (a CODEOWNERS file plus a branch-protection rule) is routed to the owner as an open
+  the control (re-point the inert supply-chain CODEOWNERS rows to a real collaborator, *then* add a
+  branch-protection rule — two steps, per D11's S5 correction) is routed to the owner as an open
   decision in `docs/owner-tasks.md`, with the exposure recorded in `docs/risk-register.md`.
 
 **Ordering satisfied.** AC-SYNC-3(d) could not be written before `AC-SYNC-CODEOWNERS-1` resolved,
@@ -12358,7 +12417,7 @@ Commit 5 = doc-truth corrections (items 4a–4e + S7 item 3); Commit 6 = release
 |---|------|--------|-------------------|
 | 1 | `scripts/verify-lock-content-sha.sh` | **NEW** — single skip-free verifier; `$1` = lock-or-fixture path; reads `.upstream`/`.pinned_commit_sha` from that file; absent/empty/`MISSING` hash → error; fetch failure → error; prints `verified=<N>`; asserts `N == (.files\|length)` and `N > 0` | D2, D3; AC-SYNC-1/2/6 |
 | 2 | `.github/jq/lock-entry.jq` | **NEW** — single source of the lock-entry object shape, emitting `{path, sha256, spdx, requires_review, content_sha256}`; invoked via `jq -nc … -f` from both the workflow and the ratchet | D4; AC-SYNC-7/9 |
-| 3 | `.github/CODEOWNERS` | **MODIFIED** — add `scripts/verify-lock-content-sha.sh @msitarzewski` and `.github/jq/ @msitarzewski`; rows move with the logic they govern | **D11** (S4) |
+| 3 | `.github/CODEOWNERS` | **MODIFIED** — (a) add rows for `scripts/verify-lock-content-sha.sh` and `.github/jq/` so ownership moves with the logic; (b) **re-point all six supply-chain rows (`:11-16`) from `@msitarzewski` to `@jmlozano1990`** — `@msitarzewski` is not a collaborator, so GitHub ignores those entries and they are **inert today** (S5). New rows use `@jmlozano1990` for the same reason. The second maintainer's `skills/`/`curated-skills-registry.md` rows are already correct and are not touched. | **D11** (S4, **S5**) |
 | 4 | `.github/workflows/sync-agency.yml` | **MODIFIED** — (a) NEW hoisted step `Verify pinned content integrity (old-pin tamper check)` invoking file 1, placed after `Check if lock file needs update`, before `Fetch upstream LICENSE`; (b) DELETE the comparison block `:216-227` from the advance loop (keep `:216`'s hash compute as a writer input); (c) accumulator `:246-252` → `jq -nc … -f .github/jq/lock-entry.jq`, adding `content_sha256` from `$FILE_SHA256`; (d) post-write assertions before `mv` (`:335`): `COUNT>0`, `BLANK==0` widened predicate, `DIVERGE==0`; (e) `:210` per-file fetch → `FETCH_FAILURES` + fail-closed after loop; (f) `:167-172` category listing → HTTP-status branch **plus the S9 `jq -e 'type=="array" and length>0'` assert**; (g) removed-path set difference + best-effort compare-API enrichment; (h) PR-body `### Removed Upstream Paths` section via the **S6 transport** (JSON → `body-path:` or heredoc-delimited output, never bare `KEY=value`), with the **S7** rename sub-case labeled distinctly; (i) `:401` CODEOWNERS claim corrected; (j) **`:409` `vendored-integrity-check` claim corrected (D12)** | D1/D4/D6/D7/D12; AC-SYNC-1/2/6/7/8, AC-SYNC-CODEOWNERS-1, S6, S9 |
 | 5 | `.github/workflows/quality.yml` | **MODIFIED** — (a) NEW `sync-verify-ratchet` job, 3 legs, all invoking file 1; (b) **D10 `CHECKED > 0` floor before `:1495`'s `PASSED` line**; (c) DELETE `lock-content-sha-fault-injection` (`:1417-1456`) | D9, **D10**; AC-SYNC-9, AC-F1-3 retirement |
 | 6 | `tests/fixtures/sync-verify-red.json` | **NEW** — Leg 2 RED fixture: pinned at `783f6a7…`, one entry whose `content_sha256` is the real hash of the same path at `c89557f…` | D9 Leg 2; AC-SYNC-1 |
@@ -12366,8 +12425,8 @@ Commit 5 = doc-truth corrections (items 4a–4e + S7 item 3); Commit 6 = release
 | 8 | `tests/fixtures/sha-fault-injection.json` | **DELETED** — with the retired `AC-F1-3` job | ADR-028 amendment §(e) |
 | 9 | `scripts/publish-release.sh` | **NEW** — CHANGELOG section extraction (fail on missing/empty); idempotence + empty-body repair path; `gh release create <tag> --target <sha> --notes-file`; post-condition asserts (body non-empty, contains version, 2 assets) | ADR-076 D1; AC-REL-BODY-1/2/3 |
 | 10 | `.github/workflows/release-assets.yml` | **MODIFIED** — fail-closed precondition step before `Upload assets to release`: a Release must already exist for the pushed tag with a non-empty body | ADR-076 D2 |
-| 11 | `docs/owner-tasks.md` | **MODIFIED** — **NEW OT row** (next free number): *enable branch protection requiring CODEOWNERS approval on PRs touching `cowork.lock.json`*, as an **open owner decision**. Must record D11's refinement: `.github/CODEOWNERS` **already exists and is substantive**, so option (a) reduces to enabling branch protection alone — cheaper than AC-SYNC-CODEOWNERS-1 implies. Must also carry the Phase-3 fact from condition 3 (this cycle re-arms a dormant external-content ingestion path into a repo with no enforced review gate). | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only) |
-| 12 | `docs/risk-register.md` | **MODIFIED** — **NEW row**: unenforced-review-gate-over-ingested-content. Must state all four enforcement facts from ADR-028 §(d): no step gates on `requires_review`; the only post-PR `exit 1` is structurally unreachable; **no CI runs on a sync PR** (PR #27/#31, `statusCheckRollup`=0); `approvals=0`/`codeowners=false`/`rulesets=0`. | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only) |
+| 11 | `docs/owner-tasks.md` | **MODIFIED** — **NEW OT row** (next free number): *enable an enforced review gate on PRs touching `cowork.lock.json`*, as an **open owner decision**. Per D11's S5 correction, option (a) is **TWO steps in order**: (1) re-point the six supply-chain CODEOWNERS rows to `@jmlozano1990` — **the current `@msitarzewski` rows are INERT**, ignored by GitHub because that user is not a collaborator; (2) *then* enable branch protection. The row must say **inert**, not merely "unenforced" — enabling protection against inert rows deadlocks or silently no-ops. Must also carry the Phase-3 fact from condition 3 (this cycle re-arms a dormant external-content ingestion path into a repo with no enforced review gate). | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only), **S5** |
+| 12 | `docs/risk-register.md` | **MODIFIED** — **NEW row**: unenforced-review-gate-over-ingested-content. Must state all four enforcement facts from ADR-028 §(d): no step gates on `requires_review`; the only post-PR `exit 1` is structurally unreachable; **no CI runs on a sync PR** (PR #27/#31, `statusCheckRollup`=0); `approvals=0`/`codeowners=false`/`rulesets=0` — **plus the fifth (S5): the six supply-chain CODEOWNERS rows name a non-collaborator and are therefore inert, so the review gate is absent at two independent layers, not one.** | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only), **S5** |
 | 13 | `docs/roadmap.md` | **MODIFIED** — `:55` count `73`→ re-derived live (81); sum-consistency check; "kept current by sync-agency.yml" claim corrected **only after** the AC-SYNC set verifies | AC-ROADMAP-COUNT-1/2, AC-ROADMAP-SYNC-CLAIM-1 |
 | 14 | `docs/architecture.md` | **MODIFIED** — 7 fence-adjacent NAMED correction blocks (AC-ARCH-SCHEMA-1) + 2 (AC-ARCH-LICENSE-1). **⛔ Re-derive every anchor by script immediately before each write and again after each insertion — use no numeral from the spec or from this table.** **⛔ All three AC scripts MUST be run in the `END`-bounded form (D13) — the unbounded form is known-wrong.** Use the two anchored one-hit greps in `docs/spec.md` §Architectural Modifications for LICENSE/SPDX discovery. | AC-ARCH-SCHEMA-1, AC-ARCH-LICENSE-1, **D13** |
 | 15 | `WIZARD.md` | **MODIFIED (conditional)** — `:26`'s *"hash-verified against the lock by CI"* claim checked for truth against the orphan case; corrected if false | **S7 item 3** |
