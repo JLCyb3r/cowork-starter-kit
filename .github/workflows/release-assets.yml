@@ -101,6 +101,35 @@ jobs:
 
           echo "PASS: archive contents verified (DROP=${#DROP_PATHS[@]}, KEEP=${#KEEP_PATHS[@]})"
 
+      - name: Verify a populated Release already exists for this tag
+        # ADR-076 D2: fail-closed precondition. Pre-publishing (via
+        # scripts/publish-release.sh, run before the tag is pushed) fixes
+        # the PROCEDURE; it leaves the PRODUCER — this job — still able to
+        # mint an empty Release for anyone who tags with a plain
+        # `git push`. This step converts "silently creates an empty-bodied
+        # Release" into "loudly refuses", which is the structural close of
+        # CF-v2.19.3-A rather than a procedural one. Failure leaves the tag
+        # present with no Release — fully recoverable by running
+        # scripts/publish-release.sh, which detects the existing tag and
+        # creates the Release against it.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          if ! BODY="$(gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" --json body -q '.body' 2>/dev/null)"; then
+            echo "::error::No GitHub Release exists for tag ${TAG}. Run 'scripts/publish-release.sh' BEFORE pushing a tag — it creates the tag and a populated Release together. Refusing to attach assets to a Release this workflow would otherwise have to create with an empty body."
+            exit 1
+          fi
+
+          if [ -z "$BODY" ] || [ "$BODY" = "null" ]; then
+            echo "::error::Release ${TAG} exists but has an empty body. Run 'scripts/publish-release.sh ${TAG#v}' to populate it from CHANGELOG.md before assets are attached."
+            exit 1
+          fi
+
+          echo "Precondition PASSED — Release ${TAG} exists with a non-empty body."
+
       - name: Upload assets to release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
         with:
