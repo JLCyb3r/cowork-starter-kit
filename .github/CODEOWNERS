@@ -8,12 +8,29 @@
 # See CONTRIBUTING.md §Agency-Sync PR Review for the full 2-approval protocol.
 
 # Supply-chain integrity files — 2 approvals required for all PRs touching these
-cowork.lock.json                    @msitarzewski
-.cowork-allowlist.json              @msitarzewski
-THIRD-PARTY-NOTICES.md             @msitarzewski
-.github/workflows/sync-agency.yml  @msitarzewski
-.github/workflows/quality.yml      @msitarzewski
-docs/security/                     @msitarzewski
+#
+# v2.19.5 (ADR-075 D11, S5 correction): re-pointed from @msitarzewski to
+# @jmlozano1990. @msitarzewski is the UPSTREAM repo's owner (msitarzewski/
+# agency-agents), not a collaborator on this repo — GitHub ignores CODEOWNERS
+# entries for users without write access, so every row below was INERT
+# before this cycle, not merely unenforced. @jmlozano1990 is the sole
+# collaborator (verified via `gh api repos/:owner/:repo/collaborators`).
+# See docs/owner-tasks.md for the still-open decision to enable branch
+# protection against these rows (a separate step from re-pointing them).
+cowork.lock.json                    @jmlozano1990
+.cowork-allowlist.json              @jmlozano1990
+THIRD-PARTY-NOTICES.md             @jmlozano1990
+.github/workflows/sync-agency.yml  @jmlozano1990
+.github/workflows/quality.yml      @jmlozano1990
+docs/security/                     @jmlozano1990
+
+# v2.19.5 (ADR-075 D11, S4): the verifier and the lock-entry writer moved out
+# of the two workflow files above, into paths CODEOWNERS previously did not
+# cover at all — added here so review coverage moves with the logic instead
+# of shrinking. scripts/ is also ShellCheck-covered (quality.yml, scandir
+# "./scripts"); .github/jq/ is covered by nothing else in this repo.
+scripts/verify-lock-content-sha.sh  @jmlozano1990
+.github/jq/                         @jmlozano1990
 
 # Curated pool distribution surface — v2.14.0 PROMOTE.md ceremony (ADR-051/AC-PROMOTE-4).
 # Reinforces the PR-gate for a maintainer-in-kit-checkout promotion (write-access case);
