@@ -94,6 +94,9 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-073 | Poisoned-Backfill Defense + Bootstrapping-Trust — safety-skill backfill byte-verified against ADR-069 registry `sha256`, curated-pool-only, trusted-installer-gated (SEC-F3); AC-PULL-7 sharpened + ARCH-F6 reword (v2.19 Persistency, Face 1) | ACCEPTED |
 | ADR-074 | Migration-Seam On-Disk Contract = fixed `context/.kit-migrations/` convention + append-only, on-disk-local provenance log, on both deny-lists (OQ2 / AC-UPGRADE-3(b) / SEC-F4) (v2.19 Persistency, Face 2) | ACCEPTED |
 | ADR-026 (amendment v2.19) | `/setup-wizard --upgrade` formalized + extended into the persistency layer as `self-upgrade` (engine-layer successor; ADR-026 not superseded — the two coexist axis-distinct) | ACCEPTED |
+| ADR-075 | Upstream-Sync Integrity Split — the tamper check is HOISTED out of the advance loop into a single shared, skip-free verifier (`scripts/verify-lock-content-sha.sh`) run against the OLD pin before any rewrite; the advance loop becomes a pure writer that emits `content_sha256` from the same computed bytes; every fetch failure is fail-closed so that "absent from the new lock" means exactly "removed upstream"; the ratchet (AC-SYNC-9) lands as a standing `sync-verify-ratchet` CI job, not a one-shot demo (v2.19.5 Rung 1, items 1+2) | ACCEPTED |
+| ADR-076 | Release-Body Producer = Atomic Pre-Publish (`scripts/publish-release.sh` → `gh release create --notes-file`) + a Fail-Closed Precondition Guard in `release-assets.yml`; option (b) `body_path` REJECTED on the pushed-ref-code-state argument; body preservation on the update path verified by reading the pinned action source, not recalled (v2.19.5 Rung 1, item 3 / `CF-v2.19.3-A`) | ACCEPTED |
+| ADR-028 (amendment v2.19.5) | v2.5 implementation-record correction: the shipped verify compared NEW-HEAD bytes to the OLD-pin stored hash (not what ADR-028 specified); post-fix trust model stated in writing, including the named absence of any enforced human review gate over newly-pinned content | ACCEPTED |
 
 ---
 
@@ -2835,17 +2838,30 @@ Rationale:
 }
 ```
 
+> **CORRECTION (v2.19.5) [ADR-020 schema example, upstream_repo/upstream_url/category, 2822-2839]:** the shipped `cowork.lock.json` does not have `upstream_repo`, `upstream_url`, or a per-file `category` field. The real top-level keys (`jq -r 'keys' cowork.lock.json`, verified this cycle) are exactly `{"$schema_version","files","license_file_sha256","pinned_at","pinned_commit_sha","upstream"}` — a single `upstream` string, not the two-field `upstream_repo`/`upstream_url` pair above — and no `files[].category` was ever shipped. This block documents the ORIGINAL v2.0 design intent, not what shipped; see ADR-075 §Pre-existing defects and the ADR-028 v2.19.5 amendment for the shipped reality. Not a schema change — `category`/`upstream_repo`/`upstream_url` are explicitly out of scope for v2.19.5 (AC-ARCH-SCHEMA-1).
+
 Field rationale:
 - `$schema_version`: Forward-compat for v2.1 multi-source upstream (ADR may evolve to a `sources` array; the version field lets `/sync-agency` detect old/new formats).
 - `upstream_repo` + `upstream_url`: Redundant by design — the URL is the authoritative resolution target; the repo string is for human PR-review legibility.
+
+> **CORRECTION (v2.19.5) [field-rationale: upstream_repo/upstream_url, :2845]:** `cowork.lock.json` has neither field. The real, shipped field is a single `upstream` string (e.g. `"msitarzewski/agency-agents"`) — verified this cycle via `jq -r 'keys' cowork.lock.json`. The two-field split described here is the ORIGINAL v2.0 design intent, not what shipped; not a schema change this cycle (AC-ARCH-SCHEMA-1).
+
 - `pinned_commit_sha`: 40-char hex SHA-1. CI validates length and charset.
 - `pinned_at`: ISO-8601 UTC timestamp of the lock-file write. Read by `/sync-agency` to compute staleness.
 - `license_file_sha256`: **Compliance L1-3 INFO carry-forward.** Hash of the upstream `LICENSE` file at `pinned_commit_sha`. `/sync-agency` (ADR-022) re-computes this on each bump and refuses to merge if it changes — catches an upstream relicense.
+
+> **CORRECTION (v2.19.5) [field-rationale: license_file_sha256 enforcement, :2851]:** this does not refuse to merge. `sync-agency.yml`'s LICENSE-hash-changed branch emits `::error::` and sets `license_changed=true`, but `::error::` does not fail a workflow step, and no step downstream gates on that output — in contrast to the SPDX-drift step, which does have a real `exit 1` (also structurally unreachable, see the SPDX correction below). A changed LICENSE hash is annotated and surfaced in the PR body's table, not enforced. Adding a real gating step is net-new scope, tracked as `CF-v2.19.5-D`; this correction fixes the claim, not the code.
+
 - `files`: An array of file entries. Each entry is one JSON line in canonical form (configurable via the CI's pretty-printer with `jq -S` for stable diffs).
 - `files[].path`: Relative to upstream repo root. Forward-slashes only.
 - `files[].sha256`: 64-char lowercase hex of the file's bytes at `pinned_commit_sha`.
 - `files[].spdx`: SPDX license identifier per file. **Compliance L1-3 INFO recommendation.** All v2.0 files are MIT (uniform with upstream LICENSE), but the field is per-file because future upstreams may carry mixed licenses. `/sync-agency` (ADR-022) compares per-file SPDX between bumps; any change flags the PR for `/legal` re-review before merge.
+
+> **CORRECTION (v2.19.5) [field-rationale: spdx comparison, :2858]:** this comparison can never fire. The accumulator that writes each entry hardcodes `--arg spdx "MIT"` (`sync-agency.yml`), and 110/110 currently-locked entries are `"MIT"` — there is no code path where a per-file SPDX value could differ from the literal the workflow itself writes. Deriving a real per-file SPDX value is net-new license-detection scope, explicitly out of this cycle (ADR-075 §Pre-existing defects item 2); this correction fixes the claim, not the code.
+
 - `files[].category`: The upstream category folder (`academic`, `marketing`, etc.). The wizard reads this to map goal → category (ADR-021).
+
+> **CORRECTION (v2.19.5) [field-rationale: files[].category, :2862]:** `cowork.lock.json` `files[]` entries have no `category` field — verified this cycle (`jq -r '.files[0] | keys' cowork.lock.json` → `["content_sha256","path","requires_review","sha256","spdx"]`). The wizard's category-to-goal mapping (ADR-021), where it runs today, keys on the file's PATH prefix, not a schema field that was never shipped. Not a schema change this cycle — see AC-ARCH-SCHEMA-1.
 
 ### Decision (Verification Mechanism — A-v2.0-3 resolution)
 
@@ -2881,6 +2897,8 @@ Field rationale:
   ]
 }
 ```
+
+> **CORRECTION (v2.19.5) [ADR-020 populated schema example, upstream_repo/upstream_url/category, 2886-2899]:** same correction as the "Decision (Schema)" example above — the shipped `cowork.lock.json` has a single `upstream` string, not `upstream_repo`/`upstream_url`, and no `files[].category`. This populated example illustrates the ORIGINAL v2.0 design intent, not the shipped artifact.
 
 ### Consequences
 
@@ -3579,6 +3597,8 @@ Authoritative commit order. Respects ADR-022 (CI must work before lock file is r
     AND README "Next up" → v2.0.1 wizard category mapping.
 ```
 
+> **CORRECTION (v2.19.5) [Commit Sequence checklist item C5, upstream_repo/upstream_url, 3514-3598]:** item C5's `$schema_version, upstream_repo, upstream_url, pinned_commit_sha` line names two fields (`upstream_repo`, `upstream_url`) that were never shipped — the real `cowork.lock.json` has a single `upstream` string. Historical build-sequence record of the ORIGINAL v2.0 design intent; not a schema change this cycle.
+
 ### Hard Sequencing Constraints
 
 - **C1 (move) MUST commit before C3 (CI path update).** Otherwise CI breaks immediately. Verified via [USER REVIEW CHECKPOINT after C3].
@@ -3643,6 +3663,9 @@ Wizard enters `multi-category-disambiguation` FSM state. Presents Riley with the
 
 ### Step 4 — Lock file resolution
 Wizard reads `cowork.lock.json` (ADR-020). For each of the 5 categories, finds entries matching `files[].category`:
+
+> **CORRECTION (v2.19.5) [wizard runtime-lookup prose, files[].category, :3665]:** `files[].category` was never shipped — behavior keyed on a phantom field. The wizard does not run this lookup today (installing vendored agents as workspace skills remains v2.7+ scope per the F4 pool boundary, `WIZARD.md`); this walkthrough describes the ORIGINAL v2.0 design intent. If/when this lookup ships, it must key on the file's path prefix (`cowork.lock.json` `files[].path`), the field that actually exists.
+
 - `product`: 3 files
 - `project-management`: 4 files (note: cowork-starter-kit's own `examples/project-management/` is unaffected — the lock file is for upstream agency-agents content only)
 - `marketing`: 3 files
@@ -5593,6 +5616,8 @@ The deferred-three-times status is closed by this ADR. Status flips PROPOSED →
   "category": "academic"
 }
 ```
+
+> **CORRECTION (v2.19.5) [ADR-028 v2.5 populated example, files[].category, 5610-5618]:** `category` was never shipped as a `files[]` field — verified this cycle: the real entry for this exact path is `{"path","sha256","spdx","requires_review","content_sha256"}`, no `category`. `content_sha256` (this example's actual subject) IS accurate and shipped as shown.
 
 At v2.5 cutover, `content_sha256` equals `sha256` for every backfilled entry — they are computed against the same byte stream at the same pinned commit. They DIVERGE only on a tampered or post-hoc-modified upstream: if `sync-agency.yml`'s verify pass detects bytes whose SHA-256 differs from the stored `content_sha256`, the workflow fails; the lock is NOT rewritten.
 
@@ -11513,3 +11538,1228 @@ compliance surface; no outbound network on either face. Rationale: reason #1 (se
 surface) is unchanged and strongest.
 
 End of v2.19 — Persistency Layer — Phase 1 Design (ADR-071 .. ADR-074 + ADR-026 v2.19 amendment).
+
+---
+
+# v2.19.5 — Rung 1 — Phase 1 Design (ADR-075, ADR-076 + ADR-028 amendment)
+
+> Authored 2026-08-04. Cycle: v2.19.5 "Rung 1". Classification: **SECURITY-SENSITIVE (Tier B
+> ceremony)** — settled at Phase 0.D on `docs/pipeline-policy.md:516`, re-run at the end of this
+> section against the final file list. Branch on the main checkout; no sibling worktree
+> (`docs/patterns.md:34`, BINDING at 3 instances).
+>
+> **Every claim in this section about existing behavior was re-verified this session by direct read
+> or live execution.** Where a claim could not be executed, it is tagged `[ESTIMATED]` and the
+> design is constructed so it does not depend on that claim.
+
+## Live re-verification performed at Phase 1 (not carried from the spec on trust)
+
+| Claim | Evidence executed this session |
+|---|---|
+| `content_sha256` has a reader and no CI writer | `sync-agency.yml:218` (comment), `:221` (read), `:224` (error string); accumulator `:246-252` emits `{path,sha256,spdx,requires_review}`; lock update `:332` is `.files = $files` |
+| `content_sha256` is present in all 110 entries and identical to `sha256` | `jq '[.files[]\|select(.content_sha256==.sha256)]\|length'` → `110`; `select(.content_sha256==null)` → `0` |
+| `files[].sha256` has **zero readers anywhere in this repo's code** | `grep -rn` across `*.sh`/`*.yml`: every consumer reads `content_sha256` (`sync-agency.yml:221`, `quality.yml:1451/1490/1535`, `scripts/vendor-agency.sh:54,114`). No code reads `files[].sha256`. |
+| Upstream has moved since the pin | pin `783f6a72bfd7f3135700ac273c619d92821b419a` (2026-05-07) vs HEAD `c89557f78509868c6d4cc08e5cbc79bc8625fe1c`; compare API → **104 added / 41 modified / 4 renamed** |
+| **15 files currently in the lock have different bytes at HEAD** | `comm -12` of `jq '.files[].path'` against the compare API's `modified` list → 15 paths (4 engineering, 6 marketing, 2 product, 3 testing) |
+| The two "404 at upstream HEAD" paths are **RENAMES, not deletions** | compare API `status=renamed`: `engineering/engineering-security-engineer.md → security/security-architect.md`; `engineering/engineering-threat-detection-engineer.md → security/security-threat-detection-engineer.md`. `security` is **not** in `.cowork-allowlist.json` `allowed_categories`. |
+| The old-pin-vs-new-HEAD split is the actual defect, proven by execution | For `marketing/marketing-content-creator.md`: stored `content_sha256` = `676c536d…9e35`; bytes @ old pin → `676c536d…9e35` (**MATCH**); bytes @ new HEAD → `26ddce44…b3d5` (**MISMATCH**) |
+| `softprops/action-gh-release@b430933…` preserves an existing body when given no body input | Source read at the pinned SHA: `src/github.ts:563-566` — `if (input_append_body && workflowBody && existingReleaseBody) {…} else { body = workflowBody \|\| existingReleaseBody; }`; `:521-535` takes the `createRelease` path only when `findTagFromReleases` returns undefined; `:553` `name = input_name \|\| existingRelease.name \|\| tag` |
+| `release-assets.yml` has no body input and no `workflow_dispatch` | `on:` is `push: tags:` only (`:9-12`); `softprops/action-gh-release` invoked at `:104-110` with `files:` + `fail_on_unmatched_files:` only |
+| All 8 historical `release-assets.yml` runs were `push` events | `gh run list --workflow=release-assets.yml` → v2.15.0 … v2.19.3, all `push`, all `success` |
+| `docs/roadmap.md:55` breakdown sums to 81, not 73 | 30+8+8+8+6+6+5+5+5 = 81 |
+| AC-ARCH-SCHEMA-1's passage-derivation script returns 7 anchors | re-ran the spec's `awk` verbatim → `2819 2840 2848 2870 3496 3645 5587` |
+
+---
+
+## ADR-075: Upstream-Sync Integrity Split — Hoisted Skip-Free Verifier, Pure Writer, Fail-Closed Fetches, Standing Ratchet (v2.19.5 Rung 1, items 1+2)
+
+**Status:** ACCEPTED
+**Supersedes:** nothing. **Amends:** ADR-028's v2.5 *implementation record* (see the ADR-028
+amendment below). ADR-020's lock contract and `$schema_version: "1.0"` are unchanged (AC-SYNC-5).
+**Retires:** `AC-F1-3` and the `lock-content-sha-fault-injection` job (`quality.yml:1417-1456`).
+
+### Context
+
+`sync-agency.yml` performs two logically distinct operations inside one loop:
+
+1. **Attest** that content already pinned has not been retroactively altered (ADR-028's tamper check).
+2. **Advance** the pin to new upstream content.
+
+The shipped v2.5 implementation interleaved them: the loop fetches at `NEW_SHA` (`:209-210`), hashes
+(`:216`), and compares that hash to the stored `content_sha256` (`:221-227`) — which was recorded
+against the **old** pin. The two operands come from two different commits. This is not a subtle
+bug: it means the tamper check fails on every legitimate upstream edit. Executed live this session,
+`marketing/marketing-content-creator.md` at the old pin hashes to the stored value and at HEAD does
+not — so the check hard-fails, exactly as the 2026-07-01 and 2026-08-01 crons did.
+
+Three further properties fall out of the same interleaving and are all in scope here:
+
+- **No writer.** Because the loop's only interaction with `content_sha256` is a *read*, the
+  accumulator never emits it. The first successful advance would write 110 entries with the field
+  absent.
+
+  > **CORRECTED at Phase 2 (S2, CRITICAL — this ADR's own first draft was wrong; the error is left
+  > visible rather than silently rewritten).** The first draft claimed the erasure "would **not** be
+  > silent" because `quality.yml:1519-1522` fails the PR for any entry missing `content_sha256`,
+  > concluding "the sync becomes permanently un-mergeable the first time it succeeds." **That is
+  > false. No CI runs on a sync PR at all** — verified, see D8 reason 3. The truthful consequence:
+  > the erasure is caught only when `vendored-integrity-check` fires on the **post-merge push to
+  > `main`** — **detection after ingestion**, not a merge block. Nothing prevents the merge.
+  >
+  > A premise correction that installs a second wrong failure mode is precisely this cycle's own
+  > subject matter, which is why the draft's error is recorded here instead of overwritten.
+  > **AC-SYNC-7 is load-bearing for a stronger reason than the draft gave:** nothing blocks a bad
+  > advance, so the writer has to simply be correct — there is no downstream gate to catch it.
+- **Fetch failures are indistinguishable from removals.** `:210` `|| { echo "WARNING…"; continue; }`
+  and `:167-172` `|| echo "[]"` both convert a network fault into a silent omission, and `:332`
+  `.files = $files` then drops the path from the lock without a trace.
+- **Nothing proves the check stays armed.** `AC-F1-3` (`quality.yml:1417-1456`) poisons a stored
+  hash to `DEADBEEF`. Any fetched bytes mismatch a hash that corresponds to no content, so that
+  test passes identically against the correct and the buggy implementation. It is
+  `docs/patterns.md:31` **`Check-That-Cannot-Fail`** (BINDING in this repo), not a tamper test.
+
+### Decision
+
+**D1 — Split attest from advance. Hoist the tamper check out of the loop into its own step, run
+against the OLD pin, before any rewrite.**
+
+A new step, `Verify pinned content integrity (old-pin tamper check)`, runs immediately after
+`Check if lock file needs update` and before `Fetch upstream LICENSE`. It reads `cowork.lock.json`
+as checked out (i.e. the **old** pin), fetches every `files[]` entry at `.pinned_commit_sha` — not
+at `NEW_SHA` — and compares to the stored `content_sha256`. The comparison block at
+`sync-agency.yml:216-227` is deleted from the advance loop; the loop keeps `:216`'s hash compute,
+which it now needs as a *writer* input rather than a comparison operand.
+
+**D2 — One implementation of the verify logic, in `scripts/verify-lock-content-sha.sh`, invoked by
+every call site. No reimplementation.**
+
+`quality.yml` currently contains two independent hand-written copies of this loop
+(`:1435-1451`, `:1475-1490`) plus a third fetch-and-verify variant in `scripts/vendor-agency.sh`
+(guard at `:54`, round-trip hash compare at `:106-110`, lock-driven loop at `:114`). Adding a
+fourth copy for the ratchet would make the copy-drift vacuity path worse, not better. The new
+script takes a lock-or-fixture path as `$1`, reads `.upstream` and `.pinned_commit_sha` **from that
+file** (the existing fixture-file lane, precedent `quality.yml:1432-1433`), and is the single
+implementation the sync step and all three ratchet legs invoke.
+
+**Deliberately NOT parameterized by `workflow_dispatch` input.** Per @security's Phase 0.D ruling,
+the production sync path's `UPSTREAM_REPO` stays a hardcoded literal at `sync-agency.yml:46`, `:97`,
+`:129`. Fixture files may name their own `upstream`, and that is acceptable only because a fixture
+is committed, diffed and code-reviewed like any other file, and is read solely by the test job —
+never by the production sync. **This boundary is an invariant: no fixture value may ever reach the
+production fetch path.**
+
+**D3 — The verifier has no skip branches.** Three concrete vacuity paths exist in the code being
+replaced, and the script closes all three by construction:
+
+| Vacuity path in existing code | Replacement behavior |
+|---|---|
+| `sync-agency.yml:222` — `content_sha256 == "MISSING"` silently skips the comparison | absent / empty / literal `MISSING` → `::error::` naming the path, exit 1. There is no grace branch. |
+| `quality.yml:1481-1483` — a failed fetch `continue`s | fetch failure → `::error::` naming the path, exit 1 (**AC-SYNC-6**, one behavior, not a choice) |
+| `quality.yml:1495` — prints `PASSED` with no floor on `CHECKED` | script prints `verified=<N>` and asserts `N == (.files \| length)` **and** `N > 0` before exiting 0 |
+
+**D4 — The advance loop becomes a pure writer that emits `content_sha256` from the same bytes it
+already hashed (AC-SYNC-7).**
+
+The accumulator gains `content_sha256`, sourced from the same `$FILE_SHA256` variable that populates
+`sha256` — one compute, two fields, structurally incapable of divergence. To keep the emitted entry
+shape single-sourced (the same anti-copy-drift argument as D2), the jq object is extracted to
+`.github/jq/lock-entry.jq` and invoked with `jq -nc … -f .github/jq/lock-entry.jq` from both the
+workflow and the ratchet job. The ratchet therefore exercises **the real writer**, not a
+hand-written imitation of it.
+
+**Extraction was confirmed at the Phase 1 gate against the inline alternative** (keep the jq inline
+in both places, add a CI assertion that the two copies are byte-equal). Rejected: an assertion that
+two copies agree is a weaker invariant wearing the costume of a stronger one, and this cycle has
+already found four separate instances of that shape. More decisively, it would make AC-SYNC-9
+untrue as written — the ratchet cannot exercise *the* writer if the writer exists in two places.
+One source, one behavior.
+
+Post-write, before `mv /tmp/updated-lock.json cowork.lock.json` (`:335`), three assertions run
+against the produced lock:
+
+```bash
+COUNT=$(jq '.files | length' /tmp/updated-lock.json)
+BLANK=$(jq '[.files[] | select((.content_sha256 // "") | . == "" or . == "MISSING")] | length' /tmp/updated-lock.json)
+DIVERGE=$(jq '[.files[] | select(.sha256 != .content_sha256)] | length' /tmp/updated-lock.json)
+```
+
+`COUNT > 0 && BLANK == 0 && DIVERGE == 0`, else `::error::` + exit 1. The predicate is the
+**widened** form @security offered as a free Phase-1 improvement — the spec's `== null` form is
+false-negative-blind to `""` and to the literal string `"MISSING"`, both of which this codebase
+already treats as sentinel values (`sync-agency.yml:221`, `quality.yml:1476`, `:1519`).
+
+**D5 — On the `sha256` / `content_sha256` redundancy: it IS a finding. Record it, assert it, do not
+collapse it this cycle.**
+
+The two fields are the same quantity by definition (SHA-256 of the file's bytes at
+`pinned_commit_sha` — `architecture.md:2846` for `sha256`, ADR-028 for `content_sha256`) and are
+identical in 110/110 entries. Worse than redundant: **`files[].sha256` has no reader anywhere in
+this repo's code** — verified by `grep -rn` across `*.sh`/`*.yml` this session. It is write-only
+data preserved by the `$schema_version: "1.0"` contract.
+
+It is not collapsed here because (a) removing a field from a published lock schema is a
+`$schema_version` bump, which AC-SYNC-5 explicitly forbids this cycle, and (b) the lock is an
+external-consumption artifact under the v2.18 transferability contract (ADR-070), so an
+out-of-repo consumer may read `sha256` — unverifiable from inside this repo, therefore `[ESTIMATED]`
+and treated as a real constraint. The `DIVERGE == 0` assertion in D4 converts an undocumented
+coincidence into a stated invariant, which is precisely what a future collapse cycle will need in
+order to prove the removal is safe. Carried forward as **`CF-v2.19.5-A`**.
+
+**D6 — Every fetch is fail-closed, so that "absent from the new lock" means exactly "removed
+upstream" (AC-SYNC-8).**
+
+Removed-path accounting is impossible while a network fault can silently omit a path. Two changes
+make the omission channel disappear:
+
+- **Per-file (`:210`).** `curl -sf … || { WARNING; continue; }` → append the path to a
+  `FETCH_FAILURES` list. After the loop, a non-empty list is `::error::` + exit 1, **before** any
+  lock rewrite.
+- **Per-category (`:167-172`).** `curl -sf … || echo "[]"` conflates three distinct outcomes.
+  Replaced with an explicit HTTP status read (`curl -s -o … -w '%{http_code}'`): **200** → parse the
+  listing; **404** → the category directory no longer exists upstream, which is a legitimate
+  removal, recorded as such and continued; **anything else, including `000`** → `::error::` + exit 1.
+  Without this, one API blip could delete an entire category (up to 30 marketing entries) from the
+  lock and report success.
+
+  **S9 (Phase 2, WARNING — folded in as a binding Phase-4 constraint).** The `200` branch is not
+  finished by receiving a 200. A 200 carrying a non-array body — an error object, an HTML
+  interstitial, a rate-limit envelope — parses to nothing through `jq -r '.[] | select(...)'` and
+  reproduces the *exact* silent-empty-category outcome D6 exists to close, one layer down. The
+  `200` branch MUST therefore assert the body's shape before consuming it:
+
+  ```bash
+  echo "$CATEGORY_LISTING" | jq -e 'type == "array" and length > 0' >/dev/null \
+    || { echo "::error::category ${category}: HTTP 200 with non-array or empty listing body"; exit 1; }
+  ```
+
+  `length > 0` is safe here and does not create a false failure: **git cannot represent an empty
+  directory**, so a genuinely-empty category does not exist as a tree entry and returns 404 — which
+  the 404 branch already handles as a legitimate removal. The two branches partition the space
+  without overlap. **Negative control:** RED on a fixture body of `{"message":"Not Found"}` served
+  as 200 (today: parses to zero paths, category silently vanishes, run reports success); GREEN on
+  any real category listing. Both legs reachable, neither vacuous.
+
+This is a deliberate **availability-for-integrity trade**, stated as such: a monthly cron that
+aborts on a transient fault and re-runs is strictly preferable to one that silently ships a lock
+with content missing. It is the same posture AC-SYNC-6 already mandates for the tamper check.
+
+With the omission channel closed, the removed set is a pure set difference computed offline:
+
+```bash
+jq -n --slurpfile old cowork.lock.json --slurpfile new /tmp/new-files.json \
+  '($old[0].files | map(.path)) - ($new[0] | map(.path))' > /tmp/removed-paths.json
+```
+
+**D7 — Removed-path reporting is a two-layer construct: an unconditional offline gate plus a
+best-effort online enrichment.**
+
+The *report* is unconditional and derived offline from D6's set difference — it cannot be skipped
+and cannot fail open. The *reason* is enriched, best-effort, by one call to
+`GET /repos/{upstream}/compare/{old}...{new}`, classifying each removed path as `removed`,
+`renamed → <new path>`, or `still present upstream but outside .cowork-allowlist.json`. If the
+compare call fails or truncates (the API caps at 300 files), each unclassified path is still
+reported, with the reason `absent from allowlisted listing at <NEW_SHA> — upstream compare
+unavailable`. **The enrichment may never gate the run; the report may never be omitted.** Keeping
+those two layers separate is what stops the enrichment's failure mode from becoming a silent skip.
+
+This distinction is not hypothetical, and the live evidence corrects the spec: the two paths the
+spec recorded as "confirmed 404 / upstream deleted" are in fact **renames into a new `security/`
+category that is not in `.cowork-allowlist.json`**. A pure 404 probe cannot see that; the compare
+API can. Fail-closed allowlisting is the correct outcome (an unknown category is blocked by
+default, `.cowork-allowlist.json` notes), but a PR body that says "deleted upstream" when the
+content was renamed into a blocked category would be a *fourth* false claim in a cycle that exists
+to remove three.
+
+**S6 (Phase 2, WARNING — folded in as a binding Phase-4 constraint). Transport for
+upstream-controlled strings into the PR body is specified, not left to @dev.** D7 renders upstream
+filenames — attacker-influenceable data — into a workflow-generated PR body, and the nearest
+precedent in the file is the unsafe shape: `:259` does
+`echo "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"`, interpolating upstream `${file_path}`
+values straight into a `KEY=value` step-output line, which is then expanded into the PR body at
+`:399`. A path containing a newline, a `::`-prefixed sequence, or a second `KEY=` breaks out of the
+output line. Copying that shape for the removed-path list would be a new instance of an existing
+defect. **Required transport:**
+
+1. Accumulate removed paths as **JSON** (they already are — `/tmp/removed-paths.json` from the jq
+   set difference), never as a delimiter-joined shell string.
+2. Render the PR-body section to a **file** with `jq -r` and pass it via
+   `peter-evans/create-pull-request`'s `body-path:`, or emit it through the heredoc-delimiter form
+   of `$GITHUB_OUTPUT` (`{name}<<{randomly-generated-delimiter}`) — never bare `KEY=value`.
+3. Render each path inside a fenced or backticked cell so Markdown cannot interpret it, and never
+   pass it through `echo` without quoting.
+
+**Explicitly NOT in scope:** retrofitting `:259`/`:399`'s existing unsafe `flagged_files` transport.
+That is a pre-existing defect on a different variable; it is named here and carried as
+**`CF-v2.19.5-E`** so Phase 6 does not read the new code's correctness as a claim about the old.
+
+**S7 (Phase 2 — the rename sub-case gets its own disposition; the shared remediation was wrong).**
+D7's three-way taxonomy is right, but treating all three the same at the remediation step is not.
+`removed` and `fetch-failure` are handled adequately by "report it, delete the orphaned vendored
+copy." **`renamed-into-a-blocked-category` is a materially different object and needs its own
+posture**, because the orphan it leaves is not stale-and-dead — it is a **frozen fork of
+actively-maintained upstream content**:
+
+- it is never re-fetched, never re-hashed, and never patched, because it has no lock entry;
+- it is invisible to `vendored-integrity-check`, which is lock-entry-driven (`:1512`, `:1535`);
+- `WIZARD.md:26` instructs the wizard to read and quote from `vendored/agency-agents/` offline
+  regardless of lock membership, **and asserts in the same breath that the folder is
+  "hash-verified against the lock by CI"** — a claim that is false for an orphan, and which becomes
+  false the moment this cycle's fix lands;
+- **`vendored/` is NOT in `.gitattributes` `export-ignore`** (verified this session — the DROP list
+  covers `.github/`, `tests/`, `upstream-contribution/`, `docs/internal/` and three named docs, not
+  `vendored/`; `release-assets.yml:93` positively asserts `vendored/agency-agents/LICENSE` must be
+  present), so an orphan **ships inside every release ZIP and tarball**, to every downloader.
+
+Both armed paths are on disk right now, and one of them is a security-engineer persona whose
+upstream successor is being actively maintained under `security/`.
+
+**Disposition — three parts, all Phase 4:**
+1. **Classify and label the rename distinctly in the PR body.** Not "removed upstream" but
+   `RENAMED → <new path> (category '<cat>' not in .cowork-allowlist.json)`. Conflating the two is a
+   false claim of the same class this cycle exists to delete.
+2. **The remediation differs and must be stated per sub-case.** For `removed`/`fetch-failure`:
+   delete the orphaned vendored copy. For `renamed-into-blocked-category`: delete the orphaned
+   vendored copy **and** surface the allowlist decision to the maintainer — the content still
+   exists upstream and is being maintained; the only question is whether `security/` should be
+   allowlisted. Silently deleting hides a live curation decision; silently keeping ships a frozen
+   fork.
+3. **`WIZARD.md:26`'s "hash-verified against the lock by CI" claim is checked for truth at Phase 4
+   and corrected if the orphan case makes it false.** Folded into item 4's false-claim sweep rather
+   than left as a fifth uncorrected claim in a cycle whose subject is false claims.
+
+The structural fix — an orphan sweep in `vendored-integrity-check`, plus a `vendored/`
+`export-ignore` decision — is **out of scope** and carried as **`CF-v2.19.5-B`**, whose arming is
+recorded in §Pre-existing defects item 4.
+
+**D8 — `sync-agency.yml:216-227` is RE-POINTED, not deleted. `quality.yml:1458-1495` is not a
+duplicate of it.**
+
+The spec assumed re-pointing; @security correctly asked whether `lock-content-sha-cross-check`
+already covers it. It does not, for three independent reasons — and the decision does not rest on
+the one of them I could not execute:
+
+1. **Different property (decisive, verified).** `quality.yml:1471-1472` reads `pinned_commit_sha`
+   and `content_sha256` **from the lock on the PR head**. On a sync PR that lock is already
+   advanced, so the job compares *new pin vs new hashes* — a self-consistency check on the artifact
+   the sync just produced. The hoisted step compares *old-pin bytes vs old-pin stored hashes*,
+   before the rewrite. Only the latter can prevent a poisoned advance from being written at all.
+2. **Different gate position (decisive, verified).** `quality.yml:1461` is
+   `if: github.event_name == 'pull_request'`. The sync job runs on `schedule` / `workflow_dispatch`,
+   so the cross-check does not execute inside it under any circumstance. Deleting the sync-side
+   check leaves the advance itself ungated.
+3. **VERIFIED at Phase 2 (S2) — and it is broader than this ADR's first draft scoped it. This
+   reason is now the decisive one.** The first draft flagged as `[ESTIMATED]` that a PR opened by
+   `peter-evans/create-pull-request` with `secrets.GITHUB_TOKEN` (`:374`) would not trigger
+   `pull_request` workflows. Re-run this session against the two real sync PRs:
+
+   ```
+   PR #27  author=app/github-actions  statusCheckRollup=0  head=5daba9ab…
+   PR #31  author=app/github-actions  statusCheckRollup=0  head=d83b64cc…
+   required_status_checks on main → NOT ENABLED
+   ```
+
+   @security independently reached the same result via `check-runs total_count == 0` on both head
+   SHAs. **The finding is broader than "the `pull_request`-gated cross-check does not run":
+   NOTHING runs.** `quality.yml` is `on: [push, pull_request]` (`:3`) — ungated by event type — but
+   the branch push that creates the sync branch is *also* GITHUB_TOKEN-raised, so neither trigger
+   fires. That takes down `vendored-integrity-check` and this cycle's own new
+   `sync-verify-ratchet` on sync PRs as well, not just `lock-content-sha-cross-check`.
+
+**Consequence — D8 is decisive, not merely correct.** Re-pointing `sync-agency.yml:216-227` rather
+than deleting it as a duplicate is now **the only verification of an advanced pin that executes at
+all**. Deleting it would have left the ingestion path with zero automated integrity checks between
+upstream bytes and a merged lock. The two checks are complementary and both are kept;
+`quality.yml:1458-1495` gains only D10's floor and is otherwise **not modified** this cycle.
+
+**Second consequence — every `quality.yml` job in this design is a post-merge detector on the sync
+path, not a gate.** `sync-verify-ratchet` still earns its place: it runs on every *human* PR
+(including this cycle's own), where it is a **visible red/green signal a human sees before merging
+— not a mechanical gate, since `required_status_checks` is not enabled**, and on the post-merge
+push to `main`, where it is detection.
+
+**Exactly what AC-SYNC-9 buys — less than it intended at 0.D, stated in three parts:** (i) on human
+PRs, a standing visible signal that the verifier is still armed, re-run forever — **the durability
+property, delivered**, and the reason it earns its place; (ii) on the sync path, nothing at PR
+time, detection on the post-merge push; (iii) **it gates nothing, anywhere**, because nothing in
+this repo gates on CI (`required_status_checks` not enabled, `required_approving_review_count` = 0)
+— a red `sync-verify-ratchet` blocks no merge on any path. No design document may describe it as
+blocking a sync PR, and none may call it a gate on a human PR either. Recorded because this
+paragraph's own first draft re-introduced the overstatement one clause after correcting it.
+
+**D9 — The ratchet (AC-SYNC-9) lands as a standing CI job, `sync-verify-ratchet` in `quality.yml`,
+with three legs.**
+
+@security's constraint is that an AC satisfied once by hand at Phase 5 and never re-run is the
+durability gap it exists to close. The ratchet therefore runs on every PR, forever, alongside the
+other lock jobs.
+
+- **Leg 1 — GREEN, against real production data, no fixture.** Invoke
+  `scripts/verify-lock-content-sha.sh cowork.lock.json`. Must exit 0 with `verified == 110`.
+  This is AC-SYNC-2's positive-execution-count requirement satisfied against the real code path and
+  the real artifact. Its discriminating power was **executed this session**: 15 of the 110 locked
+  paths have different bytes at upstream HEAD, so an implementation that fetches at HEAD fails this
+  leg on 15 entries while a correct one passes on all 110.
+- **Leg 2 — RED, fail-closed.** `tests/fixtures/sync-verify-red.json`: one entry, pinned at the old
+  pin `783f6a7…`, whose stored `content_sha256` is the **real** SHA-256 of that same path's bytes at
+  a **different real commit** (`c89557f…` — for `marketing/marketing-content-creator.md` that is
+  `26ddce44…b3d5`). From the verifier's position this is indistinguishable from "the bytes at the
+  pin were retroactively rewritten," which is AC-SYNC-1's construction. Must exit non-zero **and**
+  emit the path in the diagnostic — asserted on the message, not the exit code alone, per this
+  repo's v2.7.2 precedent.
+- **Leg 3 — RATCHET.** Build an advanced lock *in-job* by running the real writer: pick 3 real
+  paths, fetch each at `c89557f…`, hash, and emit entries through `.github/jq/lock-entry.jq`. Then
+  (a) assert AC-SYNC-7's widened predicate against **that produced lock** (`BLANK == 0`,
+  `COUNT == 3`); (b) run the verifier against it — must PASS with `verified=3`; (c) re-point one
+  entry's stored hash to the *old*-pin hash of the same path and re-run — must FAIL naming that
+  path. This proves the check is still armed **after** an advance, which is the precise failure
+  Leg 1 alone cannot exclude.
+
+**D10 — `quality.yml:1495`'s missing `CHECKED > 0` floor is FIXED IN THIS CYCLE, not carried.**
+
+Decided at the Phase 1 gate, overriding this ADR's first draft, which had listed it under
+§Pre-existing defects as named-not-fixed. `lock-content-sha-cross-check` prints
+`lock-content-sha-cross-check PASSED — ${CHECKED} entries verified` and exits 0 with **no floor on
+`CHECKED`**. Combined with the `MISSING` skip (`:1476-1479`) and the fetch-failure `continue`
+(`:1481-1483`), a run in which every fetch fails prints `PASSED — 0 entries verified` and succeeds.
+That is a live `docs/patterns.md:31` `Check-That-Cannot-Fail` — **BINDING** in this repo — in
+production today, independently flagged by @security at Phase 0.D Round 1.
+
+The "keep a SECURITY-SENSITIVE diff minimal" argument that carried it in the first draft is real,
+but weaker than the countervailing fact: **`quality.yml` is already in this cycle's file list**
+because `sync-verify-ratchet` lands in it. This is not an out-of-scope file opened for an unrelated
+fix; it is three lines in a file the cycle is already editing, in a cycle whose entire subject is
+checks that cannot fail. Shipping that cycle while leaving a live instance three lines from touched
+code is not a defensible trade.
+
+**The fix.** Immediately before the terminal `PASSED` line (`:1495`), assert `CHECKED > 0` and fail
+with a diagnostic that names the condition — zero entries verified, i.e. every entry skipped or
+every fetch failed — instead of printing a pass. The `MISSING` skip and the fetch-failure `continue`
+above it are deliberately **left as-is**: narrowing them is the `verify-lock-content-sha.sh`
+re-point in §Maturation Path (ii), a materially larger change. The floor is precisely what makes
+their combined worst case observable rather than silent.
+
+**The floor gets its own negative control** — a fix for a vacuous PASS may not itself ship
+unproven. **RED:** run the job body against a fixture lock whose entries are all unfetchable (paths
+pinned at a commit where they do not exist), driving `CHECKED` to 0; the job must now fail naming
+the condition, where today it prints `PASSED — 0 entries verified` and exits 0. **GREEN:** the
+normal run against `cowork.lock.json`, `CHECKED == 110`. Both legs are reachable, observed in
+opposite directions, and neither depends on the other. The RED leg is also a *regression witness*:
+it fails against the pre-fix job body, which is what proves the three lines do something.
+
+`CF-v2.19.5-C` is **retired as fixed-in-cycle**, not carried.
+
+**D11 — the CODEOWNERS rows move with the logic (S4, Phase 2 WARNING, folded in).**
+
+D2 and D4 relocate the two most security-critical pieces of this workflow — the verifier and the
+lock-entry writer — out of `.github/workflows/sync-agency.yml` and `.github/workflows/quality.yml`,
+**both of which carry CODEOWNERS rows** (`.github/CODEOWNERS:15-16`, `@msitarzewski`), into
+`scripts/` and `.github/jq/`, **neither of which has any row at all**. Verified this session: the
+CODEOWNERS file covers `cowork.lock.json`, `.cowork-allowlist.json`, `THIRD-PARTY-NOTICES.md`, the
+two workflows, and `docs/security/`; `skills/` and `curated-skills-registry.md` are owned by a
+second maintainer. There is no `scripts/` row and no `.github/jq/` row.
+
+Refactoring logic out of a reviewed surface into an unreviewed one is a **net reduction in review
+coverage disguised as a structural improvement** — the same costume-wearing shape D4 rejected for
+the inline-jq alternative. Phase 4 therefore adds:
+
+```
+scripts/verify-lock-content-sha.sh   @msitarzewski
+.github/jq/                          @msitarzewski
+```
+
+Two further coverage facts, recorded so neither is assumed: `scripts/` **is** covered by ShellCheck
+(`quality.yml:132`, `scandir: "./scripts"`), so `verify-lock-content-sha.sh` and
+`publish-release.sh` are linted on every human PR; **`.github/jq/` is covered by nothing** — no
+linter, no schema check — which is a second, independent reason its CODEOWNERS row is not optional.
+
+**Honest limit, stated rather than implied:** CODEOWNERS is presently **unenforced** on this repo
+(`codeowners=false`, `approvals=0` — the same live finding that drives AC-SYNC-CODEOWNERS-1). These
+rows therefore restore *parity* with the surfaces the logic left; they do not create a gate that
+was working before.
+
+> **CORRECTED at Phase 2 (S5 — this decision's own first draft minted a fresh instance of the
+> defect class this cycle exists to remove; the error is left visible).** The first draft called
+> AC-SYNC-CODEOWNERS-1's option (a) "cheaper than the spec implies," reducing it to *enabling
+> branch protection alone* because `.github/CODEOWNERS` already exists. **That is wrong, and it is
+> wrong in the worst available direction.** Verified this session:
+>
+> ```
+> gh api repos/:owner/:repo/collaborators --jq '.[].login'  →  jmlozano1990   (sole collaborator)
+> .github/CODEOWNERS:11  cowork.lock.json                   @msitarzewski
+> .github/CODEOWNERS:14  .github/workflows/sync-agency.yml  @msitarzewski
+> .github/CODEOWNERS:15  .github/workflows/quality.yml      @msitarzewski
+> ```
+>
+> **`@msitarzewski` is not a collaborator on this repo, and GitHub ignores CODEOWNERS entries for
+> users without write access. All six supply-chain rows (`:11-16`) are inert.** Enabling branch
+> protection against them yields either a permanent deadlock — a required reviewer who cannot
+> review — or, worse, **a silent no-op: a control that reads as enabled in the settings UI and
+> enforces nothing.** Routing the owner to that would have been a newly-minted false control claim,
+> written into the very artifact @security's CRITICAL made binding.
+>
+> **Corrected: option (a) is TWO steps, in order.** (1) Re-point the supply-chain CODEOWNERS rows
+> to `@jmlozano1990`, the sole collaborator — without this the rows do nothing. (2) *Then* enable
+> branch protection requiring CODEOWNERS approval. The owner-task row (§D item 11) and the
+> risk-register row (§D item 12) must both state plainly that **the current rows are inert**, not
+> merely unenforced — those are different failures and only one of them is fixed by a settings
+> toggle.
+>
+> Whether the second maintainer's rows (`skills/`, `curated-skills-registry.md`, `@jmlozano1990`)
+> are affected: they are not — that owner *is* the sole collaborator. Only the six
+> `@msitarzewski` rows are inert. Re-pointing them is a `.github/CODEOWNERS` edit already in §D
+> row 3, so it costs no new file.
+
+**D12 — `sync-agency.yml:409` is a FOURTH false claim, and it is corrected in this cycle.**
+
+Verified verbatim this session: the generated PR checklist says *"Run `bash
+scripts/vendor-agency.sh` and commit the refreshed `vendored/agency-agents/` — **the
+`vendored-integrity-check` CI job fails until vendored content matches the new lock**."* Per D8
+reason 3, **no CI job runs on a sync PR**, so that job does not fail, does not pass, and does not
+execute. The claim tells a reviewer that a control is holding a line that is not being held.
+
+It is in scope on three independent grounds and none of them is "while we're here": it is the same
+defect class as items 4a–4e (a false public claim about an ingested-content control); it sits eight
+lines from `:401`, which AC-SYNC-CODEOWNERS-1 already opens, in the same `body:` literal, at zero
+marginal diff cost; and it is *created into falseness* by nothing this cycle does — it was already
+false, and correcting `:401` while leaving `:409` would leave the checklist internally
+inconsistent, half-corrected.
+
+**Correction:** state the enforced reality — the vendored refresh is a maintainer step verified
+**after merge**, by `vendored-integrity-check` running on the push to `main`; it does not gate this
+PR. **Negative control:** the corrected text is checked against the live enforced state by the same
+direction-agnostic method AC-SYNC-CODEOWNERS-1 condition 4 mandates — `gh pr view <sync-PR>
+--json statusCheckRollup` on a real sync PR returns `0`, and the text must agree with that number,
+whichever way the number later moves.
+
+**D13 — AC-ARCH-SCHEMA-1's passage-derivation script is a `Verifier-that-cannot-PASS` as written,
+and must be scoped to the pre-v2.19.5 body of the file. Found by running it against my own
+amendment.**
+
+Re-running the AC's own `awk` after the Phase 2 amendments returned **8** anchors, not 7. The new
+one was line `12260` — a sentence in *this design record* that wrote the token `upstream_repo` as
+prose while explaining the line-shift trap. The locator does not care where a token appears; the
+document that corrects the false claims is itself scanned for them.
+
+**The prose hit is the mild version. The severe version is structural and would have blocked
+Phase 5:** AC-ARCH-SCHEMA-1 *mandates* that each correction block NAME its target field, e.g.
+`CORRECTION (v<VERSION>) [field-rationale: files[].category, :2851]` — **the version token is a
+placeholder here deliberately, so that this illustration cannot itself be counted as a correction
+block; see §D13c, where this exact line was the phantom.** That label contains the literal
+string `files[].category`, which the locator matches, outside any fence, therefore **its own new
+passage**. Every correction block @dev writes raises the passage count it is being measured
+against. Seven correction blocks → up to 14 passages → `NAMED_BLOCKS >= PASSAGES` can never be
+satisfied. **A check that punishes obeying the rule it enforces** — `docs/patterns.md:32`
+`Verifier-that-cannot-PASS`, and the identical shape the spec's own round-2 discovery-window fix
+already caught once in this same AC. It survived because that fix moved the search *window* and
+never re-examined the *locator*.
+
+**Fix (binding for Phase 4 and Phase 5): scope both scripts to the pre-v2.19.5 body of the file.**
+The AC targets ADR-020/021/028's original text; this cycle's own design record and correction
+labels are not in its subject matter. Terminate the scan at this section's heading:
+
+```bash
+END=$(grep -n '^# v2.19.5 — Rung 1 — Phase 1 Design' docs/architecture.md | head -1 | cut -d: -f1)
+awk -v end="$END" 'NR >= end { exit } { ... existing fence-tracking + locator ... }' docs/architecture.md
+```
+
+Apply the identical `NR >= end { exit }` bound to **both** the passage-derivation script and the
+`UNCORRECTED:` discovery script, and to the `NAMED_BLOCKS` extraction — otherwise the numerator and
+denominator are computed over different ranges, which is its own defect. Re-derive `END` on every
+run: it moves with every insertion, like everything else in this file.
+
+**D13a — the bound has a live rot mode, and it fails OPEN. Guard it (Phase 2, @security — tested,
+not asserted).** `END` is derived by grepping a heading that contains an **em-dash**. If that grep
+ever returns empty — the heading gets reworded, or a Phase-4 transcription turns `—` into `--` —
+then `END=""`, and `awk -v end="" 'NR >= end { exit }'` exits on the first line and yields **zero
+passages**. Not an error. Zero. `NAMED_BLOCKS >= PASSAGES` becomes `N >= 0`, trivially true, and
+the `UNCORRECTED:` script finds nothing to report. **The fix for a `Verifier-that-cannot-PASS`
+would fail open into a `Check-That-Cannot-Fail`** — `docs/patterns.md:31`, BINDING — which would
+be this cycle's seventh instance of that family, minted inside the fix for the sixth.
+
+**Binding, on all three scripts, immediately after deriving `END`:**
+
+```bash
+[ -n "$END" ] && [ "$END" -gt 0 ] || { echo "::error::END anchor not found — AC-ARCH-SCHEMA-1 scripts cannot run unbounded or unanchored"; exit 1; }
+```
+
+**Negative control, free:** delete or reword the heading and re-run — the scripts must fail loudly
+naming the missing anchor, where without the guard they print `0` and pass. Neither leg is
+hypothetical: the RED leg is one em-dash away at every future edit to this file.
+
+**Negative control:** with the bound, the script returns **7** against the current file (verified
+this session, both before and after the `upstream_repo`-token removal at `:12260`); without it, it
+returns 8 now and would return up to 15 after Phase 4. RED is the unbounded form on the post-Phase-4
+file; GREEN is the bounded form. Both legs reachable, and the RED leg is exactly the state Phase 5
+would otherwise have hit.
+
+**The bound is not one of two fixes — it is the only one. Proven by this very block.** The first
+remedy attempted was prose-avoidance: strip the raw token from `:12260`. That worked for exactly
+one line. Writing **this decision** — which cannot explain the hazard without naming the tokens it
+concerns — immediately reintroduced four more unbounded hits inside D13 itself. Measured:
+unbounded, the locator now returns **11** anchors (`2822 2843 2851 2873 3499 3648 5590` plus four
+inside this block); **bounded at `END=11522`, it returns exactly the 7 real ones.** Prose-avoidance
+does not survive contact with a document whose job is to discuss the tokens, and neither will
+@dev's mandated field-naming labels. **Phase 4 and Phase 5 MUST use the bounded form; the unbounded
+form is now known-wrong and its output must not be used for any threshold.**
+
+> **CORRECTION (v2.19.5, Phase 4, @dev) — the sentence immediately above ("neither will @dev's
+> mandated field-naming labels") predicted this correctly, but the bound does NOT fix it, and this
+> block records the actual measurement rather than leaving the prediction unconfirmed.** The `END`
+> bound excludes this design section's own narrative from the passage count; it cannot exclude
+> @dev's correction blocks, because AC-ARCH-SCHEMA-1 requires those blocks to live INSIDE the
+> pre-v2.19.5 body, fence-adjacent to the passage each one corrects — the same bounded region the
+> passage-derivation script scans. A correction block that obeys the AC's own labeling mandate
+> (`[field-rationale: files[].category, :NNNN]`) necessarily contains the token the locator matches,
+> so writing it creates a new passage one line below the one it just corrected.
+>
+> **Measured this session, after all 9 correction blocks (7 for this AC + 2 for AC-ARCH-LICENSE-1)
+> were written and re-derived against the live file, bounded at `END=11544`:** the passage-derivation
+> script returns **14** (7 original + 7 new, one per AC-ARCH-SCHEMA-1 correction block written — the
+> 2 AC-ARCH-LICENSE-1 blocks don't carry these tokens and don't inflate this count). The scoped
+> `NAMED_BLOCKS` extraction (§(ii) below) returns **7** — correct, and not itself buggy; it counts
+> exactly the 7 correction blocks whose labels name this AC's subject, neither more (LICENSE-1's 2
+> blocks are correctly excluded) nor fewer. `NAMED_BLOCKS >= PASSAGES` therefore evaluates `7 >= 14`
+> — **false**, against a Phase 4 implementation that is complete: every one of the 7 original
+> passages carries a correction, each correctly labeled, each fence-adjacent.
+>
+> **This is a `docs/patterns.md:32` `Verifier-that-cannot-PASS`, discovered inside the fix for the
+> family's own 7th instance (D13) — the 8th.** It is unsatisfiable by construction for ANY complete,
+> honestly-labeled implementation, not merely masked-implementation-shaped: the more precisely a
+> correction names its target field (which the AC itself mandates), the more certainly it inflates
+> the count it is being measured against. Silently wording corrections to avoid the mandated field
+> names would dodge the number while reintroducing the ambiguity `AC-ARCH-SCHEMA-1` exists to remove
+> — the same prose-avoidance failure mode this document's own D13 paragraph already tried and
+> rejected, one section up.
+>
+> **The decisive check is, and was always, the `UNCORRECTED:` discovery script (§(iii) below), not
+> this count.** It asks the substantively correct question per original passage — "is a correction
+> reachable within the fence-adjacency window?" — and does not conflate a correction's own text with
+> an uncorrected claim. Run this session, single-pass, bounded at `END=11544`, against all 19 raw
+> locator hits across the 7 passages: **empty `UNCORRECTED:` output — every hit resolves to a
+> correction within its window.** `NAMED_BLOCKS >= PASSAGES` was designed as a cheap anti-masking
+> guard for the case the discovery script's window logic might miss (the exact D13/S13 history this
+> section documents) — but once corrections exist, it measures something else entirely, and its
+> failure here is not evidence of masking; the discovery script already rules masking out directly.
+>
+> **Binding for Phase 5 (not decided here, since retiring or rewriting a Phase-1/2 AC is not a Phase
+> 4 @dev action): treat the `UNCORRECTED:` discovery script's empty output as this AC's pass
+> condition. Treat `NAMED_BLOCKS >= PASSAGES` as informational only once ≥1 correction block has been
+> written for this AC's subject — it cannot be a hard gate for a complete implementation, only a
+> pre-implementation masking check on a still-empty file.** A future cycle should either drop this
+> secondary check or redefine `PASSAGES` to exclude lines that are themselves inside a `CORRECTION
+> (v2.19.5)` blockquote — mirroring the fence-tracking this file already has, one more state variable.
+
+### Negative-control ledger (mandatory — `docs/patterns.md:31` is BINDING)
+
+Every control below has a reasoned RED and a reasoned GREEN. No control ships whose RED or GREEN is
+unreachable.
+
+| Control | Goes RED when | Goes GREEN when | Why neither is vacuous |
+|---|---|---|---|
+| Hoisted old-pin verify (D1/D2/D3) | bytes at the pin ≠ stored hash; **or** any fetch fails; **or** any entry's `content_sha256` is absent/empty/`MISSING`; **or** `verified != 110`; **or** `verified == 0` | all 110 fetch and match | GREEN is reachable and observed today (all 110 match at the old pin — `marketing/marketing-content-creator.md` executed as a witness). RED is reachable via Leg 2's fixture. The script has **no** branch that can produce a pass without a comparison. |
+| `content_sha256` write-completeness (D4) | any produced entry blank/`MISSING`, any `sha256 != content_sha256`, or zero entries | every produced entry carries a non-empty `content_sha256` equal to its `sha256` | RED fires today against the pre-fix accumulator (which emits no `content_sha256` at all → `BLANK == 110`). GREEN is asserted against the **produced** lock in Leg 3, not the pre-fix lock. |
+| Per-file fail-closed fetch (D6) | any allowlisted `.md` fails to fetch at `NEW_SHA` | all allowlisted files fetch | RED is the current `WARNING…continue` path, reachable on any 5xx/timeout. GREEN is the normal monthly run. Neither depends on the other. |
+| Per-category HTTP-status branch (D6) | listing returns any status other than 200 or 404 | 200 (parse) or 404 (category genuinely gone) | 404 is a real, distinguishable outcome — the `security/` rename proves upstream restructures categories. `000`/5xx is a real network fault. The two are no longer collapsed into `[]`. |
+| Removed-path report (D7) | never — it is a report, not a gate | always emitted, empty section when the set difference is empty | Stated plainly: **this is a report, not a check.** Its integrity comes from D6 making its input unambiguous, not from a pass/fail. Labeling it as a gate would be the dishonesty this cycle exists to remove. |
+| Ratchet Leg 1 (GREEN) | verifier fetches the wrong commit (fails on the 15 drifted paths); or `verified != 110`; or `verified == 0` | correct old-pin fetch across all 110 | **Executed live:** stored `676c536d…` vs old-pin `676c536d…` (match) vs HEAD `26ddce44…` (mismatch). The leg discriminates the exact defect. Residual: if upstream ever equals the pin, the leg still verifies but stops discriminating — which is why Leg 3 exists and is not optional. |
+| Ratchet Leg 2 (RED) | always, against a correct verifier | never — by construction | Deliberately a one-directional control. Its stored hash is a **real** hash of **real** content, so a mismatch proves "fetched ≠ the bytes that hash corresponds to," not "the hash is garbage" — which is exactly the discriminating power `AC-F1-3`'s `DEADBEEF` construction lacked. |
+| Ratchet Leg 3 (post-advance RED) | poisoned entry after a real writer-produced advance | unpoisoned produced lock verifies with `verified=3` | Forecloses "GREEN passed because every entry skipped." Since D3 removed all skip branches, a skip cannot occur; Leg 3 proves it empirically rather than by assertion. |
+| `CHECKED > 0` floor on `lock-content-sha-cross-check` (D10) | every entry skipped or every fetch failed, i.e. `CHECKED == 0` | any normal run — `CHECKED == 110` today | RED is proven against a fixture lock of unfetchable paths, and is a **regression witness**: the pre-fix job body prints `PASSED — 0 entries verified` on that same fixture and exits 0. GREEN is the live production state. The fix for a vacuous PASS does not itself ship unproven. |
+| Category-listing shape assert (D6 / S9) | HTTP 200 carrying a non-array or empty body | 200 with a real array listing | RED fixture: `{"message":"Not Found"}` served as 200 — today this parses to zero paths and the category silently vanishes with the run reporting success. GREEN: any live category listing. 404 is handled by a *different* branch, so `length > 0` cannot false-fire (git cannot represent an empty directory). |
+| AC-ARCH-SCHEMA-1 passage bound (D13) | unbounded locator run on the post-Phase-4 file — count inflates past any achievable `NAMED_BLOCKS` | bounded at `END` = the v2.19.5 design heading — returns the 7 real passages | **Both legs measured this session:** unbounded returns **11** on the current file (7 real + 4 inside D13 itself); bounded returns exactly **7**. The RED leg is not hypothetical — it is the state Phase 5 would have hit, and the block documenting the hazard is what produced it. |
+
+**AC-SYNC-1 reframed (adopted at the Phase 1 gate — this supersedes the spec's "single
+discriminating construction" framing).** RED does **not** discriminate old-pin-fetch from
+HEAD-fetch. "Bytes altered at the old pin, stored hash untouched" mismatches under *both* the
+correct and the buggy implementation, so it proves **fail-closed-ness, not which commit was
+fetched**. **GREEN is the discriminating leg**: a HEAD-fetching implementation fails it on 15 real
+paths, a correct one passes on all 110. The **pair** discriminates — a verifier that always fails
+passes RED and fails GREEN; one that always passes fails RED; only a correct verifier passes both.
+
+This **strengthens** the spec's deletion of the `DEADBEEF` construction rather than weakening it,
+and for a better reason than the spec gave: a hash corresponding to no real content mismatches
+under **any** fetch strategy at all — including one that fetches nothing and hashes an error body —
+so it establishes nothing whatsoever about *which bytes were compared*. Leg 2's construction, by
+contrast, stores a real SHA-256 of real content at a real commit, so its mismatch carries the
+specific claim "the fetched bytes are not the bytes that hash denotes."
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** (i) collapse `sha256`/`content_sha256` into one field under a
+  `$schema_version` `"1.1"` bump, using D4's `DIVERGE == 0` invariant as the safety proof and a
+  transferability-contract review for external consumers; (ii) re-point `quality.yml:1458-1495`
+  and `scripts/vendor-agency.sh`'s loop at `scripts/verify-lock-content-sha.sh`, reducing four
+  implementations to one and thereby also removing that job's `MISSING`-skip and fetch-failure
+  `continue` branches (D10 adds the floor that makes their worst case observable; only the re-point
+  removes the branches themselves); (iii) add an
+  orphan sweep to `vendored-integrity-check` so a vendored file with no lock entry fails CI
+  (`CF-v2.19.5-B`); (iv) make the removed-path report a *gate* — refuse to advance when the removed
+  set is non-empty until a maintainer acknowledges each path — once the review-gate question
+  (`AC-SYNC-CODEOWNERS-1`) has an owner decision behind it.
+- **Concrete revisit triggers:** the first sync run that reports a non-empty removed set (arms
+  immediately — 2 paths are already renamed out of the allowlist); any `$schema_version` bump for
+  any reason; any fifth copy of the verify loop appearing in the repo; a second consecutive cron
+  abort caused by D6's fail-closed posture (which would mean the availability trade is priced
+  wrong and needs a bounded retry instead).
+- **Risk knowingly accepted:** (a) a transient upstream fault now aborts the whole monthly sync
+  rather than degrading — accepted because a silently truncated supply-chain lock is worse than a
+  re-run; (b) `files[].sha256` continues to ship as write-only data for at least one more cycle
+  (`CF-v2.19.5-A`) — a real finding, deliberately not collapsed because that is a
+  `$schema_version` bump AC-SYNC-5 forbids, with D4's `DIVERGE == 0` assertion standing in as the
+  safety proof a future collapse cycle will need; (c) `lock-content-sha-cross-check` keeps its
+  `MISSING`-skip and fetch-failure `continue` branches — D10 adds the floor that makes their
+  combined worst case fail loudly, but the branches themselves survive until the §(ii) re-point;
+  (d) newly-pinned content still has **no enforced human review
+  gate** — see the ADR-028 amendment §(d), which is the honest statement of what this ADR does and
+  does not buy.
+
+---
+
+## ADR-076: Release-Body Producer = Atomic Pre-Publish + Fail-Closed Precondition Guard (v2.19.5 Rung 1, item 3 / `CF-v2.19.3-A`)
+
+**Status:** ACCEPTED
+
+### Context
+
+`release-assets.yml` triggers on `push: tags` only (`:9-12`) and invokes
+`softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda` (`:105`) with `files:` and
+`fail_on_unmatched_files:` and **no body input of any kind** (`:104-110`). When no Release exists
+for the pushed tag, the action creates one — with an empty body. v2.19.2 backfilled the bodies by
+hand and reported the finding closed without touching the producer; it regenerated on the next tag
+push (`docs/retro.md:218`). This is a repeat finding, not a new one.
+
+The spec chose option **(a)** — pre-publish the Release before the tag push — over option (b)
+(`body_path` → CHANGELOG) on the pushed-ref argument: a tag-push workflow runs at the *code state
+of the pushed ref*, so tagging the existing `v2.19.4` commit would execute the **pre-fix** workflow
+however recently the fix landed on `main`. That argument is correct and this ADR adopts it.
+
+### Decision
+
+**D1 — The mechanism is `scripts/publish-release.sh`, a maintainer-run script, not a new
+workflow.**
+
+No workflow in this repo pushes tags (`grep -rln 'push.*tag\|git tag\|gh release' .github/workflows/
+scripts/` → empty; all 8 historical `release-assets.yml` runs were `push` events from a human).
+Tagging is already a manual maintainer action, so the pre-publish step belongs beside it. A
+`workflow_dispatch` release-creation job would add a new `contents: write` trigger surface for no
+gain — the same posture as @security's ruling against a dispatch-parameterized sync.
+
+The script:
+1. Extracts the `## [<version>] - <date>` section from `CHANGELOG.md` into a notes file, and
+   **fails if that section is missing or empty**.
+2. Refuses to run if a Release already exists for the tag with a non-empty body (idempotence), and
+   takes the `gh release edit --notes-file` repair path if one exists with an empty body.
+3. Runs `gh release create v<version> --target <sha> --title … --notes-file <f>` — which creates
+   the tag ref **and** the populated Release in a single API call. There is therefore no interval
+   in which the tag exists without its Release, and no window for `release-assets.yml` to reach the
+   empty-body create path.
+4. Asserts the post-conditions: the Release body is non-empty **and** contains the version string,
+   and (after polling for the asset workflow) exactly the two expected archives are attached. It
+   exits non-zero with a named diagnostic otherwise.
+
+**Why the body survives the subsequent asset upload — verified, not recalled.** Read at the pinned
+SHA this session: `src/github.ts:521-535` takes `createRelease` only when `findTagFromReleases`
+returns undefined, and `:563-566` computes
+`body = workflowBody || existingReleaseBody` when no `input_append_body` is set. With no body input,
+`workflowBody` is `''`, so the pre-published body is preserved verbatim. `:553` preserves the name
+the same way. This is the single load-bearing fact of the whole design and it is read from source at
+the exact pinned SHA, not remembered.
+
+**D2 — `release-assets.yml` gains a fail-closed precondition step before the upload.**
+
+Pre-publishing fixes the *procedure*; it leaves the *producer* still able to mint an empty Release
+for anyone who tags with plain `git push`. A new step before `Upload assets to release` asserts that
+a Release already exists for the pushed tag **and** that its body is non-empty, failing with a
+message naming the tag and pointing at `scripts/publish-release.sh` otherwise. This converts
+"silently creates an empty-bodied Release" into "loudly refuses," which is the structural close of
+`CF-v2.19.3-A` rather than a procedural one.
+
+Failure leaves the tag present with no Release — fully recoverable by running the script, which
+detects the existing tag and creates the Release against it.
+
+**D3 — Residual risk, named rather than assumed.**
+
+`[ESTIMATED]` Whether a tag created through the Releases API raises the `push` event that
+`release-assets.yml` listens on is **not verified** — every historical run was a `git push`. The
+design does not depend on it: the script *asserts* asset presence rather than assuming it, and a
+missing-assets result is a loud, named failure with a documented remedy, not a silent gap.
+Phase 5 must exercise this on the outstanding `v2.19.4` tag, which is the natural target
+(AC-REL-BODY-3), and record the observed answer.
+
+### Negative-control ledger
+
+| Control | Goes RED when | Goes GREEN when | Why neither is vacuous |
+|---|---|---|---|
+| CHANGELOG-section extraction | the `## [<version>]` header is absent, or the extracted body is whitespace-only | a real dated section exists | RED is reachable today for any unreleased version; GREEN is reachable for all 8 existing releases. |
+| `release-assets.yml` precondition guard (D2) | tag pushed with no Release, or with an empty-bodied Release | the script pre-published a populated Release | RED is exactly the state that produced v2.18.0/v2.19.0/v2.19.3's empty bodies — reachable by construction. GREEN is the post-fix happy path. |
+| Post-condition assertion (D1.4) | body empty, body missing the version string, or asset count ≠ 2 | populated body + both archives attached | Both legs observed on existing data: v2.19.3 has `bodyLen=1712` and 2 assets (GREEN shape); v2.18.0/v2.19.0 shipped empty (RED shape). |
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** (i) once D3's `[ESTIMATED]` is settled by observation, either drop the
+  asset-polling loop (if the event fires reliably) or add a `workflow_dispatch` tag input to
+  `release-assets.yml` so assets can be attached deterministically without a tag re-push;
+  (ii) fold the pre-release scorecard reminder at `release-assets.yml:3-7` into the script as an
+  actual check rather than a comment no mechanism reads; (iii) generate the notes from the
+  CHANGELOG *and* an auto-derived commit range once the CHANGELOG discipline is CI-enforced beyond
+  `version-consistency-check`.
+- **Concrete revisit triggers:** the first release cut with `scripts/publish-release.sh` (i.e. the
+  outstanding `v2.19.4` tag, at this cycle's Phase 5) — its observed behavior settles D3 either way;
+  any bump of the `softprops/action-gh-release` pin, which invalidates the `:563-566` source read
+  this ADR rests on and requires re-reading the new SHA's source before merge.
+- **Risk knowingly accepted:** the release procedure remains a human-run script rather than an
+  automated pipeline — accepted because tagging is already manual here and automating release
+  creation would add a `contents: write` trigger surface this cycle explicitly declined; and the
+  body's *content quality* is only asserted structurally (non-empty, contains the version), never
+  semantically.
+
+---
+
+## ADR-028 amendment (v2.19.5): v2.5 implementation-record correction + post-fix trust model
+
+> Append-only amendment. The original ADR-028 records (`docs/architecture.md:4465` PROPOSED,
+> `:5570` v2.5 Implementation) are **not rewritten**. ADR-028 remains **ACCEPTED**.
+
+**(a) What was wrong.** ADR-028 specified a tamper check anchored to the pin: fetch each file at the
+pinned commit, hash it, compare to the stored `content_sha256`. The v2.5 implementation instead
+compared bytes fetched at the **new upstream HEAD** against the hash stored for the **old pin**
+(`sync-agency.yml:209-210` fetch, `:216` hash, `:221-227` compare). The two operands come from
+different commits, so the check fails on every legitimate upstream edit. Additionally, the
+implementation shipped a reader with **no writer** — the accumulator (`:246-252`) never emitted
+`content_sha256`, and the lock update (`:332`) is a wholesale `.files = $files` replacement.
+This is a correction to the *implementation record*, not a change of decision.
+
+**(b) What changed.** Per ADR-075: the tamper check is hoisted into its own step, run against the
+OLD pin before any rewrite, through a single skip-free verifier
+(`scripts/verify-lock-content-sha.sh`). The pin advance is a **separate write path** that emits
+`content_sha256` for every entry from the same bytes it hashes, asserted non-blank and equal to
+`sha256` on the produced lock before it is moved into place.
+
+**(c) Cron failures closed.** The 2026-07-01 and 2026-08-01 hard failures were this defect, not
+tampering: upstream moved (41 modified files between pin `783f6a7…` and HEAD `c89557f…`, 15 of them
+in the lock), so every advance attempt compared drifted HEAD bytes to old-pin hashes and exited 1 at
+`:225`. Executed as a witness this session: `marketing/marketing-content-creator.md` hashes to the
+stored `676c536d…9e35` at the old pin and to `26ddce44…b3d5` at HEAD.
+
+**(d) Post-fix trust model — what this does and does not detect.**
+
+`architecture.md:2857` already states that the lock's hash field is *"a record of what was reviewed,
+not a runtime check."* That remains true and is **not** contradicted by ADR-028's tamper check; the
+two describe different moments:
+
+- **Detected:** retroactive alteration of content that was **already pinned and already reviewed**.
+  The old-pin comparison is a *re-attestation* of prior review, enforced in CI at ingestion time
+  (`sync-agency.yml`, gating the advance) and, for the current pin, on every **human** PR
+  (`quality.yml:1458-1495` — *not* on a sync PR, per fact 3 below) and offline against the vendored
+  tree (`quality.yml:1497-1552`).
+- **NOT detected:** whether **newly pinned** content was ever read by a human. The advance path
+  computes a fresh hash over whatever upstream serves at `NEW_SHA`; the hash attests *what* was
+  ingested, never *that anyone looked at it*. The S1 content-scan (`sync-agency.yml:143-152`,
+  8 patterns) is a shape tripwire, not a review.
+
+**The enforcement reality, stated plainly (sharpened at Phase 2, S3 — the first draft was softer
+than the truth):**
+
+1. **No automated control blocks on a content-scan hit.** `requires_review` occurs at exactly seven
+   places — `:250` `:251` (accumulator), `:258` (step output), `:388` (PR-body table row), `:397`
+   (PR-body warning string), `:406` (checklist item), `:418` (`security-review-required` label).
+   Verified by `grep -n requires_review .github/workflows/sync-agency.yml` this session. **No step
+   gates on it.** A file that trips all eight injection patterns is labeled, tabulated, warned
+   about — and merges exactly as easily as one that trips none.
+2. **The only `exit 1` after PR creation is the SPDX step** (`:422-431`) — and `--arg spdx "MIT"`
+   at `:249` makes that step structurally unreachable (§Pre-existing defects item 2). So **the gate
+   that can fail cannot fire, and the control that can fire cannot fail the run.**
+3. **No CI runs on a sync PR at all** (D8 reason 3, VERIFIED: PR #27 and #31, `statusCheckRollup`
+   = 0, `required_status_checks` NOT ENABLED). Every `quality.yml` job — including
+   `vendored-integrity-check`, `lock-content-sha-cross-check`, and this cycle's own
+   `sync-verify-ratchet` — is a **post-merge detector** on this path, never a gate.
+4. **Branch protection does not require approval:** `approvals=0`, `codeowners=false`,
+   `rulesets=0`. `.github/CODEOWNERS` exists and is substantive, but nothing enforces it.
+
+**Therefore: nothing — automated or human — is currently required to stand between upstream bytes
+and a merged `cowork.lock.json`.** That is the honest post-fix statement. What ADR-075 buys is
+that the *advance itself* is now gated by the hoisted old-pin verifier inside the producing
+workflow, which is the one check that does execute; what it does not buy, and must not be read as
+buying, is any review of the new content.
+- **Which control carries new-content integrity today: none that is enforced.** The PR checklist at
+  `sync-agency.yml:401` claimed *"2 approvals required per CODEOWNERS"*; the repo's live branch
+  protection reports `approvals=0`, `codeowners=false`, `rulesets=0`. Per `AC-SYNC-CODEOWNERS-1`,
+  option (b) was chosen: the checklist is corrected to state the actual enforced state plainly —
+  **there is no enforced approval requirement on PRs touching `cowork.lock.json`** — while enabling
+  the control (re-point the inert supply-chain CODEOWNERS rows to a real collaborator, *then* add a
+  branch-protection rule — two steps, per D11's S5 correction) is routed to the owner as an open
+  decision in `docs/owner-tasks.md`, with the exposure recorded in `docs/risk-register.md`.
+
+**Ordering satisfied.** AC-SYNC-3(d) could not be written before `AC-SYNC-CODEOWNERS-1` resolved,
+precisely so this paragraph could not name a control that does not exist. It resolved at Phase 0.D
+(option (b)); this paragraph therefore names the **absence** of the control, not a substitute for
+it. What remains open is the owner's acceptance at Phase 3, which is a decision about the risk, not
+about this text.
+
+**(e) Retired.** `AC-F1-3` and `quality.yml:1417-1456` (`lock-content-sha-fault-injection`) are
+retired, along with `tests/fixtures/sha-fault-injection.json`. Rationale: poisoning a stored hash to
+`DEADBEEF` mismatches whatever bytes are fetched, under the correct implementation and under the
+v2.5 defect alike — it always passes and can never localize the defect. That is
+`docs/patterns.md:31` `Check-That-Cannot-Fail` (already **BINDING**), and the correct ledger
+attribution is against that BINDING row's instance count, not the `:32`
+`Verifier-that-cannot-PASS` WATCH row. AC-SYNC-1/2/6/7/8/9 and the `sync-verify-ratchet` job
+supersede it.
+
+**(f) `AC-F1-5` SCAN_PATTERNS invariant — preserved, not touched.** SCAN_PATTERNS is the array
+literal at `sync-agency.yml:143-152`. No change in ADR-075 adds, removes, or reorders any element;
+D1 deletes the comparison block at `:216-227` and D6 alters the fetch error branches, all of which
+are *outside* the array. Under AC-SYNC-4's own definition ("provably requires touching it" = the fix
+cannot be implemented without adding, removing, or reordering an element), this fix does not meet
+that bar, so the invariant carries unchanged. Verify by content, never by line number:
+`sed -n '/^ *SCAN_PATTERNS=(/,/^ *)/p' .github/workflows/sync-agency.yml` — first pattern string,
+last pattern string, and element count (8) byte-identical before and after.
+
+---
+
+## Pre-existing defects in the blast radius
+
+Recorded so Phase 4 does not reproduce their shape in new code, and so Phase 6 does not mistake them
+for regressions introduced here. Item 1 is **fixed in this cycle** (Phase 1 gate decision, ADR-075
+§D10); items 2–4 are **named, not fixed**, each with a named carry-forward.
+
+1. **`quality.yml:1495`'s missing `CHECKED > 0` floor — MOVED OUT of this list. FIXED IN THIS CYCLE
+   per ADR-075 §D10.** Retained here as a pointer only, so that a reader of this section is not
+   left believing it shipped uncorrected. `CF-v2.19.5-C` is **retired as fixed-in-cycle, not
+   carried**. Its RED leg (a fixture lock of unfetchable paths driving `CHECKED` to 0) doubles as
+   the regression witness proving the three added lines do something. The job's `MISSING`-skip and
+   fetch-failure `continue` branches do survive this cycle — see §Maturation Path (ii) and risk (c).
+2. **`sync-agency.yml:249` — `--arg spdx "MIT"` makes the SPDX drift gate structurally
+   unreachable.** The accumulator hardcodes the literal, so the comparison at `:265-316` and the
+   fail step at `:422-431` compare `"MIT"` against `"MIT"` for all 110 entries and can never fire.
+   The `files[].spdx` field-rationale bullet describes this as a working control (at
+   `docs/architecture.md:2850` **as of this write — RE-DERIVE, do not reuse**; the spec's `:2847` is
+   already stale, see §Architectural Modifications ⛔ block). `AC-ARCH-LICENSE-1` corrects the
+   **doc**, and the code stays. **Phase 4 must not "fix" this by deriving a real SPDX value** —
+   that is net-new licence-detection scope, explicitly out of this cycle.
+3. **`sync-agency.yml:117-123` — the LICENSE hash check annotates, it does not block.** It emits
+   `::error::` and sets `license_changed=true`, but `::error::` does not fail a step and no gating
+   step consumes the output (contrast `:422-431`, which does exist for SPDX). The
+   `license_file_sha256` field-rationale bullet claims `/sync-agency` *"refuses to merge if it
+   changes"* — false (at `docs/architecture.md:2846` **as of this write — RE-DERIVE**; the spec's
+   `:2843` is already stale and now points at the redundant-repo-and-URL bullet — the token is not
+   written out here, deliberately; see §D13). `AC-ARCH-LICENSE-1` corrects the doc; adding the
+   gating step is **`CF-v2.19.5-D`**.
+4. **`quality.yml:1512-1535` — `vendored-integrity-check` cannot see orphans.** The loop is driven
+   by `jq '.files[]'`, never by `find vendored/`, so a vendored file with no lock entry passes
+   unnoticed while `WIZARD.md` §2 still instructs the wizard to read and quote from that directory.
+   **`CF-v2.19.5-B` — moved from theoretical to LIVE during this cycle.** It is armed *now*, not
+   on some future removal: `engineering/engineering-security-engineer.md` and
+   `engineering/engineering-threat-detection-engineer.md` are renamed upstream into a `security/`
+   category absent from `.cowork-allowlist.json`, so the first successful pin advance drops both
+   from the lock while their `vendored/agency-agents/` copies remain on disk, attribution-blocks
+   intact, invisible to `vendored-integrity-check`, and still quotable by the wizard offline under
+   `WIZARD.md` §2. The arming is a direct consequence of this cycle's own fix landing. The PR-body
+   checklist item added by §D7 (delete the orphaned vendored copy per removed path) is the interim
+   human control; the orphan sweep is the structural one, and it is deferred. **Compounded by
+   `.gitattributes`:** `vendored/` carries no `export-ignore` (verified — the DROP list covers
+   `.github/`, `tests/`, `upstream-contribution/`, `docs/internal/` and three named docs; and
+   `release-assets.yml:93` positively requires `vendored/agency-agents/LICENSE` in the archive), so
+   an orphan ships in **every release ZIP and tarball**. See §D7's S7 disposition.
+5. **`sync-agency.yml:311-312` — upstream-controlled data on an unsafe transport, with a
+   suppression path, not just a corruption path.** `:311` `echo
+   "requires_review=${REQUIRES_REVIEW}" >> "$GITHUB_OUTPUT"` and `:312` `echo
+   "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"` both interpolate upstream-controlled values
+   into bare `KEY=value` step-output lines. `$GITHUB_OUTPUT` takes the **last** write of a given key
+   within a step, so an injected `requires_review=false` payload appended after `:311`'s own write
+   overrides it — and that single override **silences both downstream consumers**: the warning
+   banner at `:551` (`requires_review == 'true' && '**WARNING: ...**' || 'No content-scan hits
+   detected.'`) and the `security-review-required` label at `:581` (`requires_review == 'true' &&
+   'security-review-required' || ''`). The same signal that is supposed to raise the alarm is the
+   one an attacker-controlled path can use to silence it — a strictly worse failure mode than
+   `flagged_files`' line-injection, which corrupts a display string but does not flip a
+   PASS/FAIL-shaped boolean two other steps gate on. **Not retrofitted this cycle** — it is a
+   different variable pair on a path this design does not otherwise touch — but §D7's S6 transport
+   rule exists precisely so the new removed-path list does not copy this shape, and Phase 4's
+   removed-path output correctly used the `$GITHUB_OUTPUT` heredoc-delimiter form rather than
+   `requires_review`/`flagged_files`'s bare `KEY=value` shape. **`CF-v2.19.5-E`**. Phase 6 must not
+   read the new code's correctness as a claim about `requires_review`/`flagged_files`.
+
+---
+
+## §D. File-by-File Implementation Plan (Phase 4)
+
+> Added at Phase 2 (S1, CRITICAL). Its absence was the blocking gap: @security's S3 condition-2
+> artifacts — a `docs/owner-tasks.md` row and a `docs/risk-register.md` row — were named once in
+> prose and appeared in no file list, so Phase 4 had no work order for them. Per this document's
+> own precedent (`:10139`, `:10253`), **the §D file list is the Phase-4 @dev contract.**
+
+**Suggested commit topology** (@dev's call on the exact split, but these must not share a hunk):
+Commit 1 = the shared primitives (`scripts/verify-lock-content-sha.sh`, `.github/jq/lock-entry.jq`,
+`.github/CODEOWNERS`); Commit 2 = `sync-agency.yml` (verify hoist + writer + fail-closed fetches +
+removed-path accounting + the four PR-body corrections); Commit 3 = `quality.yml` (ratchet job +
+D10 floor + AC-F1-3 retirement) — kept separate so each `quality.yml` diff reviews in isolation;
+Commit 4 = release-body work (`publish-release.sh`, `release-assets.yml`, `CONTRIBUTING.md`);
+Commit 5 = doc-truth corrections (items 4a–4e + S7 item 3); Commit 6 = release trio + this record.
+
+| # | File | Change | Key AC / decision |
+|---|------|--------|-------------------|
+| 1 | `scripts/verify-lock-content-sha.sh` | **NEW** — single skip-free verifier; `$1` = lock-or-fixture path; reads `.upstream`/`.pinned_commit_sha` from that file; absent/empty/`MISSING` hash → error; fetch failure → error; prints `verified=<N>`; asserts `N == (.files\|length)` and `N > 0` | D2, D3; AC-SYNC-1/2/6 |
+| 2 | `.github/jq/lock-entry.jq` | **NEW** — single source of the lock-entry object shape, emitting `{path, sha256, spdx, requires_review, content_sha256}`; invoked via `jq -nc … -f` from both the workflow and the ratchet | D4; AC-SYNC-7/9 |
+| 3 | `.github/CODEOWNERS` | **MODIFIED** — (a) add rows for `scripts/verify-lock-content-sha.sh` and `.github/jq/` so ownership moves with the logic; (b) **re-point all six supply-chain rows (`:11-16`) from `@msitarzewski` to `@jmlozano1990`** — `@msitarzewski` is not a collaborator, so GitHub ignores those entries and they are **inert today** (S5). New rows use `@jmlozano1990` for the same reason. The second maintainer's `skills/`/`curated-skills-registry.md` rows are already correct and are not touched. | **D11** (S4, **S5**) |
+| 4 | `.github/workflows/sync-agency.yml` | **MODIFIED** — (a) NEW hoisted step `Verify pinned content integrity (old-pin tamper check)` invoking file 1, placed after `Check if lock file needs update`, before `Fetch upstream LICENSE`; (b) DELETE the comparison block `:216-227` from the advance loop (keep `:216`'s hash compute as a writer input); (c) accumulator `:246-252` → `jq -nc … -f .github/jq/lock-entry.jq`, adding `content_sha256` from `$FILE_SHA256`; (d) post-write assertions before `mv` (`:335`): `COUNT>0`, `BLANK==0` widened predicate, `DIVERGE==0`; (e) `:210` per-file fetch → `FETCH_FAILURES` + fail-closed after loop; (f) `:167-172` category listing → HTTP-status branch **plus the S9 `jq -e 'type=="array" and length>0'` assert**; (g) removed-path set difference + best-effort compare-API enrichment; (h) PR-body `### Removed Upstream Paths` section via the **S6 transport** (JSON → `body-path:` or heredoc-delimited output, never bare `KEY=value`), with the **S7** rename sub-case labeled distinctly; (i) `:401` CODEOWNERS claim corrected; (j) **`:409` `vendored-integrity-check` claim corrected (D12)** | D1/D4/D6/D7/D12; AC-SYNC-1/2/6/7/8, AC-SYNC-CODEOWNERS-1, S6, S9 |
+| 5 | `.github/workflows/quality.yml` | **MODIFIED** — (a) NEW `sync-verify-ratchet` job, 3 legs, all invoking file 1; (b) **D10 `CHECKED > 0` floor before `:1495`'s `PASSED` line**; (c) DELETE `lock-content-sha-fault-injection` (`:1417-1456`) | D9, **D10**; AC-SYNC-9, AC-F1-3 retirement |
+| 6 | `tests/fixtures/sync-verify-red.json` | **NEW** — Leg 2 RED fixture: pinned at `783f6a7…`, one entry whose `content_sha256` is the real hash of the same path at `c89557f…` | D9 Leg 2; AC-SYNC-1 |
+| 7 | `tests/fixtures/sync-verify-zero-checked.json` | **NEW** — D10 RED fixture: entries pinned at a commit where the paths do not exist, driving `CHECKED` to 0 | **D10** negative control |
+| 8 | `tests/fixtures/sha-fault-injection.json` | **DELETED** — with the retired `AC-F1-3` job | ADR-028 amendment §(e) |
+| 9 | `scripts/publish-release.sh` | **NEW** — CHANGELOG section extraction (fail on missing/empty); idempotence + empty-body repair path; `gh release create <tag> --target <sha> --notes-file`; post-condition asserts (body non-empty, contains version, 2 assets) | ADR-076 D1; AC-REL-BODY-1/2/3 |
+| 10 | `.github/workflows/release-assets.yml` | **MODIFIED** — fail-closed precondition step before `Upload assets to release`: a Release must already exist for the pushed tag with a non-empty body | ADR-076 D2 |
+| 11 | `docs/owner-tasks.md` | **MODIFIED** — **NEW OT row** (next free number): *enable an enforced review gate on PRs touching `cowork.lock.json`*, as an **open owner decision**. Per D11's S5 correction, option (a) is **TWO steps in order**: (1) re-point the six supply-chain CODEOWNERS rows to `@jmlozano1990` — **the current `@msitarzewski` rows are INERT**, ignored by GitHub because that user is not a collaborator; (2) *then* enable branch protection. The row must say **inert**, not merely "unenforced" — enabling protection against inert rows deadlocks or silently no-ops. Must also carry the Phase-3 fact from condition 3 (this cycle re-arms a dormant external-content ingestion path into a repo with no enforced review gate). | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only), **S5** |
+| 12 | `docs/risk-register.md` | **MODIFIED** — **NEW row**: unenforced-review-gate-over-ingested-content. Must state all four enforcement facts from ADR-028 §(d): no step gates on `requires_review`; the only post-PR `exit 1` is structurally unreachable; **no CI runs on a sync PR** (PR #27/#31, `statusCheckRollup`=0); `approvals=0`/`codeowners=false`/`rulesets=0` — **plus the fifth (S5): the six supply-chain CODEOWNERS rows name a non-collaborator and are therefore inert, so the review gate is absent at two independent layers, not one.** | **AC-SYNC-CODEOWNERS-1 condition 2** (was prose-only), **S5** |
+| 13 | `docs/roadmap.md` | **MODIFIED** — `:55` count `73`→ re-derived live (81); sum-consistency check; "kept current by sync-agency.yml" claim corrected **only after** the AC-SYNC set verifies | AC-ROADMAP-COUNT-1/2, AC-ROADMAP-SYNC-CLAIM-1 |
+| 14 | `docs/architecture.md` | **MODIFIED** — 7 fence-adjacent NAMED correction blocks (AC-ARCH-SCHEMA-1) + 2 (AC-ARCH-LICENSE-1). **⛔ Re-derive every anchor by script immediately before each write and again after each insertion — use no numeral from the spec or from this table.** **⛔ All three AC scripts MUST be run in the `END`-bounded form (D13), with the §D13a `END` guard AND the §D13b correction-block exclusion — any earlier variant is known-wrong (unbounded inflates; unguarded fails open to 0; without D13b's `inCorr` the count check cannot pass against a correct implementation).** Use the two anchored one-hit greps in `docs/spec.md` §Architectural Modifications for LICENSE/SPDX discovery. | AC-ARCH-SCHEMA-1, AC-ARCH-LICENSE-1, **D13 / D13a / D13b** |
+| 15 | `WIZARD.md` | **MODIFIED (conditional)** — `:26`'s *"hash-verified against the lock by CI"* claim checked for truth against the orphan case; corrected if false | **S7 item 3** |
+| 16 | `CONTRIBUTING.md` | **MODIFIED** — `:304` §Pre-release checklist gains the `scripts/publish-release.sh` procedure (pre-publish, then tag) | ADR-076 D1 |
+| 17 | `docs/next-steps.md` | **MODIFIED (best-effort)** — `:17` stale "close the v2.19.4 retro — Owed" line; do not block the cycle on it | T-NEXTSTEPS-1 (non-AC) |
+| 18 | `VERSION` | **MODIFIED** — `2.19.4` → `2.19.5` | release trio |
+| 19 | `CHANGELOG.md` | **MODIFIED** — dated `## [2.19.5]` block | release trio |
+| 20 | `README.md` | **MODIFIED** — version badge `2.19.4` → `2.19.5` | release trio |
+| 21 | `docs/spec.md` | **MODIFIED** — `## Architectural Modifications` (written at Phase 1) | design record |
+
+**Files 18/19/20 must land together** — `quality.yml:1623-1682` `version-consistency-check` asserts
+`VERSION == README badge == CHANGELOG top header` and fails the PR if any one lags.
+
+**`scope_allow_delta`:** SKIP-apply (V44-S5 / ADR-115 §Implications — external-project cycle;
+`dev.md scope_allow` governs Council self cycles only, not this external repo). Block recorded for
+the orchestrator's parse-completeness:
+
+```yaml
+scope_allow_delta:
+  add: []
+  rationale: external-project cycle; Council dev.md scope_allow does not govern claude-cowork-config paths
+```
+
+---
+
+## Classification Re-Run (post-OQ, per `docs/pipeline-policy.md` §PostOQClassificationReRun)
+
+**Result: CONFIRMED — SECURITY-SENSITIVE, Tier B ceremony, no Guard Change Summary.**
+
+**Re-run a second time at Phase 2 (S1/S4), against the now-explicit §D list of 21 files.** Beyond
+the Phase 1 additions (`scripts/verify-lock-content-sha.sh`, `scripts/publish-release.sh`,
+`.github/jq/lock-entry.jq`, `tests/fixtures/sync-verify-red.json`; minus
+`tests/fixtures/sha-fault-injection.json`), the Phase 2 amendments add five more:
+`.github/CODEOWNERS` (D11), `tests/fixtures/sync-verify-zero-checked.json` (D10),
+`docs/owner-tasks.md` and `docs/risk-register.md` (AC-SYNC-CODEOWNERS-1 condition 2, previously
+prose-only), and `WIZARD.md` (S7 item 3, conditional).
+
+**None of the five flips the tier.** `.github/CODEOWNERS` is the closest call and warrants the
+explicit note: it is a review-routing file, **not** a Tier A guard surface — the Tier A list is
+`scripts/guards/`, `.claude/settings.json`, `docs/pipeline-policy.md`, agent
+`scope_allow:`/`hooks:` blocks, and `scripts/orchestrator/`, all Council-side, none present here.
+It is also **presently unenforced** on this repo (`codeowners=false`), so the rows restore parity
+rather than creating a gate. The classification driver is unchanged: three `.github/workflows/`
+files, a Tier B surface. Cross-referenced against the two-tier table
+(`docs/pipeline-policy.md:491-516`): **no Tier A surface is present** — the new `scripts/` files are
+ordinary repo scripts in a registered external project, not Council `scripts/guards/`, not
+`.claude/settings.json`, not `docs/pipeline-policy.md`, and no agent `scope_allow:`/`hooks:` block
+is touched. Three `.github/workflows/` files remain in scope, which is a **Tier B** surface, and
+per `:516` ("if ANY Tier A OR Tier B file is in the list, the cycle is SECURITY-SENSITIVE") the
+classification is unchanged. No COMPLIANCE-SENSITIVE trigger (ISO 27001 / GDPR / SOC 2 / HIPAA) is
+implicated; the SPDX/licence surfaces are corrected in documentation only and the actual licence
+logic is untouched.
+
+**Ceremony therefore stands as settled at Phase 0.D:** mandatory Phase 2, required Phase 6, no
+combined audit+approve path, branch + PR on the main checkout, no sibling worktree, no Guard Change
+Summary. No upward flip; Phase 2 is not skippable and was never proposed to be.
+
+End of v2.19.5 — Rung 1 — Phase 1 Design (ADR-075, ADR-076 + ADR-028 v2.19.5 amendment).
+
+---
+
+## ADR-075 §D13b — Correction blocks are excluded from passage derivation (Phase 4 amendment, 2026-08-04)
+
+> Append-only amendment to ADR-075 §D13 / §D13a. @dev's Phase-4 finding is recorded as written and
+> is **not** rewritten here; this block resolves it. Eighth instance of the defect family this
+> cycle, and the third minted inside the fix for a previous one.
+
+**The defect @dev found while implementing AC-ARCH-SCHEMA-1.** §D13's `END` bound excludes the
+design section's own narrative. It **cannot** exclude the correction blocks, because the AC requires
+each block to sit *inside* the bounded region — fence-adjacent to the text it fixes — and to NAME
+its target field. Every honestly-labeled correction block therefore mints a fresh locator hit inside
+the measured range. Measured on the implemented branch (`END=11544`):
+
+| Quantity | Value |
+|---|---|
+| raw locator hits, bounded region | **19** (was 12 pre-implementation) |
+| `PASSAGES` under §D13 as written | **14** |
+| `NAMED_BLOCKS`, scoped to this AC's subject | **7** |
+| `NAMED_BLOCKS >= PASSAGES` | **7 ≥ 14 → FALSE** |
+
+A substantively complete, correctly-placed, honestly-labeled implementation fails the count check
+**by construction**. Any correct fix fails it. That is `docs/patterns.md:32`
+`Verifier-that-cannot-PASS`.
+
+**What did NOT fail, and this drives the diagnosis.** The **primary** check — the `UNCORRECTED:`
+discovery script — returns **empty**, 19/19 resolved. The corrections themselves are complete and
+correctly fence-adjacent. Only the secondary *count* check is broken, so the fix must touch the
+count's derivation and nothing else.
+
+**Decision.** A locator hit that sits *inside* a `CORRECTION (v2.19.5)` block is not a passage
+requiring correction — **it is the correction**. Exclude such hits before computing `PASSAGES`,
+reusing the existing line-state tracking rather than adding a second mechanism: one extra state
+variable, `inCorr`, alongside the existing `inFence`.
+
+```awk
+NR >= end { exit }
+/^>/  { if ($0 ~ /CORRECTION \(v2\.19\.5\)/) inCorr = 1; if (inCorr) next }
+!/^>/ { inCorr = 0 }
+/^```/ { inFence = !inFence; if (inFence) fenceStart = NR; next }
+/"category":|files\[\]\.category|upstream_repo|upstream_url/ { if (inFence) print fenceStart; else print NR }
+```
+
+`inCorr` latches on a blockquote line carrying the token and clears on the first non-blockquote
+line, so it handles a multi-line blockquote as well as the single-line form @dev used. **Apply the
+identical exclusion to the `UNCORRECTED:` discovery script and to the `NAMED_BLOCKS` extraction** —
+§D13's same-range rule: numerator and denominator must be computed over the same filtered stream.
+The §D13a `END` guard is unchanged and still runs first.
+
+### Both legs proven — the RED leg is the one that matters
+
+The count check exists solely to catch the masking case @security found at Phase 0.D round 2. **A
+fix that made it pass by weakening it would be strictly worse than the defect** — it would trade
+`Verifier-that-cannot-PASS` for `Check-That-Cannot-Fail`, the exact error §D13 itself made and
+§D13a had to repair. RED was therefore executed, not reasoned:
+
+| Leg | Construction | Result |
+|---|---|---|
+| **GREEN** | the complete implementation on the branch | `PASSAGES=7`, `NAMED_BLOCKS=7` → **7 ≥ 7 PASS**; `UNCORRECTED:` still **empty** |
+| **RED** | delete one correction block (`field-rationale: files[].category`), leaving 6 blocks for 7 subject passages | `PASSAGES=7` (**unchanged** — the deleted block's own hits were never counted), `NAMED_BLOCKS=6` → **6 ≥ 7 → FAIL** |
+| **§D13a guard** | grep a non-existent heading | **fires**, exits 1 naming the missing anchor |
+
+**Why RED still fires is a property of the fix, not an accident.** Excluding correction-block hits
+removes them from **`PASSAGES` only**, while `NAMED_BLOCKS` counts the blocks themselves. Deleting a
+block therefore decrements the numerator and leaves the denominator pinned at the true number of
+passages needing correction. Under-coverage is caught with exactly the sensitivity it had before —
+one missing block out of seven still fails.
+
+The seven derived anchors under the fixed script (`2822 2845 2862 2886 3514 3665 5610`) are the same
+seven the pre-implementation bound returned, shifted by the corrections inserted above them.
+**Re-derive them; do not reuse these numerals** — §D13's rule is unchanged and this table is not an
+exception to it.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** (i) replace the token-substring locator with a structural one — parse
+  the fenced JSON examples and diff their key sets against `jq -r 'keys' cowork.lock.json` — which
+  would make the check immune to prose and labels entirely rather than filtering them out one class
+  at a time; (ii) lift the three-script family into `scripts/` as one shell function with the `END`
+  guard, correction-exclusion and same-range rule built in, so a future AC cannot re-derive a subtly
+  different variant; (iii) retire the count check outright if (i) lands, since a structural locator
+  makes the masking case unrepresentable rather than merely detectable.
+- **Concrete revisit triggers:** any future cycle that adds `CORRECTION (v<version>)` blocks under a
+  different version token — the exclusion is hardcoded to `v2.19.5` and will not match `v2.20.0`, so
+  the defect returns at the next cycle that corrects this file; any edit to the locator regex; a
+  ninth instance of either pattern-family row inside a single cycle.
+- **Risk knowingly accepted:** the exclusion is **token-scoped to `CORRECTION (v2.19.5)`**, correct
+  today and rotting at the next version that corrects this document — accepted because generalizing
+  the token at a Phase-4 gate is unreviewable scope, and the revisit trigger above names the exact
+  condition that re-arms it; and the check remains a *count* paired with human fence-adjacency
+  judgement (this repo's `AC-PROV-1`/`AC-PROV-4` inspection-class precedent), never a proof that
+  each block corrects the passage it names.
+
+End of v2.19.5 §D13b amendment.
+
+---
+
+## ADR-075 §D13c — The bounded `NAMED_BLOCKS` command is written down (Phase 5 amendment, 2026-08-04)
+
+> Append-only amendment to §D13 / §D13a / §D13b. @qa's Phase-5 BLOCKER, recorded as found.
+> **Ninth instance of the defect family this cycle, and the fourth minted inside the fix for a
+> previous one.** This one is mine: the defect is in my own check, and my own reported figure was
+> right only by an unwritten mental step.
+
+**The defect @qa found.** §D13 and §D13b *instruct* that the identical bound be applied to the
+`NAMED_BLOCKS` extraction. **That instruction was never cashed out as runnable code anywhere in the
+repo.** The only literal, copy-pasteable command was the **unbounded** one at `docs/spec.md:5968`.
+And `:12045` of this file carried — as prose inside §D13's own explanatory paragraph — an
+*illustrative* label of the mandated shape, below the bound, which the unbounded extraction counted
+as if it were a real correction block. Measured before the fix:
+
+| Command as a reader could actually run it | `NAMED_BLOCKS` |
+|---|---|
+| unbounded (the only literal that shipped) | **8** |
+| bounded (instructed in prose, written nowhere) | **7** |
+
+A fixed **+1 phantom offset** — and @qa proved it lands exactly where it does the most damage:
+
+| Variant | `PASSAGES` | `NAMED_BLOCKS` | Verdict |
+|---|---|---|---|
+| bounded (correct) | 7 | 6 | 6 ≥ 7 → **FAIL** ✓ catches the masking regression |
+| **unbounded — the shipped literal** | 7 | 7 | 7 ≥ 7 → **PASS** ✗ misses it |
+
+The offset **exactly cancels a one-block deletion**, so the check as any reader could run it was a
+`Check-That-Cannot-Fail` against precisely the masking regression it was built to catch
+(`docs/patterns.md:31`, BINDING). My reported `NAMED_BLOCKS=7` was numerically correct and
+*epistemically* wrong: correct only via a bound I applied in my head and never wrote down.
+**Invisible correctness is the thing this cycle's discipline exists to eliminate**, and @qa was
+right to name it that way rather than soften it to a documentation gap.
+
+**Not a defect in the shipped corrections.** All 7 passages verified present, correctly labeled,
+fence-adjacent; `UNCORRECTED:` empty; anchors `2822 2845 2862 2886 3514 3665 5610`. The defect is in
+the **reproducibility of the verifier**, not in what it verifies.
+
+**Decision — the literal ships.** This is the command, in full, bound and guarded. It replaces the
+unbounded form at `docs/spec.md:5968`, which is corrected in place with the superseded version left
+visible:
+
+```bash
+END=$(grep -n '^# v2.19.5 — Rung 1 — Phase 1 Design' docs/architecture.md | head -1 | cut -d: -f1)
+[ -n "$END" ] && [ "$END" -gt 0 ] || { echo "::error::END anchor not found — refusing to run unbounded"; exit 1; }
+
+NAMED_BLOCKS=$(sed -n "1,$((END-1))p" docs/architecture.md \
+  | grep -oE 'CORRECTION \(v2\.19\.5\) \[.*\]' \
+  | grep -iE 'category|upstream_repo|upstream_url' | sort -u | wc -l)
+```
+
+**Why `sort -u` is load-bearing, since @qa asked it be stated.** The extraction emits one line per
+*label occurrence*, not per block. Two blocks may legitimately name the same passage — the AC's own
+fence-adjacency rule can require a fenced example and its field-rationale bullet to be corrected
+separately with near-identical labels — and a label may also be quoted elsewhere in the bounded
+region. Without `sort -u`, duplicate or quoted labels inflate the numerator and re-create exactly
+the slack this amendment exists to remove: the count would pass while a passage went uncorrected.
+`sort -u` makes the numerator count *distinct named passages*, which is the quantity the threshold
+is actually about. It is not defensive tidying; removing it re-opens the masking hole.
+
+### Both legs re-proven with the new literal command
+
+| Leg | Construction | Result |
+|---|---|---|
+| **GREEN** | branch as committed, literal bounded command | `END=11544`, `NAMED_BLOCKS=7`, `PASSAGES=7` → **7 ≥ 7 PASS**; `UNCORRECTED:` **empty** |
+| **RED** | delete the real block naming the `files[].category` field-rationale bullet; `END` re-derived to **11543** by the same command, not assumed | `NAMED_BLOCKS=6`, `PASSAGES=7` → **6 ≥ 7 FAIL** ✓ |
+| **RED under the superseded unbounded literal** | same deletion | `NAMED_BLOCKS=7` vs `PASSAGES=7` → **PASS** ✗ — the defect, reproduced |
+
+The third row is the one that matters: it is the same fixture under the two commands, and it is why
+the fix is "write the bound down," not "recount."
+
+**Phantom neutralised as belt, not braces.** `:12045`'s illustrative label now uses a `v<VERSION>`
+placeholder, so it cannot be extracted, with an inline note saying why. **The bound remains the
+fix.** After neutralisation the unbounded form happens to return 7 as well — which is a trap, not a
+reprieve: it is accidentally correct today and breaks again at the next illustrative label anyone
+writes. Nothing may depend on it. Requirement stands: run the bounded, guarded literal above.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** the durable answer is already named in §D13b Maturation Path (i) and is
+  **explicitly promoted here from an option to the recommendation**: replace token-substring
+  counting with a **structural locator** — parse the fenced JSON examples and diff their key sets
+  against `jq -r 'keys' cowork.lock.json`. That makes the masking case *unrepresentable* rather than
+  detectable, needs no bound, no correction-block exclusion, no phantom neutralisation and no
+  `sort -u`, because it never counts labels at all. Secondary: lift the three-script family into
+  `scripts/` as one function (§D13b (ii)) so the literal cannot diverge from the instruction again —
+  which is the specific failure this amendment repairs.
+- **Concrete revisit triggers:** **the strongest trigger is the amendment history itself.** §D13a
+  closed a fail-open in §D13; §D13b closed a cannot-pass in §D13a; §D13c closes a cannot-fail in
+  §D13b. **Three consecutive fixes to one check, each minting the inverse defect of the last, is the
+  evidence that token-counting is at its limit** — the next cycle that touches this document should
+  read that as the trigger and adopt the structural locator, not rediscover the pattern a fourth
+  time. Also: any cycle adding `CORRECTION (v<version>)` blocks under a new version token (§D13b's
+  hardcoded-token rot); any edit to the locator regex.
+- **Risk knowingly accepted:** the check remains a *count* over labels, so it can still only prove
+  that as many distinct named blocks exist as there are passages — never that each block corrects the
+  passage it names. That half stays human/agent fence-adjacency judgement, honestly labeled
+  inspection-class per this repo's `AC-PROV-1`/`AC-PROV-4` precedent. Accepted for this cycle
+  because the structural locator is a design change, not a Phase-5 fix, and shipping it under a
+  BLOCKER would be the fourth un-reviewed change to this check in one cycle.
+
+End of v2.19.5 §D13c amendment.

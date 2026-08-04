@@ -14,7 +14,7 @@
 |---|---|---|---|---|
 | 1 | ~~Post the announcement to LinkedIn + Telegram~~ | **Owner** | `owner-tasks.md` OT-1 | **HELD 2026-08-03** — owner decision, pending the upstream-integration question below. No task blocks it; the copy is approved and its prerequisites are closed. |
 | 2 | Ship Rung 1 (`v2.19.5`) | Pipeline | `spec.md` v2.19.4 §Roadmap Context | Not started — hard deadline, cron re-fires **2026-09-01** |
-| 3 | Close the `v2.19.4` retro | Pipeline | pipeline Phase 8 | Owed |
+| 3 | Close the `v2.19.4` retro | Pipeline | pipeline Phase 8 | Closed 2026-08-03 via PR #98 |
 | 4 | Catalog submissions | **Owner** (one browser check) | `owner-tasks.md` OT-3 | `ComposioHQ` clear; `travisvn` blocked by its own rules; `claudepluginhub` needs a human look |
 | 5 | Re-run the sourcing scan on the vendored personas | Pipeline, **after** step 2 | `roadmap.md` "Later" | Not scheduled — a cheap read, not a build |
 
@@ -42,10 +42,10 @@ Three items, all small, all in the same blast radius:
 
 ## Two corrections queued for Rung 1
 
-Both are in the persona row at `roadmap.md`. Neither is fixed here — they are cycle work, listed so the cycle picks them up.
+Both are in the persona row at `roadmap.md`. **Both closed in v2.19.5** — recorded here for the historical record; `roadmap.md` is the canonical current text.
 
-- **"73 of 110 are non-engineering"** — the row's own parenthetical breakdown sums to **81**. Verified against `cowork.lock.json` `files[]`: 29 engineering, 81 non-engineering, 110 total.
-- **"kept current by `.github/workflows/sync-agency.yml`"** — untrue since 2026-07-01. The pin has not moved from `2026-05-07`; the workflow has hard-failed twice. Rung 1 makes this claim true again.
+- **"73 of 110 are non-engineering"** — the row's own parenthetical breakdown sums to **81**. Verified against `cowork.lock.json` `files[]`: 29 engineering, 81 non-engineering, 110 total. `roadmap.md:55` corrected in v2.19.5.
+- **"kept current by `.github/workflows/sync-agency.yml`"** — untrue since 2026-07-01. The pin had not moved from `2026-05-07`; the workflow hard-failed twice (2026-07-01, 2026-08-01). v2.19.5 (ADR-075) fixes the root cause — the tamper check compared bytes fetched at the new upstream HEAD against the old pin's stored hash, so it failed on every legitimate edit — and the fix is verified end-to-end against the live 110-entry lock (`scripts/verify-lock-content-sha.sh cowork.lock.json` → `verified=110`) before this correction was made.
 
 The first is a *check-that-cannot-fail* on the authoring side rather than the verify side: a number that reads as self-evidencing because its own proof sits beside it, where nobody ever performs the addition. It survived two cycles and was restated as verified fact before anyone summed the components. Candidate for a cheap doc lint — find an `N of M` adjacent to a parenthesized count list, assert the sum.
 

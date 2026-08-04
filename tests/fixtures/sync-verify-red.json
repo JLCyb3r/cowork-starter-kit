@@ -5,9 +5,9 @@
   "pinned_at": "2026-05-07T12:32:06Z",
   "files": [
     {
-      "path": "academic/academic-anthropologist.md",
-      "sha256": "2668602164abf574cb4e432a0cd40727a943de0b59864abb5b73956a0eb26146",
-      "content_sha256": "DEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
+      "path": "marketing/marketing-content-creator.md",
+      "sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5",
+      "content_sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5",
       "spdx": "MIT",
       "requires_review": false
     }

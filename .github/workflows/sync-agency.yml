@@ -7,6 +7,13 @@ name: Sync Agency Upstream
 # First run MUST be treated as SECURITY-SENSITIVE — full audit ≥3 files per
 # allowed category required before merging (see docs/internal/security/security-review.md S1,
 # Open Issue #3).
+#
+# ADR-075 (v2.19.5): the integrity check is split into two separate
+# operations that the v2.5 implementation had interleaved — ATTEST (does
+# already-pinned content still match what was reviewed?) and ADVANCE (pin
+# to new upstream content). Attest runs first, against the OLD pin, before
+# any rewrite; advance is a pure writer. See docs/architecture.md ADR-075
+# and the ADR-028 v2.19.5 amendment for the full design and trust model.
 
 on:
   # Monthly at 09:00 UTC on the 1st (S7: predictable schedule, mitigated by 24h soak before merge)
@@ -90,6 +97,19 @@ jobs:
             echo "bootstrap_state=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify pinned content integrity (old-pin tamper check)
+        # ADR-075 D1: ATTEST runs first, against the OLD pin as checked out,
+        # before any rewrite — separated from the ADVANCE loop below, which
+        # used to interleave the two (comparing NEW-HEAD bytes against the
+        # OLD pin's stored hash, which fails on every legitimate upstream
+        # edit — the root cause of the 2026-07-01/2026-08-01 cron failures).
+        # Single implementation (D2), no skip branches (D3) — see
+        # scripts/verify-lock-content-sha.sh.
+        if: steps.check.outputs.needs_update == 'true'
+        id: verify_old_pin
+        run: |
+          bash scripts/verify-lock-content-sha.sh cowork.lock.json
+
       - name: Fetch upstream LICENSE and verify hash
         if: steps.check.outputs.needs_update == 'true'
         id: license
@@ -153,6 +173,12 @@ jobs:
 
           FLAGGED_FILES=""
           REQUIRES_REVIEW=false
+          # ADR-075 D6: fail-closed per-file fetch accounting. A fetch
+          # failure is recorded, not silently WARNING+continue'd — the loop
+          # aborts the whole run after collecting every failure, before any
+          # lock rewrite, so "absent from the new lock" never means
+          # "a network blip happened to eat this path."
+          FETCH_FAILURES=""
 
           # JSONL accumulator — eliminates pipe-subshell scope loss (#28 Fix A)
           # Run-ID suffix prevents collision when two dispatches share the same /tmp (E3)
@@ -161,17 +187,37 @@ jobs:
           : > "$ACCUM"
 
           for category in $ALLOWED_CATEGORIES; do
-            # Fetch the category directory listing via GitHub API
+            # Fetch the category directory listing via GitHub API.
+            # ADR-075 D6/S9: explicit HTTP-status branching, not a blanket
+            # `|| echo "[]"` — a fault must not read as "category is empty."
             CATEGORY_URL="https://api.github.com/repos/${UPSTREAM_REPO}/contents/${category}?ref=${NEW_SHA}"
-            # Auth header upgrades to authenticated rate-limit pool (5000 req/hr vs 60 anon)
-            CATEGORY_LISTING=$(curl -sf \
+            HTTP_STATUS=$(curl -s -o /tmp/category-listing.json -w '%{http_code}' \
               -H "Authorization: bearer ${GITHUB_TOKEN}" \
               -H "Accept: application/vnd.github.v3+json" \
-              "$CATEGORY_URL" || echo "[]")
+              "$CATEGORY_URL")
 
-            if [ "$CATEGORY_LISTING" = "[]" ] || [ -z "$CATEGORY_LISTING" ]; then
-              echo "No files found for category: ${category} (skipping)"
+            if [ "$HTTP_STATUS" = "404" ]; then
+              # A genuinely legitimate outcome: git cannot represent an empty
+              # directory, so a category that upstream removed (or renamed
+              # away from) returns 404, not an empty 200 listing.
+              echo "Category '${category}' not found upstream (HTTP 404) — legitimate removal/absence, skipping."
               continue
+            elif [ "$HTTP_STATUS" != "200" ]; then
+              echo "::error::category ${category}: unexpected HTTP status ${HTTP_STATUS} fetching listing — fail-closed (D6)"
+              exit 1
+            fi
+
+            CATEGORY_LISTING=$(cat /tmp/category-listing.json)
+
+            # S9: a 200 whose body is not a real, non-empty JSON array
+            # (an error object, an HTML interstitial, a rate-limit envelope)
+            # must not be treated as "category is empty" — that is the exact
+            # silent-empty-category outcome D6 exists to close, one layer
+            # down. length > 0 is safe: a genuinely empty category returns
+            # 404 above, not 200 with an empty array.
+            if ! echo "$CATEGORY_LISTING" | jq -e 'type == "array" and length > 0' >/dev/null 2>&1; then
+              echo "::error::category ${category}: HTTP 200 with non-array or empty listing body"
+              exit 1
             fi
 
             # Extract file paths from listing — for loop avoids pipe-subshell
@@ -205,26 +251,20 @@ jobs:
               # Create per-category staging directory (#17: namespace by category to prevent filename collisions)
               mkdir -p "/tmp/fetched-files/${category}"
 
-              # Fetch file content
+              # Fetch file content — ADR-075 D6: fail-closed, not
+              # WARNING+continue. A failure is recorded and the whole run
+              # aborts after the loop, before any lock rewrite.
               FILE_URL="https://raw.githubusercontent.com/${UPSTREAM_REPO}/${NEW_SHA}/${file_path}"
-              curl -sf "$FILE_URL" -o "/tmp/fetched-files/${category}/${filename}" || {
-                echo "WARNING: Failed to fetch ${file_path} — skipping"
+              if ! curl -sf "$FILE_URL" -o "/tmp/fetched-files/${category}/${filename}"; then
+                echo "::warning::Failed to fetch ${file_path} at ${NEW_SHA} — recording as a fetch failure (fail-closed after loop, D6)"
+                FETCH_FAILURES="${FETCH_FAILURES}|${file_path}"
                 continue
-              }
-
-              # Compute SHA-256
-              FILE_SHA256=$(sha256sum "/tmp/fetched-files/${category}/${filename}" | awk '{print $1}')
-
-              # ADR-028 v2.5: Verify content_sha256 integrity before accumulator append
-              # Ordered AFTER SHA-256 compute (line 216) and BEFORE accumulator append (line 237).
-              # Fail-closed: mismatch exits loop before any partial state reaches the lock rewrite.
-              OLD_CONTENT_SHA256=$(jq -r --arg p "$file_path" '.files[] | select(.path == $p) | .content_sha256 // "MISSING"' cowork.lock.json)
-              if [ "$OLD_CONTENT_SHA256" != "MISSING" ] && [ -n "$OLD_CONTENT_SHA256" ]; then
-                if [ "$FILE_SHA256" != "$OLD_CONTENT_SHA256" ]; then
-                  echo "::error::Integrity mismatch on ${file_path} — stored content_sha256=${OLD_CONTENT_SHA256} fetched=${FILE_SHA256}"
-                  exit 1
-                fi
               fi
+
+              # Compute SHA-256 — this is the writer's compute (ADR-075 D4):
+              # the same value populates both sha256 and content_sha256 below,
+              # one compute, two fields, structurally incapable of diverging.
+              FILE_SHA256=$(sha256sum "/tmp/fetched-files/${category}/${filename}" | awk '{print $1}')
 
               # S1 Content scan — run all 8 patterns (bash array iteration — no subshell)
               FILE_FLAGGED=false
@@ -242,18 +282,31 @@ jobs:
                 FILE_REQUIRES_REVIEW=true
               fi
 
-              # Append one JSON line to accumulator — all values via --arg/--argjson (S1: no string interpolation)
+              # ADR-075 D4: single-sourced entry shape via .github/jq/lock-entry.jq
+              # — this is the ADVANCE path's write, distinct from the ATTEST
+              # step above. content_sha256 is emitted from the same
+              # $FILE_SHA256 as sha256 (AC-SYNC-7).
               jq -nc \
                 --arg path "$file_path" \
                 --arg sha256 "$FILE_SHA256" \
                 --arg spdx "MIT" \
                 --argjson requires_review "$FILE_REQUIRES_REVIEW" \
-                '{path:$path, sha256:$sha256, spdx:$spdx, requires_review:$requires_review}' \
+                --arg content_sha256 "$FILE_SHA256" \
+                -f .github/jq/lock-entry.jq \
                 >> "$ACCUM"
 
               echo "Fetched: ${file_path} (sha256: ${FILE_SHA256:0:8}...)"
             done < <(echo "$CATEGORY_LISTING" | jq -r '.[] | select(.type == "file") | .path')
           done
+
+          # ADR-075 D6: any per-file fetch failure aborts the run here —
+          # before the lock is touched. "Absent from the new lock" can now
+          # only mean "genuinely removed/renamed/outside the allowlist",
+          # never "a network fault happened to eat it."
+          if [ -n "$FETCH_FAILURES" ]; then
+            echo "::error::One or more allowlisted files failed to fetch at ${NEW_SHA} — fail-closed, no lock rewrite. Failed paths:${FETCH_FAILURES}"
+            exit 1
+          fi
 
           echo "requires_review=${REQUIRES_REVIEW}" >> "$GITHUB_OUTPUT"
           echo "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"
@@ -261,6 +314,89 @@ jobs:
           # Compose JSONL accumulator into final JSON array for next step
           jq -s '.' "$ACCUM" > /tmp/new-files.json
           echo "Files fetched: $(jq length /tmp/new-files.json)"
+
+      - name: Compute and report removed upstream paths
+        # ADR-075 D6/D7: the removed-path report is a two-layer construct —
+        # an unconditional offline gate (the set difference below, which
+        # cannot be skipped and cannot fail open) plus a best-effort online
+        # enrichment (the upstream compare API) that may never gate the run
+        # and whose failure never omits the report. AC-SYNC-8.
+        if: steps.check.outputs.needs_update == 'true'
+        id: removed_paths
+        env:
+          UPSTREAM_REPO: msitarzewski/agency-agents
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OLD_SHA: ${{ steps.check.outputs.pinned_sha }}
+          NEW_SHA: ${{ steps.upstream.outputs.latest_sha }}
+        run: |
+          set -euo pipefail
+
+          # Unconditional, offline set difference — the report, never gated.
+          jq -n --slurpfile old cowork.lock.json --slurpfile new /tmp/new-files.json \
+            '($old[0].files | map(.path)) - ($new[0] | map(.path))' > /tmp/removed-paths.json
+
+          REMOVED_COUNT=$(jq 'length' /tmp/removed-paths.json)
+          echo "Removed-path count: ${REMOVED_COUNT}"
+
+          # Best-effort online enrichment. A failed call degrades to an
+          # empty files[] array — every removed path then falls through to
+          # the documented fallback reason below. This never gates the run.
+          COMPARE_JSON="/tmp/compare.json"
+          curl -sf \
+            -H "Authorization: bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${UPSTREAM_REPO}/compare/${OLD_SHA}...${NEW_SHA}" \
+            -o "$COMPARE_JSON" || echo '{"files":[]}' > "$COMPARE_JSON"
+
+          : > /tmp/removed-paths-section.md
+          if [ "$REMOVED_COUNT" -eq 0 ]; then
+            echo "_No paths were removed from the lock this run._" >> /tmp/removed-paths-section.md
+          else
+            while IFS= read -r path; do
+              # Three-way classification (D7/AC-SYNC-8): removed / renamed /
+              # unclassified. A per-path 404 probe cannot tell "removed"
+              # from "renamed" — the compare API can, and getting this wrong
+              # is itself a false claim of the class this cycle exists to
+              # remove (a rename into a category outside the allowlist is
+              # NOT "deleted upstream").
+              STATUS_LINE=$(jq -r --arg p "$path" '
+                (.files[]? | select(.previous_filename == $p) | "renamed|" + .filename),
+                (.files[]? | select(.filename == $p and .status == "removed") | "removed|")
+                ' "$COMPARE_JSON" 2>/dev/null | head -1)
+
+              REASON="absent from allowlisted listing at ${NEW_SHA} — upstream compare unavailable"
+              if [ -n "$STATUS_LINE" ]; then
+                KIND="${STATUS_LINE%%|*}"
+                REST="${STATUS_LINE#*|}"
+                if [ "$KIND" = "renamed" ]; then
+                  NEWDEST="$REST"
+                  CATEGORY="${NEWDEST%%/*}"
+                  ALLOWLISTED=$(jq -r --arg c "$CATEGORY" '.allowed_categories | index($c) != null' .cowork-allowlist.json)
+                  if [ "$ALLOWLISTED" = "false" ]; then
+                    REASON="RENAMED → \`${NEWDEST}\` (category '${CATEGORY}' not in .cowork-allowlist.json)"
+                  else
+                    REASON="RENAMED → \`${NEWDEST}\`"
+                  fi
+                elif [ "$KIND" = "removed" ]; then
+                  REASON="removed upstream"
+                fi
+              fi
+              printf -- '- `%s` — %s\n' "$path" "$REASON" >> /tmp/removed-paths-section.md
+            done < <(jq -r '.[]' /tmp/removed-paths.json)
+          fi
+
+          # S6: safe transport for upstream-controlled strings. Never a bare
+          # KEY=value $GITHUB_OUTPUT line (the existing unsafe precedent at
+          # this file's flagged_files output, CF-v2.19.5-E, not retrofitted
+          # here) — heredoc-delimiter form with a randomly-generated
+          # delimiter, and every path rendered inside a code span so
+          # Markdown cannot interpret it.
+          DELIM="ghadelim_$(openssl rand -hex 8)"
+          {
+            echo "section<<${DELIM}"
+            cat /tmp/removed-paths-section.md
+            echo "${DELIM}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Compare SPDX fields (ADR-022 compliance gap #13)
         if: steps.check.outputs.needs_update == 'true'
@@ -332,8 +468,22 @@ jobs:
             '.pinned_commit_sha = $sha | .pinned_at = $ts | .license_file_sha256 = $lsha | .files = $files' \
             cowork.lock.json > /tmp/updated-lock.json
 
+          # ADR-075 D4: write-completeness assertions on the PRODUCED lock,
+          # before it replaces the checked-out one. Widened predicate
+          # (AC-SYNC-7): "" and the literal "MISSING" are live sentinel
+          # values in this codebase already (sync-agency.yml, quality.yml),
+          # so a null-only check would be false-negative-blind to both.
+          COUNT=$(jq '.files | length' /tmp/updated-lock.json)
+          BLANK=$(jq '[.files[] | select((.content_sha256 // "") | . == "" or . == "MISSING")] | length' /tmp/updated-lock.json)
+          DIVERGE=$(jq '[.files[] | select(.sha256 != .content_sha256)] | length' /tmp/updated-lock.json)
+
+          if [ "$COUNT" -eq 0 ] || [ "$BLANK" -ne 0 ] || [ "$DIVERGE" -ne 0 ]; then
+            echo "::error::write-completeness check failed — COUNT=${COUNT} (want >0) BLANK=${BLANK} (want 0) DIVERGE=${DIVERGE} (want 0)"
+            exit 1
+          fi
+
           mv /tmp/updated-lock.json cowork.lock.json
-          echo "Lock file updated: pinned_commit_sha=${NEW_SHA}"
+          echo "Lock file updated: pinned_commit_sha=${NEW_SHA} (COUNT=${COUNT}, BLANK=0, DIVERGE=0)"
 
       - name: Regenerate THIRD-PARTY-NOTICES.md (ADR-025; preserves DO-NOT-REGENERATE tail)
         if: steps.check.outputs.needs_update == 'true'
@@ -392,13 +542,25 @@ jobs:
 
             See `cowork.lock.json` diff for full file list with SHA-256 checksums.
 
+            ### Removed Upstream Paths
+
+            ${{ steps.removed_paths.outputs.section }}
+
             ### Content-Scan Results (S1)
 
             ${{ steps.fetch_files.outputs.requires_review == 'true' && '**WARNING: One or more files triggered content-scan patterns. Review required before merge.**' || 'No content-scan hits detected.' }}
 
             Flagged files: `${{ steps.fetch_files.outputs.flagged_files }}`
 
-            ### Reviewer Checklist (MANDATORY — 2 approvals required per CODEOWNERS)
+            > **No enforced review gate (ADR-028 v2.19.5 amendment §(d)).** This PR
+            > touches `cowork.lock.json`, an ingested-content file, and no CI check
+            > runs on a PR opened by this workflow. There is currently no enforced
+            > approval requirement on PRs touching it — `.github/CODEOWNERS`'s
+            > supply-chain rows exist but branch protection does not require
+            > CODEOWNERS review or any passing check before merge. See
+            > `docs/owner-tasks.md` for the open owner decision to close this gap.
+
+            ### Reviewer Checklist (MANDATORY — manual review is the only control here)
 
             - [ ] Review `cowork.lock.json` diff — verify no unexpected files added
             - [ ] Spot-check ≥3 files per allowed category against S1 regex patterns (see `docs/internal/security/upstream-content-scan-rules.md`)
@@ -406,7 +568,8 @@ jobs:
             - [ ] Review any files with `requires_review: true` in lock file
             - [ ] If LICENSE hash changed: route to `/legal` review before merge
             - [ ] Review `THIRD-PARTY-NOTICES.md` changes — verify timestamps and SHA match
-            - [ ] Run `bash scripts/vendor-agency.sh` and commit the refreshed `vendored/agency-agents/` — the `vendored-integrity-check` CI job fails until vendored content matches the new lock
+            - [ ] Review the "Removed Upstream Paths" section above — for any `RENAMED → ... (category not in .cowork-allowlist.json)` entry, delete the orphaned `vendored/agency-agents/` copy AND decide whether the new category should be allowlisted (the content is still maintained upstream, not gone)
+            - [ ] Run `bash scripts/vendor-agency.sh` and commit the refreshed `vendored/agency-agents/` — this is a maintainer step verified AFTER merge, by the `vendored-integrity-check` CI job running on the push to `main`. It does not gate this PR: no CI runs on a sync PR at all.
             - [ ] If first sync (bootstrap): treat as SECURITY-SENSITIVE per `docs/internal/security/security-review.md` Open Issue #3
 
             > **24h soak rule (S7):** Do not merge this PR within 24h of opening. Allow time for community eyes.

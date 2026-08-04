@@ -255,6 +255,8 @@ for skills_dir in examples/*/.claude/skills; do
 done
 ```
 
+**macOS note:** `quality.yml`'s `vendored-integrity-check` job (`:1626`) uses `sed '1{/^$/d}'`, which GNU sed accepts and BSD/macOS sed rejects (`extra characters at the end of d command`). The job runs on `ubuntu-latest` in CI, so the shipped line is correct as-is — this only affects trying to replicate that one step locally on a Mac. Not a defect; flagged here so it isn't mistaken for one (found at v2.19.5 Phase 6 re-audit).
+
 ---
 
 ## CI Workflow Quality Baseline (v2.0.1+)
@@ -304,6 +306,7 @@ Do not modify the `VERSION` file or `CHANGELOG.md`. Maintainers handle versionin
 ### Pre-release checklist (maintainers)
 
 - [ ] `VERSION`, the README version badge, and the top `CHANGELOG.md` entry agree (`version-consistency-check` CI gate)
+- [ ] **Publish the Release BEFORE pushing the tag:** run `bash scripts/publish-release.sh` on `main` at the commit you intend to tag. It extracts the dated `## [x.y.z]` section from `CHANGELOG.md`, creates the tag and a populated GitHub Release together in one step, and asserts the body is non-empty and the two release archives attach — never push a version tag with plain `git push` first (`release-assets.yml`'s asset-upload job will refuse to run against a Release it didn't find already populated; see ADR-076).
 - [ ] `vendored-integrity-check` is green — vendored tree matches `cowork.lock.json`
 - [ ] **Run the offline smoke test** (`tests/offline-smoke-test.md`) — all 4 scorecard rows filled with real timed-run data, and the "15 minutes" hero claim's disposition matches the pre-bound decision rule applied to that data. A release tagged with a stale or empty smoke-test scorecard is shipping the timing claim on zero evidence.
 - [ ] `docs/architecture.md` ADR index updated for any new ADRs this cycle
