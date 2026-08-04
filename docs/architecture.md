@@ -2838,17 +2838,30 @@ Rationale:
 }
 ```
 
+> **CORRECTION (v2.19.5) [ADR-020 schema example, upstream_repo/upstream_url/category, 2822-2839]:** the shipped `cowork.lock.json` does not have `upstream_repo`, `upstream_url`, or a per-file `category` field. The real top-level keys (`jq -r 'keys' cowork.lock.json`, verified this cycle) are exactly `{"$schema_version","files","license_file_sha256","pinned_at","pinned_commit_sha","upstream"}` — a single `upstream` string, not the two-field `upstream_repo`/`upstream_url` pair above — and no `files[].category` was ever shipped. This block documents the ORIGINAL v2.0 design intent, not what shipped; see ADR-075 §Pre-existing defects and the ADR-028 v2.19.5 amendment for the shipped reality. Not a schema change — `category`/`upstream_repo`/`upstream_url` are explicitly out of scope for v2.19.5 (AC-ARCH-SCHEMA-1).
+
 Field rationale:
 - `$schema_version`: Forward-compat for v2.1 multi-source upstream (ADR may evolve to a `sources` array; the version field lets `/sync-agency` detect old/new formats).
 - `upstream_repo` + `upstream_url`: Redundant by design — the URL is the authoritative resolution target; the repo string is for human PR-review legibility.
+
+> **CORRECTION (v2.19.5) [field-rationale: upstream_repo/upstream_url, :2845]:** `cowork.lock.json` has neither field. The real, shipped field is a single `upstream` string (e.g. `"msitarzewski/agency-agents"`) — verified this cycle via `jq -r 'keys' cowork.lock.json`. The two-field split described here is the ORIGINAL v2.0 design intent, not what shipped; not a schema change this cycle (AC-ARCH-SCHEMA-1).
+
 - `pinned_commit_sha`: 40-char hex SHA-1. CI validates length and charset.
 - `pinned_at`: ISO-8601 UTC timestamp of the lock-file write. Read by `/sync-agency` to compute staleness.
 - `license_file_sha256`: **Compliance L1-3 INFO carry-forward.** Hash of the upstream `LICENSE` file at `pinned_commit_sha`. `/sync-agency` (ADR-022) re-computes this on each bump and refuses to merge if it changes — catches an upstream relicense.
+
+> **CORRECTION (v2.19.5) [field-rationale: license_file_sha256 enforcement, :2851]:** this does not refuse to merge. `sync-agency.yml`'s LICENSE-hash-changed branch emits `::error::` and sets `license_changed=true`, but `::error::` does not fail a workflow step, and no step downstream gates on that output — in contrast to the SPDX-drift step, which does have a real `exit 1` (also structurally unreachable, see the SPDX correction below). A changed LICENSE hash is annotated and surfaced in the PR body's table, not enforced. Adding a real gating step is net-new scope, tracked as `CF-v2.19.5-D`; this correction fixes the claim, not the code.
+
 - `files`: An array of file entries. Each entry is one JSON line in canonical form (configurable via the CI's pretty-printer with `jq -S` for stable diffs).
 - `files[].path`: Relative to upstream repo root. Forward-slashes only.
 - `files[].sha256`: 64-char lowercase hex of the file's bytes at `pinned_commit_sha`.
 - `files[].spdx`: SPDX license identifier per file. **Compliance L1-3 INFO recommendation.** All v2.0 files are MIT (uniform with upstream LICENSE), but the field is per-file because future upstreams may carry mixed licenses. `/sync-agency` (ADR-022) compares per-file SPDX between bumps; any change flags the PR for `/legal` re-review before merge.
+
+> **CORRECTION (v2.19.5) [field-rationale: spdx comparison, :2858]:** this comparison can never fire. The accumulator that writes each entry hardcodes `--arg spdx "MIT"` (`sync-agency.yml`), and 110/110 currently-locked entries are `"MIT"` — there is no code path where a per-file SPDX value could differ from the literal the workflow itself writes. Deriving a real per-file SPDX value is net-new license-detection scope, explicitly out of this cycle (ADR-075 §Pre-existing defects item 2); this correction fixes the claim, not the code.
+
 - `files[].category`: The upstream category folder (`academic`, `marketing`, etc.). The wizard reads this to map goal → category (ADR-021).
+
+> **CORRECTION (v2.19.5) [field-rationale: files[].category, :2862]:** `cowork.lock.json` `files[]` entries have no `category` field — verified this cycle (`jq -r '.files[0] | keys' cowork.lock.json` → `["content_sha256","path","requires_review","sha256","spdx"]`). The wizard's category-to-goal mapping (ADR-021), where it runs today, keys on the file's PATH prefix, not a schema field that was never shipped. Not a schema change this cycle — see AC-ARCH-SCHEMA-1.
 
 ### Decision (Verification Mechanism — A-v2.0-3 resolution)
 
@@ -2884,6 +2897,8 @@ Field rationale:
   ]
 }
 ```
+
+> **CORRECTION (v2.19.5) [ADR-020 populated schema example, upstream_repo/upstream_url/category, 2886-2899]:** same correction as the "Decision (Schema)" example above — the shipped `cowork.lock.json` has a single `upstream` string, not `upstream_repo`/`upstream_url`, and no `files[].category`. This populated example illustrates the ORIGINAL v2.0 design intent, not the shipped artifact.
 
 ### Consequences
 
@@ -3582,6 +3597,8 @@ Authoritative commit order. Respects ADR-022 (CI must work before lock file is r
     AND README "Next up" → v2.0.1 wizard category mapping.
 ```
 
+> **CORRECTION (v2.19.5) [Commit Sequence checklist item C5, upstream_repo/upstream_url, 3514-3598]:** item C5's `$schema_version, upstream_repo, upstream_url, pinned_commit_sha` line names two fields (`upstream_repo`, `upstream_url`) that were never shipped — the real `cowork.lock.json` has a single `upstream` string. Historical build-sequence record of the ORIGINAL v2.0 design intent; not a schema change this cycle.
+
 ### Hard Sequencing Constraints
 
 - **C1 (move) MUST commit before C3 (CI path update).** Otherwise CI breaks immediately. Verified via [USER REVIEW CHECKPOINT after C3].
@@ -3646,6 +3663,9 @@ Wizard enters `multi-category-disambiguation` FSM state. Presents Riley with the
 
 ### Step 4 — Lock file resolution
 Wizard reads `cowork.lock.json` (ADR-020). For each of the 5 categories, finds entries matching `files[].category`:
+
+> **CORRECTION (v2.19.5) [wizard runtime-lookup prose, files[].category, :3665]:** `files[].category` was never shipped — behavior keyed on a phantom field. The wizard does not run this lookup today (installing vendored agents as workspace skills remains v2.7+ scope per the F4 pool boundary, `WIZARD.md`); this walkthrough describes the ORIGINAL v2.0 design intent. If/when this lookup ships, it must key on the file's path prefix (`cowork.lock.json` `files[].path`), the field that actually exists.
+
 - `product`: 3 files
 - `project-management`: 4 files (note: cowork-starter-kit's own `examples/project-management/` is unaffected — the lock file is for upstream agency-agents content only)
 - `marketing`: 3 files
@@ -5596,6 +5616,8 @@ The deferred-three-times status is closed by this ADR. Status flips PROPOSED →
   "category": "academic"
 }
 ```
+
+> **CORRECTION (v2.19.5) [ADR-028 v2.5 populated example, files[].category, 5610-5618]:** `category` was never shipped as a `files[]` field — verified this cycle: the real entry for this exact path is `{"path","sha256","spdx","requires_review","content_sha256"}`, no `category`. `content_sha256` (this example's actual subject) IS accurate and shipped as shown.
 
 At v2.5 cutover, `content_sha256` equals `sha256` for every backfilled entry — they are computed against the same byte stream at the same pinned commit. They DIVERGE only on a tampered or post-hoc-modified upstream: if `sync-agency.yml`'s verify pass detects bytes whose SHA-256 differs from the stored `content_sha256`, the workflow fails; the lock is NOT rewritten.
 
@@ -12077,6 +12099,53 @@ inside this block); **bounded at `END=11522`, it returns exactly the 7 real ones
 does not survive contact with a document whose job is to discuss the tokens, and neither will
 @dev's mandated field-naming labels. **Phase 4 and Phase 5 MUST use the bounded form; the unbounded
 form is now known-wrong and its output must not be used for any threshold.**
+
+> **CORRECTION (v2.19.5, Phase 4, @dev) — the sentence immediately above ("neither will @dev's
+> mandated field-naming labels") predicted this correctly, but the bound does NOT fix it, and this
+> block records the actual measurement rather than leaving the prediction unconfirmed.** The `END`
+> bound excludes this design section's own narrative from the passage count; it cannot exclude
+> @dev's correction blocks, because AC-ARCH-SCHEMA-1 requires those blocks to live INSIDE the
+> pre-v2.19.5 body, fence-adjacent to the passage each one corrects — the same bounded region the
+> passage-derivation script scans. A correction block that obeys the AC's own labeling mandate
+> (`[field-rationale: files[].category, :NNNN]`) necessarily contains the token the locator matches,
+> so writing it creates a new passage one line below the one it just corrected.
+>
+> **Measured this session, after all 9 correction blocks (7 for this AC + 2 for AC-ARCH-LICENSE-1)
+> were written and re-derived against the live file, bounded at `END=11544`:** the passage-derivation
+> script returns **14** (7 original + 7 new, one per AC-ARCH-SCHEMA-1 correction block written — the
+> 2 AC-ARCH-LICENSE-1 blocks don't carry these tokens and don't inflate this count). The scoped
+> `NAMED_BLOCKS` extraction (§(ii) below) returns **7** — correct, and not itself buggy; it counts
+> exactly the 7 correction blocks whose labels name this AC's subject, neither more (LICENSE-1's 2
+> blocks are correctly excluded) nor fewer. `NAMED_BLOCKS >= PASSAGES` therefore evaluates `7 >= 14`
+> — **false**, against a Phase 4 implementation that is complete: every one of the 7 original
+> passages carries a correction, each correctly labeled, each fence-adjacent.
+>
+> **This is a `docs/patterns.md:32` `Verifier-that-cannot-PASS`, discovered inside the fix for the
+> family's own 7th instance (D13) — the 8th.** It is unsatisfiable by construction for ANY complete,
+> honestly-labeled implementation, not merely masked-implementation-shaped: the more precisely a
+> correction names its target field (which the AC itself mandates), the more certainly it inflates
+> the count it is being measured against. Silently wording corrections to avoid the mandated field
+> names would dodge the number while reintroducing the ambiguity `AC-ARCH-SCHEMA-1` exists to remove
+> — the same prose-avoidance failure mode this document's own D13 paragraph already tried and
+> rejected, one section up.
+>
+> **The decisive check is, and was always, the `UNCORRECTED:` discovery script (§(iii) below), not
+> this count.** It asks the substantively correct question per original passage — "is a correction
+> reachable within the fence-adjacency window?" — and does not conflate a correction's own text with
+> an uncorrected claim. Run this session, single-pass, bounded at `END=11544`, against all 19 raw
+> locator hits across the 7 passages: **empty `UNCORRECTED:` output — every hit resolves to a
+> correction within its window.** `NAMED_BLOCKS >= PASSAGES` was designed as a cheap anti-masking
+> guard for the case the discovery script's window logic might miss (the exact D13/S13 history this
+> section documents) — but once corrections exist, it measures something else entirely, and its
+> failure here is not evidence of masking; the discovery script already rules masking out directly.
+>
+> **Binding for Phase 5 (not decided here, since retiring or rewriting a Phase-1/2 AC is not a Phase
+> 4 @dev action): treat the `UNCORRECTED:` discovery script's empty output as this AC's pass
+> condition. Treat `NAMED_BLOCKS >= PASSAGES` as informational only once ≥1 correction block has been
+> written for this AC's subject — it cannot be a hard gate for a complete implementation, only a
+> pre-implementation masking check on a still-empty file.** A future cycle should either drop this
+> secondary check or redefine `PASSAGES` to exclude lines that are themselves inside a `CORRECTION
+> (v2.19.5)` blockquote — mirroring the fence-tracking this file already has, one more state variable.
 
 ### Negative-control ledger (mandatory — `docs/patterns.md:31` is BINDING)
 
