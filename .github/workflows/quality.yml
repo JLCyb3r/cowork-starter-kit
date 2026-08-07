@@ -1912,11 +1912,21 @@ jobs:
         # pipeline failure under `pipefail`, aborting before the documented CHECKED==0
         # branch). Fixed with `|| true` on that one pipeline. This proves it now reaches
         # the documented diagnostic instead.
+        #
+        # --evidence-dir here is load-bearing for a reason unrelated to CHECKED==0 itself:
+        # without it, this invocation is "live mode" from the script's own perspective (no
+        # --evidence-dir given), so it now also reaches assert_gh_destination_repo() (S-A2)
+        # before ever getting to the parse stage — which needs a real, authenticated `gh
+        # api` call this step never had and does not need. The directory's CONTENTS are
+        # irrelevant here (zero headers means the per-version loop never runs, so no
+        # evidence_* function is ever called) — only its presence is needed, to put the
+        # script in evidence-injected mode and skip the live-only destination check.
         run: |
           set -euo pipefail
           set +e
           OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
-            --changelog tests/fixtures/release-surface/changelog-no-headers.md 2>&1)"
+            --changelog tests/fixtures/release-surface/changelog-no-headers.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean 2>&1)"
           RC=$?
           set -e
           echo "$OUT"
