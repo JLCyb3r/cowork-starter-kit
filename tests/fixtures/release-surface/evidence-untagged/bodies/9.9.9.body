@@ -1,0 +1,4 @@
+Fixture release note that DOES name its version, "9.9.9" — deliberately present to prove the
+TAG conjunct is checked independently of, and before, the RELEASE conjunct: even with a
+conforming body sitting right here, the missing tag on origin must still produce MISSING-TAG,
+never a false GREEN and never a DEFECTIVE-RELEASE-BODY finding instead.

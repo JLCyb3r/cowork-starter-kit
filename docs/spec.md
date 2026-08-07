@@ -6222,3 +6222,481 @@ than reading them. No AC is dropped; five are sharpened and one premise is corre
   against the expanded list: **CONFIRMED SECURITY-SENSITIVE, Tier B, no Guard Change Summary** (see
   `docs/architecture.md` §Classification Re-Run).
 
+---
+
+# Product Spec — Cowork Starter Kit v2.19.6 "Publish What Shipped"
+
+**Status:** FINAL (Phase 1, `@architect`) · **Version class:** PATCH · **Classification:**
+SECURITY-SENSITIVE (Tier B), zero Tier A files, **no Guard Change Summary** ·
+**Isolation:** branch `release/v2.19.6-publish-what-shipped` in the primary checkout, **no worktree**
+· **Date:** 2026-08-07
+
+**Provenance.** Authored by `@pm` across two Phase-0 rounds and held in the Council hub scratchpad
+(`.claude/projects/claude-cowork-config/scratchpad.md` § *Phase 0 Draft Spec — ROUND 2 (CURRENT)*)
+so it could not be stranded on `main`. Finalized here by `@architect` at Phase 1, inside the branch.
+Round 1 is SUPERSEDED and is **not** a source for this section. Where this section differs from the
+Round-2 draft, the difference is a Phase-1 design correction and is labelled `[P1-CORRECTION-n]`
+with its reason; nothing is silently changed.
+
+---
+
+## Problem
+
+Twice consecutively (`v2.19.4`, `v2.19.5`) a merged and retro'd cycle was never tagged and never
+released. Tagging is a manual maintainer step (`scripts/publish-release.sh`, ADR-076) that nothing
+enforces. The repo's `homepageUrl` is `https://github.com/jmlozano1990/Cowork-Starter-Kit/releases/latest`
+(verified live 2026-08-07) — the designated website link for a **public** repo — so the release
+surface a visitor lands on is two versions behind `main`, days before the OT-1 announcement.
+
+**The second half of the original diagnosis was wrong.** `CF-v2.19.5-F` (`docs/risk-register.md`)
+claims all five pre-existing releases (`v2.18.0`–`v2.19.3`) "fail permanently for lacking the
+version string." Re-diagnosed live 2026-08-07: every one of the five follows a house convention
+established at v2.18.0 — a short curated editorial summary plus a
+`Full details: [CHANGELOG.md#<anchor>](…)` pointer. GitHub slugifies `## [2.18.0] - 2026-07-22` to
+`#2180---2026-07-22`, so each body **does** name its version, in anchor form rather than dotted form.
+
+Verified anchors, read live this session (not recalled):
+
+| Release | dotted hits | anchor present | anchor literal |
+|---|---|---|---|
+| `v2.18.0` | 0 | yes | `CHANGELOG.md#2180---2026-07-22` |
+| `v2.19.0` | 0 | yes | `CHANGELOG.md#2190---2026-07-22` |
+| `v2.19.1` | 1 | yes | `CHANGELOG.md#2191---2026-07-22` |
+| `v2.19.2` | 0 | yes | `CHANGELOG.md#2192---2026-07-26` |
+| `v2.19.3` | 0 | yes | `CHANGELOG.md#2193---2026-07-27` |
+
+`v2.19.1`'s single dotted hit is **not** evidence the check works: `@security` traced it to an
+incidental editorial-provenance sentence added at v2.19.2 — a check that passes for a reason
+unrelated to the property it tests.
+
+**The bodies are correct. The post-condition's predicate (`publish-release.sh:86-89`) is too
+narrow.** The repair action at `:69` (`gh release edit --notes-file`) replaces a body **wholesale**;
+`v2.18.0`'s raw CHANGELOG section is 3,576 bytes against a 652-byte curated body. Widening the
+repair branch — the original Round-1 plan — would have destroyed four curated bodies to "fix" bodies
+that were never broken.
+
+**Root cause, corrected:** one overly-narrow assertion in `publish-release.sh`, plus a risk-register
+row that mis-described what it found.
+
+### `[P1-CORRECTION-1]` — the release corpus is larger than "five"
+
+Round 2 reasons throughout about "the five pre-existing releases." Verified live: the repo has
+**30+ published Releases**, and `v2.0.2` in particular has a Release with a **0-byte body** while
+also carrying a dated `## [2.0.2]` CHANGELOG section (`CHANGELOG.md:772`) and an origin tag
+`refs/tags/v2.0.2`. "Five" is correct only as *"the five at or above the v2.18.0 floor"* — which is
+the standing gate's scope, so no acceptance criterion changes. The framing is corrected because the
+`2.0.2` reachability argument in `AC-PUB-6` depends on knowing that `v2.0.2` is a **live, empty-bodied
+Release**, not a hypothetical: `scripts/publish-release.sh 2.0.2` run today from `main` reaches the
+**repair** branch (`:67-70`) and fires a real `gh release edit`. — *Reason: direct read of
+`gh release list` and `gh release view v2.0.2`.*
+
+---
+
+## Core features
+
+### Scope A — Backfill the missing releases (intent unchanged, procedure respecified)
+
+Publish the missing tags + Releases via `scripts/publish-release.sh`, using the **as-merged**
+v2.19.6 script (no ad-hoc local edit), in **ascending version order**, on `main`, **after** the
+feature PR merges and **before** the Phase-8 retro merge.
+
+| # | Version | Tag target | Full SHA (verified) | Procedure |
+|---|---|---|---|---|
+| 1 | `2.19.4` | feature-merge `5fee6f9` | `5fee6f9ce3050f82ef0c97ed60800e0328cb722a` | detached worktree (script absent at that commit) |
+| 2 | `2.19.5` | feature-merge `7c524d4` | `7c524d44fd0a233f45de2d662959cb787451dd50` | detached worktree (commit is not `main` HEAD) |
+| 3 | `2.19.6` | this cycle's feature-merge commit on `main` | resolved at run time | direct, on `main` (HEAD is already correct) |
+
+Tag targets follow the repo's **unanimous tag-at-feature-merge precedent** (`v2.18.0`→`5620730`,
+`v2.19.0`→`16e84f8`, `v2.19.2`→`c6648af`, `v2.19.3`→`f995aeb`) — never the later retro-merge commit.
+
+### `[P1-CORRECTION-2]` — `v2.19.5` also requires a detached worktree
+
+Round-2 `AC-PUB-3` states `v2.19.5` is published "via unmodified `publish-release.sh` run **directly**
+at `7c524d4` (no worktree trick — the script exists there)." The script's presence at `7c524d4` is
+true and irrelevant: `publish-release.sh` derives its tag target **solely** from
+`TARGET_SHA="$(git rev-parse HEAD)"` (`:29`) and has **no caller-facing target option**. `main` HEAD is
+`5d5301b` (the v2.19.5 *retro*-merge), not `7c524d4`. Running "directly on `main`" would therefore
+tag `v2.19.5` at the retro-merge commit and break the precedent the Round-2 draft itself established
+and the orchestrator accepted. Detaching the primary checkout instead is refused on the standing
+parallel-session constraint. **Both backfills use the same detached-worktree procedure**; the only
+difference between them was never the procedure, it was which commit the workflow file runs at.
+— *Reason: architectural constraint. See ADR-078 §D2.*
+
+### `[P1-CORRECTION-3]` — `v2.19.6` is published in-cycle, and this is load-bearing
+
+Round 2 defers `AC-PUB-1` State C ("both done → 0 failures") without noticing that State C is
+**unreachable** if `v2.19.6` itself ships untagged: the standing gate reads *every* dated
+`## [x.y.z]` at or above the floor from `CHANGELOG.md`, and `## [2.19.6]` lands on `main` at merge.
+Only three dispositions exist:
+
+1. **Exempt the newest version from the gate.** Rejected outright. `v2.19.4` and `v2.19.5` were each
+   the newest version at the moment they were missed; an exemption for the newest version is an
+   exemption for exactly the failure this cycle exists to catch — a Verifier-that-cannot-PASS in its
+   mirror form, a gate that cannot go RED where it matters.
+2. **Warn-only for the newest, fail for older.** Rejected — a severity split with no principled
+   boundary, and the same blindness with a softer label.
+3. **Publish `v2.19.6` as part of Scope A.** Adopted. The cycle named "Publish What Shipped" does not
+   ship untagged.
+
+A consequence, stated so it is not read as a defect: between the feature merge and Scope A the
+standing gate on `main` is legitimately **RED** for `2.19.6`. That RED window is the shipped
+artifact's own firing negative control — the strongest available proof the gate works — and it clears
+when Scope A completes.
+
+### Scope B — Fix the post-condition predicate (this REPLACES Round 1's Scope B)
+
+Widen `publish-release.sh:86-89` to accept the dotted form **or** the house anchor form, via a single
+shared predicate (`scripts/release-predicate.sh`) used by both the producer and the standing gate.
+**Zero release bodies are touched; no `gh release edit` fires against any release at or above the
+floor.** Add one create-path-only precondition (see `AC-PUB-14`). Close `CF-v2.19.5-F` as
+**MISDIAGNOSED** (`AC-PUB-8`).
+
+### Scope C — Standing check
+
+A standalone read-only `scripts/verify-release-surface.sh`, wired via `.github/workflows/release-surface.yml`
+on a **post-merge trigger only** (`push: branches: [main]` + `schedule` + `workflow_dispatch`) —
+**never `pull_request`**, which would fail on its own introducing PR and on every release PR after.
+For every dated `## [x.y.z]` from `2.18.0` forward, assert (a) a tag on origin, (b) a Release whose
+body satisfies the corrected predicate — naming every failure and **which conjunct** failed. Job
+`permissions:` explicitly read-only, matching `quality.yml`'s least-privilege house style
+(`:1332`, `:1732`).
+
+---
+
+## Out of scope
+
+`CF-v2.19.5-B/-D/-E` → **v2.19.7** (deadline 2026-09-01) · `CF-v2.19.5-A` → unassigned
+(`$schema_version` bump forbidden) · `v2.19.5-CODEOWNERS-1` / `OT-7` step 2 → owner block ·
+`OT-1`, `OT-3` → owner block · Rungs 2/3/4 → after the announcement · upstream axis → NO LANE ·
+110-persona conversion → `roadmap.md` Later · `roadmap.md:5` stale "Where we are" → pre-OT-1 fold-in
+or v2.19.7 · `release-assets.yml:104-131` version-matching → verified clean, not a gap.
+
+**CODEOWNERS coverage for `publish-release.sh` / `release-assets.yml` (@security S4): DEFERRED to the
+`v2.19.7` governance bundle**, dated 2026-08-07, owner-decided. The review gate is off regardless
+(`require_code_owner_reviews=false`), so the rows would be **inert** — the same trap v2.19.5 just
+fixed for the supply-chain rows. Also keeps this cycle Tier B with zero Tier A files. A deferral,
+not an omission.
+
+**Repairing the pre-floor empty-bodied Releases** (`v2.0.2` and any sibling) is explicitly out of
+scope. `AC-PUB-14` is deliberately designed **not** to foreclose that future repair.
+
+**Pre-v2.18.0 mismatch — 3 items, not 5.** `v1.0.0`, `v1.1.1` (dated CHANGELOG entries, no tag) and
+`v2.0.1` (tagged, no entry). Round 1 wrongly also listed `v1.3.1.1` / `v1.3.2.1`; both have entries
+(`CHANGELOG.md:894`, `:847`). Recorded as `AC-PUB-10`, not silently absorbed.
+
+---
+
+## Technical constraints
+
+Bash + GitHub Actions YAML + Markdown; not the Council default stack. Requires `gh` (repo + release
+scopes), `git`, `jq`. Repo is **PUBLIC** (verified live) — Actions minutes are unmetered, so the
+`schedule` trigger is cost-neutral.
+
+`version-consistency-check` (ADR-035, `quality.yml:1729`) already asserts
+`VERSION == README badge == CHANGELOG top header` on every PR, so v2.19.6's own artifact bump rides
+it — no new mechanism for that part.
+
+`publish-release.sh:31` refuses any version that is not `^[0-9]+\.[0-9]+\.[0-9]+$`. This is
+load-bearing twice over: it is why `1.3.1.1` / `1.3.2.1` are out of the gate's scope **by
+construction**, and it is the principled reason the standing gate classifies a non-3-component
+header as *skip* rather than *error* (see `AC-PUB-11` / ADR-078 §D1).
+
+**`CONTRIBUTING.md:309` is the governing written procedure** and it already says: run
+`bash scripts/publish-release.sh` **on `main` at the commit you intend to tag**. Scope A conforms;
+`AC-PUB-14` converts that sentence from documentation into enforcement.
+
+**Asset-poll coupling (recorded, not silently inherited):** `publish-release.sh:102-129` sits after
+the post-condition on the same path — a run against a release without exactly 2 assets exits 1 after
+a ~5-minute poll despite the tag and Release having succeeded. All five current releases have exactly
+2, so it does not bite today, but Scope A is the first real exercise of this path in a while, and now
+three times over.
+
+**Workflow-version asymmetry — `v2.19.4` and `v2.19.5` are NOT interchangeable evidence.** A
+tag-triggered workflow runs at the pushed ref's commit (ADR-076 D1). The "Verify a populated Release
+already exists" precondition was added at `7c524d4`; it is **absent** at `5fee6f9`. Benign — the
+Release is created populated first, so the guarded condition cannot arise — but only the `v2.19.5`
+and `v2.19.6` publishes exercise the current producer.
+
+**ADR-076 D3 (`publish-release.sh:95-101`, `[ESTIMATED, not verified]`):** whether an API-created tag
+raises `push: tags`. The `v2.19.4` backfill is its first live test. On failure the script exits 1 at
+`:128` with tag **and** populated Release already created, and its printed remedy (`:124-125`) would
+delete a tag with a live public Release attached. **Documented fallback only (`AC-PUB-13`) — do not
+test this against the public repo.** If the poll times out, check
+`gh run list --workflow=release-assets.yml` first; a slow or unrelated-failure run is not grounds for
+deleting the tag.
+
+### `[P1-CORRECTION-4]` — ADR-076 D3 exposure is now 3×, and Scope A must serialize on it
+
+Publishing three tags means three independent exposures to the D3 unknown. Scope A therefore carries
+a **stop condition**: publish `2.19.4` first and **halt the entire scope** if its asset poll fails.
+Do not proceed to `2.19.5` or `2.19.6` until D3 is confirmed live. — *Reason: three unguarded
+irreversible operations against an unverified assumption is a different risk from one.*
+
+### `[P1-CORRECTION-5]` — the offline smoke-test scorecard obligation fires per tag
+
+`CONTRIBUTING.md:311` binds every tag to a current `tests/offline-smoke-test.md` scorecard, and
+`release-assets.yml`'s file header repeats it: *"a tag pushed without a current scorecard means the
+README '15 minutes' claim is shipping unverified for this release."* Scope A pushes **three** tags,
+so this obligation fires three times. It is a maintainer step that no CI gate can enforce. Routed to
+`docs/owner-tasks.md` as a named pre-Scope-A item rather than silently ignored. — *Reason: direct
+read of `CONTRIBUTING.md:306-312`.*
+
+---
+
+## Acceptance criteria
+
+Every AC below carries a **firing negative control** — one that can go RED and GREEN for the right
+reasons. Where a control cannot be executed by the shipped artifact, that is stated explicitly rather
+than resolved by adding a toggle to make it executable.
+
+- [ ] **AC-PUB-1 — Standing gate per Scope C.** Predicate = tag exists on origin **AND** a Release
+  exists whose body satisfies the dotted-OR-anchor match. Failures name **which conjunct** failed via
+  three stable, greppable tokens: `MISSING-TAG`, `MISSING-RELEASE`, `DEFECTIVE-RELEASE-BODY` — these
+  are different remedies and must never be collapsed into one message.
+  **Three-state proof discriminating the two conjuncts:**
+  *State A* (old dotted-only predicate, today) → **6 failures, enumerated**: `2.18.0`, `2.19.0`,
+  `2.19.2`, `2.19.3` (body conjunct only) and `2.19.4`, `2.19.5` (both).
+  *State B* (predicate fixed, before Scope A) → ~~**exactly 2**: `2.19.4`, `2.19.5`~~ — proving the
+  predicate fix alone closes all four body-conjunct failures.
+  **[P5-CORRECTION-1] State B is 4, not 2.** Two independent revisions landed after this line was
+  written. `@dev` raised it to 3 at Phase 4 — the `WRONG-LATEST` stage added for AMEND 4 / S4 fires
+  on top of the two `MISSING-TAG` rows. `@qa` then raised it to **4** at Phase 5: `@dev` measured
+  against pre-merge `main`, but on merge `v2.19.6`'s own CHANGELOG entry lands too (per
+  `[P1-CORRECTION-3]`), so `2.19.4`, `2.19.5` **and** `2.19.6` are all `MISSING-TAG`, plus
+  `WRONG-LATEST`. Re-verified independently by `@dev` against this branch's own `CHANGELOG.md`:
+  `8 checked, 4 failed`. The *claim* the state proves is unchanged — the predicate fix alone closes
+  every body-conjunct failure — only the count moved. **State C = 0 still holds** once Scope A
+  publishes all three in ascending order.
+  *State C* (both done, `2.19.6` included per `[P1-CORRECTION-3]`) → **0**.
+  **State A is a fixture / ad-hoc run, NOT a mode of the shipped artifact.** It requires the old
+  dotted-only predicate, which `verify-release-surface.sh` will never implement. Stated explicitly so
+  nobody adds a `--legacy-predicate` toggle and ships dead code purely to make a control executable.
+  *Observability requirement:* Scope A produces no commit, so `workflow_dispatch` is **mandatory** on
+  `release-surface.yml` — without it there is no way to re-run the gate and observe State C.
+
+- [ ] **AC-PUB-2 — `v2.19.4` published targeting `5fee6f9ce3050f82ef0c97ed60800e0328cb722a`.**
+  Executable procedure, exactly as written:
+  1. `git worktree add --detach /tmp/backfill-2194 5fee6f9`
+     — `/tmp`, **not** a path nested inside the repo: `quality.yml` iterates `examples/*/`,
+     `skills/*/`, and `**/*.md` globs, and the pre-commit hook scans the tree; a nested checkout
+     pollutes all three.
+  2. **PRE-FLIGHT GATE (all four assertions, abort on any failure — this is the cycle's only
+     unguarded irreversible moment; every other SHA assertion in this AC is a post-condition checked
+     *after* `gh release create` has already published to a public repo):**
+     - `[ "$(git -C /tmp/backfill-2194 rev-parse HEAD)" = "5fee6f9ce3050f82ef0c97ed60800e0328cb722a" ]`
+       — full 40-char SHA, never the abbreviation.
+     - `[ "$(tr -d '[:space:]' < /tmp/backfill-2194/VERSION)" = "2.19.4" ]` (verified: `VERSION` at
+       `5fee6f9` is `2.19.4`).
+     - `[ -r <MAIN_CHECKOUT>/scripts/release-predicate.sh ]` — the shared predicate resolves
+       `BASH_SOURCE`-relative to the *invoked* script, not to `cwd`; assert it is readable before the
+       irreversible call rather than discovering it at the post-condition.
+     - `git -C /tmp/backfill-2194 status --porcelain` is empty.
+  3. Run **main's** script with `cwd` inside the worktree — no file is copied into the worktree, and
+     nothing is committed there:
+     `(cd /tmp/backfill-2194 && bash <MAIN_CHECKOUT>/scripts/publish-release.sh 2.19.4)`.
+     `publish-release.sh` reads `VERSION`, `CHANGELOG.md` and `git rev-parse HEAD` **relative to
+     `cwd`** and contains no `$0`- or `BASH_SOURCE`-relative path other than the predicate include —
+     verified by direct read — so `cwd` alone fixes the target commit.
+  4. Cleanup: `git worktree remove /tmp/backfill-2194` — **plain `remove`, no `--force`.** Because
+     step 3 copies nothing into the worktree, it stays clean and plain `remove` succeeds. `--force`
+     is the documented answer only to the untracked-copy variant this procedure deliberately avoids.
+     If plain `remove` refuses, that is a signal something wrote into the worktree — **investigate,
+     do not add `--force`.**
+  *Negative control:* today — `gh release view v2.19.4` fails and `git tag -l v2.19.4` is empty
+  (both verified live 2026-08-07; `refs/tags/v2.19.4` absent from `git ls-remote --tags origin`).
+  *Positive control:* `targetCommitish` compared as a **full 40-char SHA** (Round 1 compared a 7-char
+  abbreviation to a 40-char SHA, which could never match); body satisfies the corrected predicate;
+  `publishedAt` precedes `v2.19.5`'s.
+
+- [ ] **AC-PUB-3 — `v2.19.5` published targeting `7c524d44fd0a233f45de2d662959cb787451dd50`** via the
+  same detached-worktree procedure as `AC-PUB-2`, with `VERSION` asserted `= 2.19.5` (verified at
+  `7c524d4`). The live positive control `AC-REL-2` never got.
+  *Negative control:* today's no-tag state. *Positive control:* `targetCommitish` full-SHA-equal to
+  `7c524d4…`; body non-empty and satisfying the corrected predicate.
+  *Recorded asymmetry:* only this publish and `AC-PUB-15`'s exercise the current `release-assets.yml`
+  precondition.
+
+- [ ] ~~**AC-PUB-4** — repair-branch widening~~ **WITHDRAWN.** Struck, not deleted, so the reversal
+  stays auditable.
+
+- [ ] ~~**AC-PUB-5** — five bodies contain version string post-repair~~ **RETIRED.** Absorbed into
+  `AC-PUB-1` State B/C and `AC-PUB-7`.
+
+- [ ] **AC-PUB-6 — the predicate accepts the anchor form in addition to the dotted form, and can
+  still go RED.** Single definition in `scripts/release-predicate.sh`, sourced by both
+  `publish-release.sh` and `verify-release-surface.sh`. Exact form (fixed-string, never regex — the
+  literal contains `.` and `#`):
+
+  ```sh
+  body_names_version() {            # $1 = body text, $2 = x.y.z version
+    local stripped="${2//./}"
+    printf '%s' "$1" | grep -qF "$2"                              && return 0   # dotted leg
+    printf '%s' "$1" | grep -qF "CHANGELOG.md#${stripped}---"     && return 0   # anchor leg
+    return 1
+  }
+  ```
+
+  The trailing `---` is **load-bearing as a right boundary**, for two independently sufficient
+  reasons, both verified this session: a bare `2191` test false-positives inside `21910` (a future
+  `2.19.10` — measured 1 vs 0), and dots-stripped forms collide outright (`2.19.0`→`2190` and
+  `21.9.0`→`2190`). All five live anchors carry the `---`.
+  *Bug-report control (retained, but it is NOT the negative control):* pre-fix, the unmodified
+  `:86-89` post-condition against `v2.18.0`'s live body fails. This restates the starting defect and
+  exercises the **old** predicate.
+  *Negative control — exercises the **WIDENED** predicate, two fixtures, no live release touched:*
+  **(i)** a body containing neither form → `body_names_version` returns 1.
+  **(ii)** the `2.0.2` collision → **must return 1.** `## [2.0.2]` exists at `CHANGELOG.md:772`, its
+  dots-stripped form is `202`, and `202` occurs in every live body via the `2026-` date. Measured
+  against `v2.18.0`'s live body: naive `grep -qF 202` → **matches (1 line)**; anchored
+  `grep -qF 'CHANGELOG.md#202---'` → **0**; dotted `grep -qF '2.0.2'` → **0**. So the widened
+  predicate returns 1 (fail) and the naive one would return 0 (pass).
+  **(iii)** boundary fixture — a body whose only anchor is `CHANGELOG.md#21910---2026-09-01`
+  evaluated for version `2.19.1` → **must return 1**.
+  *Fixture-validity controls (house pattern — cf. `quality.yml:421`, `:588`, `:1023`):* for (ii) the
+  **naive** dots-stripped predicate MUST match the same fixture, and for (iii) the **unterminated**
+  `CHANGELOG.md#2191` variant MUST match — otherwise the fixture carries no collision and the
+  anchored predicate's RED proves nothing. A fixture that fails its own validity control is a hard
+  error, not a skip.
+  *Positive control:* post-fix, evaluated against all five live bodies unmodified → all return 0,
+  with **zero `gh release edit` calls fired**.
+
+- [ ] **AC-PUB-7 — all five curated bodies byte-unchanged across the entire cycle.** `sha256` of each
+  body captured **before** Scope B/C land and again **after Scope A completes** — all five identical.
+  The window ends after Scope A because Scope A is the only phase that invokes `publish-release.sh`
+  against live releases; a control whose window excludes the one operation capable of mutating what it
+  guards is precisely the shape this cycle exists to retire.
+
+- [ ] **AC-PUB-8 — `CF-v2.19.5-F` moved to `risk-register.md` "Closed this cycle" as MISDIAGNOSED,
+  not fixed.** The row must state plainly: the predicate was too narrow; `v2.19.1` never actually
+  failed; the other four were never broken; the proposed "widen the repair branch" fix would have
+  destroyed four curated bodies.
+  *Negative control:* pre-change, the open row still asserts all five fail permanently.
+  *Positive control:* post-change, no open row makes that claim, and `ADR-077` records the
+  misdiagnosis so a future reader does not re-derive the wrong conclusion from the register alone.
+
+- [ ] **AC-PUB-9 — v2.19.6's own artifacts** (`VERSION` → `2.19.6`, dated `## [2.19.6]` section,
+  README badge) pass the existing `version-consistency-check` gate — CI green. Controls are that
+  gate's own documented ones (VERSION drift, stranded `[Unreleased]`, missing badge), re-used, not
+  re-invented.
+
+- [ ] **AC-PUB-10 — *(documentation only)*** new carry-forward recording the corrected 3-item
+  pre-v2.18.0 mismatch (`v1.0.0`, `v1.1.1` untagged; `v2.0.1` tagged without an entry). OPEN, no
+  target cycle.
+
+- [ ] **AC-PUB-11 — parser↔comparator contract test, fixture-based.** *(Kept, and re-aimed. The
+  descope call was made and declined.)* The fixture's job is **not** "prove we handle em-dashes"; it
+  is to prove a non-3-component header is classified **skip**, never **error**. That is backed by data
+  present today (`CHANGELOG.md:847`, `:894`) and by a comparator that fails closed on exactly those
+  inputs — verified live: `scripts/semver-compare.sh ge 1.3.2.1 2.18.0` →
+  `::error::not a valid x.y.z semver` … `exit=2`. Descoping the fixture while keeping the
+  dash-agnostic grammar would be the worst available pairing: shipping the grammar that *reaches*
+  4-component versions while deleting the only test proving it survives them.
+  Fixture contains an ASCII-hyphen header, an em-dash header with a parenthetical title, a
+  4-component header, and `## [Unreleased]`.
+  *Assertions:* the COMPARABLE set is exactly the 3-component ones; the IN-SCOPE set is exactly those
+  at/above the floor; `1.3.2.1` is reported `SKIP/non-x.y.z`; the run's exit code is **not** 2; and
+  the run's stderr contains **zero** occurrences of `not a valid x.y.z semver` — a direct, greppable
+  proof that `semver-compare.sh` was never invoked on it.
+  *Negative control:* a parser anchored on the literal `' - '` extracts only the ASCII-hyphen header,
+  missing the em-dash/parenthetical one — real already-present data (`CHANGELOG.md:415`, `:454`,
+  `:489`), not hypothetical. The test asserts the naive set differs from the real set.
+
+- [ ] **AC-PUB-12 — Scope C's CI wiring.** Trigger is post-merge only —
+  `push: branches: [main]`, `schedule` (daily), `workflow_dispatch`; **never `pull_request`**, and
+  **not `workflow_run`** (it executes in default-branch context with a token that is not restricted
+  the way a PR token is; rejected on least-privilege grounds — ADR-078 §D4). Workflow-level and
+  job-level `permissions: contents: read`. `fetch-depth` left at the default `1`, because the
+  authoritative tag check is `git ls-remote` against origin, not the local tag set.
+  *Negative control (executable, ships no dead code):* a `quality.yml` fixture job runs the **shipped**
+  `verify-release-surface.sh` in evidence-injection mode against a fixture CHANGELOG carrying a
+  not-yet-tagged in-flight version, asserting exit 1 and a `MISSING-TAG` line — reproducing exactly
+  what a `pull_request`-triggered run would do to this cycle's own PR and to every release PR after.
+  *Positive control:* the same script against fixture evidence where the tag and a conforming body
+  both exist → exit 0.
+
+- [ ] **AC-PUB-13 — *(documentation only)*** ADR-076 D3's unverified assumption and its corrected
+  fallback recorded in `docs/architecture.md` (ADR-076 amendment) and in the script header. **Not
+  live-tested.**
+
+- [ ] **AC-PUB-14 — *(NEW at Phase 1)* create-path-only version precondition on
+  `publish-release.sh`.** Before the `gh release create` branch — and **only** that branch — assert
+  that the requested version equals `VERSION` at HEAD; abort otherwise with a named error. Rationale
+  and the rejected alternatives (a hardcoded version floor; "the anchored predicate alone is
+  sufficient") are argued in ADR-077 §D3. The guard is deliberately **not** applied to the
+  idempotent-skip or repair branches, so repairing a pre-floor empty-bodied Release (e.g. `v2.0.2`)
+  remains possible.
+  *Negative control:* ~~`publish-release.sh 2.0.2`~~ **`publish-release.sh 1.0.0`** on `main` (where
+  `VERSION` is `2.19.6`) aborts before any `gh` write, with a message naming both values. **The
+  control is executed with `gh` shadowed on `PATH`**, so a regression that lets it through fails
+  loudly instead of publishing a bogus tag to the public repo.
+  **[P4-CORRECTION-1] The token is `1.0.0`, not `2.0.2`, and the original was green for the wrong
+  reason.** `v2.0.2` has an origin tag **and** a 1-byte body, so with `gh` present it reaches the
+  **repair** branch — the sentence "aborts before any `gh` write" was therefore false for it, and the
+  control passed only because removing `gh` forced the create path. `1.0.0` is a genuine create-path
+  token: dated CHANGELOG section present, **zero** origin tags (verified live). Found by `@security`
+  at Phase 2 after this AC had already passed review twice.
+  **[P5-CORRECTION-2] "Shadowed", not "removed from `PATH`".** The original control subtracted every
+  directory containing `gh` from `PATH`; on `ubuntu-latest` `gh` and `bash` share `/usr/bin`, so it
+  deleted `bash` too and died at exit 127 before `publish-release.sh` ran — a control that could not
+  pass for the right reason. Replaced at `c33cb22` with a temp-dir `gh` shim that exits 127 and
+  shadows only `gh`, leaving `bash`, `git` and everything else resolvable.
+  *Positive control:* all three Scope-A publishes pass the guard unmodified — verified in advance:
+  `VERSION` is `2.19.4` at `5fee6f9`, `2.19.5` at `7c524d4`, and `2.19.6` at the merge commit by
+  `version-consistency-check`. The guard costs nothing on every legitimate path in this repo's
+  history.
+
+- [ ] **AC-PUB-15 — *(NEW at Phase 1)* `v2.19.6` is itself tagged and released within this cycle**,
+  as the third and last Scope-A publish, on `main`, after the feature merge and **before** the
+  Phase-8 retro merge. Required for `AC-PUB-1` State C to be reachable without an exemption
+  (`[P1-CORRECTION-3]`).
+  *Negative control:* the standing gate on the feature-merge commit reports
+  `2.19.6 MISSING-TAG` — a genuine RED from the shipped artifact, on real data, before the fix.
+  *Positive control:* a `workflow_dispatch` re-run after Scope A reports `0 failed`.
+
+---
+
+## Edge cases
+
+Anchor vs. dotted form (the actual defect class) · already-correct body must not be touched (now the
+primary invariant) · accidental-pass content (`v2.19.1`'s stray dotted digit) · 4-component version
+headers (`1.3.1.1`, `1.3.2.1`) · mixed dash glyphs (26 ASCII-hyphen / 22 em-dash, split at
+v2.6.0/v2.6.1) · parenthetical section titles (`CHANGELOG.md:415`) · `## [Unreleased]` ·
+tag local but not pushed · tag on origin with no Release · Release with a body naming the wrong
+version · dots-stripped anchor collisions (`2190`/`21.9.0`; `2191` inside `21910`) ·
+workflow-file version skew across tag-triggered runs · API-created tag possibly not raising
+`push: tags` (documented, untested) · a `schedule` trigger auto-disabling after 60 days of repo
+inactivity · `CHECKED == 0` (zero versions in scope) treated as fail-closed, never a silent pass.
+
+---
+
+## Success metrics
+
+**Primary:** a visitor following `homepageUrl` or the announcement link sees a Release body that
+describes the version they clicked, every time, without a maintainer catching the mismatch
+afterward. **Secondary:** the next three release cycles ship with zero "no tag/Release found"
+surprises at retro.
+
+---
+
+## Phase-1 obligations — closed
+
+**N-5 (anchor-matching regex) — ANSWERED** in `AC-PUB-6`, with the exact `grep -qF` form, the
+`---` right-boundary justification, and the live measurements behind it. GitHub's slugifier is **not**
+reproduced. Documented caveat: em-dash headers slugify differently, so this matcher is inherently
+floor-scoped — which is acceptable, and is a second independent reason the floor stays at `2.18.0`.
+
+**N-1 (parser × comparator) — RESOLVED at the parser stage.** See ADR-078 §D1 and `AC-PUB-11`.
+Classification happens **in the parser, before the comparator is ever called**:
+`semver-compare.sh` is invoked **only** on tokens already matched by `^[0-9]+\.[0-9]+\.[0-9]+$`, so
+its fail-closed `exit 2` can never fire on pre-floor data. Non-3-component tokens are bucketed
+`SKIP`, never `malformed-fail`. The comparator's `exit 2` branch is retained in the gate as an
+**unreachable-by-construction assertion** that hard-fails with a named parser/comparator-contract
+error — the fail-closed signal is preserved intact, not silenced at the call site, which is what
+handling exit 2 in a comparator wrapper or in the gate body would have done (and would have re-created
+`CF-v2.19-B`'s defect: a caller that treats a malformed-input code as benign).
+**Refinement to the binding wording:** the Round-2 draft mandates the bucket label
+`skip / below-floor`. The bucket is `SKIP`, as required — but its *reason* is recorded as
+`non-x.y.z — not publishable by publish-release.sh:31`, not `below-floor`. Today the two coincide
+(`1.3.1.1`, `1.3.2.1` are both). The producer-capability reason survives a hypothetical future
+`2.19.4.1`, which the floor reason would not.
+

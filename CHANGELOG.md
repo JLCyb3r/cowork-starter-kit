@@ -4,6 +4,37 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [2.19.6] - 2026-08-07
+
+**"Publish What Shipped."** `v2.19.4` and `v2.19.5` were each merged, retro'd, and never tagged or
+released — twice consecutively, because tagging is a documented manual step (`CONTRIBUTING.md`)
+that nothing enforced. This cycle closes the gap two ways. First, `scripts/publish-release.sh`'s
+body post-condition was too narrow: it required the literal dotted version string, but this
+repo's own house convention — a curated summary plus a `CHANGELOG.md#<anchor>` link — names the
+version in the anchor form GitHub's slugifier produces, not the dotted one. All five pre-existing
+releases (`v2.18.0`–`v2.19.3`) were misdiagnosed as broken; none of them was (`CF-v2.19.5-F`,
+closed as MISDIAGNOSED — see `docs/risk-register.md`). The predicate now accepts either form, in
+one shared definition (`scripts/release-predicate.sh`) sourced by both the producer and a new
+standing gate. Second, a new read-only `scripts/verify-release-surface.sh`, wired via
+`.github/workflows/release-surface.yml` on post-merge triggers, checks every dated CHANGELOG
+version at or above `v2.18.0` for a tag and a conforming Release body — this is what would have
+caught `v2.19.4`/`v2.19.5` immediately instead of two cycles late. Four Phase-2 findings from
+`@security` are folded in: the guard preventing `publish-release.sh` from tagging the wrong
+commit is now verified against a genuine live create-path token (not one that silently takes a
+different code path with the guard's own precondition still present); a fifth pre-flight
+assertion confirms the code about to run is the as-merged, uncommitted-clean script, and a sixth
+refuses outright if `GH_REPO` or `GH_HOST` is set — an earlier form of this sixth assertion asked
+`gh repo view` what repository it thought it was in, which turned out to ignore exactly the
+override it existed to catch; @qa caught this live at Phase 5 before merge, and it was fixed
+before shipping, not after. Together these close two ways an irreversible public write could
+target the wrong code or the wrong place; the Release body is now re-asserted after the asset-upload
+step runs, not only before it; and the standing gate now also asserts `/releases/latest` resolves
+to the newest published version, since GitHub's "Latest" tracks creation order, not semver order.
+`v2.19.4`, `v2.19.5`, and this release are backfilled/published in ascending order as a follow-up
+operator procedure once this PR merges.
+
+---
+
 ## [2.19.5] - 2026-08-04
 
 **"Rung 1" — the automation tells the truth.** `sync-agency.yml`'s integrity check has been silently broken since 2026-07-01: it compared bytes fetched at the *new* upstream HEAD against the *old* pin's stored hash, so it failed on every legitimate upstream edit, not just tampering — the pin has been frozen since 2026-05-07 and the cron hard-failed twice. Fixed by splitting the check into two operations that were wrongly interleaved: a hoisted, skip-free tamper check runs first, against the old pin, before any rewrite; the pin advance is now a separate, pure writer that emits `content_sha256` for every entry, with fail-closed fetches and removed-path accounting (renames are now distinguished from deletions). A standing `sync-verify-ratchet` CI job (3 legs, all against real data) re-proves this on every future PR, replacing a fault-injection test that could never fail regardless of whether the real defect was present. Also fixes a repeat finding: `release-assets.yml` could still mint a GitHub Release with an empty body on a fresh tag push, even though this was reported fixed once already — a new `scripts/publish-release.sh` pre-publishes a populated Release (from the CHANGELOG) before the tag exists, and the asset-upload workflow now refuses to run against a Release it didn't find already populated. Corrects five public-facing false claims: a stale "73 of 110" persona count (the row's own breakdown summed to 81), a "kept current" sync claim that had been false for a month, an inert CODEOWNERS review-gate description, and two schema-example passages in `docs/architecture.md` that documented fields (`upstream_repo`/`upstream_url`/`files[].category`) the shipped lock file never had. No enforced human review gate exists yet over PRs that touch the supply-chain lock file — this cycle restores the machinery's honesty and re-arms upstream ingestion; closing that gap is an explicit, tracked owner decision (`docs/owner-tasks.md` OT-7), not silently assumed.

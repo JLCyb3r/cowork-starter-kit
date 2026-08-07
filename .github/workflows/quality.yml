@@ -1786,3 +1786,498 @@ jobs:
             exit 1
           fi
           echo "version-consistency-check PASSED — VERSION == README badge == CHANGELOG top == $V"
+
+  release-predicate-check:
+    name: Release Predicate + Standing Gate Check (v2.19.6)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # pure fixture tests, no network — safe on pull_request (this is exactly
+                       # why the live network gate lives in its own workflow, release-surface.yml)
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: AC-PUB-6 — body_names_version, with fixture-validity controls
+        run: |
+          set -euo pipefail
+          source scripts/release-predicate.sh
+          FAIL=0
+
+          # (i) a body naming neither form -> must return 1.
+          BODY="$(cat tests/fixtures/release-surface/bodies/neither.md)"
+          if body_names_version "$BODY" "1.2.3"; then
+            echo "::error::AC-PUB-6(i) FAILED — neither.md incorrectly matched a version it does not name."
+            FAIL=1
+          else
+            echo "AC-PUB-6(i) PASS — neither.md correctly rejected."
+          fi
+
+          # (ii) the 2.0.2 collision — the live v2.18.0 body must NOT match "2.0.2".
+          BODY="$(cat tests/fixtures/release-surface/bodies/v2180-real.md)"
+          if body_names_version "$BODY" "2.0.2"; then
+            echo "::error::AC-PUB-6(ii) FAILED — v2180-real.md incorrectly matched '2.0.2' (the 202-substring collision)."
+            FAIL=1
+          else
+            echo "AC-PUB-6(ii) PASS — v2180-real.md correctly rejects '2.0.2'."
+          fi
+          # Fixture-validity control: the NAIVE dots-stripped predicate (no anchor, no
+          # boundary) MUST match this same fixture — otherwise the fixture carries no real
+          # collision and the (ii) RED above proves nothing (house pattern, quality.yml:421/:588/:1023).
+          if ! printf '%s' "$BODY" | grep -qF "202"; then
+            echo "::error::AC-PUB-6(ii) FIXTURE-VALIDITY FAILED — v2180-real.md does not contain the naive '202' collision substring; the fixture no longer proves what this test claims."
+            FAIL=1
+          else
+            echo "AC-PUB-6(ii) fixture-validity PASS — naive '202' substring present (the 2026- date)."
+          fi
+          # v2.18.0's own version must still match itself, both legs.
+          if ! body_names_version "$BODY" "2.18.0"; then
+            echo "::error::AC-PUB-6(ii) FAILED — v2180-real.md must still match its own version '2.18.0'."
+            FAIL=1
+          fi
+
+          # (iii) the 21910/2191 boundary — evaluated for "2.19.1" must return 1.
+          BODY="$(cat tests/fixtures/release-surface/bodies/v21910-anchor.md)"
+          if body_names_version "$BODY" "2.19.1"; then
+            echo "::error::AC-PUB-6(iii) FAILED — v21910-anchor.md incorrectly matched '2.19.1' (the unterminated-anchor boundary)."
+            FAIL=1
+          else
+            echo "AC-PUB-6(iii) PASS — v21910-anchor.md correctly rejects '2.19.1'."
+          fi
+          # Fixture-validity control: the UNTERMINATED anchor form (no trailing ---) MUST
+          # match — otherwise the fixture carries no collision for the boundary to catch.
+          if ! printf '%s' "$BODY" | grep -qF "CHANGELOG.md#2191"; then
+            echo "::error::AC-PUB-6(iii) FIXTURE-VALIDITY FAILED — v21910-anchor.md does not contain the unterminated 'CHANGELOG.md#2191' substring."
+            FAIL=1
+          else
+            echo "AC-PUB-6(iii) fixture-validity PASS — unterminated substring present."
+          fi
+          # And it must match its own real version.
+          if ! body_names_version "$BODY" "2.19.10"; then
+            echo "::error::AC-PUB-6(iii) FAILED — v21910-anchor.md must match its own version '2.19.10'."
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::release-predicate-check (AC-PUB-6) FAILED — see errors above."
+            exit 1
+          fi
+          echo "AC-PUB-6 ALL PASS."
+
+      - name: AC-PUB-11 — parser/comparator contract (fixture-based, dash-agnostic parser)
+        run: |
+          set -euo pipefail
+          set +e
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/changelog-headers.md \
+            --evidence-dir tests/fixtures/release-surface/changelog-headers-evidence 2>/tmp/ac-pub-11-stderr.txt)"
+          RC=$?
+          set -e
+          echo "$OUT"
+
+          FAIL=0
+          if [ "$RC" -eq 2 ]; then
+            echo "::error::AC-PUB-11 FAILED — run exited 2 (contract error); expected 0 or 1, never 2 on this fixture."
+            FAIL=1
+          fi
+          if grep -qF "not a valid x.y.z semver" /tmp/ac-pub-11-stderr.txt; then
+            echo "::error::AC-PUB-11 FAILED — stderr contains 'not a valid x.y.z semver'; the comparator was invoked on a non-3-component token (parser/comparator contract violated)."
+            FAIL=1
+          else
+            echo "AC-PUB-11 PASS — zero 'not a valid x.y.z semver' occurrences; comparator never invoked on 1.3.2.1 or Unreleased."
+          fi
+          # The 4-component and Unreleased tokens must be reported SKIP (non-x.y.z), never silently dropped.
+          if ! printf '%s' "$OUT" | grep -qF "'1.3.2.1' SKIP"; then
+            echo "::error::AC-PUB-11 FAILED — 1.3.2.1 not reported SKIP."
+            FAIL=1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "'Unreleased' SKIP"; then
+            echo "::error::AC-PUB-11 FAILED — Unreleased not reported SKIP."
+            FAIL=1
+          fi
+          # IN-SCOPE set: exactly the two 3-component, above-floor tokens.
+          CHECKED_LINE="$(printf '%s' "$OUT" | grep -E '^release-surface: [0-9]+ checked')"
+          if ! printf '%s' "$CHECKED_LINE" | grep -qE '^release-surface: 2 checked'; then
+            echo "::error::AC-PUB-11 FAILED — expected exactly 2 checked (COMPARABLE and >= floor), got: ${CHECKED_LINE}"
+            FAIL=1
+          fi
+          rm -f /tmp/ac-pub-11-stderr.txt
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::release-predicate-check (AC-PUB-11) FAILED — see errors above."
+            exit 1
+          fi
+          echo "AC-PUB-11 ALL PASS."
+
+      - name: CHECKED==0 fail-closed on a zero-header CHANGELOG (@qa Phase 5 WARNING fix)
+        # docs/qa-report-v2.19.6.md §7: a `--changelog` pointed at a file with ZERO
+        # `## [x.y.z]`-shaped headers previously died silently at `exit 1` (a `grep -o`
+        # pipeline failure under `pipefail`, aborting before the documented CHECKED==0
+        # branch). Fixed with `|| true` on that one pipeline. This proves it now reaches
+        # the documented diagnostic instead.
+        #
+        # --evidence-dir here is load-bearing for a reason unrelated to CHECKED==0 itself:
+        # without it, this invocation is "live mode" from the script's own perspective (no
+        # --evidence-dir given), so it now also reaches assert_gh_destination_repo() (S-A2)
+        # before ever getting to the parse stage — which needs a real, authenticated `gh
+        # api` call this step never had and does not need. The directory's CONTENTS are
+        # irrelevant here (zero headers means the per-version loop never runs, so no
+        # evidence_* function is ever called) — only its presence is needed, to put the
+        # script in evidence-injected mode and skip the live-only destination check.
+        run: |
+          set -euo pipefail
+          set +e
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/changelog-no-headers.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ "$RC" -ne 2 ]; then
+            echo "::error::CHECKED==0 fix FAILED — expected exit 2, got ${RC}."
+            exit 1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "0 versions checked"; then
+            echo "::error::CHECKED==0 fix FAILED — expected the documented '0 versions checked' diagnostic."
+            exit 1
+          fi
+          echo "CHECKED==0 fix PASS — exit 2, documented diagnostic present."
+
+      - name: AC-PUB-12 — negative control (untagged in-flight version -> exit 1, MISSING-TAG)
+        run: |
+          set -euo pipefail
+          set +e
+          # 2>&1: the MISSING-TAG finding is printed via ::error:: to STDERR, not stdout — the
+          # grep below needs it in the same stream it's checking.
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-untagged/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-untagged 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          FAIL=0
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::AC-PUB-12 negative control FAILED — expected exit 1, got ${RC}."
+            FAIL=1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "9.9.9 MISSING-TAG"; then
+            echo "::error::AC-PUB-12 negative control FAILED — expected a '9.9.9 MISSING-TAG' line."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "AC-PUB-12 negative control PASS."
+
+      - name: AC-PUB-12 — positive control (tag + conforming body + correct Latest -> exit 0)
+        run: |
+          set -euo pipefail
+          bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-clean/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean
+          echo "AC-PUB-12 positive control PASS — exit 0."
+
+      - name: WRONG-LATEST negative control (S-A1 — @security Phase 6, docs/security-audit-v2.19.6.md)
+        # Before this step, WRONG-LATEST — the sole check on the cycle's stated Primary
+        # success metric AND on Scope A's ascending-publish-order requirement — had NO
+        # negative control anywhere in this job. @security proved this by neutering the
+        # check (`if false`) and running it against every other fixture-based step in this
+        # job: all of them still passed, meaning the conjunct could be deleted outright and
+        # CI would stay 100% green. This step, and the evidence-wrong-latest/ fixture it
+        # exercises, close that: the fixture is identical in shape to evidence-clean (one
+        # in-scope version, correctly tagged, correctly bodied) EXCEPT its latest.txt does
+        # not match the highest in-scope version — every per-version conjunct passes; only
+        # WRONG-LATEST fires. Independently re-verified this session (not merely trusted
+        # from the audit): a neutered copy of the script (same `if false` substitution)
+        # against this exact fixture returns exit 0, 0 failed — proving the fixture is
+        # actually load-bearing on the code path it exists to test, not passing for an
+        # unrelated reason.
+        run: |
+          set -euo pipefail
+          set +e
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-wrong-latest/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-wrong-latest 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          FAIL=0
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::S-A1 FAILED — expected exit 1, got ${RC}."
+            FAIL=1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "WRONG-LATEST — /releases/latest resolves to 'v2.18.0', expected 'v9.9.9'"; then
+            echo "::error::S-A1 FAILED — expected WRONG-LATEST finding naming 'v2.18.0' vs 'v9.9.9' not present."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "S-A1 (WRONG-LATEST negative control) PASS."
+
+      - name: AC-PUB-14 — create-path version guard fires with gh otherwise ABSENT (S1 fix)
+        # Security-review note (S1, docs/security-review-v2.19.6.md): the negative-control
+        # token is "1.0.0", NOT "2.0.2". "2.0.2" already has an origin tag and a live 0-byte
+        # Release, so with `gh` present it reaches the REPAIR branch and never exercises this
+        # guard at all. "1.0.0" has a dated CHANGELOG section and NO origin tag (verified live
+        # at Phase 4), so it reaches the CREATE branch whether `gh` is present or absent.
+        #
+        # @qa Phase 5 root-caused the ORIGINAL form of this step (docs/qa-report-v2.19.6.md
+        # §2): it simulated "gh absent" by stripping every PATH directory that CONTAINS a
+        # `gh` executable. On ubuntu-latest, `gh` and `bash` both live in /usr/bin, so that
+        # also deleted `bash`'s own directory — the step died with "bash: command not
+        # found" (127) before publish-release.sh ever ran. Fixed by shadowing ONLY `gh`: a
+        # shim prepended to PATH so it wins the lookup — every other binary resolves
+        # normally.
+        #
+        # @security Phase 6 (S-A2) added assert_gh_destination_repo() — a REAL `gh api`
+        # call — running BEFORE this step's actual target (the version-mismatch guard).
+        # A shim that failed ALL `gh` calls uniformly would make THAT check the one that
+        # fires here instead, silently testing the wrong thing while still reporting
+        # "exit 1, not 127" (still true, but for the wrong reason — the S-A11 shape, caught
+        # here before it shipped rather than after). Fixed: the shim answers the
+        # destination-repo `gh api` call correctly and fails every OTHER `gh` subcommand,
+        # so this step still exercises the version-mismatch guard specifically, with
+        # destination-repo verification passing exactly as it would with `gh` fully
+        # present and correctly configured.
+        run: |
+          set -euo pipefail
+          GH_SHIM_DIR="$(mktemp -d)"
+          trap 'rm -rf "$GH_SHIM_DIR"' EXIT
+          cat > "${GH_SHIM_DIR}/gh" <<'SHIM'
+          #!/usr/bin/env bash
+          if [ "$1" = "api" ]; then
+            # Answers assert_gh_destination_repo()'s call correctly so THIS step still
+            # reaches its actual target (the version-mismatch guard) rather than stopping
+            # early at a check this step is not about.
+            echo "jmlozano1990/Cowork-Starter-Kit"
+            exit 0
+          fi
+          echo "gh: command not found (test shim — AC-PUB-14 negative control)" >&2
+          exit 127
+          SHIM
+          chmod +x "${GH_SHIM_DIR}/gh"
+          echo "shim gh resolves first: $(PATH="${GH_SHIM_DIR}:${PATH}" command -v gh)"
+
+          set +e
+          OUT="$(PATH="${GH_SHIM_DIR}:${PATH}" bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          echo "exit code: ${RC}"
+          if [ "$RC" -eq 127 ]; then
+            echo "::error::AC-PUB-14 FAILED — exit 127 (gh command-not-found reached the create path unguarded); expected exit 1 from the version guard."
+            exit 1
+          fi
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::AC-PUB-14 FAILED — expected exit 1, got ${RC}."
+            exit 1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "refusing to CREATE tag"; then
+            echo "::error::AC-PUB-14 FAILED — exit 1 fired, but not from the version-mismatch guard (expected 'refusing to CREATE tag' in output). The shim's destination-repo answer may not be wired correctly."
+            exit 1
+          fi
+          echo "AC-PUB-14 PASS — exit 1 from the version-mismatch guard specifically, not 127, and not an earlier check."
+
+      - name: Destination-repo guard fires when GH_REPO/GH_HOST is set (S2 BLOCKER fix)
+        # @qa Phase 5 BLOCKER (docs/qa-report-v2.19.6.md §3): the prior guard asked
+        # `gh repo view` what repo it thought it was in — a command that IGNORES GH_REPO —
+        # to protect `gh release view/create/edit`, which HONOR GH_REPO. It passed exactly
+        # when the attack it existed to catch was active. Fixed in publish-release.sh by
+        # refusing outright, unconditionally, before any `gh` call, if GH_REPO or GH_HOST is
+        # set — see that file's own comment for the full `gh help environment` audit. This
+        # step proves the fix actually fires, against the real shipped script, both ways.
+        #
+        # @security Phase 6 (S-A2, docs/security-audit-v2.19.6.md) added a second,
+        # POSITIVE assertion — assert_gh_destination_repo() — because the env-var deny-list
+        # above cannot reach every redirect vector (git-config injection, GH_CONFIG_DIR).
+        # This step's "neither set" leg now needs a real, authenticated `gh api` call to
+        # get past that assertion — GH_TOKEN below is what makes this step exercise the
+        # REAL live path instead of an unauthenticated stand-in for it.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          set +e
+          OUT1="$(GH_REPO="octocat/Hello-World" bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC1=$?
+          set -e
+          echo "--- GH_REPO set, exit=${RC1} ---"
+          echo "$OUT1"
+          if [ "$RC1" -ne 1 ] || ! printf '%s' "$OUT1" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::destination-repo guard did NOT fire correctly with GH_REPO set (exit ${RC1})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_REPO set."
+          fi
+
+          set +e
+          OUT2="$(GH_HOST="github.example.com" bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC2=$?
+          set -e
+          echo "--- GH_HOST set, exit=${RC2} ---"
+          echo "$OUT2"
+          if [ "$RC2" -ne 1 ] || ! printf '%s' "$OUT2" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::destination-repo guard did NOT fire correctly with GH_HOST set (exit ${RC2})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_HOST set."
+          fi
+
+          # Positive control: neither set -> must NOT hit either destination-repo message
+          # (the free env check OR the authenticated positive assertion). It will still
+          # exit 1 further down (the version-mismatch guard, VERSION at HEAD is never
+          # "1.0.0" on a real checkout) — that is the CORRECT reason to fail here, and
+          # proves both destination checks pass cleanly on the real, unredirected repo
+          # before the run reaches the next real guard.
+          set +e
+          OUT3="$(bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC3=$?
+          set -e
+          echo "--- neither set, exit=${RC3} ---"
+          echo "$OUT3"
+          if printf '%s' "$OUT3" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::destination-repo guard FALSE-POSITIVE fired with neither GH_REPO nor GH_HOST set."
+            FAIL=1
+          elif printf '%s' "$OUT3" | grep -qF "could not verify the destination repository"; then
+            echo "::error::assert_gh_destination_repo FALSE-POSITIVE (or a real auth/network failure) with neither variable set."
+            FAIL=1
+          elif ! printf '%s' "$OUT3" | grep -qF "refusing to CREATE tag"; then
+            echo "::error::expected the version-mismatch guard's message when neither GH_REPO nor GH_HOST is set; got something else."
+            FAIL=1
+          else
+            echo "PASS — neither variable set, both destination checks silent, run proceeded to the next real guard."
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: assert_gh_destination_repo() detects a real mismatch (S-A2 positive-assertion unit test)
+        # The two legs above cannot exercise assert_gh_destination_repo()'s OWN mismatch
+        # branch through the full script: GH_REPO/GH_HOST are intercepted earlier by
+        # refuse_if_gh_redirect_env_set(), by design (cheap check first). This calls the
+        # shared function directly against the REAL repo's real `gh api` resolution, with a
+        # deliberately WRONG expected value — proving the comparison itself is correct,
+        # independent of which environment variable (if any) caused a real redirect.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source scripts/release-predicate.sh
+          FAIL=0
+
+          set +e
+          OUT="$(assert_gh_destination_repo "not-the/real-repo" 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ "$RC" -eq 0 ] || ! printf '%s' "$OUT" | grep -qF "resolves to"; then
+            echo "::error::assert_gh_destination_repo did not refuse a real mismatch."
+            FAIL=1
+          else
+            echo "PASS — refuses correctly against a wrong expected repo."
+          fi
+
+          if ! assert_gh_destination_repo "jmlozano1990/Cowork-Starter-Kit"; then
+            echo "::error::assert_gh_destination_repo refused the CORRECT repo — false positive."
+            FAIL=1
+          else
+            echo "PASS — accepts the correct repo."
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Destination-repo guard also fires in verify-release-surface.sh (S9 — sibling-script fix)
+        # @qa Phase 5 §9.5 (docs/qa-report-v2.19.6.md — the "ninth instance"): the BLOCKER fix
+        # above touched publish-release.sh only. verify-release-surface.sh's own evidence_body()
+        # makes an equally GH_REPO-redirectable `gh release view` call with no guard at all.
+        # Live-demonstrated consequence: `GH_REPO=cli/cli gh release view v2.18.0` returns
+        # cli/cli's OWN release notes, which coincidentally contain the literal substring
+        # "2.18.0" via GitHub's auto-generated "Full Changelog: .../compare/v2.17.0...v2.18.0"
+        # footer — satisfying body_names_version() for a completely unrelated repository. A
+        # false MISSING-RELEASE is noisy but safe; a false PASS is the one outcome that makes
+        # this gate worse than not having it. Fixed by hoisting the SAME shared
+        # refuse_if_gh_redirect_env_set() (scripts/release-predicate.sh) into this script too,
+        # unconditionally, before evidence_tags()/evidence_body()/evidence_latest() are even
+        # defined — not a second hand-written check.
+        #
+        # This step needs no live network access to prove the fix: the guard refuses BEFORE any
+        # `gh` call is attempted, so "GH_REPO=cli/cli" never actually reaches cli/cli here — that
+        # non-reach IS the assertion.
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          set +e
+          OUT1="$(GH_REPO="cli/cli" bash scripts/verify-release-surface.sh --floor 2.18.0 2>&1)"
+          RC1=$?
+          set -e
+          echo "--- GH_REPO=cli/cli, exit=${RC1} ---"
+          echo "$OUT1"
+          if [ "$RC1" -ne 2 ] || ! printf '%s' "$OUT1" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::verify-release-surface.sh destination-repo guard did NOT fire with GH_REPO set (exit ${RC1})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_REPO set, exit 2."
+          fi
+          # The specific false-PASS this finding demonstrated must not be reachable: the run
+          # must never get far enough to print a "checked/failed" summary line at all.
+          if printf '%s' "$OUT1" | grep -qE '^release-surface: [0-9]+ checked'; then
+            echo "::error::verify-release-surface.sh completed a full run under GH_REPO=cli/cli instead of refusing outright — the false-PASS path is still reachable."
+            FAIL=1
+          fi
+
+          set +e
+          OUT2="$(GH_HOST="github.example.com" bash scripts/verify-release-surface.sh --floor 2.18.0 2>&1)"
+          RC2=$?
+          set -e
+          echo "--- GH_HOST set, exit=${RC2} ---"
+          echo "$OUT2"
+          if [ "$RC2" -ne 2 ] || ! printf '%s' "$OUT2" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::verify-release-surface.sh destination-repo guard did NOT fire with GH_HOST set (exit ${RC2})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_HOST set, exit 2."
+          fi
+
+          # Defense-in-depth: the guard must still fire even when --evidence-dir is also given,
+          # proving the seam cannot be used to route around it (it controls where evidence is
+          # READ from, not whether this check runs).
+          set +e
+          OUT3="$(GH_REPO="cli/cli" bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-clean/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean 2>&1)"
+          RC3=$?
+          set -e
+          echo "--- GH_REPO set + --evidence-dir, exit=${RC3} ---"
+          echo "$OUT3"
+          if [ "$RC3" -ne 2 ] || ! printf '%s' "$OUT3" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::verify-release-surface.sh guard did NOT fire under GH_REPO with --evidence-dir also set — the seam must not bypass this guard."
+            FAIL=1
+          else
+            echo "PASS — guard fires even with --evidence-dir given."
+          fi
+
+          # Positive control: --evidence-dir with neither var set must be entirely unaffected —
+          # this is the existing AC-PUB-12 positive-control shape, re-asserted here so a
+          # regression in THIS guard's placement would be caught by this step too, not only by
+          # the AC-PUB-12 step elsewhere in this job.
+          bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-clean/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean
+          echo "PASS — --evidence-dir mode with neither var set is unaffected by the new guard."
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: C3 seam containment — release-surface.yml carries no --evidence-dir/--changelog
+        run: |
+          set -euo pipefail
+          if grep -qE -- '--evidence-dir|--changelog' .github/workflows/release-surface.yml; then
+            echo "::error::C3 seam containment FAILED — release-surface.yml's live invocation carries --evidence-dir or --changelog. The evidence seam must never be live-wired."
+            exit 1
+          fi
+          echo "C3 seam containment PASS — release-surface.yml invokes the script with no evidence-injection flags."

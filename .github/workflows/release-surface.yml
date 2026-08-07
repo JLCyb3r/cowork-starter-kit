@@ -1,0 +1,57 @@
+name: Release Surface
+
+# Standing, read-only gate: for every dated CHANGELOG.md version at or above the floor, does it
+# have a tag on origin AND a GitHub Release whose body names its version (dotted or the house
+# anchor form)? ADR-078.
+#
+# Triggers, each earning its place (docs/design-v2.19.6.md §C4, ADR-078 §D4):
+#   - push: branches: [main]  — the primary need: immediate post-merge signal. This is what
+#     would have caught v2.19.4 and v2.19.5, each missed silently for a full release cycle.
+#   - schedule (daily)        — catches drift that happens with NO push: a tag deleted, or a
+#     Release body edited in the GitHub UI. Not hypothetical — this cycle exists because the
+#     release surface was mutated outside git. The repo is PUBLIC (verified), so Actions
+#     minutes are unmetered and this is cost-neutral. Known limitation: GitHub auto-disables
+#     `schedule` after 60 days of repository inactivity (recorded, not assumed away).
+#   - workflow_dispatch       — MANDATORY, not convenience: Scope A (backfilling missed tags)
+#     produces no commit, so without a manual trigger there is no way to re-run this gate and
+#     observe a clean result afterward.
+#
+# `pull_request` is PROHIBITED, not merely unused: this gate would fail on its own introducing
+# PR (a newly-merged `## [x.y.z]` is untagged at PR time, by definition) and on every release PR
+# after. `workflow_run` is REJECTED, not merely unchosen: it executes in default-branch context
+# with a token that is not restricted the way a `pull_request` token is — a privilege-escalation
+# shape this design does not need.
+#
+# This workflow invokes scripts/verify-release-surface.sh with NO flags — see the
+# `release-predicate-check` job in quality.yml for the meta-check asserting that stays true.
+# The script's evidence-injection seam is a test-only fixture-redirection point and is never
+# live-wired here. (Deliberately not spelled out as literal flag text in this comment: the
+# meta-check that guards against live-wiring greps this file for that literal text, and a
+# mention in prose would trip its own guard — see quality.yml's C3 seam containment step.)
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-surface-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify tag + Release for every CHANGELOG version >= 2.18.0
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read   # least-privilege, matching quality.yml:1332 / :1732
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: verify-release-surface
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: bash scripts/verify-release-surface.sh --floor 2.18.0
