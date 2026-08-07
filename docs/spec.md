@@ -6456,8 +6456,17 @@ than resolved by adding a toggle to make it executable.
   **Three-state proof discriminating the two conjuncts:**
   *State A* (old dotted-only predicate, today) → **6 failures, enumerated**: `2.18.0`, `2.19.0`,
   `2.19.2`, `2.19.3` (body conjunct only) and `2.19.4`, `2.19.5` (both).
-  *State B* (predicate fixed, before Scope A) → **exactly 2**: `2.19.4`, `2.19.5` — proving the
+  *State B* (predicate fixed, before Scope A) → ~~**exactly 2**: `2.19.4`, `2.19.5`~~ — proving the
   predicate fix alone closes all four body-conjunct failures.
+  **[P5-CORRECTION-1] State B is 4, not 2.** Two independent revisions landed after this line was
+  written. `@dev` raised it to 3 at Phase 4 — the `WRONG-LATEST` stage added for AMEND 4 / S4 fires
+  on top of the two `MISSING-TAG` rows. `@qa` then raised it to **4** at Phase 5: `@dev` measured
+  against pre-merge `main`, but on merge `v2.19.6`'s own CHANGELOG entry lands too (per
+  `[P1-CORRECTION-3]`), so `2.19.4`, `2.19.5` **and** `2.19.6` are all `MISSING-TAG`, plus
+  `WRONG-LATEST`. Re-verified independently by `@dev` against this branch's own `CHANGELOG.md`:
+  `8 checked, 4 failed`. The *claim* the state proves is unchanged — the predicate fix alone closes
+  every body-conjunct failure — only the count moved. **State C = 0 still holds** once Scope A
+  publishes all three in ascending order.
   *State C* (both done, `2.19.6` included per `[P1-CORRECTION-3]`) → **0**.
   **State A is a fixture / ad-hoc run, NOT a mode of the shipped artifact.** It requires the old
   dotted-only predicate, which `verify-release-surface.sh` will never implement. Stated explicitly so
@@ -6616,10 +6625,21 @@ than resolved by adding a toggle to make it executable.
   sufficient") are argued in ADR-077 §D3. The guard is deliberately **not** applied to the
   idempotent-skip or repair branches, so repairing a pre-floor empty-bodied Release (e.g. `v2.0.2`)
   remains possible.
-  *Negative control:* `publish-release.sh 2.0.2` on `main` (where `VERSION` is `2.19.6`) aborts before
-  any `gh` write, with a message naming both values. **The control is executed with `gh` unavailable
-  on `PATH`**, so a regression that lets it through fails loudly instead of publishing a bogus tag to
-  the public repo.
+  *Negative control:* ~~`publish-release.sh 2.0.2`~~ **`publish-release.sh 1.0.0`** on `main` (where
+  `VERSION` is `2.19.6`) aborts before any `gh` write, with a message naming both values. **The
+  control is executed with `gh` shadowed on `PATH`**, so a regression that lets it through fails
+  loudly instead of publishing a bogus tag to the public repo.
+  **[P4-CORRECTION-1] The token is `1.0.0`, not `2.0.2`, and the original was green for the wrong
+  reason.** `v2.0.2` has an origin tag **and** a 1-byte body, so with `gh` present it reaches the
+  **repair** branch — the sentence "aborts before any `gh` write" was therefore false for it, and the
+  control passed only because removing `gh` forced the create path. `1.0.0` is a genuine create-path
+  token: dated CHANGELOG section present, **zero** origin tags (verified live). Found by `@security`
+  at Phase 2 after this AC had already passed review twice.
+  **[P5-CORRECTION-2] "Shadowed", not "removed from `PATH`".** The original control subtracted every
+  directory containing `gh` from `PATH`; on `ubuntu-latest` `gh` and `bash` share `/usr/bin`, so it
+  deleted `bash` too and died at exit 127 before `publish-release.sh` ran — a control that could not
+  pass for the right reason. Replaced at `c33cb22` with a temp-dir `gh` shim that exits 127 and
+  shadows only `gh`, leaving `bash`, `git` and everything else resolvable.
   *Positive control:* all three Scope-A publishes pass the guard unmodified — verified in advance:
   `VERSION` is `2.19.4` at `5fee6f9`, `2.19.5` at `7c524d4`, and `2.19.6` at the merge commit by
   `version-consistency-check`. The guard costs nothing on every legitimate path in this repo's

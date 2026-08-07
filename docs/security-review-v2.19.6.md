@@ -218,6 +218,19 @@ exported in the operator's shell, all four current assertions pass and the relea
 cost, and it is the only assertion that guards the *destination* of an irreversible public write
 rather than its content.
 
+> **⚠ CORRECTION — 2026-08-07, post-Phase-5. The prescription in the paragraph immediately above is WRONG and must not be implemented as written.** It was implemented verbatim at Phase 4, and `@qa` found the result to be a **no-op against this very threat model**. Verified live and independently three times (@qa, the orchestrator, @dev):
+>
+> ```
+> GH_REPO=cli/cli gh repo view --json nameWithOwner  →  jmlozano1990/Cowork-Starter-Kit
+> GH_REPO=cli/cli gh release list --limit 1          →  v2.97.0   (cli/cli's own release)
+> ```
+>
+> `gh repo view` **ignores** `GH_REPO` — it resolves from the git remote, and does so even with no remote present at all. `gh release create` / `edit` / `view` — the exact commands this assertion exists to protect — **honour** it. A guard built on `gh repo view` therefore reports "correct destination" at precisely the moment the write is being redirected: **it passes when the attack succeeds.**
+>
+> **What shipped instead** (`c33cb22`): an unconditional, `gh`-independent refusal — `[ -n "${GH_REPO:-}" ] || [ -n "${GH_HOST:-}" ]` → `exit 1` — placed **before the first `gh` call in the script**, since the idempotence check previously ran ahead of the guard and was itself unprotected. Coverage is stated rather than assumed: `GH_REPO` covered (confirmed live as the honoured vector); `GH_HOST` covered defensively (it fails closed in this single-remote checkout today, but that is a fact about this configuration, not a guarantee to lean on); `--repo`/`-R` grep-confirmed absent from every `gh` invocation in the script and explicitly **NOT** covered by an env-var guard — an operator's own aliased wrapper injecting `--repo` is a different threat model this check cannot see. No other documented `gh` environment variable affects repo/host resolution.
+>
+> **Why this correction is written into the review and not only into the code:** this document is what a future cycle will read to learn how the destination guard should work. Left uncorrected it would prescribe the no-op again. That is the same failure mode v2.19.6 exists to close — a record that reads as authoritative while being false — and it is the **eighth** green-for-the-wrong-reason instance in this cycle, this one authored by the security review itself.
+
 I would also fold in the `/releases/latest` post-condition (S4) — see AMEND 4.
 
 ---
@@ -488,9 +501,15 @@ Numbered and actionable. Items 1-4 are the ones I would not merge without.
     to name all five paths. **This is a text change to a deferral record and adds no Tier A file to
     this cycle** — `.github/CODEOWNERS` itself is not modified, so the classification is unaffected.
 
-11. **(S2, optional but cheap) Assert the destination repository.** Add
-    `gh repo view --json nameWithOwner` equality (or `unset GH_REPO`) to the pre-flight. `gh` honors
+11. **(S2, optional but cheap) Assert the destination repository.** ~~Add
+    `gh repo view --json nameWithOwner` equality (or `unset GH_REPO`) to the pre-flight.~~ `gh` honors
     `GH_REPO`, which would redirect an irreversible public write while all other assertions pass.
+    **⚠ CORRECTED 2026-08-07 post-Phase-5 — the struck prescription is a NO-OP.** `gh repo view`
+    ignores `GH_REPO` (it resolves from the git remote); `gh release create/edit/view` honour it, so
+    the check passes exactly when the redirect is active. Shipped instead at `c33cb22`: an
+    unconditional, `gh`-independent refusal on `GH_REPO` **or** `GH_HOST` being set, placed before the
+    first `gh` call. **Do not implement the struck form.** Full account at the §S2 correction block
+    above (line ~220).
 
 ---
 
