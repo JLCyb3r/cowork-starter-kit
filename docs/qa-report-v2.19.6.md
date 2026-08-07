@@ -455,3 +455,222 @@ closed, and isn't.
 Everything else — the predicate, the parser/comparator contract, the standing-gate wiring, the
 provenance check, the post-upload body re-assertion, the risk-register closure, the version
 artifacts — is real, independently re-verified this session, and sound.
+
+---
+
+## 10. Phase 7 — Final Approval
+
+**Date:** 2026-08-07T14:20:00Z
+**Reviewed:** `release/v2.19.6-publish-what-shipped` @ `85eaf3968c6464185615486f1ee03919251c42bc` (PR [#101](https://github.com/jmlozano1990/Cowork-Starter-Kit/pull/101), 12 commits ahead of `main`)
+
+Everything below rests on a command I ran myself this session, independently of the audit's or
+the fix-pass commit messages' narrative — reproduced from the real repo, the real CI, or a
+neutered local copy of the shipped script. Scope A was not touched: no tag pushed, no Release
+created or edited, `gh release create`/`gh release edit` never invoked. `verify-release-surface.sh`
+was run live and read-only, exactly as its own `schedule`/`workflow_dispatch` triggers do in
+production.
+
+### 10.1 CI
+
+`gh pr checks 101`: every named job reports `pass`; the two `skipping` rows
+(`/sync-agency Dry-Run`, `lock-content-sha-cross-check`) are pre-existing path-gated jobs unrelated
+to this diff, same as at Phase 5. Zero `fail` rows. `gh pr view 101` confirms `headRefOid` matches
+the reviewed SHA and `mergeable: MERGEABLE`.
+
+### 10.2 The three items @security left gating, independently re-verified — not re-read
+
+**S-A1 (WRONG-LATEST negative control).** I reproduced the destructive test myself rather than
+trusting the commit message: ran the real `verify-release-surface.sh` against
+`tests/fixtures/release-surface/evidence-wrong-latest/` — `RC=1`, fires
+`WRONG-LATEST — /releases/latest resolves to 'v2.18.0', expected 'v9.9.9'`. Then took my own copy
+of the script, changed line 335's guard to `if false && [...]`, and reran it against the identical
+fixture: `RC=0`, `0 failed`. Same fixture, same inputs, opposite verdict, purely from disabling the
+one line the WRONG-LATEST stage lives on — confirming the fixture and the CI assertion that checks
+for it are load-bearing on the actual code path, not passing by coincidence.
+
+**S-A2 (destination-repo enumeration).** Both call sites run both checks: `publish-release.sh:111`
+calls `assert_gh_destination_repo` unconditionally after the free env-var check; `verify-release-
+surface.sh:116` calls it gated on `EVIDENCE_DIR` being unset (so the offline fixture seam stays
+network-free — confirmed by code read, not assumption). `assert_gh_destination_repo()` itself
+(`release-predicate.sh:162`) is a positive `gh api "repos/{owner}/{repo}"` assertion, fail-closed on
+any error. The new CI unit test (`quality.yml:2155`) exercises both branches live against the real
+repo — a deliberately wrong expected value (must refuse) and the correct one (must accept) — and
+passed in the run I checked. I also grepped every `gh api`/`gh release` call left in the three
+touched scripts: all of them execute after `assert_gh_destination_repo` in their respective control
+flow, none bypass it.
+
+**S-A2 fix-pass CI break, and the fix.** `902bf9e` is disclosed, not squashed — a real CI failure
+(`CHECKED==0` step lost its `GH_TOKEN`-free path once the positive assertion went live) that
+`@dev` fixed by adding `--evidence-dir` and then swept every remaining invocation for the same gap,
+re-verifying under a simulated unauthenticated `gh` (`GH_CONFIG_DIR` pointed at an empty directory)
+rather than the session's own already-authenticated one. I re-read the sweep's stated scope against
+a full `grep` of every `verify-release-surface.sh` invocation in `quality.yml` myself; the claim —
+all others either already pass `--evidence-dir` or hit the free env-var check first — holds.
+
+Both were scored WARNING/AMEND-gating by `@security`, not CRITICAL — correct, since neither is
+exploitable data loss and both are pre-merge catches, not live incidents. Gating was the right
+call regardless: S-A1 guards the cycle's own stated Primary success metric, S-A2 guards the one
+irreversible public write this whole cycle exists to make trustworthy.
+
+### 10.3 The eleventh-instance sweep
+
+The pattern this cycle exists to close — a control that reads as protective but isn't — has
+produced ten confirmed instances across `v2.19.5`/`v2.19.6` (`@qa` found #7 and #9, the orchestrator
+found #8, `@security` found #10/S-A1, with S-A2 a closely related eleventh candidate that `@security`
+correctly did not let ride on S-A1's fix). I did not treat this fix pass as clean because it is the
+last one before merge. Beyond re-deriving S-A1 and S-A2 myself (10.2), I checked the newly-added
+S-A6/S-A7/S-A3/S-A5/S-A8/S-A11 fixes against the code, not just the commit message:
+
+- **S-A6** — `publish-release.sh:123-124` now uses `mktemp` for both `NOTES_FILE` and the
+  previously fixed-path `EXISTING_BODY_FILE`; `verify-release-surface.sh:253` replaced its
+  `$$`-suffixed temp file with `mktemp` too. Confirmed by reading both files, not the diff summary.
+- **S-A7** — `CONTRIBUTING.md:310` documents the 0-asset halt-state gap and names `v2.12.0` as the
+  live precedent. I checked this live rather than trusting the doc: `gh release view v2.12.0
+  --json assets` → `0` assets, today, on the real repo. The claim is true right now, not merely
+  written down.
+- **S-A3** — `evidence_body()` now surfaces `gh`'s real stderr via a `mktemp`'d capture instead of
+  `2>/dev/null`, so a transient `gh` failure reports its real cause instead of being reported as
+  `MISSING-RELEASE` with the wrong remedy. Confirmed by reading the function.
+- **S-A11** — the AC-PUB-14 CI step's `gh` shim now answers `gh api` calls (needed once
+  `assert_gh_destination_repo` runs ahead of it on the live path); the step comment states the
+  corrected ordering. Confirmed present and consistent with the commit message.
+- **S-A5, S-A8, S-A9, S-A10, S-A12** — message-wording, logging-marker, and deferral-rationale
+  items; read directly, no functional guard behavior involved, nothing to destructively test.
+
+No new unguarded surface found in this sweep. That is a statement about what I checked, not a
+claim of exhaustiveness the cycle's own history argues against — see 10.7.
+
+### 10.4 15 ACs
+
+All 15 named in `docs/spec.md`. Nine (AC-PUB-1, -6, -8, -9, -10, -11, -12, -13, -14) are
+independently re-verifiable pre-merge and I re-ran or re-read every one myself this session, not
+merely re-read Phase 5's table:
+
+- **AC-PUB-1** — ran the real `verify-release-surface.sh` against live data (no `--evidence-dir`):
+  `8 checked, 4 failed` (`2.19.4`/`2.19.5`/`2.19.6` MISSING-TAG + WRONG-LATEST, `v2.19.3` currently
+  Latest). Matches `[P5-CORRECTION-1]`'s State B = 4 exactly, reproduced independently rather than
+  taken on the spec's word. This is also the live negative control for **AC-PUB-15** (below).
+- **AC-PUB-6** — predicate function read directly (`release-predicate.sh`); the `2.0.2`/`21910`
+  collision-avoidance logic and the `---` right-boundary match the spec's exact form. CI's
+  `AC-PUB-6` fixture steps (`quality.yml:1799`) passed in the run checked.
+- **AC-PUB-8** — `docs/risk-register.md:17`: `CF-v2.19.5-F` closed as MISDIAGNOSED, plain language,
+  no longer in the open-rows table.
+- **AC-PUB-9** — `VERSION`=`2.19.6`, `CHANGELOG.md:7` `## [2.19.6] - 2026-08-07`, `README.md:7`
+  badge=`2.19.6`, all read directly; `Version Consistency Check` = `pass` in `gh pr checks`.
+- **AC-PUB-10** — `docs/risk-register.md:12`: 3-item pre-`v2.18.0` mismatch, documentation-only,
+  OPEN, no target cycle, cross-referenced to ADR-077/078 §Maturation Path.
+- **AC-PUB-11** — `quality.yml:1865` fixture step present and passed; spec's exact assertions
+  (COMPARABLE set, IN-SCOPE set, `1.3.2.1` SKIP, exit ≠ 2, zero `not a valid x.y.z semver` in
+  stderr) are what the step checks, confirmed by reading it.
+- **AC-PUB-12** — `release-surface.yml` triggers read directly: `push: branches:[main]`, `schedule`,
+  `workflow_dispatch`; no `pull_request`, no `workflow_run`; `permissions: contents: read` at both
+  levels. `quality.yml`'s meta-check greps this file for live-wiring; passed.
+- **AC-PUB-13** — documentation-only; `publish-release.sh:216` carries the `[ESTIMATED, not
+  verified]` ADR-076 D3 note verbatim; ADR-076's index row (`docs/architecture.md:99`) records the
+  v2.19.6 amendment. Thin (single index row, not a full new ADR section) but present, as scoped.
+- **AC-PUB-14** — code read confirms the version-mismatch guard (`publish-release.sh:167`) is
+  ordered ahead of every `gh` call on the create path; CI's negative control now uses a shimmed
+  `gh` (`quality.yml:2044`) rather than the PATH-deleting form that broke Phase 5's first pass, and
+  passed in the run checked.
+
+**Three ACs are genuinely not verifiable pre-merge, named as such rather than counted as passing**:
+**AC-PUB-2** and **AC-PUB-3** (the `v2.19.4`/`v2.19.5` backfill procedures — Scope A, unrun by this
+review's own boundary) and **AC-PUB-15** (`v2.19.6` tagged/released in-cycle — same reason). Their
+negative controls are live and RED right now (confirmed in AC-PUB-1 above: all three MISSING-TAG),
+which is the correct pre-Scope-A state, not a defect.
+
+**AC-PUB-7** is half-verifiable: the "before" sha256 baseline of all five curated bodies was
+captured at Phase 5 and is unchanged (no `gh release edit`/`create` has fired since — confirmed,
+zero such calls made by this review either). The "after Scope A" half of the control cannot run
+until Scope A does; this is not a gap in this review, it is what the AC itself specifies.
+
+**AC-PUB-4, AC-PUB-5** — WITHDRAWN/RETIRED, confirmed still struck in `docs/spec.md`, not silently
+deleted.
+
+No AC claimed as passing here is inferred from narrative; each has a command or a direct code read
+behind it, listed above.
+
+### 10.5 Topology
+
+All five phase artifacts (`docs/spec.md`, `docs/design-v2.19.6.md`, `docs/security-review-v2.19.6.md`,
+`docs/qa-report-v2.19.6.md`, `docs/security-audit-v2.19.6.md`) are `git ls-files`-tracked at HEAD,
+`git status --short` is clean, and `git log main..HEAD` shows real commits touching all five —
+nothing living only in a working tree. `docs/spec.md` also exists on `main` (it is this project's
+cumulative, cross-cycle spec file by house convention, not a per-cycle artifact) — expected, not a
+stranding signal. No Council-hub pipeline state applies here (this is an external registered
+project on its own branch/PR, not a Council self-improvement worktree); the relevant topology
+question — are this cycle's own artifacts in the PR — is answered yes, directly, by the above.
+
+### 10.6 Scope A readiness
+
+`@security` said it would run Scope A once S-A6/S-A7 landed. Both are in this PR (10.3) and CI is
+green. **I concur Scope A is ready to run**, with three things that must hold at run time, not
+merely at merge time:
+
+1. **Ascending order, one sitting, halt-on-first-failure** — `v2.19.4` → `v2.19.5` → `v2.19.6`, per
+   `docs/spec.md` AC-PUB-2/3/15 and ADR-076's amendment. `AC-PUB-1`'s live State B (10.4) is the
+   before-picture; a `workflow_dispatch` re-run of `release-surface.yml` after Scope A is the only
+   way to observe State C (`0 failed`) — confirmed the workflow has that trigger (10.4, AC-PUB-12).
+2. **OT-8** — `docs/owner-tasks.md` now has a named row requiring the offline smoke-test
+   scorecard be current *before* Scope A, and it fires three times (once per tag), not once for the
+   batch. Confirmed present in the diff.
+3. **This is `publish-release.sh`'s first production use** — zero prior invocations against a real
+   release (confirmed at Phase 6, unchanged since). ADR-076 D3's `push: tags`-from-API-created-tag
+   assumption is `[ESTIMATED, not verified]` by the script's own header (10.4, AC-PUB-13) and gets
+   its first live test here, three times. The halt-state gap (S-A7) is now documented, not closed —
+   a halted publish still leaves a public tag+Release behind with no automated cleanup.
+
+None of this is a reason to withhold merge — Scope A is explicitly out of this PR's scope and
+stays read-only against the live repo per the boundary given to this review. It is what an operator
+running Scope A afterward should have in front of them.
+
+### 10.7 Rework rate, and the estimate miss reported as a miss
+
+`git diff --shortstat c653141 HEAD -- scripts/ .github/workflows/ tests/` (Phase 4 commit → this
+review's HEAD, code surface only): **645 insertions, 62 deletions = 707 changed lines** of rework.
+`git diff --shortstat main c653141 -- scripts/ .github/workflows/ tests/` (Phase 4's own
+delivery): **776 insertions, 3 deletions = 779 changed lines**. **Rework rate ≈ 707 / 779 ≈ 91%** —
+nearly as much code churned after the first implementation pass as the first pass itself contained.
+Across the full cycle (`main` → HEAD, same surface): **1,364 insertions, 8 deletions = 1,372
+lines**, of which 707 (52%) landed after Phase 4 was marked DONE.
+
+This cycle was estimated at 1.5–2 hours (`next-cycle-v2.19.6-publish-what-shipped.md`) and consumed
+four implementation passes (`c653141`, `f160393` doc-landing, `c33cb22`, then the two-commit Phase 6
+fix pass `89b7843`/`902bf9e`), three QA passes (this one, the Phase 5 AMEND, the Phase 5
+re-verification PASS), and two security passes (Phase 2 review, Phase 6 audit). **That is the
+estimate miss, stated plainly, not netted against the catch count.** Ten confirmed
+green-for-the-wrong-reason defects across this arc is a good outcome for the review layers that
+caught them and a bad one for whatever kept producing them at this rate — two of the last three fix
+passes each introduced at least one fresh instance of the same class they were fixing (10.3). The
+pipeline held the line each time; it should not have needed to hold it this many times on one
+cycle sized at under two hours.
+
+### 10.8 Issues prevented this cycle (would have shipped without the pipeline)
+
+| Severity | Count | Items |
+|---|---|---|
+| Blocker-equivalent (gating, would have shipped a false-safe control on the irreversible write path) | 3 | Phase 5's `assert_destination_repo()` no-op (found by `@qa`); S-A1 WRONG-LATEST no negative control; S-A2 incomplete redirect enumeration (both found by `@security`) |
+| Issue (WARNING, fixed pre-merge, non-gating) | 7 | Phase 5's 3 CI failures (ShellCheck, Markdown Lint, AC-PUB-14 harness bug) + S-A3, S-A5, S-A6, S-A7, S-A8, S-A11 minus overlap — see note |
+| Info (accepted/deferred, documented) | 3 | S-A9, S-A10, S-A12 |
+
+Note on the issue count: S-A3/S-A5/S-A6/S-A7/S-A8/S-A11 is 6 items; combined with the 3 Phase-5 CI
+failures that is 9, not 7 — I am stating the arithmetic rather than quietly rounding: 9 issue-level
+items, not 7. Corrected: **9 issue-level items**, all confirmed fixed in 10.3/10.4 above.
+
+### 10.9 Verdict
+
+**APPROVE MERGE.**
+
+What the owner is approving: the release-surface tooling and CI gates in this PR — the shared
+predicate, the standing read-only gate, the create-path version guard, the destination-repo
+assertions, and their tests — as they exist at `85eaf39`, with CI green and every gating finding
+independently re-verified against the code and, where possible, against live data, not merely
+re-read from commit messages. Scope A (publishing `v2.19.4`, `v2.19.5`, `v2.19.6`) is **not**
+covered by this approval — it has not run, this review did not run it, and per 10.6 it is ready but
+carries real first-use risk (ADR-076 D3 untested, 0-asset halt state documented but not closed).
+
+What remains owner-only after merge: running Scope A itself (ascending order, halt-on-first-failure,
+`gh` authenticated as the actual repo owner) or delegating it with the OT-8 pre-check satisfied each
+time; `OT-7` step 2 (enabling the CODEOWNERS review gate) remains a separate, already-tracked owner
+action, unaffected by this cycle; confirming the offline smoke-test scorecard is current before
+each of the three tags per OT-8.
