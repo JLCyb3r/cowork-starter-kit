@@ -79,6 +79,30 @@ fi
 
 EXPECTED_REPO="jmlozano1990/Cowork-Starter-Kit"
 
+# --- Destination-repo guard (@qa Phase 5 §9.5, docs/qa-report-v2.19.6.md — the "ninth
+#     instance"). The original destination-repo BLOCKER fix (§3) touched publish-release.sh
+#     only; this script's own `evidence_body()` makes an equally GH_REPO-redirectable
+#     `gh release view` call that shipped with no guard at all. Read-only, so a redirect
+#     here cannot itself publish anywhere — but it can make the standing gate report a
+#     FALSE PASS: `GH_REPO=cli/cli` demonstrated live that `gh release view v2.18.0`
+#     returns cli/cli's own release notes, which happen to contain the literal substring
+#     "2.18.0" via GitHub's auto-generated "Full Changelog: .../compare/v2.17.0...v2.18.0"
+#     footer — coincidentally satisfying body_names_version() for a completely unrelated
+#     repository. A false MISSING-RELEASE is noisy but safe; a false PASS is the one
+#     outcome that makes this gate worse than not having it, in the exact artifact this
+#     cycle exists to make trustworthy.
+#
+#     Shared implementation: scripts/release-predicate.sh's refuse_if_gh_redirect_env_set()
+#     — the SAME function publish-release.sh calls, not a second hand-copied check. Runs
+#     UNCONDITIONALLY, HERE, before evidence_tags()/evidence_body()/evidence_latest() are
+#     even defined, regardless of --evidence-dir: in evidence-injected mode no `gh` call
+#     happens at all, so this check is provably inert there rather than merely assumed
+#     to be — it costs nothing and closes the door on a future edit accidentally adding a
+#     live fallback inside the evidence-dir branch without this guard already covering it.
+#     The seam cannot be used to route AROUND this guard: --evidence-dir controls where
+#     evidence is READ from, not whether this check runs.
+refuse_if_gh_redirect_env_set "$EXPECTED_REPO" || exit 2
+
 # --- Evidence seam: origin tags ---
 evidence_tags() {
   if [ -n "$EVIDENCE_DIR" ]; then

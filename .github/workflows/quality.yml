@@ -2069,6 +2069,90 @@ jobs:
             exit 1
           fi
 
+      - name: Destination-repo guard also fires in verify-release-surface.sh (S9 — sibling-script fix)
+        # @qa Phase 5 §9.5 (docs/qa-report-v2.19.6.md — the "ninth instance"): the BLOCKER fix
+        # above touched publish-release.sh only. verify-release-surface.sh's own evidence_body()
+        # makes an equally GH_REPO-redirectable `gh release view` call with no guard at all.
+        # Live-demonstrated consequence: `GH_REPO=cli/cli gh release view v2.18.0` returns
+        # cli/cli's OWN release notes, which coincidentally contain the literal substring
+        # "2.18.0" via GitHub's auto-generated "Full Changelog: .../compare/v2.17.0...v2.18.0"
+        # footer — satisfying body_names_version() for a completely unrelated repository. A
+        # false MISSING-RELEASE is noisy but safe; a false PASS is the one outcome that makes
+        # this gate worse than not having it. Fixed by hoisting the SAME shared
+        # refuse_if_gh_redirect_env_set() (scripts/release-predicate.sh) into this script too,
+        # unconditionally, before evidence_tags()/evidence_body()/evidence_latest() are even
+        # defined — not a second hand-written check.
+        #
+        # This step needs no live network access to prove the fix: the guard refuses BEFORE any
+        # `gh` call is attempted, so "GH_REPO=cli/cli" never actually reaches cli/cli here — that
+        # non-reach IS the assertion.
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          set +e
+          OUT1="$(GH_REPO="cli/cli" bash scripts/verify-release-surface.sh --floor 2.18.0 2>&1)"
+          RC1=$?
+          set -e
+          echo "--- GH_REPO=cli/cli, exit=${RC1} ---"
+          echo "$OUT1"
+          if [ "$RC1" -ne 2 ] || ! printf '%s' "$OUT1" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::verify-release-surface.sh destination-repo guard did NOT fire with GH_REPO set (exit ${RC1})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_REPO set, exit 2."
+          fi
+          # The specific false-PASS this finding demonstrated must not be reachable: the run
+          # must never get far enough to print a "checked/failed" summary line at all.
+          if printf '%s' "$OUT1" | grep -qE '^release-surface: [0-9]+ checked'; then
+            echo "::error::verify-release-surface.sh completed a full run under GH_REPO=cli/cli instead of refusing outright — the false-PASS path is still reachable."
+            FAIL=1
+          fi
+
+          set +e
+          OUT2="$(GH_HOST="github.example.com" bash scripts/verify-release-surface.sh --floor 2.18.0 2>&1)"
+          RC2=$?
+          set -e
+          echo "--- GH_HOST set, exit=${RC2} ---"
+          echo "$OUT2"
+          if [ "$RC2" -ne 2 ] || ! printf '%s' "$OUT2" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::verify-release-surface.sh destination-repo guard did NOT fire with GH_HOST set (exit ${RC2})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_HOST set, exit 2."
+          fi
+
+          # Defense-in-depth: the guard must still fire even when --evidence-dir is also given,
+          # proving the seam cannot be used to route around it (it controls where evidence is
+          # READ from, not whether this check runs).
+          set +e
+          OUT3="$(GH_REPO="cli/cli" bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-clean/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean 2>&1)"
+          RC3=$?
+          set -e
+          echo "--- GH_REPO set + --evidence-dir, exit=${RC3} ---"
+          echo "$OUT3"
+          if [ "$RC3" -ne 2 ] || ! printf '%s' "$OUT3" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::verify-release-surface.sh guard did NOT fire under GH_REPO with --evidence-dir also set — the seam must not bypass this guard."
+            FAIL=1
+          else
+            echo "PASS — guard fires even with --evidence-dir given."
+          fi
+
+          # Positive control: --evidence-dir with neither var set must be entirely unaffected —
+          # this is the existing AC-PUB-12 positive-control shape, re-asserted here so a
+          # regression in THIS guard's placement would be caught by this step too, not only by
+          # the AC-PUB-12 step elsewhere in this job.
+          bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-clean/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean
+          echo "PASS — --evidence-dir mode with neither var set is unaffected by the new guard."
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+
       - name: C3 seam containment — release-surface.yml carries no --evidence-dir/--changelog
         run: |
           set -euo pipefail
