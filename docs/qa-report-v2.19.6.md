@@ -1,8 +1,8 @@
 # QA Report — Cowork Starter Kit v2.19.6 "Publish What Shipped"
 
 ## Phase: 5
-## Date: 2026-08-07T11:15:00Z
-## Status: FAIL — CI is currently RED (3 jobs), and one of the three failures is masking a real, unrelated security defect (destination-repo guard is a no-op against its own threat model)
+## Date: 2026-08-07T11:15:00Z (original) / 2026-08-07T12:05:00Z (re-verification, §9)
+## Status: AMEND actioned and independently re-verified — see §9 for the discharge check. Original findings below (§0-§8) are preserved as the historical record; do not re-derive, read §9 for current state.
 
 Every verdict below rests on a command I ran myself this session — live CI logs pulled via `gh run
 view`, the shipped scripts executed locally against the shipped fixtures, or read-only `gh`
@@ -311,7 +311,129 @@ caught by ShellCheck because workflow YAML isn't in its `scandir`.
 
 ---
 
+## 9. Re-verification (2026-08-07T12:05:00Z) — fix pass at `c33cb22` + `752ccbf`
+
+Coordinator asked for a discharge check, not a re-review from scratch. Judged each of my §0-§8
+findings against the actual code at `752ccbf`, re-running real controls myself rather than trusting
+the fix-pass narrative or the new CI step in isolation.
+
+### 9.1 BLOCKER (§3) — DISCHARGED, independently re-verified
+
+`assert_destination_repo()` (the `gh repo view` no-op) is gone. Replaced with an unconditional
+`[ -n "${GH_REPO:-}" ] || [ -n "${GH_HOST:-}" ]` refusal, hoisted above the first `gh` call in the
+script (`publish-release.sh:112-119`) — closes the ordering gap too (previously the idempotence
+check's own `gh release view` ran unprotected before any destination check existed at all).
+
+I ran the **real, shipped script** three ways myself (not the CI step, not a mock):
+
+```
+$ GH_REPO="octocat/Hello-World" bash scripts/publish-release.sh
+ERROR: refusing to publish — GH_REPO and/or GH_HOST is set in this shell. ... EXIT=1
+
+$ GH_HOST="evil.example.com" bash scripts/publish-release.sh
+ERROR: refusing to publish — GH_REPO and/or GH_HOST is set in this shell. ... EXIT=1
+
+$ env -u GH_REPO -u GH_HOST bash scripts/publish-release.sh 1.0.0
+Extracted CHANGELOG section for 1.0.0 (22 lines).
+ERROR: refusing to CREATE tag v1.0.0 — VERSION at HEAD is '2.19.6'. ... EXIT=1
+```
+
+All three match the new `quality.yml` "Destination-repo guard fires..." step's own three
+assertions exactly — confirmed by reading that step (`quality.yml:2010-2070`) after running the
+equivalent by hand, not before. `--repo`/`-R` coverage claim independently re-grepped: zero
+`--repo`/`-R` on any real `gh release *` call in the file (only inside printed remedy text a
+human would type, never executed by the script). The genuine close is real.
+
+### 9.2 Three CI failures (§0, §2) — DISCHARGED
+
+- **ShellCheck**: `GE_OUT` capture dropped, stdout redirected to `/dev/null`, only the exit code
+  kept. Re-ran the AC-PUB-11/-12 fixtures against the patched `verify-release-surface.sh` myself —
+  identical results to before the fix (`2 checked`, RC=1, no `not a valid x.y.z semver`; untagged
+  fixture RC=1 with `9.9.9 MISSING-TAG`) — the fix didn't silently change behavior along the way.
+- **Markdown Lint**: trailing blank line removed from the fixture. Confirmed @dev's reasoning
+  directly rather than accepting it: `$(cat file)` strips all trailing newlines unconditionally
+  regardless of source file content — verified `wc -c`/`tail -c` on the actual captured `$BODY`
+  value, then re-ran all three `AC-PUB-6(ii)` assertions (`2.0.2` rejected, own `2.18.0` still
+  matches, naive-`202` fixture-validity control still present) against the trimmed file — all
+  still PASS. Not a lint-config change; the byte the file lost was never load-bearing.
+- **AC-PUB-14 step**: PATH-subtraction replaced with a `gh`-only shim (temp dir holding a fake
+  `gh` that itself exits 127, prepended to `PATH`) that shadows nothing else. Reproduced the exact
+  mechanism by hand (own shim dir, own `mktemp -d`) against the real script: `EXIT=1`, guard fired,
+  not 127. Root cause (shared-`/usr/bin` directory-subtraction) confirmed fixed at the mechanism
+  level, not just at the assertion level.
+
+CI at `31173062583` (`752ccbf`, the docs-only correction commit): **29 success, 2 skipped
+(pre-existing, path-gated, unrelated), 0 failures.**
+
+### 9.3 Minor finding (§7) — DISCHARGED
+
+`ALL_TOKENS="$(... || true)"` added. Reproduced the exact zero-header repro from §7 against the
+patched script: `EXIT=2`, `::error::...0 versions checked...` printed — no longer a silent
+`exit 1`. The below-floor CHECKED==0 path (the one that already worked) re-confirmed unaffected.
+One minor note, not a defect: the new CI step (`quality.yml:1909`) only regression-tests the
+zero-header trigger; the below-floor trigger has no dedicated CI step (it's covered by my own
+manual verification, both before and after this fix pass, but not pinned in CI). Not blocking —
+flagging so it doesn't quietly rot.
+
+### 9.4 Spec / security-review corrections (§4) — applied faithfully
+
+`docs/spec.md` `[P5-CORRECTION-1]` (State B = 4, not 2 or 3) and `[P4-CORRECTION-1]` (token
+`1.0.0`) both present, both accurate, both in the append-only strike-through convention — no
+history silently erased. `docs/security-review-v2.19.6.md` corrected at both the S2 prose site and
+AMEND item 11, explicitly marking the original `gh repo view` prescription "WRONG and must not be
+implemented as written" so a future cycle reading the review doesn't re-derive the no-op. Read
+both corrections in full; they match what actually shipped.
+
+### 9.5 NEW FINDING (WARNING, not a blocker on this discharge) — the same defect class is still live in `verify-release-surface.sh`, and I demonstrated it produces a false PASS, not just a false failure
+
+The fix pass touched only `publish-release.sh`. Its sibling, `verify-release-surface.sh`
+(`evidence_body()`, line ~107) calls `gh release view "v${version}"` via the same
+implicit-resolution form that honors `GH_REPO` — with **no** guard at all. Lower severity than the
+original BLOCKER because this script is read-only (a report can mislead; it cannot itself publish
+to the wrong repo) — but I did not stop at "it's read-only, therefore fine." I ran it, live,
+read-only, against the real repo:
+
+```
+$ GH_REPO="cli/cli" bash scripts/verify-release-surface.sh --floor 2.18.0
+2.19.6/2.19.5/2.19.4 MISSING-TAG   (unaffected — tag check uses `git ls-remote --tags origin`)
+2.19.3/2.19.2/2.19.1 MISSING-RELEASE   (FALSE — these releases exist; cli/cli has no such tags)
+2.18.0, 2.19.0 — NEITHER reported as failed
+release-surface: 8 checked, 7 failed, ...
+```
+
+`2.18.0` and `2.19.0` silently **passed** against `cli/cli`'s own, unrelated releases. Traced why:
+`GH_REPO=cli/cli gh release view v2.18.0 --json body -q .body` returns cli/cli's real v2.18.0
+release notes, which happen to contain the literal substring `2.18.0` — not about our repo at all,
+but GitHub's own auto-generated footer: `**Full Changelog**:
+https://github.com/cli/cli/compare/v2.17.0...v2.18.0`. That's a coincidental dotted-string
+collision satisfying `body_names_version()` for a completely unrelated release. So a poisoned run
+of this script doesn't just fail loud in the wrong way (MISSING-RELEASE on real releases) — it can
+also **silently mask a real problem with a false PASS**, for any version number common enough to
+collide with another repo's own release history. This is exactly the "green for the wrong reason"
+pattern the whole cycle exists to close, demonstrated live, in the one script the fix pass didn't
+touch.
+
+**Not blocking this discharge** — Scope A's actual write path is now genuinely protected, and this
+script never fires a write. But it should be closed before this class of gap is considered fully
+retired repo-wide. Recommend the same unconditional `GH_REPO`/`GH_HOST` refusal be added to
+`verify-release-surface.sh`, or a follow-up carry-forward if the owner prefers to scope it
+separately (`docs/risk-register.md`, this cycle's OT/CF conventions).
+
+---
+
 ## Verdict
+
+**PASS** — for this discharge check: the BLOCKER is genuinely fixed and independently re-verified
+against the real shipped script (not just the new CI assertions), the three CI failures are
+genuinely fixed with their underlying claims independently re-confirmed (not merely re-read), CI is
+green at `752ccbf` (29/29 non-skipped jobs), and both doc corrections are faithful. §9.5 is a real,
+live-demonstrated new finding of the same defect class in a sibling script — recorded so it isn't
+lost, not held back to gate this discharge, since it's read-only and Scope A's actual write path is
+sound.
+
+---
+
+## Original verdict (superseded by §9, preserved for the record)
 
 **AMEND.**
 
