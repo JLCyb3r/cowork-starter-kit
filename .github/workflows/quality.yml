@@ -1964,28 +1964,82 @@ jobs:
             --evidence-dir tests/fixtures/release-surface/evidence-clean
           echo "AC-PUB-12 positive control PASS — exit 0."
 
-      - name: AC-PUB-14 — create-path version guard fires with gh ABSENT from PATH (S1 fix)
+      - name: WRONG-LATEST negative control (S-A1 — @security Phase 6, docs/security-audit-v2.19.6.md)
+        # Before this step, WRONG-LATEST — the sole check on the cycle's stated Primary
+        # success metric AND on Scope A's ascending-publish-order requirement — had NO
+        # negative control anywhere in this job. @security proved this by neutering the
+        # check (`if false`) and running it against every other fixture-based step in this
+        # job: all of them still passed, meaning the conjunct could be deleted outright and
+        # CI would stay 100% green. This step, and the evidence-wrong-latest/ fixture it
+        # exercises, close that: the fixture is identical in shape to evidence-clean (one
+        # in-scope version, correctly tagged, correctly bodied) EXCEPT its latest.txt does
+        # not match the highest in-scope version — every per-version conjunct passes; only
+        # WRONG-LATEST fires. Independently re-verified this session (not merely trusted
+        # from the audit): a neutered copy of the script (same `if false` substitution)
+        # against this exact fixture returns exit 0, 0 failed — proving the fixture is
+        # actually load-bearing on the code path it exists to test, not passing for an
+        # unrelated reason.
+        run: |
+          set -euo pipefail
+          set +e
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-wrong-latest/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-wrong-latest 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          FAIL=0
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::S-A1 FAILED — expected exit 1, got ${RC}."
+            FAIL=1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "WRONG-LATEST — /releases/latest resolves to 'v2.18.0', expected 'v9.9.9'"; then
+            echo "::error::S-A1 FAILED — expected WRONG-LATEST finding naming 'v2.18.0' vs 'v9.9.9' not present."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "S-A1 (WRONG-LATEST negative control) PASS."
+
+      - name: AC-PUB-14 — create-path version guard fires with gh otherwise ABSENT (S1 fix)
         # Security-review note (S1, docs/security-review-v2.19.6.md): the negative-control
         # token is "1.0.0", NOT "2.0.2". "2.0.2" already has an origin tag and a live 0-byte
         # Release, so with `gh` present it reaches the REPAIR branch and never exercises this
         # guard at all. "1.0.0" has a dated CHANGELOG section and NO origin tag (verified live
         # at Phase 4), so it reaches the CREATE branch whether `gh` is present or absent.
         #
-        # @qa Phase 5 root-caused the PRIOR form of this step (docs/qa-report-v2.19.6.md §2):
-        # it simulated "gh absent" by stripping every PATH directory that CONTAINS a `gh`
-        # executable. On ubuntu-latest, `gh` and `bash` both live in /usr/bin, so that also
-        # deleted `bash`'s own directory — the step died with "bash: command not found" (127)
-        # before publish-release.sh ever ran, and the observed 127 was proof of a broken
-        # harness, not a broken guard. Fixed here by shadowing ONLY `gh`: a shim directory
-        # holding a fake `gh` that itself exits 127 (the real shell's own "not found" code),
-        # prepended to PATH so it wins the lookup — every other binary (bash, git, awk,
-        # mktemp, ...) resolves normally from its real location.
+        # @qa Phase 5 root-caused the ORIGINAL form of this step (docs/qa-report-v2.19.6.md
+        # §2): it simulated "gh absent" by stripping every PATH directory that CONTAINS a
+        # `gh` executable. On ubuntu-latest, `gh` and `bash` both live in /usr/bin, so that
+        # also deleted `bash`'s own directory — the step died with "bash: command not
+        # found" (127) before publish-release.sh ever ran. Fixed by shadowing ONLY `gh`: a
+        # shim prepended to PATH so it wins the lookup — every other binary resolves
+        # normally.
+        #
+        # @security Phase 6 (S-A2) added assert_gh_destination_repo() — a REAL `gh api`
+        # call — running BEFORE this step's actual target (the version-mismatch guard).
+        # A shim that failed ALL `gh` calls uniformly would make THAT check the one that
+        # fires here instead, silently testing the wrong thing while still reporting
+        # "exit 1, not 127" (still true, but for the wrong reason — the S-A11 shape, caught
+        # here before it shipped rather than after). Fixed: the shim answers the
+        # destination-repo `gh api` call correctly and fails every OTHER `gh` subcommand,
+        # so this step still exercises the version-mismatch guard specifically, with
+        # destination-repo verification passing exactly as it would with `gh` fully
+        # present and correctly configured.
         run: |
           set -euo pipefail
           GH_SHIM_DIR="$(mktemp -d)"
           trap 'rm -rf "$GH_SHIM_DIR"' EXIT
           cat > "${GH_SHIM_DIR}/gh" <<'SHIM'
           #!/usr/bin/env bash
+          if [ "$1" = "api" ]; then
+            # Answers assert_gh_destination_repo()'s call correctly so THIS step still
+            # reaches its actual target (the version-mismatch guard) rather than stopping
+            # early at a check this step is not about.
+            echo "jmlozano1990/Cowork-Starter-Kit"
+            exit 0
+          fi
           echo "gh: command not found (test shim — AC-PUB-14 negative control)" >&2
           exit 127
           SHIM
@@ -1993,19 +2047,24 @@ jobs:
           echo "shim gh resolves first: $(PATH="${GH_SHIM_DIR}:${PATH}" command -v gh)"
 
           set +e
-          PATH="${GH_SHIM_DIR}:${PATH}" bash scripts/publish-release.sh 1.0.0
+          OUT="$(PATH="${GH_SHIM_DIR}:${PATH}" bash scripts/publish-release.sh 1.0.0 2>&1)"
           RC=$?
           set -e
+          echo "$OUT"
           echo "exit code: ${RC}"
           if [ "$RC" -eq 127 ]; then
-            echo "::error::AC-PUB-14 FAILED — exit 127 (gh command-not-found reached the create path unguarded); expected exit 1 from the version guard BEFORE any gh call."
+            echo "::error::AC-PUB-14 FAILED — exit 127 (gh command-not-found reached the create path unguarded); expected exit 1 from the version guard."
             exit 1
           fi
           if [ "$RC" -ne 1 ]; then
             echo "::error::AC-PUB-14 FAILED — expected exit 1, got ${RC}."
             exit 1
           fi
-          echo "AC-PUB-14 PASS — exit 1 (guard fired), not 127 (gh reached unguarded)."
+          if ! printf '%s' "$OUT" | grep -qF "refusing to CREATE tag"; then
+            echo "::error::AC-PUB-14 FAILED — exit 1 fired, but not from the version-mismatch guard (expected 'refusing to CREATE tag' in output). The shim's destination-repo answer may not be wired correctly."
+            exit 1
+          fi
+          echo "AC-PUB-14 PASS — exit 1 from the version-mismatch guard specifically, not 127, and not an earlier check."
 
       - name: Destination-repo guard fires when GH_REPO/GH_HOST is set (S2 BLOCKER fix)
         # @qa Phase 5 BLOCKER (docs/qa-report-v2.19.6.md §3): the prior guard asked
@@ -2015,6 +2074,15 @@ jobs:
         # refusing outright, unconditionally, before any `gh` call, if GH_REPO or GH_HOST is
         # set — see that file's own comment for the full `gh help environment` audit. This
         # step proves the fix actually fires, against the real shipped script, both ways.
+        #
+        # @security Phase 6 (S-A2, docs/security-audit-v2.19.6.md) added a second,
+        # POSITIVE assertion — assert_gh_destination_repo() — because the env-var deny-list
+        # above cannot reach every redirect vector (git-config injection, GH_CONFIG_DIR).
+        # This step's "neither set" leg now needs a real, authenticated `gh api` call to
+        # get past that assertion — GH_TOKEN below is what makes this step exercise the
+        # REAL live path instead of an unauthenticated stand-in for it.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           FAIL=0
@@ -2045,10 +2113,12 @@ jobs:
             echo "PASS — guard fired with GH_HOST set."
           fi
 
-          # Positive control: neither set -> must NOT hit the destination-repo message. It
-          # will still exit 1 further down (the version-mismatch guard, VERSION at HEAD is
-          # never "1.0.0" on a real checkout) — that is the CORRECT reason to fail here, and
-          # proves the destination-repo check is not firing on a false positive.
+          # Positive control: neither set -> must NOT hit either destination-repo message
+          # (the free env check OR the authenticated positive assertion). It will still
+          # exit 1 further down (the version-mismatch guard, VERSION at HEAD is never
+          # "1.0.0" on a real checkout) — that is the CORRECT reason to fail here, and
+          # proves both destination checks pass cleanly on the real, unredirected repo
+          # before the run reaches the next real guard.
           set +e
           OUT3="$(bash scripts/publish-release.sh 1.0.0 2>&1)"
           RC3=$?
@@ -2058,11 +2128,51 @@ jobs:
           if printf '%s' "$OUT3" | grep -qF "GH_REPO and/or GH_HOST is set"; then
             echo "::error::destination-repo guard FALSE-POSITIVE fired with neither GH_REPO nor GH_HOST set."
             FAIL=1
+          elif printf '%s' "$OUT3" | grep -qF "could not verify the destination repository"; then
+            echo "::error::assert_gh_destination_repo FALSE-POSITIVE (or a real auth/network failure) with neither variable set."
+            FAIL=1
           elif ! printf '%s' "$OUT3" | grep -qF "refusing to CREATE tag"; then
             echo "::error::expected the version-mismatch guard's message when neither GH_REPO nor GH_HOST is set; got something else."
             FAIL=1
           else
-            echo "PASS — neither variable set, guard correctly silent, run proceeded to the next real guard."
+            echo "PASS — neither variable set, both destination checks silent, run proceeded to the next real guard."
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: assert_gh_destination_repo() detects a real mismatch (S-A2 positive-assertion unit test)
+        # The two legs above cannot exercise assert_gh_destination_repo()'s OWN mismatch
+        # branch through the full script: GH_REPO/GH_HOST are intercepted earlier by
+        # refuse_if_gh_redirect_env_set(), by design (cheap check first). This calls the
+        # shared function directly against the REAL repo's real `gh api` resolution, with a
+        # deliberately WRONG expected value — proving the comparison itself is correct,
+        # independent of which environment variable (if any) caused a real redirect.
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          source scripts/release-predicate.sh
+          FAIL=0
+
+          set +e
+          OUT="$(assert_gh_destination_repo "not-the/real-repo" 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ "$RC" -eq 0 ] || ! printf '%s' "$OUT" | grep -qF "resolves to"; then
+            echo "::error::assert_gh_destination_repo did not refuse a real mismatch."
+            FAIL=1
+          else
+            echo "PASS — refuses correctly against a wrong expected repo."
+          fi
+
+          if ! assert_gh_destination_repo "jmlozano1990/Cowork-Starter-Kit"; then
+            echo "::error::assert_gh_destination_repo refused the CORRECT repo — false positive."
+            FAIL=1
+          else
+            echo "PASS — accepts the correct repo."
           fi
 
           if [ "$FAIL" -eq 1 ]; then

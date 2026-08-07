@@ -103,6 +103,19 @@ EXPECTED_REPO="jmlozano1990/Cowork-Starter-Kit"
 #     evidence is READ from, not whether this check runs.
 refuse_if_gh_redirect_env_set "$EXPECTED_REPO" || exit 2
 
+# --- Destination-repo POSITIVE assertion (@security Phase 6, S-A2, docs/security-audit-
+#     v2.19.6.md — "the right remedy"). Same rationale as publish-release.sh's identical
+#     call — see that file's comment for the full argument. Gated on EVIDENCE_DIR being
+#     unset: this assertion needs a live, authenticated `gh api` call, which would defeat
+#     the entire point of --evidence-dir (offline, no-network fixture testing) if forced
+#     onto that path too. In evidence-dir mode, no `gh` call of any kind occurs — the free
+#     env-var refusal above already covers that path completely (it is provably inert
+#     there rather than merely unneeded), and this positive assertion adds nothing further
+#     to guard because there is nothing left to redirect.
+if [ -z "$EVIDENCE_DIR" ]; then
+  assert_gh_destination_repo "$EXPECTED_REPO" || exit 2
+fi
+
 # --- Evidence seam: origin tags ---
 evidence_tags() {
   if [ -n "$EVIDENCE_DIR" ]; then
@@ -117,7 +130,18 @@ evidence_tags() {
 }
 
 # --- Evidence seam: Release body for a version. Prints body (possibly empty) and returns
-#     0 if a Release exists, 1 if none exists (MISSING-RELEASE). ---
+#     0 if a Release exists, 1 if none exists (MISSING-RELEASE).
+#
+#     S-A3 fix (@security Phase 6, docs/security-audit-v2.19.6.md): `gh release view`
+#     returns non-zero for "no such release" and for an unrelated transient failure alike
+#     (expired token, rate limit, network) — `2>/dev/null` used to discard that distinction
+#     entirely, so the caller printed "MISSING-RELEASE ... run publish-release.sh" even
+#     when the real cause was, say, a rate limit, which is actively wrong advice. This does
+#     NOT fully separate the two into different top-level tokens (that would need a new
+#     greppable token and a new remedy, a larger change) — it surfaces `gh`'s own stderr
+#     alongside the MISSING-RELEASE finding, so an operator reading the output sees the
+#     real cause instead of being silently misdiagnosed. Uses `mktemp`, not a fixed path
+#     (S-A6's same fix, applied here too, since this is new code written in the same pass). ---
 evidence_body() {
   local version="$1"
   if [ -n "$EVIDENCE_DIR" ]; then
@@ -128,7 +152,21 @@ evidence_body() {
     echo "::error::release-surface: gh not available or not authenticated." >&2
     exit 2
   fi
-  gh release view "v${version}" --json body -q '.body' 2>/dev/null
+  local gh_stderr out rc
+  gh_stderr="$(mktemp)"
+  out="$(gh release view "v${version}" --json body -q '.body' 2>"$gh_stderr")"
+  rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "::error::release-surface: 'gh release view v${version}' failed (exit ${rc}) —" >&2
+    echo "  treated as MISSING-RELEASE below, but the real cause may not be a missing" >&2
+    echo "  release. Raw gh error:" >&2
+    sed 's/^/    /' "$gh_stderr" >&2
+    rm -f "$gh_stderr"
+    return 1
+  fi
+  rm -f "$gh_stderr"
+  printf '%s' "$out"
+  return 0
 }
 
 # --- Evidence seam: the tag /releases/latest currently resolves to (S4). Prints the tag
@@ -207,19 +245,25 @@ while IFS= read -r tok; do
   #     UNREACHABLE-BY-CONSTRUCTION assertion: if it ever prints, the parser/comparator
   #     contract has been broken elsewhere and this is a hard, loud failure — not a
   #     silently-collapsed skip (ADR-078 §D1). ---
+  # S-A6 fix (@security Phase 6): `$$`-suffixed is PID-scoped, not attacker-predictable
+  # across invocations, and this script never performs a write — meaningfully weaker
+  # exposure than publish-release.sh's fixed-path instance, but the same class, and the
+  # same one-line fix (`mktemp`) applies. Created fresh each loop iteration, removed
+  # immediately after use on every exit path below.
+  SEMVER_STDERR="$(mktemp)"
   set +e
   # stdout ("true"/"false") is not needed — only the exit code drives classification below;
   # stderr is kept (ShellCheck SC2034 flagged the prior form's unused capture variable).
-  "$SEMVER_CMP" ge "$tok" "$FLOOR" >/dev/null 2>"/tmp/release-surface-semver-stderr.$$"
+  "$SEMVER_CMP" ge "$tok" "$FLOOR" >/dev/null 2>"$SEMVER_STDERR"
   GE_RC=$?
   set -e
   if [ "$GE_RC" -eq 2 ]; then
     echo "::error::release-surface: comparator rejected '${tok}' which the parser classified COMPARABLE — parser/comparator contract violated. Fail-closed; not a routine path." >&2
-    cat /tmp/release-surface-semver-stderr.$$ >&2 2>/dev/null || true
-    rm -f /tmp/release-surface-semver-stderr.$$
+    cat "$SEMVER_STDERR" >&2 2>/dev/null || true
+    rm -f "$SEMVER_STDERR"
     exit 2
   fi
-  rm -f /tmp/release-surface-semver-stderr.$$
+  rm -f "$SEMVER_STDERR"
   if [ "$GE_RC" -ne 0 ]; then
     echo "::notice::release-surface: '${tok}' SKIP — below floor ${FLOOR}."
     SKIP_BELOWFLOOR=$((SKIP_BELOWFLOOR + 1))
@@ -296,7 +340,17 @@ if [ "$ACTUAL_LATEST" != "$EXPECTED_LATEST" ]; then
   FAILED=$((FAILED + 1))
 fi
 
-echo "release-surface: ${CHECKED} checked, ${FAILED} failed, $((SKIP_NONXYZ + SKIP_BELOWFLOOR)) skipped (${SKIP_NONXYZ} non-x.y.z, ${SKIP_BELOWFLOOR} below-floor)."
+# S-A8 fix (@security Phase 6, docs/security-audit-v2.19.6.md): Phase-2 AMEND 6 asked for
+# TWO self-identifying signals in evidence-injected mode — the `::warning::` banner above
+# (shipped) and an explicit marker in THIS summary line (did not ship). The banner is what
+# survives in a full CI log; this line is what survives a copy-paste into a retro, a PR
+# body, or a risk-register row — for a cycle about records that read as authoritative while
+# being false, the un-shipped half was the load-bearing one.
+SUMMARY_SUFFIX=""
+if [ -n "$EVIDENCE_DIR" ]; then
+  SUMMARY_SUFFIX=" [EVIDENCE-INJECTED — not a fact about this repository]"
+fi
+echo "release-surface: ${CHECKED} checked, ${FAILED} failed, $((SKIP_NONXYZ + SKIP_BELOWFLOOR)) skipped (${SKIP_NONXYZ} non-x.y.z, ${SKIP_BELOWFLOOR} below-floor).${SUMMARY_SUFFIX}"
 
 if [ "$FAILED" -gt 0 ]; then
   exit 1

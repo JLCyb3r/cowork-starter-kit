@@ -47,11 +47,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #     and release-predicate.sh) is read from the operator's main checkout via the
 #     BASH_SOURCE resolution above. Every ref-facing assertion elsewhere in this
 #     procedure verifies the COMMIT being tagged; none verified the CODE being run. This
-#     closes that gap: the two files about to execute must be tracked and clean at HEAD
-#     in the checkout they live in — enforcing docs/spec.md's "as-merged script (no
-#     ad-hoc local edit)" requirement instead of merely stating it. `git status
+#     narrows that gap: the two files about to execute must be tracked and clean at
+#     whatever commit is currently checked out in the checkout they live in. `git status
 #     --porcelain` reports an uncommitted edit AND an untracked file both as non-empty
 #     output, so this one check covers both hazards.
+#
+#     S-A5 (@security Phase 6, docs/security-audit-v2.19.6.md): this proves "tracked and
+#     clean," which is NOT the same claim as "as-merged" — a checkout sitting on a stale
+#     feature branch, or an older `main`, passes this exact check just as cleanly as one on
+#     the true HEAD the operator intends. The error message below is deliberately scoped to
+#     what is actually enforced rather than the broader claim an earlier version of this
+#     comment made. Neither this check nor `AC-PUB-2`'s pre-flight (which asserts the
+#     DETACHED WORKTREE's ref, not this checkout's) currently assert MAIN_REPO_ROOT is at
+#     the expected merge commit — recorded as an open gap, not silently strengthened here.
 MAIN_REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROVENANCE_STATUS="$(git -C "$MAIN_REPO_ROOT" status --porcelain -- scripts/publish-release.sh scripts/release-predicate.sh 2>&1)" || {
   echo "ERROR: producer-provenance check failed — '${MAIN_REPO_ROOT}' is not a readable git checkout." >&2
@@ -61,7 +69,10 @@ if [ -n "$PROVENANCE_STATUS" ]; then
   echo "ERROR: refusing to publish — scripts/publish-release.sh and/or scripts/release-predicate.sh" >&2
   echo "  have uncommitted or untracked changes in ${MAIN_REPO_ROOT}:" >&2
   echo "$PROVENANCE_STATUS" >&2
-  echo "  This script must run as-merged, with no ad-hoc local edit (docs/spec.md Scope A)." >&2
+  echo "  These two files must be tracked and clean (no ad-hoc local edit) at whatever" >&2
+  echo "  commit is checked out in ${MAIN_REPO_ROOT}. This does NOT by itself confirm that" >&2
+  echo "  commit is the expected merge commit — verify that separately (docs/spec.md" >&2
+  echo "  Scope A / docs/security-audit-v2.19.6.md S-A5)." >&2
   exit 1
 fi
 
@@ -83,6 +94,22 @@ fi
 EXPECTED_REPO="jmlozano1990/Cowork-Starter-Kit"
 refuse_if_gh_redirect_env_set "$EXPECTED_REPO" || exit 1
 
+# --- Destination-repo POSITIVE assertion (@security Phase 6, S-A2, docs/security-audit-
+#     v2.19.6.md — "the right remedy"). The refusal above is a deny-list over GH_REPO/
+#     GH_HOST; it does not reach `gh`'s INHERITED resolution surface (git-config injection
+#     via GIT_CONFIG_COUNT/KEY/VALUE, which could redirect `git ls-remote` too — mechanism
+#     confirmed, composed chain unverified) or GH_CONFIG_DIR (confirmed to fail closed
+#     today; false-PASS potential unverified), and it cannot see an operator's own aliased
+#     wrapper that injects `--repo` onto every `gh` call. A deny-list is the wrong
+#     instrument for a surface that can grow. This is the actual close: a POSITIVE
+#     assertion via `gh api "repos/{owner}/{repo}"`, which resolves through the SAME
+#     implicit path `gh release view/create/edit` use (confirmed live) — true by
+#     construction against every vector above, including the aliased-`--repo` case (the
+#     alias would apply to THIS call too, and the comparison would then fail). Costs one
+#     authenticated API call, so it runs second, after the free env check above, not
+#     instead of it.
+assert_gh_destination_repo "$EXPECTED_REPO" || exit 1
+
 VERSION="${1:-$(tr -d '[:space:]' < VERSION)}"
 TAG="v${VERSION}"
 TARGET_SHA="$(git rev-parse HEAD)"
@@ -94,7 +121,8 @@ fi
 
 # --- 1. Extract the dated CHANGELOG section. Fails if missing or empty. ---
 NOTES_FILE="$(mktemp)"
-trap 'rm -f "$NOTES_FILE"' EXIT
+EXISTING_BODY_FILE="$(mktemp)"
+trap 'rm -f "$NOTES_FILE" "$EXISTING_BODY_FILE"' EXIT
 
 # The section runs from its own "## [x.y.z] - date" header (included, so the
 # post-condition assertion at step 4 has a version string to match against)
@@ -117,10 +145,18 @@ fi
 echo "Extracted CHANGELOG section for ${VERSION} ($(wc -l < "$NOTES_FILE" | tr -d ' ') lines)."
 
 # --- 2. Idempotence: refuse (no-op) if a populated Release already exists;
-#        repair an existing empty-bodied one instead of duplicating. ---
-if gh release view "$TAG" --json body -q '.body' > /tmp/publish-release-existing-body.txt 2>/dev/null; then
-  EXISTING_BODY="$(cat /tmp/publish-release-existing-body.txt)"
-  rm -f /tmp/publish-release-existing-body.txt
+#        repair an existing empty-bodied one instead of duplicating.
+#
+#     S-A6 fix (@security Phase 6, docs/security-audit-v2.19.6.md): this used to redirect
+#     to a fixed, predictable /tmp path (`/tmp/publish-release-existing-body.txt`) — on the
+#     one script in this repo that performs irreversible public writes. CWE-59/CWE-377: a
+#     symlink pre-planted at that name causes `>` to truncate-and-write through to the link
+#     target as the invoking user, and a redirect that merely FAILS (path exists, owned by
+#     someone else) silently defeats this idempotence check rather than erroring loudly.
+#     `NOTES_FILE` three lines above already used `mktemp` — the inconsistency was the
+#     tell. EXISTING_BODY_FILE is `mktemp`'d alongside it and cleaned by the same trap. ---
+if gh release view "$TAG" --json body -q '.body' > "$EXISTING_BODY_FILE" 2>/dev/null; then
+  EXISTING_BODY="$(cat "$EXISTING_BODY_FILE")"
   if [ -n "$EXISTING_BODY" ] && [ "$EXISTING_BODY" != "null" ]; then
     echo "Release ${TAG} already exists with a non-empty body — skipping publish (idempotent), still verifying post-conditions."
   else

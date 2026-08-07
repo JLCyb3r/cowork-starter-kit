@@ -91,9 +91,41 @@ body_names_version() {
 #     - `--repo`/`-R` (a flag, not an environment variable) is out of scope for THIS
 #       function by construction — grep confirms neither caller of this file passes it to
 #       any `gh` invocation. An operator's own aliased wrapper injecting `--repo` is a
-#       different threat model an environment-variable guard cannot observe.
-#     - No other documented `gh` environment variable affects repository or host
-#       resolution (`GH_TOKEN`/`GH_ENTERPRISE_TOKEN` are AUTH only, never target selection).
+#       different threat model an environment-variable guard cannot observe — but see
+#       assert_gh_destination_repo() below, which DOES close that one, as a side effect of
+#       closing everything else this function's deny-list cannot reach.
+#
+#   NOT covered by this function — corrected here (@security Phase 6, S-A2; the previous
+#   form of this comment claimed completeness this function does not have):
+#     - `gh`'s INHERITED resolution surface. `gh` derives its target repository from
+#       `remote.origin.url` when no `--repo`/`GH_REPO` is given, and `git-config(1)`
+#       documents `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` as
+#       environment variables that override configuration-file values for ANY git process
+#       `gh` shells out to. A single such env triple could in principle redirect BOTH
+#       `gh release view/create/edit` AND `evidence_tags()`'s `git ls-remote --tags origin`
+#       together — the two evidence sources this function's own callers treat as
+#       independently safe from each other. Mechanism and resolution path confirmed; the
+#       composed chain itself is **UNVERIFIED** (probing `GIT_CONFIG_*` was not possible in
+#       the environment this was audited from) — treat as plausible-unproven, not
+#       established.
+#     - `GH_CONFIG_DIR` (and `XDG_CONFIG_HOME` behind it) — documented, and confirmed live
+#       to change `gh`'s authenticated-host state. Its confirmed effect is FAIL-CLOSED (an
+#       unexpected config dir leaves `gh` unauthenticated, so calls fail rather than
+#       succeed against a wrong target). Whether a crafted config directory could produce a
+#       false PASS rather than a fail-closed error is **UNVERIFIED**. Not added to this
+#       function's deny-list on purpose: `XDG_CONFIG_HOME` is set for ordinary, benign
+#       reasons on many workstations, and refusing on its mere presence would be a
+#       usability regression for a property that is not established to be exploitable.
+#
+#   A deny-list over `gh`'s resolution surface is the wrong instrument regardless of how
+#   complete this comment manages to be — the surface can grow (a future `gh` release could
+#   add another override) and this function would need to grow with it, silently, to stay
+#   correct. assert_gh_destination_repo() below is the actual close: a POSITIVE assertion
+#   against the same resolution path the protected commands use, true by construction
+#   against every vector above (including the ones this function cannot see) rather than
+#   enumerated against them one at a time. Keep this function anyway — it is real
+#   defense-in-depth that fails fast, offline, with no network round trip, and it is the
+#   only one of the two that also protects the --evidence-dir seam's non-network paths.
 refuse_if_gh_redirect_env_set() {
   local expected_repo="$1"
   if [ -n "${GH_REPO:-}" ] || [ -n "${GH_HOST:-}" ]; then
@@ -102,6 +134,44 @@ refuse_if_gh_redirect_env_set() {
     echo "  Either can redirect a 'gh' call to a repository or host other than" >&2
     echo "  ${expected_repo}, which this script must never do. Run 'unset GH_REPO GH_HOST'" >&2
     echo "  and try again." >&2
+    return 1
+  fi
+  return 0
+}
+
+# assert_gh_destination_repo <expected-owner/repo>
+#   Returns 0 if `gh api "repos/{owner}/{repo}"` resolves to exactly the expected
+#   "OWNER/REPO" string; returns 1 (with a named ERROR to stderr) on any mismatch OR if the
+#   `gh api` call itself fails for any reason (network, auth, gh absent) — fail-closed,
+#   never a silent pass when the destination cannot be POSITIVELY confirmed.
+#
+#   @security Phase 6 (S-A2/S-A1 discussion, docs/security-audit-v2.19.6.md — "Is the
+#   shared guard actually sound"): the `{owner}/{repo}` placeholder form resolves through
+#   THE SAME implicit path `gh release view/create/edit` use — confirmed live:
+#   `GH_REPO=cli/cli gh api "repos/{owner}/{repo}" --jq .full_name` returns `cli/cli`;
+#   unset, it returns this repo's own name. Being a POSITIVE assertion against that shared
+#   resolution path — rather than a deny-list of the environment variables that can perturb
+#   it — this closes every redirect vector at once, including ones refuse_if_gh_redirect_
+#   env_set() cannot see by construction (an aliased wrapper that injects `--repo` onto
+#   every `gh` call would inject it onto THIS call too, and the comparison would then fail).
+#
+#   Costs one authenticated API call, so this is NOT a substitute for the free, offline
+#   refuse_if_gh_redirect_env_set() — callers should run both, cheap check first. This
+#   function must not be called from a path that is supposed to work with no network
+#   access (the --evidence-dir seam) — callers gate it accordingly.
+assert_gh_destination_repo() {
+  local expected_repo="$1"
+  local actual_repo
+  actual_repo="$(gh api "repos/{owner}/{repo}" --jq '.full_name' 2>&1)" || {
+    echo "ERROR: refusing to run — could not verify the destination repository via" >&2
+    echo "  'gh api repos/{owner}/{repo}'. Output: ${actual_repo}" >&2
+    return 1
+  }
+  if [ "$actual_repo" != "$expected_repo" ]; then
+    echo "ERROR: refusing to run — destination repository resolves to '${actual_repo}'," >&2
+    echo "  expected '${expected_repo}'. This is checked independently of GH_REPO/GH_HOST" >&2
+    echo "  (see refuse_if_gh_redirect_env_set() above) because this resolves through the" >&2
+    echo "  same path 'gh release view/create/edit' use, whatever redirected it." >&2
     return 1
   fi
   return 0
