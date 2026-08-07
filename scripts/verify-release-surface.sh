@@ -31,6 +31,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./release-predicate.sh
+# shellcheck disable=SC1091  # see scripts/publish-release.sh's identical comment — this
+# repo's ShellCheck CI job never passes -x, so this include can never be followed there.
 . "${SCRIPT_DIR}/release-predicate.sh" || {
   echo "::error::release-surface: ${SCRIPT_DIR}/release-predicate.sh not found beside $0." >&2
   exit 2
@@ -136,8 +138,20 @@ fi
 # --- Stage 1: parse. Dash-agnostic by construction — the grammar never looks past the
 #     closing bracket, so ASCII-hyphen, em-dash, and parenthetical-title headers are all
 #     reached. Deliberately NOT `grep -P`: this script must also run on an operator's
-#     macOS workstation, where the default /bin/grep has no -P support. ---
-ALL_TOKENS="$(grep -o '^## \[[^]]*\]' "$CHANGELOG_PATH" | sed -E 's/^## \[//; s/\]$//')"
+#     macOS workstation, where the default /bin/grep has no -P support.
+#
+#     `|| true` (@qa Phase 5 WARNING, docs/qa-report-v2.19.6.md §7): `grep -o` with ZERO
+#     matches exits 1, and under `pipefail` that makes this whole pipeline's status 1 even
+#     though `sed` itself succeeds — under `set -e`, a plain assignment aborts the script
+#     right here, before the loop or the documented CHECKED==0 fail-closed branch below is
+#     ever reached. Not reachable with the real CHANGELOG.md (45+ headers, always), but
+#     `--changelog` is a user-facing flag on the evidence-injection seam — a malformed file
+#     there deserves the documented `exit 2` diagnostic, not a silent, unexplained `exit 1`
+#     from a plain variable assignment. `|| true` only neutralizes THIS pipeline's exit
+#     status for the "no match" case; it does not suppress any error the loop or the
+#     CHECKED==0 check below would otherwise catch — ALL_TOKENS is simply empty and the
+#     loop runs zero times, exactly as if the CHANGELOG had no headers, which is the truth. ---
+ALL_TOKENS="$(grep -o '^## \[[^]]*\]' "$CHANGELOG_PATH" | sed -E 's/^## \[//; s/\]$//' || true)"
 
 TAGS_EVIDENCE="$(evidence_tags)"
 
@@ -170,7 +184,9 @@ while IFS= read -r tok; do
   #     contract has been broken elsewhere and this is a hard, loud failure — not a
   #     silently-collapsed skip (ADR-078 §D1). ---
   set +e
-  GE_OUT="$("$SEMVER_CMP" ge "$tok" "$FLOOR" 2>/tmp/release-surface-semver-stderr.$$)"
+  # stdout ("true"/"false") is not needed — only the exit code drives classification below;
+  # stderr is kept (ShellCheck SC2034 flagged the prior form's unused capture variable).
+  "$SEMVER_CMP" ge "$tok" "$FLOOR" >/dev/null 2>"/tmp/release-surface-semver-stderr.$$"
   GE_RC=$?
   set -e
   if [ "$GE_RC" -eq 2 ]; then

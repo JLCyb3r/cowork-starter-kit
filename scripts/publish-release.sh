@@ -31,6 +31,12 @@ set -euo pipefail
 #     succeed by accident everywhere else. Fail-closed, never a silent inline fallback.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./release-predicate.sh
+# shellcheck disable=SC1091  # this repo's ShellCheck CI job (ludeeus/action-shellcheck)
+# never passes -x/--external-sources, so `source=` above is honored only by a local
+# `shellcheck -x` run — in CI the include can never be followed, and SC1091 would
+# otherwise fire on that fact alone (info-level, but this job's default severity shows
+# every level). House pattern for exactly this: quality.yml:442/:472 disable SC2034 the
+# same way, for the same reason (a real, reasoned suppression, not a blanket ignore).
 . "${SCRIPT_DIR}/release-predicate.sh" || {
   echo "ERROR: ${SCRIPT_DIR}/release-predicate.sh not found beside $0 — refusing to publish." >&2
   exit 1
@@ -59,26 +65,58 @@ if [ -n "$PROVENANCE_STATUS" ]; then
   exit 1
 fi
 
-# assert_destination_repo — S2 (AMEND 11): `gh` honors the GH_REPO environment variable,
-# which overrides repository resolution from the git remote. If GH_REPO is exported in
-# the operator's shell, every other assertion in this script still passes while the
-# release is created in a DIFFERENT repository. Called immediately before each
-# irreversible `gh` write — never earlier, so a guard that must work with `gh` absent
-# from PATH (AC-PUB-14's negative control) is never blocked by this one needing `gh`.
+# --- Destination-repo guard (BLOCKER fix — @qa Phase 5, docs/qa-report-v2.19.6.md §3).
+#     The PRIOR form of this guard called `gh repo view --json nameWithOwner` and compared
+#     it to EXPECTED_REPO. That is a no-op against its own threat model: `gh repo view`
+#     resolves the repository from the git remote and IGNORES `GH_REPO` even when `GH_REPO`
+#     is exported — verified live: `GH_REPO=octocat/Hello-World gh repo view --json
+#     nameWithOwner` still printed THIS repo's real name. But the commands this guard
+#     exists to protect — `gh release view`, `gh release create`, `gh release edit` — DO
+#     honor `GH_REPO` — verified live: `GH_REPO=cli/cli gh release view v2.96.0` returned
+#     cli/cli's real release data. So the old guard passed EXACTLY WHEN the attack it was
+#     meant to catch was active — a check green for the wrong reason.
+#
+#     Fix: stop asking a DIFFERENT command what it thinks the repo is. Refuse outright if
+#     either environment variable capable of redirecting a `gh release *` call is set. Per
+#     `gh help environment` (the complete, authoritative list of gh's documented
+#     environment variables — read in full, not skimmed for the one already known about):
+#       - GH_REPO: "specify the GitHub repository ... for commands that otherwise operate
+#         on a local repository." This is the vector `gh release *` honors — verified live
+#         above. COVERED — refused below.
+#       - GH_HOST: "specify the GitHub hostname for commands where a hostname has not been
+#         provided, or cannot be inferred from the context of a local Git repository." In
+#         THIS checkout (one git remote, github.com) it empirically fails CLOSED today —
+#         both `gh repo view` and `gh release list` refuse with "none of the git remotes
+#         ... correspond to GH_HOST" rather than silently redirecting, because gh still
+#         needs a remote matching that host to resolve owner/repo. Tested live, both
+#         commands, same result. COVERED anyway, defensively, below — this checkout's
+#         single-remote configuration is what makes GH_HOST fail closed today, and that is
+#         a fact about the checkout, not a guarantee this script should lean on.
+#       - `--repo`/`-R` (per-invocation flag, not an environment variable): NOT a vector
+#         from inside this script — grep confirms no `gh` invocation anywhere in this file
+#         passes `--repo`/`-R`; every call resolves implicitly from `cwd`'s git remote (or,
+#         for the two variables above, from the environment). NOT COVERED, because there is
+#         nothing here for an environment-variable guard to see: an operator who wraps this
+#         script in their own alias/function that injects `--repo` onto every `gh` call is
+#         a different threat model this check cannot observe.
+#       - No other documented `gh` environment variable affects repository or host
+#         resolution (`GH_TOKEN`/`GH_ENTERPRISE_TOKEN` affect AUTH only, never target
+#         selection) — confirmed against the full `gh help environment` output, not assumed.
+#
+#     This check needs no `gh` call itself (a pure environment-variable read), so it runs
+#     UNCONDITIONALLY, HERE, before the first `gh` call anywhere in this script (the
+#     idempotence check a few lines below) — closing the ordering gap @qa also flagged: a
+#     guard called only right before create/edit would still leave that earlier read
+#     exposed to a redirected repo.
 EXPECTED_REPO="jmlozano1990/Cowork-Starter-Kit"
-assert_destination_repo() {
-  local actual_repo
-  actual_repo="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>&1)" || {
-    echo "ERROR: refusing to publish — could not resolve destination repository via 'gh repo view'." >&2
-    echo "  $actual_repo" >&2
-    exit 1
-  }
-  if [ "$actual_repo" != "$EXPECTED_REPO" ]; then
-    echo "ERROR: refusing to publish — destination repository is '${actual_repo}', expected '${EXPECTED_REPO}'." >&2
-    echo "  Check for an exported GH_REPO overriding gh's repository resolution ('unset GH_REPO')." >&2
-    exit 1
-  fi
-}
+if [ -n "${GH_REPO:-}" ] || [ -n "${GH_HOST:-}" ]; then
+  echo "ERROR: refusing to publish — GH_REPO and/or GH_HOST is set in this shell." >&2
+  echo "  GH_REPO='${GH_REPO:-<unset>}'  GH_HOST='${GH_HOST:-<unset>}'" >&2
+  echo "  Both can redirect 'gh release view/create/edit' to a repository other than" >&2
+  echo "  ${EXPECTED_REPO}, which this script must never do. Run 'unset GH_REPO GH_HOST'" >&2
+  echo "  and try again." >&2
+  exit 1
+fi
 
 VERSION="${1:-$(tr -d '[:space:]' < VERSION)}"
 TAG="v${VERSION}"
@@ -122,7 +160,6 @@ if gh release view "$TAG" --json body -q '.body' > /tmp/publish-release-existing
     echo "Release ${TAG} already exists with a non-empty body — skipping publish (idempotent), still verifying post-conditions."
   else
     echo "Release ${TAG} exists with an empty body — repairing via 'gh release edit'."
-    assert_destination_repo
     gh release edit "$TAG" --notes-file "$NOTES_FILE"
   fi
 else
@@ -148,8 +185,6 @@ else
     echo "  must already exist — this guard does not apply on the repair path." >&2
     exit 1
   fi
-
-  assert_destination_repo
 
   # --- 3. Create the tag AND the populated Release in one call. ---
   echo "Creating ${TAG} at ${TARGET_SHA} with a populated body..."

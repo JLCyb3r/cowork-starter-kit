@@ -1906,6 +1906,30 @@ jobs:
           fi
           echo "AC-PUB-11 ALL PASS."
 
+      - name: CHECKED==0 fail-closed on a zero-header CHANGELOG (@qa Phase 5 WARNING fix)
+        # docs/qa-report-v2.19.6.md §7: a `--changelog` pointed at a file with ZERO
+        # `## [x.y.z]`-shaped headers previously died silently at `exit 1` (a `grep -o`
+        # pipeline failure under `pipefail`, aborting before the documented CHECKED==0
+        # branch). Fixed with `|| true` on that one pipeline. This proves it now reaches
+        # the documented diagnostic instead.
+        run: |
+          set -euo pipefail
+          set +e
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/changelog-no-headers.md 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          if [ "$RC" -ne 2 ]; then
+            echo "::error::CHECKED==0 fix FAILED — expected exit 2, got ${RC}."
+            exit 1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "0 versions checked"; then
+            echo "::error::CHECKED==0 fix FAILED — expected the documented '0 versions checked' diagnostic."
+            exit 1
+          fi
+          echo "CHECKED==0 fix PASS — exit 2, documented diagnostic present."
+
       - name: AC-PUB-12 — negative control (untagged in-flight version -> exit 1, MISSING-TAG)
         run: |
           set -euo pipefail
@@ -1946,19 +1970,30 @@ jobs:
         # Release, so with `gh` present it reaches the REPAIR branch and never exercises this
         # guard at all. "1.0.0" has a dated CHANGELOG section and NO origin tag (verified live
         # at Phase 4), so it reaches the CREATE branch whether `gh` is present or absent.
+        #
+        # @qa Phase 5 root-caused the PRIOR form of this step (docs/qa-report-v2.19.6.md §2):
+        # it simulated "gh absent" by stripping every PATH directory that CONTAINS a `gh`
+        # executable. On ubuntu-latest, `gh` and `bash` both live in /usr/bin, so that also
+        # deleted `bash`'s own directory — the step died with "bash: command not found" (127)
+        # before publish-release.sh ever ran, and the observed 127 was proof of a broken
+        # harness, not a broken guard. Fixed here by shadowing ONLY `gh`: a shim directory
+        # holding a fake `gh` that itself exits 127 (the real shell's own "not found" code),
+        # prepended to PATH so it wins the lookup — every other binary (bash, git, awk,
+        # mktemp, ...) resolves normally from its real location.
         run: |
           set -euo pipefail
-          SAFE_PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vE '/gh$|gh-cli' | tr '\n' ':')"
-          # Belt-and-suspenders: also shadow `gh` with a PATH dir containing no such binary,
-          # by filtering out any directory that actually contains a `gh` executable.
-          FILTERED=""
-          IFS=':' read -ra DIRS <<< "$PATH"
-          for d in "${DIRS[@]}"; do
-            if [ -x "${d}/gh" ]; then continue; fi
-            FILTERED="${FILTERED:+$FILTERED:}${d}"
-          done
+          GH_SHIM_DIR="$(mktemp -d)"
+          trap 'rm -rf "$GH_SHIM_DIR"' EXIT
+          cat > "${GH_SHIM_DIR}/gh" <<'SHIM'
+          #!/usr/bin/env bash
+          echo "gh: command not found (test shim — AC-PUB-14 negative control)" >&2
+          exit 127
+          SHIM
+          chmod +x "${GH_SHIM_DIR}/gh"
+          echo "shim gh resolves first: $(PATH="${GH_SHIM_DIR}:${PATH}" command -v gh)"
+
           set +e
-          PATH="$FILTERED" bash scripts/publish-release.sh 1.0.0
+          PATH="${GH_SHIM_DIR}:${PATH}" bash scripts/publish-release.sh 1.0.0
           RC=$?
           set -e
           echo "exit code: ${RC}"
@@ -1971,6 +2006,68 @@ jobs:
             exit 1
           fi
           echo "AC-PUB-14 PASS — exit 1 (guard fired), not 127 (gh reached unguarded)."
+
+      - name: Destination-repo guard fires when GH_REPO/GH_HOST is set (S2 BLOCKER fix)
+        # @qa Phase 5 BLOCKER (docs/qa-report-v2.19.6.md §3): the prior guard asked
+        # `gh repo view` what repo it thought it was in — a command that IGNORES GH_REPO —
+        # to protect `gh release view/create/edit`, which HONOR GH_REPO. It passed exactly
+        # when the attack it existed to catch was active. Fixed in publish-release.sh by
+        # refusing outright, unconditionally, before any `gh` call, if GH_REPO or GH_HOST is
+        # set — see that file's own comment for the full `gh help environment` audit. This
+        # step proves the fix actually fires, against the real shipped script, both ways.
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          set +e
+          OUT1="$(GH_REPO="octocat/Hello-World" bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC1=$?
+          set -e
+          echo "--- GH_REPO set, exit=${RC1} ---"
+          echo "$OUT1"
+          if [ "$RC1" -ne 1 ] || ! printf '%s' "$OUT1" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::destination-repo guard did NOT fire correctly with GH_REPO set (exit ${RC1})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_REPO set."
+          fi
+
+          set +e
+          OUT2="$(GH_HOST="github.example.com" bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC2=$?
+          set -e
+          echo "--- GH_HOST set, exit=${RC2} ---"
+          echo "$OUT2"
+          if [ "$RC2" -ne 1 ] || ! printf '%s' "$OUT2" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::destination-repo guard did NOT fire correctly with GH_HOST set (exit ${RC2})."
+            FAIL=1
+          else
+            echo "PASS — guard fired with GH_HOST set."
+          fi
+
+          # Positive control: neither set -> must NOT hit the destination-repo message. It
+          # will still exit 1 further down (the version-mismatch guard, VERSION at HEAD is
+          # never "1.0.0" on a real checkout) — that is the CORRECT reason to fail here, and
+          # proves the destination-repo check is not firing on a false positive.
+          set +e
+          OUT3="$(bash scripts/publish-release.sh 1.0.0 2>&1)"
+          RC3=$?
+          set -e
+          echo "--- neither set, exit=${RC3} ---"
+          echo "$OUT3"
+          if printf '%s' "$OUT3" | grep -qF "GH_REPO and/or GH_HOST is set"; then
+            echo "::error::destination-repo guard FALSE-POSITIVE fired with neither GH_REPO nor GH_HOST set."
+            FAIL=1
+          elif ! printf '%s' "$OUT3" | grep -qF "refusing to CREATE tag"; then
+            echo "::error::expected the version-mismatch guard's message when neither GH_REPO nor GH_HOST is set; got something else."
+            FAIL=1
+          else
+            echo "PASS — neither variable set, guard correctly silent, run proceeded to the next real guard."
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
 
       - name: C3 seam containment — release-surface.yml carries no --evidence-dir/--changelog
         run: |

@@ -23,8 +23,11 @@ caught `v2.19.4`/`v2.19.5` immediately instead of two cycles late. Four Phase-2 
 commit is now verified against a genuine live create-path token (not one that silently takes a
 different code path with the guard's own precondition still present); a fifth pre-flight
 assertion confirms the code about to run is the as-merged, uncommitted-clean script, and a sixth
-confirms the destination repository, closing two ways an irreversible public write could target
-the wrong code or the wrong place; the Release body is now re-asserted after the asset-upload
+refuses outright if `GH_REPO` or `GH_HOST` is set — an earlier form of this sixth assertion asked
+`gh repo view` what repository it thought it was in, which turned out to ignore exactly the
+override it existed to catch; @qa caught this live at Phase 5 before merge, and it was fixed
+before shipping, not after. Together these close two ways an irreversible public write could
+target the wrong code or the wrong place; the Release body is now re-asserted after the asset-upload
 step runs, not only before it; and the standing gate now also asserts `/releases/latest` resolves
 to the newest published version, since GitHub's "Latest" tracks creation order, not semver order.
 `v2.19.4`, `v2.19.5`, and this release are backfilled/published in ascending order as a follow-up
