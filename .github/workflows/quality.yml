@@ -1786,3 +1786,197 @@ jobs:
             exit 1
           fi
           echo "version-consistency-check PASSED — VERSION == README badge == CHANGELOG top == $V"
+
+  release-predicate-check:
+    name: Release Predicate + Standing Gate Check (v2.19.6)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # pure fixture tests, no network — safe on pull_request (this is exactly
+                       # why the live network gate lives in its own workflow, release-surface.yml)
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: AC-PUB-6 — body_names_version, with fixture-validity controls
+        run: |
+          set -euo pipefail
+          source scripts/release-predicate.sh
+          FAIL=0
+
+          # (i) a body naming neither form -> must return 1.
+          BODY="$(cat tests/fixtures/release-surface/bodies/neither.md)"
+          if body_names_version "$BODY" "1.2.3"; then
+            echo "::error::AC-PUB-6(i) FAILED — neither.md incorrectly matched a version it does not name."
+            FAIL=1
+          else
+            echo "AC-PUB-6(i) PASS — neither.md correctly rejected."
+          fi
+
+          # (ii) the 2.0.2 collision — the live v2.18.0 body must NOT match "2.0.2".
+          BODY="$(cat tests/fixtures/release-surface/bodies/v2180-real.md)"
+          if body_names_version "$BODY" "2.0.2"; then
+            echo "::error::AC-PUB-6(ii) FAILED — v2180-real.md incorrectly matched '2.0.2' (the 202-substring collision)."
+            FAIL=1
+          else
+            echo "AC-PUB-6(ii) PASS — v2180-real.md correctly rejects '2.0.2'."
+          fi
+          # Fixture-validity control: the NAIVE dots-stripped predicate (no anchor, no
+          # boundary) MUST match this same fixture — otherwise the fixture carries no real
+          # collision and the (ii) RED above proves nothing (house pattern, quality.yml:421/:588/:1023).
+          if ! printf '%s' "$BODY" | grep -qF "202"; then
+            echo "::error::AC-PUB-6(ii) FIXTURE-VALIDITY FAILED — v2180-real.md does not contain the naive '202' collision substring; the fixture no longer proves what this test claims."
+            FAIL=1
+          else
+            echo "AC-PUB-6(ii) fixture-validity PASS — naive '202' substring present (the 2026- date)."
+          fi
+          # v2.18.0's own version must still match itself, both legs.
+          if ! body_names_version "$BODY" "2.18.0"; then
+            echo "::error::AC-PUB-6(ii) FAILED — v2180-real.md must still match its own version '2.18.0'."
+            FAIL=1
+          fi
+
+          # (iii) the 21910/2191 boundary — evaluated for "2.19.1" must return 1.
+          BODY="$(cat tests/fixtures/release-surface/bodies/v21910-anchor.md)"
+          if body_names_version "$BODY" "2.19.1"; then
+            echo "::error::AC-PUB-6(iii) FAILED — v21910-anchor.md incorrectly matched '2.19.1' (the unterminated-anchor boundary)."
+            FAIL=1
+          else
+            echo "AC-PUB-6(iii) PASS — v21910-anchor.md correctly rejects '2.19.1'."
+          fi
+          # Fixture-validity control: the UNTERMINATED anchor form (no trailing ---) MUST
+          # match — otherwise the fixture carries no collision for the boundary to catch.
+          if ! printf '%s' "$BODY" | grep -qF "CHANGELOG.md#2191"; then
+            echo "::error::AC-PUB-6(iii) FIXTURE-VALIDITY FAILED — v21910-anchor.md does not contain the unterminated 'CHANGELOG.md#2191' substring."
+            FAIL=1
+          else
+            echo "AC-PUB-6(iii) fixture-validity PASS — unterminated substring present."
+          fi
+          # And it must match its own real version.
+          if ! body_names_version "$BODY" "2.19.10"; then
+            echo "::error::AC-PUB-6(iii) FAILED — v21910-anchor.md must match its own version '2.19.10'."
+            FAIL=1
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::release-predicate-check (AC-PUB-6) FAILED — see errors above."
+            exit 1
+          fi
+          echo "AC-PUB-6 ALL PASS."
+
+      - name: AC-PUB-11 — parser/comparator contract (fixture-based, dash-agnostic parser)
+        run: |
+          set -euo pipefail
+          set +e
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/changelog-headers.md \
+            --evidence-dir tests/fixtures/release-surface/changelog-headers-evidence 2>/tmp/ac-pub-11-stderr.txt)"
+          RC=$?
+          set -e
+          echo "$OUT"
+
+          FAIL=0
+          if [ "$RC" -eq 2 ]; then
+            echo "::error::AC-PUB-11 FAILED — run exited 2 (contract error); expected 0 or 1, never 2 on this fixture."
+            FAIL=1
+          fi
+          if grep -qF "not a valid x.y.z semver" /tmp/ac-pub-11-stderr.txt; then
+            echo "::error::AC-PUB-11 FAILED — stderr contains 'not a valid x.y.z semver'; the comparator was invoked on a non-3-component token (parser/comparator contract violated)."
+            FAIL=1
+          else
+            echo "AC-PUB-11 PASS — zero 'not a valid x.y.z semver' occurrences; comparator never invoked on 1.3.2.1 or Unreleased."
+          fi
+          # The 4-component and Unreleased tokens must be reported SKIP (non-x.y.z), never silently dropped.
+          if ! printf '%s' "$OUT" | grep -qF "'1.3.2.1' SKIP"; then
+            echo "::error::AC-PUB-11 FAILED — 1.3.2.1 not reported SKIP."
+            FAIL=1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "'Unreleased' SKIP"; then
+            echo "::error::AC-PUB-11 FAILED — Unreleased not reported SKIP."
+            FAIL=1
+          fi
+          # IN-SCOPE set: exactly the two 3-component, above-floor tokens.
+          CHECKED_LINE="$(printf '%s' "$OUT" | grep -E '^release-surface: [0-9]+ checked')"
+          if ! printf '%s' "$CHECKED_LINE" | grep -qE '^release-surface: 2 checked'; then
+            echo "::error::AC-PUB-11 FAILED — expected exactly 2 checked (COMPARABLE and >= floor), got: ${CHECKED_LINE}"
+            FAIL=1
+          fi
+          rm -f /tmp/ac-pub-11-stderr.txt
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::release-predicate-check (AC-PUB-11) FAILED — see errors above."
+            exit 1
+          fi
+          echo "AC-PUB-11 ALL PASS."
+
+      - name: AC-PUB-12 — negative control (untagged in-flight version -> exit 1, MISSING-TAG)
+        run: |
+          set -euo pipefail
+          set +e
+          # 2>&1: the MISSING-TAG finding is printed via ::error:: to STDERR, not stdout — the
+          # grep below needs it in the same stream it's checking.
+          OUT="$(bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-untagged/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-untagged 2>&1)"
+          RC=$?
+          set -e
+          echo "$OUT"
+          FAIL=0
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::AC-PUB-12 negative control FAILED — expected exit 1, got ${RC}."
+            FAIL=1
+          fi
+          if ! printf '%s' "$OUT" | grep -qF "9.9.9 MISSING-TAG"; then
+            echo "::error::AC-PUB-12 negative control FAILED — expected a '9.9.9 MISSING-TAG' line."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "AC-PUB-12 negative control PASS."
+
+      - name: AC-PUB-12 — positive control (tag + conforming body + correct Latest -> exit 0)
+        run: |
+          set -euo pipefail
+          bash scripts/verify-release-surface.sh --floor 2.18.0 \
+            --changelog tests/fixtures/release-surface/evidence-clean/CHANGELOG.md \
+            --evidence-dir tests/fixtures/release-surface/evidence-clean
+          echo "AC-PUB-12 positive control PASS — exit 0."
+
+      - name: AC-PUB-14 — create-path version guard fires with gh ABSENT from PATH (S1 fix)
+        # Security-review note (S1, docs/security-review-v2.19.6.md): the negative-control
+        # token is "1.0.0", NOT "2.0.2". "2.0.2" already has an origin tag and a live 0-byte
+        # Release, so with `gh` present it reaches the REPAIR branch and never exercises this
+        # guard at all. "1.0.0" has a dated CHANGELOG section and NO origin tag (verified live
+        # at Phase 4), so it reaches the CREATE branch whether `gh` is present or absent.
+        run: |
+          set -euo pipefail
+          SAFE_PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -vE '/gh$|gh-cli' | tr '\n' ':')"
+          # Belt-and-suspenders: also shadow `gh` with a PATH dir containing no such binary,
+          # by filtering out any directory that actually contains a `gh` executable.
+          FILTERED=""
+          IFS=':' read -ra DIRS <<< "$PATH"
+          for d in "${DIRS[@]}"; do
+            if [ -x "${d}/gh" ]; then continue; fi
+            FILTERED="${FILTERED:+$FILTERED:}${d}"
+          done
+          set +e
+          PATH="$FILTERED" bash scripts/publish-release.sh 1.0.0
+          RC=$?
+          set -e
+          echo "exit code: ${RC}"
+          if [ "$RC" -eq 127 ]; then
+            echo "::error::AC-PUB-14 FAILED — exit 127 (gh command-not-found reached the create path unguarded); expected exit 1 from the version guard BEFORE any gh call."
+            exit 1
+          fi
+          if [ "$RC" -ne 1 ]; then
+            echo "::error::AC-PUB-14 FAILED — expected exit 1, got ${RC}."
+            exit 1
+          fi
+          echo "AC-PUB-14 PASS — exit 1 (guard fired), not 127 (gh reached unguarded)."
+
+      - name: C3 seam containment — release-surface.yml carries no --evidence-dir/--changelog
+        run: |
+          set -euo pipefail
+          if grep -qE -- '--evidence-dir|--changelog' .github/workflows/release-surface.yml; then
+            echo "::error::C3 seam containment FAILED — release-surface.yml's live invocation carries --evidence-dir or --changelog. The evidence seam must never be live-wired."
+            exit 1
+          fi
+          echo "C3 seam containment PASS — release-surface.yml invokes the script with no evidence-injection flags."

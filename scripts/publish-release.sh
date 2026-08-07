@@ -24,6 +24,62 @@
 
 set -euo pipefail
 
+# --- Load the shared release-body predicate (ADR-077 §D2). Resolved BASH_SOURCE-relative
+#     to the INVOKED script, not to $PWD: Scope A (docs/spec.md AC-PUB-2/-3) runs this
+#     script with `cwd` inside a detached worktree at a historical commit where this file
+#     does not exist, so a cwd-relative source would silently fail to find it there and
+#     succeed by accident everywhere else. Fail-closed, never a silent inline fallback.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./release-predicate.sh
+. "${SCRIPT_DIR}/release-predicate.sh" || {
+  echo "ERROR: ${SCRIPT_DIR}/release-predicate.sh not found beside $0 — refusing to publish." >&2
+  exit 1
+}
+
+# --- Producer provenance (S2 — docs/security-review-v2.19.6.md). Scope A invokes this
+#     script with `cwd` inside a detached worktree while the EXECUTABLE code (this file
+#     and release-predicate.sh) is read from the operator's main checkout via the
+#     BASH_SOURCE resolution above. Every ref-facing assertion elsewhere in this
+#     procedure verifies the COMMIT being tagged; none verified the CODE being run. This
+#     closes that gap: the two files about to execute must be tracked and clean at HEAD
+#     in the checkout they live in — enforcing docs/spec.md's "as-merged script (no
+#     ad-hoc local edit)" requirement instead of merely stating it. `git status
+#     --porcelain` reports an uncommitted edit AND an untracked file both as non-empty
+#     output, so this one check covers both hazards.
+MAIN_REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+PROVENANCE_STATUS="$(git -C "$MAIN_REPO_ROOT" status --porcelain -- scripts/publish-release.sh scripts/release-predicate.sh 2>&1)" || {
+  echo "ERROR: producer-provenance check failed — '${MAIN_REPO_ROOT}' is not a readable git checkout." >&2
+  exit 1
+}
+if [ -n "$PROVENANCE_STATUS" ]; then
+  echo "ERROR: refusing to publish — scripts/publish-release.sh and/or scripts/release-predicate.sh" >&2
+  echo "  have uncommitted or untracked changes in ${MAIN_REPO_ROOT}:" >&2
+  echo "$PROVENANCE_STATUS" >&2
+  echo "  This script must run as-merged, with no ad-hoc local edit (docs/spec.md Scope A)." >&2
+  exit 1
+fi
+
+# assert_destination_repo — S2 (AMEND 11): `gh` honors the GH_REPO environment variable,
+# which overrides repository resolution from the git remote. If GH_REPO is exported in
+# the operator's shell, every other assertion in this script still passes while the
+# release is created in a DIFFERENT repository. Called immediately before each
+# irreversible `gh` write — never earlier, so a guard that must work with `gh` absent
+# from PATH (AC-PUB-14's negative control) is never blocked by this one needing `gh`.
+EXPECTED_REPO="jmlozano1990/Cowork-Starter-Kit"
+assert_destination_repo() {
+  local actual_repo
+  actual_repo="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>&1)" || {
+    echo "ERROR: refusing to publish — could not resolve destination repository via 'gh repo view'." >&2
+    echo "  $actual_repo" >&2
+    exit 1
+  }
+  if [ "$actual_repo" != "$EXPECTED_REPO" ]; then
+    echo "ERROR: refusing to publish — destination repository is '${actual_repo}', expected '${EXPECTED_REPO}'." >&2
+    echo "  Check for an exported GH_REPO overriding gh's repository resolution ('unset GH_REPO')." >&2
+    exit 1
+  fi
+}
+
 VERSION="${1:-$(tr -d '[:space:]' < VERSION)}"
 TAG="v${VERSION}"
 TARGET_SHA="$(git rev-parse HEAD)"
@@ -66,9 +122,35 @@ if gh release view "$TAG" --json body -q '.body' > /tmp/publish-release-existing
     echo "Release ${TAG} already exists with a non-empty body — skipping publish (idempotent), still verifying post-conditions."
   else
     echo "Release ${TAG} exists with an empty body — repairing via 'gh release edit'."
+    assert_destination_repo
     gh release edit "$TAG" --notes-file "$NOTES_FILE"
   fi
 else
+  # --- create-path-only version precondition (AC-PUB-14 / ADR-077 §D3). Asserted only on
+  #     THIS branch — never on the repair or idempotent-skip branches above, so repairing
+  #     a pre-floor empty-bodied Release (e.g. v2.0.2 — see the note below) remains
+  #     possible. CONTRIBUTING.md's written procedure already says "run on main at the
+  #     commit you intend to tag"; this converts that sentence into an enforced one.
+  #
+  #     Security-review note (S1): the negative control for this guard is
+  #     `publish-release.sh 1.0.0`, NOT `2.0.2`. `2.0.2` already has an origin tag and a
+  #     live 0-byte Release (verified live), so with `gh` present it reaches the REPAIR
+  #     branch above and never exercises this guard at all — a control built on it would
+  #     be green for a reason unrelated to the property it tests, the exact defect class
+  #     this cycle diagnosed in v2.19.1's stray dotted digit (docs/spec.md). `1.0.0` has a
+  #     dated CHANGELOG section and NO origin tag (verified live), so it reaches this
+  #     exact branch whether `gh` is present or absent from PATH.
+  VERSION_AT_HEAD="$(tr -d '[:space:]' < VERSION)"
+  if [ "$VERSION" != "$VERSION_AT_HEAD" ]; then
+    echo "ERROR: refusing to CREATE tag v${VERSION} — VERSION at HEAD is '${VERSION_AT_HEAD}'." >&2
+    echo "  publish-release.sh creates tags only at the commit whose VERSION matches the request" >&2
+    echo "  (CONTRIBUTING.md pre-release checklist). To repair an EXISTING release's body, the tag" >&2
+    echo "  must already exist — this guard does not apply on the repair path." >&2
+    exit 1
+  fi
+
+  assert_destination_repo
+
   # --- 3. Create the tag AND the populated Release in one call. ---
   echo "Creating ${TAG} at ${TARGET_SHA} with a populated body..."
   gh release create "$TAG" \
@@ -83,11 +165,14 @@ if [ -z "$BODY" ]; then
   echo "ERROR: post-condition failed — Release ${TAG} has an empty body after publish." >&2
   exit 1
 fi
-if ! printf '%s' "$BODY" | grep -qF "$VERSION"; then
-  echo "ERROR: post-condition failed — Release ${TAG} body does not contain the version string '${VERSION}'." >&2
+if ! body_names_version "$BODY" "$VERSION"; then
+  echo "ERROR: post-condition failed — Release ${TAG} body names neither the dotted form '${VERSION}'" >&2
+  echo "  nor the house anchor form 'CHANGELOG.md#${VERSION//./}---' (ADR-077 §D2)." >&2
+  echo "  A curated body is expected to carry the anchor form; a raw CHANGELOG excerpt carries the" >&2
+  echo "  dotted form via its own header." >&2
   exit 1
 fi
-echo "Post-condition (body): PASS — non-empty, contains '${VERSION}'."
+echo "Post-condition (body): PASS — non-empty, names '${VERSION}' (dotted or anchor form)."
 
 # Poll for the asset-upload workflow (release-assets.yml, triggered by the
 # tag push this script just performed via `gh release create`).
@@ -129,4 +214,25 @@ if [ "$ASSET_COUNT" -ne 2 ]; then
 fi
 
 echo "Post-condition (assets): PASS — 2 archives attached."
+
+# --- Final post-condition: re-assert the body AFTER the asset upload (S3 —
+#     docs/security-review-v2.19.6.md). The body post-condition above (step 4) runs
+#     immediately after create/repair, BEFORE release-assets.yml's
+#     softprops/action-gh-release step runs (release-assets.yml:133). Nothing previously
+#     re-checked the body after that third-party action touched the Release. Whether it
+#     preserves an existing body when updating with no `body`/`body_path` input is
+#     UNVERIFIED (S3) — this assertion makes that question moot by re-checking the actual
+#     end state instead of trusting the action's undocumented update semantics. This is
+#     the ONLY body check that also covers the three releases newly published this cycle
+#     (AC-PUB-7's sha256 window covers only the five pre-existing curated bodies, none of
+#     which is republished by this script).
+FINAL_BODY="$(gh release view "$TAG" --json body -q '.body')"
+if [ -z "$FINAL_BODY" ] || ! body_names_version "$FINAL_BODY" "$VERSION"; then
+  echo "ERROR: post-condition failed — Release ${TAG}'s body no longer names its version AFTER" >&2
+  echo "  the asset-upload workflow ran. The upload step may have overwritten it." >&2
+  echo "  Inspect: gh release view ${TAG} --json body -q .body" >&2
+  exit 1
+fi
+echo "Post-condition (body, post-upload): PASS — still names '${VERSION}' after asset upload."
+
 echo "Release ${TAG} published successfully."
