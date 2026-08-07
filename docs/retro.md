@@ -2,6 +2,244 @@
 
 ---
 
+## [v2.19.6] - 2026-08-07 — "Publish What Shipped": the release surface tells the truth
+
+**Date:** 2026-08-07 (first branch commit `6b58781` 2026-08-07T08:30:08Z; PR #101 squash-merged `b7ec836` 2026-08-07T12:31:46Z UTC; Scope A attempted and halted 12:45Z).
+**Classification:** SECURITY-SENSITIVE, carried unchanged from Phase 1/2.
+**Mode:** full, with Phase 0.D deliberation. Nothing abbreviated (§5).
+**Cycle facts:** PR #101, 13 commits, squash-merged. **4 implementation passes, 3 QA passes, 2 security reviews.** Rework ≈**91%** of Phase 4's original delivery. **Scope A shipped-partial — halted at publish 1 of 3**, `CF-v2.19.6-A` blocking (§10, `docs/risk-register.md`).
+**Twelve defects found. Zero reached production.** Eleven were caught by review; the twelfth required production execution and is the only one that cost anything.
+
+---
+
+### 0. ROOT CAUSE — the owner's actual question, answered
+
+The owner asked for a root cause, not a summary, so this section leads and the metrics follow. Three findings, in the order they have to be settled.
+
+#### 0.1 First: twelve is **not** anomalous, and the framing "such a number of failures" does not survive base-rate scrutiny
+
+This has to be settled before any root cause is worth writing, because a base-rate error would make the rest worthless.
+
+- **The immediately preceding cycle reported eleven.** `docs/retro.md` v2.19.5 §7 is titled, verbatim: *"THE HEADLINE — eleven instances of the `Check-That-Cannot-Fail`/`Verifier-that-cannot-PASS` family in one cycle."* Same family, same basis (defects found inside the cycle's own verification machinery), one cycle earlier. Eleven and twelve are not different magnitudes.
+- **v2.19.0's Phase 2 security review alone produced 12 MUST-FIX findings**, plus 7 more at Phase 0.D, explicitly carved out of that cycle's headline scalar with the words "not double-counted."
+- **Prior cycles are not on a comparable basis with each other**, so no trend claim is available in either direction. Cycles through v2.19.0 reported a narrow `qa_issues_prevented: blocker/issue/info` scalar that counts only what was caught at the QA/audit gate; from v2.19.2 onward that scalar disappears entirely, replaced by narrative findings tables with no roll-up. Comparing this cycle's 12 against a v2.14-era scalar would be comparing different instruments.
+- **No prior cycle ran an explicit "assume another defect exists" protocol.** An exhaustive sweep for `adversarial|assume another|another defect|hostile|red team|negative control|falsif` across this file finds those terms used to mean skeptical re-verification and as properties a check should have — never as a standing search rule. So the protocol cannot be cited as the reason twelve appeared, and equally cannot be ruled out.
+
+**Consequence, stated plainly:** twelve is the second consecutive cycle in this range, on the one basis where comparison is valid. The correct reading is not "this cycle was unusually bad." It is that **two consecutive verification-heavy cycles each surfaced ~11–12 same-family defects, and every one of them was caught** — which describes a working pipeline with an expensive rework profile, not an escaping one. The cost to fix is **rework and cycle time**, not defect escape. Any proposal that optimizes for escape rate is optimizing a number that is already zero.
+
+#### 0.2 The orchestrator's hypothesis **loses**. Stated first, as asked.
+
+The hypothesis was that all twelve substitute an observable correlating with the desired property for the property itself, and that Council's `Check-That-Cannot-Fail` asks "can this check fail?" but never "does this check measure what it claims?"
+
+It is a **good description of the defect shape and a wrong diagnosis of the cause.** Four reasons, the third fatal:
+
+1. **Coverage is partial.** It fits 7 of 12 strongly — items 2, 6, 7, 8, 9, 10, 11. It fails on item 3 (an unchecked assumption about tag convention — a default, not a substitution), item 4 (a claim contradicted by a line already read — a recall failure), and item 12 (a design-level error about third-party runtime behavior, undiscoverable by any static reasoning). It fits items 1 and 5 only by stretching "prior assertion" into "proxy observable."
+
+2. **The capability it says is missing was demonstrably present, and is what caught most of the twelve.** This is the decisive evidence against it. At Phase 0.D Round 2, @architect wrote of `AC-PUB-7`: *"A control whose window excludes the one operation capable of mutating the thing it guards is precisely the shape this cycle exists to retire."* And of `AC-PUB-1` State A: *"Say so explicitly, or someone will add a `--legacy-predicate` toggle to make the control executable and ship dead code purely to satisfy a test."* That **is** "does this check measure what it claims," applied at design time, unprompted. The lens was not absent. It was the cycle's stated theme, it was exercised repeatedly by multiple agents, and it is the reason eleven of twelve were caught.
+
+3. **It describes the search, not the cause — the confound the owner flagged is real and it is confirmed.** This cycle's subject *was* release-verification machinery: every artifact under construction was itself a check. A check-shaped search over check-shaped artifacts finds check-shaped defects. The base-rate data confirms the confound directly rather than leaving it speculative: v2.19.5's subject was also verification machinery and it produced 11 of this family; v2.19.4's subject was announcement prerequisites and it produced 3 of an entirely **different** family (narrative-vs-artifact). **The defect family tracks the subject of the cycle, not a constant underlying rate.** That is what a confound looks like when it is real.
+
+4. **It does not explain the one defect that actually bit.** The eleven that fit the hypothesis were all caught. Item 12 — which the hypothesis cannot explain — is the one that halted Scope A at publish 1 of 3. A root cause that explains only the defects your process already catches is not pointing at your problem.
+
+#### 0.3 The root cause that survives: **fix-generation amplification under a pattern ledger that does not bind**
+
+Two parts. The first explains the *count*; the second explains the *recurrence across cycles*, and is the part that lives in The-Council.
+
+**(a) Proximate — the count is inflated by fix generations, and the fixes are the defect source.**
+
+Roughly **5 of the 12 are successive generations of 2–3 root defects**, each minted by the fix for the previous one. This is visible in the git log without relying on any agent's narrative:
+
+| Commit | Message headline | Generation |
+|---|---|---|
+| Phase 2 review | prescribes `gh repo view --json nameWithOwner` as the destination guard | **root defect (item 8)** |
+| `c33cb22f` | `dev: fix pass — BLOCKER (destination-repo guard was a no-op)` | gen 1 |
+| `16f9c447` | `dev: fix pass 2 — close the sibling GH_REPO/GH_HOST gap in ve…` | **gen 2 (item 9)** |
+| `ad5a5aac` | `docs: correct the correction -- guard the hop, not the write…` | **gen 3** |
+
+Three generations on one root defect, and the commit prose says "correct the correction" out loud. Item 5 shows the same signature independently: `AC-PUB-1`'s negative control specified 2 expected failures, then 3, then 4 — three generations of a single uncomputed expected value. Item 7 (the `PATH` strip that deleted `bash` on `ubuntu-latest` and died at 127 before reaching the code under test) was minted by the *mechanism of a control*, not by the code the control tests.
+
+Folding fix-generations back into their roots, **12 counted items collapse to roughly 7–8 distinct root defects.** That is a real correction to the headline number and it does not make the cycle look good — it relocates the problem. The rate driver is not "we write bad checks." It is **that fixing a check in place has a measured, repeated tendency here to mint the inverse defect**, and each new generation is then correctly counted as a new defect by the next phase.
+
+This is not a new discovery. v2.19.5's own retro §8 named it precisely — *"when the Nth fix to a check reintroduces a defect of the opposite polarity to the (N-1)th fix, stop patching the implementation and replace the strategy"* — and proposed it as a `docs/patterns.md` row. **It fired again this cycle.** Which is exactly the point of (b).
+
+**(b) Structural — and this is the Council-side root cause: a promoted BINDING pattern changes no agent's behavior.**
+
+`Check-That-Cannot-Fail` has been marked **BINDING** in this project's `docs/patterns.md:31` since **v2.13.0**. Between v2.13.0 and v2.19.6 the recurrence rate of its family did not fall — it produced 11 instances in v2.19.5 and a large share of the 12 here. A control that has been binding for six-plus cycles while the thing it binds against recurs at undiminished rate is not a control.
+
+The mechanism of that failure is verifiable in The-Council's own files. Every consumer of `docs/patterns.md` across all nine agents:
+
+| Agent | How it consumes `patterns.md` | Force |
+|---|---|---|
+| @dev (`dev.md:195`) | "Note any patterns relevant to the current implementation" | advisory |
+| @security (`security.md:324`) | "apply elevated attention — these are known recurring issues" | advisory |
+| @qa (`qa.md:456,462`) | **writes** the file at Phase 8 promotion | write-only |
+| @architect | **does not read it at all** | none |
+| @pm, @devops, @compliance, @ux, @integrations | **do not read it at all** | none |
+
+Three consequences follow directly, and each is a defect in The-Council rather than in this project:
+
+1. **Severity is inert.** `INFO`, `WATCH 1/3`, and `BINDING (3rd instance)` are consumed identically — @dev "notes" a BINDING row exactly as it notes an INFO row. Promotion to BINDING is the ledger's strongest signal and it changes nothing downstream. This is why the promotion mechanism has never reduced a recurrence rate.
+2. **The agent that authors the defects does not read the ledger.** Items 5, 6, 7 and 10 are all design-time check-construction defects, and @architect — which designs the checks — has no instruction to read `patterns.md` at any phase. The ledger is read by the agents that *catch* the defects and not by the agent that *writes* them.
+3. **@qa writes rows it will never be bound by.** The promotion loop closes onto a file nothing enforces, which is why v2.19.5 could correctly diagnose the fix-generation pattern, write it down, and then watch it recur unmodified in the very next cycle.
+
+**Stated as one sentence:** the defects recur not because the pipeline lacks the right lens — it demonstrably has it and applies it — but because **The-Council has no mechanism to convert a caught-and-promoted pattern into a constraint on the phase that produces that class of defect**, so every cycle re-derives the same discipline from scratch and pays the rework again.
+
+#### 0.4 Competing hypotheses considered and why they lose
+
+- **Reviewer fatigue.** Loses on shape and distribution: defects were found by four different agents across five phases, and the last defect found (item 12, at production execution) was found *after* the most review had already occurred. Fatigue predicts the opposite gradient.
+- **Spec churn.** Fits item 5 and partially item 3; fails on the majority. Churn also cannot explain defects introduced *by fixes*, which is the dominant chain.
+- **The orchestrator specifically.** Genuinely partial — items 1, 2 and 4 are orchestrator-authored assertions, and all three are "restated a claim without re-deriving it." That is a real, narrow finding worth recording (§7). But items 5–10 and 12 are agent-authored, so it fails as a total explanation.
+- **Model routing.** No evidence was gathered either way this cycle. Not asserted, not ruled out — recorded as unexamined rather than dismissed.
+- **Cycle size.** Fails to discriminate: v2.19.5 was comparable in size and produced a comparable count, so size predicts nothing the subject-matter confound does not already predict better.
+- **The subject-matter confound (strongest competitor, and it partly wins).** As §0.2(3) sets out, this is real and confirmed by the v2.19.4 contrast. It is folded into the root cause rather than defeated by it: the correct conclusion is that **this defect class is conditional on verification-authoring cycles**, which is precisely why the Council fix in §11 must be conditional too, and why a universal gate is the wrong answer.
+
+---
+
+### 1. Phase Findings Summary
+
+| Phase | Agent | Findings | Severity |
+|-------|-------|----------|----------|
+| 0.D (deliberation) | @architect + @security | Corrected `AC-PUB-1` State A to a fixture rather than a shipped mode; corrected `AC-PUB-7`'s measurement window to include Scope A; corrected the "five defective release bodies" premise (item 2) — all five bodies were correct, the *predicate* was wrong | 3 corrections pre-design, 0 shipped |
+| 1 (Design) | @architect | ADR-077/ADR-078 + ADR-076 amendment. `CF-v2.19.5-F` re-diagnosed as **MISDIAGNOSED, not fixed** — the prescribed widening would have overwritten four curated editorial bodies (as little as 652 bytes each) to repair nothing | 1 major re-diagnosis, prevented destructive fix |
+| 2 (@security) | @security | Review landed. **S2's prescribed remedy (`gh repo view --json nameWithOwner`) was itself the root of item 8** — the guard passes exactly when the redirect it exists to catch is active | 1 HIGH, remedy defective |
+| 4 (@dev) | @dev | Scope B+C implemented, `c6531417` | baseline |
+| 5 (@qa, pass 1) | @qa | **AMEND — 1 BLOCKER + CI red on 3 jobs.** BLOCKER: `assert_destination_repo()` is a no-op against its own threat model, verified live (`GH_REPO=cli/cli gh repo view` → correct repo; `gh release list` → `cli/cli`'s releases). Also: `AC-PUB-1` State B is 4, not 3 | 1 BLOCKER, 3 CI |
+| 5 (@qa, pass 2) | @qa | BLOCKER discharged; **new WARNING — sibling gate `verify-release-surface.sh` carried the same unguarded call and returned PASS for another repo's release** (item 9), because GitHub's changelog footer contains the version string | 1 WARNING |
+| 6 (@security) | @security | **WRONG-LATEST — sole control on the Primary success metric — had no negative control** (item 10). Neutering it left CI fully green | 1 finding, control added |
+| 7 (@qa) | @qa | APPROVED | 0 |
+| Post-merge | Orchestrator | Scope A halted at publish 1 of 3; `CF-v2.19.6-A` proven by run-log comparison (item 12) | 1 BLOCKER, shipped-partial |
+
+**Three phase artifacts (Phase 2 review, Phase 6 audit, Phase 7 approval) were written, reported as successful writes, and never committed** (item 11) — each landed only via a later remedial commit (`f160393f`, `85eaf396`, `befde86b`), and each was caught only because a later phase went looking. This is independently verifiable from the PR commit list alone, without trusting any agent's report.
+
+### 2. AC Difficulty Assessment
+
+| AC | Class | Basis |
+|---|---|---|
+| `AC-PUB-1` (standing gate, 3-state proof) | **Hard** | Expected-failure counts revised three times (2→3→4); State A had to be reclassified as a fixture, not a shipped mode; State C never reached because Scope A halted |
+| `AC-PUB-2` | **Partially met** | Tag + Release + correct body created for `v2.19.4`; 0 assets. Halted per stop condition |
+| `AC-PUB-3`, `AC-PUB-15` | **Unmet** | Blocked by `CF-v2.19.6-A` |
+| `AC-PUB-7` (five bodies byte-unchanged) | **Hard, resolved pre-code** | Measurement window corrected at 0.D to include Scope A — the one operation capable of mutating the guarded thing had been outside the window |
+| `AC-PUB-8` (`CF-v2.19.5-F` closure) | **Hard** | Closed as misdiagnosed rather than fixed; predicate widened to accept the house anchor form in one shared definition (`scripts/release-predicate.sh`) |
+| `AC-PUB-13` (deletion safety) | **Easy to write, load-bearing in practice** | Written pre-emptively at Phase 6; it is what stopped a live public Release from being destroyed during the Scope A halt (§10) |
+| `AC-PUB-14` (version-guard control) | **Hard** | Control token `2.0.2` exercised the repair branch, not the create branch it was written to test; the control's own `PATH` mechanism then killed `bash` and exited 127 |
+| `AC-PUB-10` | **Not-Verified** | Documentation-only carry, below the gate's `v2.18.0` floor |
+
+### 3. Token Cost Actuals
+
+Same standing gap recorded every cycle since v2.19.1, same accepted disposition from the v2.19.3 gate (accept qualitative-only reporting, stop re-flagging) — not re-raised as a new finding. Qualitatively: full mode, 13 commits, 4 implementation passes, 3 QA passes, 2 security reviews, 1 PR, 1 halted post-merge scope.
+
+### 4. Phase Durations
+
+Computed from PR #101 commit author timestamps, re-pulled this retro rather than taken from the pipeline record.
+
+| Phase | Evidence | Timestamp |
+|---|---|---|
+| 1 (design) | `6b58781` | 2026-08-07T08:30:08Z |
+| 4 (@dev Scope B+C) | `c6531417` | 10:26:35Z (+1h56m) |
+| 2 artifact landed (late) | `f160393f` | 10:30:01Z |
+| 5 (@qa pass 1, AMEND) | `e397cafe` | 10:49:36Z |
+| Fix pass 1 | `c33cb22f` | 11:06:02Z |
+| 5 (@qa pass 2) | `13822929` | 11:19:06Z |
+| Fix pass 2 (sibling gap) | `16f9c447` | 11:29:11Z |
+| Fix pass 3 ("correct the correction") | `ad5a5aac` | 11:52:59Z |
+| 6 (@security fix pass) | `89b78434` | 12:10:18Z |
+| 7 (approval landed) | `befde86b` | 12:29:32Z |
+| **Core pipeline total** | first → last commit | **~3h59m** |
+| Scope A attempt + halt | | → ~12:45Z |
+
+**Estimate miss, recorded as a miss and not netted against the catch count.** Estimated 1.5–2h; actual core pipeline ~4h, roughly **2–2.7× over**. The overrun is not explained by scope growth — Scope B+C shipped as designed. It is explained by the fix-generation chains in §0.3(a): the interval from @qa's first AMEND (10:49Z) to the last fix pass (12:10Z) is **1h21m, more than a third of the cycle, spent on three successive generations of two root defects.** That interval is the cost the §11 proposal targets.
+
+### 5. Phases Abbreviated
+
+**None.** Full mode with Phase 0.D deliberation. The only incomplete work is Scope A, halted deliberately by its own pre-declared stop condition rather than abbreviated.
+
+### 6. Rework Rate and Causes
+
+**≈91% of Phase 4's original delivery**, across 4 implementation passes.
+
+Causes, concretely, in descending share:
+1. **Fix-generation chains (dominant).** The GH_REPO destination-guard chain alone consumed three generations across `c33cb22f` → `16f9c447` → `ad5a5aac`. Root cause of the chain: the Phase-2 review *prescribed* the defective remedy, so the defect entered through the control layer rather than the implementation layer, where neither @dev nor @qa was positioned to question it until it was run.
+2. **Control-construction defects** (items 6, 7, 10) — three separate controls that were green, or red, for the wrong reason.
+3. **Uncommitted phase artifacts** (item 11) — three remedial commits that delivered no behavior.
+
+None of the rework was caused by Scope B+C implementation defects reaching CI in the ordinary sense; the CI red at Phase 5 was two lint findings and one control-mechanism bug (exit 127), not product logic.
+
+### 7. Issues Prevented
+
+`qa_issues_prevented: blocker=2, issue=7, info=3` — recorded on the **artifact-inclusive basis** defined in §0.1, and explicitly **not** comparable to the pre-v2.19.2 `qa_issues_prevented` scalar, which counted only gate-caught implementation findings. The basis is stated here precisely so the next cycle can compare against something.
+
+Two prevented items are worth naming for magnitude rather than count:
+- **Item 2** — had the "five defective release bodies" premise not been corrected at Phase 0.D, the prescribed repair would have overwritten **four curated, irreplaceable editorial bodies** (as little as 652 bytes each) with raw multi-kilobyte CHANGELOG excerpts, destroying content to repair nothing.
+- **`AC-PUB-13`** — written pre-emptively at Phase 6, it is what prevented deleting a tag with a live public Release attached during the Scope A halt, when the script's own printed remedy said to do exactly that.
+
+**A narrow, real finding about orchestrator-authored claims.** Items 1, 2 and 4 share one shape: a claim restated as verified fact without re-derivation — a count carried across two cycles whose own parenthetical summed differently, a premise about five bodies that was never re-read, and a "no `--target` flag" claim repeated about a line (`scripts/publish-release.sh:193`) already read in the same session. This does not generalize to the whole cycle (§0.4), but it is a clean 3-for-3 within the orchestrator's own assertions and it belongs on the record.
+
+### 8. Pattern Detection
+
+Adjudications written to `docs/patterns.md` this cycle, judged against that file's own per-row convention — **1 instance = 1 cycle exhibiting the shape**, regardless of sub-occurrence count within it, promote at the 3rd:
+
+- **`Agent narrative asserts a write/verification the artifact contradicts` (WATCH 2/3) → PROMOTED to BINDING (3rd instance, v2.19.6).** Item 11 is a clean 3rd qualifying cycle: three phase artifacts reported as successful writes, none committed, each landed by a later remedial commit. Independently verifiable from the PR commit list.
+- **`Local-fix exhaustion signal: N consecutive fixes to one check, each minting the inverse defect of the last` (WATCH 1/3) → WATCH 2/3.** Second qualifying cycle, founded v2.19.5. Evidence: the three-generation GH_REPO chain and the 2→3→4 expected-count chain. **Deliberately not promoted to BINDING** — the convention counts cycles, not sub-occurrences, and this cycle's several sub-instances do not license skipping a step.
+- **`Check-That-Cannot-Fail` / `Verifier-that-cannot-PASS` (both BINDING).** New instances, no status change. Recorded here because §0.3(b) turns on it: both have been BINDING for multiple cycles with no measurable effect on recurrence.
+- **NEW row — `Design decision whose correctness depends on a third-party runtime path that has never executed` (WATCH 1/3).** Founding instance: item 12 / `CF-v2.19.6-A`.
+- **Considered and NOT minted: "guard fix applied to one call site, sibling call site left unguarded"** (item 9). n=1, and this project's convention is that new rows are proposed by the phase agent that found them, not invented at `/retro` on a single example — the same convention v2.19.5 applied when it declined to mint a row for the diff-magnitude case. Flagged as retro-input for the next cycle that sees a 2nd instance.
+
+### 9. Retrospective Verdict
+
+The pipeline worked and the number that matters is zero: twelve defects found, none shipped, including two that would have destroyed irreplaceable public content. What went badly is cost, and the cost is legible — roughly a third of the cycle went to three successive generations of two root defects, and the estimate missed by 2–2.7× almost entirely on that account. The base-rate check materially changed this retro's conclusion: twelve is the second consecutive cycle in this range on the only comparable basis, so the honest reading is a stable, expensive rework profile on verification-heavy cycles rather than a sudden decline. The finding worth acting on is not about this project at all — it is that a pattern promoted to BINDING six cycles ago changed no agent's behavior, because The-Council reads its own pattern ledger advisorily, does not read it at all in the agent that designs the checks, and treats BINDING and INFO identically. That is a structural gap and it deserves a structural fix (§11), scoped to the cycles where the class actually bites rather than taxing every cycle to catch it.
+
+**Ecosystem impact: NONE** — this cycle wrote nothing to `.claude/projects/ecosystem/*` and touched no `sos-interfaces.json` `consumers[]` surface.
+
+### 10. Scope A — shipped-partial, and why the halt was correct
+
+Scope A was three ascending publishes. It executed one and stopped.
+
+`v2.19.4` now has a tag, a Release, and a correct populated body — post-condition PASS — and **0 assets**, after the asset poll returned empty for 5 minutes. Publishes 2 and 3 were never attempted. Root cause proven by comparing two production run logs rather than inferred: `softprops/action-gh-release` takes its **create** path when no Release exists (how `v2.19.0`–`v2.19.3` all succeeded with 2 assets each) and its **update** path when one does, which returns 403. **Pre-creating the Release — the entire point of ADR-076 D1 — is what forces the update path. The design defeats itself, and only on real execution.** Full record, ruled-out alternatives, and the explicitly-unproven lead: `docs/risk-register.md` `CF-v2.19.6-A`.
+
+Two things went right here and should be preserved. The stop condition was declared in advance and honored, so the blast radius was one incomplete release rather than three. And `AC-PUB-13` — a rule written at Phase 6 for exactly this situation — stopped the tag from being deleted when the script's own printed step-2 remedy advised deleting it, which would have destroyed a live public Release to fix a problem it does not address.
+
+Current public state: `/releases/latest` still resolves to `v2.19.3`; `v2.19.5` and `v2.19.6` remain unpublished. The standing gate will correctly report both as MISSING-TAG plus WRONG-LATEST — **that is the gate working, not failing.** Recommended v2.19.7 fix is in the risk register: have `publish-release.sh` upload the assets itself, removing the workflow dependency and retiring the ADR-076 D3 question.
+
+### 11. Council fix proposal — ranked by expected value, with costs stated
+
+This is the owner's actual ask and becomes a `/self-improve` spec. It is ranked by expected value, not thoroughness, and the first entry is a recommendation **against** the most obvious change.
+
+#### F0 — REJECT: a universal "does this check measure what it claims" gate
+
+This is what the orchestrator's hypothesis implies, and it should be rejected. The capability is already present and was exercised unprompted by @architect at Phase 0.D (§0.2). The defect class is conditional on verification-authoring cycles — v2.19.4, whose subject was announcement prerequisites, produced 3 defects of an entirely different family. **Adding ceremony to every cycle to catch a class that only bites on verification-heavy cycles is a bad trade, and it is the trade the hypothesis recommends.** Recorded as rejected so a future cycle does not re-propose it.
+
+#### F1 — Fix-generation circuit breaker (highest EV, lowest cost)
+
+**Change:** at Phase 5, @qa counts fix generations per individual check. On the **3rd** fix to the same check within one cycle, the fix is blocked and escalated to @architect to replace the *measurement strategy* rather than patch the implementation again.
+**Why highest EV:** it targets the dominant, measured cost driver — 1h21m of a 4h cycle (§4). The trigger already has two confirmed instances (v2.19.5's D13→D13a→D13b→D13c, this cycle's three-generation GH_REPO chain), so it is not speculative.
+**Cost:** very low. One @qa step counting something already recorded in commit prose. Fires rarely — twice in seven cycles.
+**Honest downside:** the threshold of 3 is a judgment call with n=2 supporting it. Set too low it blocks legitimate iteration; a 2-generation trip would have fired on ordinary work this cycle. It also cannot fire across cycles as specified, so a chain split over a cycle boundary escapes it.
+
+#### F2 — Make BINDING patterns actually bind, with a retirement rule (high EV, moderate cost)
+
+**Change:** introduce a severity ladder in Council's consumption of `docs/patterns.md`. `BINDING` rows become a mandatory design-time checklist item at Phase 1 and a verification item at Phase 5, **surface-matched** — a row binds only when the cycle's diff touches the surface the row names. And critically: **add `patterns.md` to @architect's read set**, since @architect designs the checks and currently never reads the ledger at all.
+**Why high EV:** it repairs the mechanism in §0.3(b) — the reason a promoted pattern has never reduced a recurrence rate. Without it, F1's own finding gets written to a file that binds nothing, and v2.19.7 re-derives it.
+**Cost:** moderate. Edits to `architect.md`, `qa.md`, `dev.md`, plus a `pipeline-policy.md` paragraph.
+**Honest downside, and it is significant:** `patterns.md` already carries **47 rows** and grows every cycle. If BINDING count grows the same way, this becomes exactly the ceremony F0 rejects. **This proposal is only safe with a retirement rule attached** — a BINDING row that records no new instance for N cycles drops to WATCH, and a row whose defect has been made structurally unrepresentable is marked STRUCTURALLY CLOSED (a status the file already uses). Ship the retirement rule in the same cycle or do not ship F2.
+
+#### F3 — `[UNEXECUTED]` labelling for third-party runtime dependencies (moderate EV, moderate cost)
+
+**Change:** when an ADR's correctness depends on the runtime behavior of a third-party system on a path that has **never executed**, Phase 1 must either execute it against a disposable target, or label the decision `[UNEXECUTED]` and require its first execution to be a designated in-cycle positive control with a declared stop condition.
+**Why:** item 12 is the only defect that cost anything, and it was undiscoverable by review — designed, reviewed twice, implemented, tested, audited, approved, and wrong.
+**Cost:** moderate; fires only on cycles with external side effects.
+**Honest downside:** this cycle **already did the valuable half** — the stop condition was declared and honored, which is why the damage was one incomplete release instead of three. So F3's marginal value over current practice is the `[UNEXECUTED]` label and the disposable-target execution, not the stop condition. That is a real but smaller gain than the item-12 severity suggests, and it should not be sold as preventing item 12 outright.
+
+#### F4 — Stable defect-counting basis (low cost, enabling)
+
+**Change:** standardize a per-cycle defect ledger recording (a) count, (b) **basis** — implementation-only vs artifact-inclusive, (c) fix-generation depth.
+**Why:** §0.1 could not answer "is twelve anomalous" from prior retros because the instrument changed underneath the metric and was then abandoned. Without this, no future retro can tell whether F1 or F2 worked — which makes it the precondition for evaluating everything above it.
+**Cost:** trivial. Three fields in the Phase 8 template.
+**Honest downside:** measures the process rather than improving it, and adds a line to every retro including the cycles where nothing interesting happened.
+
+**Recommended `/self-improve` scope: F1 + F4 first** — together they are small, they target the measured cost driver, and F4 makes F1's effect observable next cycle. **F2 only with its retirement rule**, and preferably as its own cycle given it touches four agent files. **F3 deferred** to the next cycle with external side effects, where it can be designed against a real case.
+
+---
+
 ## [v2.19.5] - 2026-08-04 — Rung 1: "The automation tells the truth."
 
 **Date:** 2026-08-04 (branch opened 2026-08-04T15:20:32Z per the earliest PR commit; PR #99 squash-merged `7c524d4` 2026-08-04T19:46:18Z).
