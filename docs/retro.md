@@ -2,6 +2,208 @@
 
 ---
 
+## [v2.19.7] - 2026-08-08 — "Finish the Storefront, Ship What We Read": everything the announcement points at is true and works
+
+**Date:** 2026-08-08 (Phase 0 opened 09:30:54Z; PR #103 squash-merged `adf2586` 13:18:35Z; Scope A publish completed 13:21:00Z).
+**Classification:** SECURITY-SENSITIVE, Tier A (Guard Change Summary required — 4 independent Tier-A surfaces: `cowork.lock.json`, `.cowork-allowlist.json`, `.github/CODEOWNERS`, 3 enforcement scripts), COMPLIANCE-SENSITIVE co-occurring.
+**Mode:** full, with Phase 0.D deliberation. Nothing abbreviated (§5).
+**Cycle facts:** PR #103, `docs/spec.md` AC count 21→38 at Phase 1, corrected to 43 by merge. 1 implementation pass + 1 QA-remediation pass (`b13ad42`→`bf2704f`), 1 security fix pass (`437d0d6`), 2 QA passes (FAIL→PASS WITH WARNINGS), 2 security passes (Phase 2 review, Phase 6 audit). Lock 110→108. All three overdue releases (v2.19.5, v2.19.6, v2.19.7) published post-merge, first attempt, all three. `Release Surface` standing gate went green after 3 consecutive failures.
+
+**⚠️ Author's note (this entry):** a first attempt to stage this draft via `Write` to a scratchpad path *outside* any registered project was blocked by `qa-scope.sh`, which reported `BLOCKED: Phase 4 (Implementation) has no status recorded`, resolving root as The-Council itself rather than `claude-cowork-config` (the write path matched no registered project, so the guard appears to have defaulted attribution to `self` and then correctly enforced `self`'s own — inapplicable — Phase 4 gate). That is arguably a live, small-scale instance of the same misleading-guard-signature family named at §0.4 below (`CF-COUNCIL-WORKTREE-ALLOWLIST`, S18): the block was real and correctly fail-closed, but its stated reason (a phase status) was not the actual cause (a path that resolved to the wrong project). Per this project's standing instruction never to tunnel around a blocked write, no workaround was attempted; a direct `Edit` against this file, inside the registered `claude-cowork-config` repo, was tried next and succeeded normally — this entry was written directly, not relayed through the orchestrator.
+
+---
+
+### 0. The seven questions asked of this retro, answered in order
+
+#### 0.1 The convergent finding — is "the authoritative input was wrong" durable, or n=1?
+
+**Not n=1 — this is the second consecutive cycle it happened, and the shape is identical both times.** @architect and @security independently discovered, at Phase 0.D, that the brief's own instruction — write the two new `blocked_files` entries "in the existing `nexus-strategy.md` shape" — would produce a block that structurally **cannot fire**: the sole reader (`sync-agency.yml:228`) does a whole-line, fixed-string match against the full category-prefixed path, but the stored precedent entry is a bare basename that only happened to work because that one file sits at upstream root. Copied literally, the two new entries would never match, and the 2026-09-01 sync cron would have silently re-fetched the CRITICAL finding while every check stayed green.
+
+The same shape appears one cycle earlier. `docs/retro.md` v2.19.6 §0.3(a) records that **the Phase 2 security review itself prescribed the defective remedy** for the destination-repo guard (`gh repo view --json nameWithOwner`, which ignores `GH_REPO` while every `gh release` command honours it) — an authoritative review document, not an implementer's guess, carried the defect into the fix.
+
+Two consecutive cycles, two different authoritative artifacts (a Phase-0 brief; a Phase-2 review), same underlying failure: **treating "this describes the fix" and "this fix works" as the same claim.** Both were caught the same way — someone actually ran or traced the described mechanism against the real reader/matcher rather than accepting the instruction's own framing. That is a real, evidenced, two-cycle pattern, not a one-off — see the new `docs/patterns.md` proposal below (§ Patterns, item C). It does not yet meet this ledger's 3-cycle promotion bar, and this retro does not promote it; it names the count honestly (2/3) so the next occurrence isn't discovered from scratch.
+
+#### 0.2 The units problem — worse than three, and it happened inside the very discipline meant to prevent it
+
+Four instances surfaced, not three, once this retro checked the fourth:
+
+1. **QA-3 (false BLOCKER).** @qa read "7 HIGH" (the audit's per-**file** coverage-table tally) against "4 IDs disclosed" (a per-**finding** count) and concluded a finding was missing. It wasn't — `C-1, H-1..H-5` is 6 IDs; 2 are deletions; 4 remain; those 4 IDs span 5 flagged *locations* (H-2 covers 2 files, H-5 covers 7 files as one group). Three units, three different correct numbers, no missing finding.
+2. **The public CHANGELOG self-contradiction.** The QA-3 wording fix touched `CHANGELOG.md:35-37` ("4 remaining HIGH findings across 5 flagged files") but left `CHANGELOG.md:24-25` ("7 HIGH findings") untouched two paragraphs above — a document that ships in the public release ZIP, contradicting its own arithmetic (7 − 1 ≠ 4).
+3. **The orchestrator's own remediation wording (S25).** The instruction telling @dev how to write the heading used "5 flagged files" while the paragraph's own intro sentence establishes the unit as *locations* — the orchestrator re-created the exact ambiguity the intro exists to remove, in the act of trying to close it.
+4. **This retro's fourth instance, found independently.** `docs/qa-report-v2.19.7.md:25` cites the v2.19.6 root cause as *"3 of 12 defects were introduced by the fixes for earlier ones."* The actual v2.19.6 retro text (`docs/retro.md` §0.3(a)) says **"roughly 5 of the 12 are successive generations of 2–3 root defects."** "3 of 12" appears nowhere in the v2.19.6 entry. This is a fifth-generation instance of the same defect class, landing inside the paragraph that invokes the discipline against it — the QA report cited its own governing precedent from memory rather than re-reading it.
+
+**Judged against `docs/patterns.md`'s own stated convention — counting CYCLES, not sub-occurrences within one cycle (explicit in the `Local-fix exhaustion signal` row and the `V45-A3` row's "several sub-instances… do not license skipping a step") — this is honestly ONE cycle of evidence, not four.** All four instances belong to v2.19.7 (the fourth was authored inside this cycle's QA report, even though caught by this retro). It does not meet the 3-cycle bar for promotion. It IS a strong first instance — four independent manifestations in one cycle, one of them self-referential — and is proposed as a new WATCH-1/3 row below (§ Patterns, item A), not force-promoted.
+
+#### 0.3 Fix-passes introducing defects — does the v2.19.6 root cause still hold?
+
+**The mechanism recurred once; the rate claim is not computable on a comparable basis, and this retro declines to make it — the same restraint v2.19.6's own retro applied to itself.**
+
+What's comparable: v2.19.6 built an explicit, enumerated 12-item defect census across the whole cycle as a deliberate protocol. v2.19.7 has no equivalent census — its findings are scattered narratively across Phase 0.D (2 findings + F1-F9 + 4 conditions), Phase 2 review (2 CRITICAL + 7 MUST-FIX), Phase 5 (5 QA items), Phase 6 (5 new WARNINGs), and the GCS. Counting "total defects this cycle" from that would require inventing a census methodology after the fact — precisely the instrument-mismatch v2.19.6 §0.1 already ruled out when comparing itself to earlier cycles' `qa_issues_prevented` scalar.
+
+What IS directly comparable: the specific mechanism — **a fix pass minting a new defect** — fired once this cycle. The QA-3 wording fix (Phase 4.1, `bf2704f`) produced the CHANGELOG unit contradiction (§0.2 item 2), caught same-day by the same QA pass's own re-verification discipline (`docs/qa-report-v2.19.7.md` §9) and fixed by the orchestrator before Phase 6. The Phase 6 security fix pass (`437d0d6`, 5 WARNINGs closed) produced **no** detected fix-introduced defect — @qa's Phase 7 pass specifically checked for this class of error (it named, as a specific risk, that "a mismatch [in symlink enumeration] would silently reintroduce the 'two counts can disagree' defect class this cycle exists to close" and confirmed both enumerations were widened together).
+
+So: the underlying risk (fixes can mint defects) is not disconfirmed — it happened once, mechanically identical in kind to v2.19.6's chains, just far smaller in blast radius (a wording contradiction in two paragraphs, not a production 403 that halted a public release). Whether the *rate* is falling cannot be claimed without a shared census, and this retro will not manufacture one to produce a trend line.
+
+#### 0.4 Guards fired 3× — worth a pattern row on misleading signatures?
+
+**Two of the three are the same bug (`CF-COUNCIL-WORKTREE-ALLOWLIST`); the third is a different mechanism with the same *symptom shape*, and that symptom shape is the part worth naming.**
+
+- **Instance 1 (@architect, Phase 1):** `orchestrator-guard.sh:422` computes `REL_FILE` by stripping the project path; from inside the nested `.worktrees/v2.19.7/` directory it produces `.worktrees/v2.19.7/docs/spec.md`, which matches no Phase-0/1 allow-list entry. The guard's error read **"Phase 3 (User Gate) has no status recorded"** — a *phase* diagnosis for what was actually a *path-prefix* bug. @architect refused to route around it, confirmed the diagnosis by moving the identical write to the project root (passed unchanged), and returned the work as text.
+- **Instance 2 (@qa, Phase 5):** the identical worktree-allowlist wall, same misdiagnosis shape, second occurrence in one cycle. @qa also refused to tunnel and returned its report as text.
+- **Instance 3 (@security, Phase 2):** a *different* mechanism — @security prepared a HIGH scope-allow finding, checked the premise before filing it, found `scope-check.sh:708-713` short-circuits correctly for registered external projects, and **withdrew the finding itself** (no guard fired here; this is a self-correction, not a guard event — see §0.5). Recorded as PASS 25/25.
+
+So strictly, the guard-firing-with-no-tunnel count is **2**, not 3 (both `CF-COUNCIL-WORKTREE-ALLOWLIST`), and the third item is evidence of correction discipline rather than a guard event. But there's a real fourth data point in the same *symptom family*, discovered independently by this very retro pass while trying to save it (see the Author's note above): a `Write` to a path outside any registered project was blocked with `BLOCKED: Phase 4 (Implementation) has no status recorded` — a phase-status diagnosis for what was actually a path-attribution failure (the guard defaulted to `self`). And @security's own Phase 2 finding S18 separately warns that if `COUNCIL_ACTIVE_PROJECT` fails to reach @dev's hook context at Phase 4, "every cowork write blocks with a **misleading `scope_allow` message**" — @security names it explicitly as "same misleading-signature family as `CF-COUNCIL-WORKTREE-ALLOWLIST`."
+
+**That is now three independently-discovered instances of a guard naming the wrong axis of failure** (phase-vs-path-prefix, twice; scope-vs-pin-propagation once, plus this retro's own path-attribution near-miss). All belong to the SAME family as the already-BINDING `Subagent Worktree Council-State Stranding` row (34) but are **not the same bug** as that row's write-loss-on-cleanup mechanism — crediting them to that row would be exactly the wrong-row double-credit this project's own Phase 0.D has twice already correctly refused (v2.19.5 §7-9). Proposed as a new, separate WATCH-1/3 row (§ Patterns, item B).
+
+#### 0.5 Self-correction across agents — is it working, and what enabled it?
+
+**Working, with concrete evidence at every layer, and it is attributable to two named, reused disciplines rather than luck:**
+
+- **@security self-corrected mid-pass** (Phase 2): prepared a HIGH scope-allow finding, checked its premise against `scope-check.sh:708-713`, found the premise false, withdrew it before filing.
+- **@architect amended @security's own `AC-B5-7`** from equality to subset form (Phase 2); @security accepted the amendment "without reservation" and then supplied the argument @architect hadn't made — that the equality form would have banned the repo's own best existing use of the list.
+- **The orchestrator investigated and overturned @qa's QA-3 blocker theory** rather than escalating to the owner (Phase 5) — checked the source audit directly, found the correct ID/location/file counts, and the refutation was then written formally into `docs/qa-report-v2.19.7.md` under @qa's own re-verification. This is cross-role correction (orchestrator checking QA's claim against the primary source), not the same agent silently reversing itself mid-stream — worth stating precisely rather than blurring the two.
+- **@qa (Phase 7) sharpened @security's own "general bypass" framing** into "reimplementation drift" — same conclusion, better-stated risk, explicitly credited in the pipeline row as "recorded for the retro."
+- **The orchestrator made and disclosed its own error** (S25, §0.2 item 3) rather than letting @security's audit note stand unattributed — @security's Phase 6 row states plainly "S25 was the orchestrator's error," which is itself a correction discipline working on the correcting party.
+
+**What enables it, concretely, not just as a slogan:** (1) an explicit convention of independent re-derivation over narrative trust — `docs/qa-report-v2.19.7.md`'s opening line states it as the governing standard for the pass, citing v2.19.6's own retro by name; (2) named, reusable principles (`fix-pass-needs-same-review`, "verify the artifact, not the narrative") that agents cite by name mid-cycle rather than reinvent; (3) a durable paper trail (scratchpad, pipeline.md, docs/*) cheap enough to re-check that "go read the source" is genuinely less effort than trusting a summary. The mechanism is real and repeatedly used — but §0.2's fourth instance (the QA report mis-citing the very retro it invokes) shows the discipline is not automatic even for the agent applying it; it still depends on someone actually re-opening the cited document, not just recalling its gist.
+
+#### 0.6 The deliberate RED — keepable practice?
+
+**Yes, and this cycle is the cleanest positive proof available: the prediction was written down before the outcome was observed, and the observed outcome matched it exactly.**
+
+`docs/risk-register.md`'s `v2.19.7-LEDGER-FP` row was authored at Phase 4/5 — explicitly noted as "the RED itself has not yet been observed by CI as of this row being written" — predicting that `verify-lock-removals.sh` would fire a false positive on the PR's own introducing commit, and explaining in advance exactly why (a bare-basename-to-full-path repair reads as a removal to a literal path-string diff, with no protection actually lost). The PR's real CI run then produced **60 pass / 3 skipping / 1 fail**, with the fail being that exact ledger check, on its first-ever execution. @qa's Phase 7 pass independently re-reproduced the false positive live and reached the same read the register had pre-committed to.
+
+This is categorically stronger than "we accepted a risk and it turned out fine" — it is a **falsifiable, dated, checkable prediction**, graded against reality after the fact rather than rationalized once the outcome was already known. Worth keeping as a standing discipline: any accepted-risk row that predicts a specific observable CI/behavioral outcome should state the prediction in a form a later retro can grade — as this row did — rather than only asserting the risk is acceptable in the abstract.
+
+#### 0.7 Estimate vs actual, reported as-is
+
+No pre-cycle wall-clock estimate was found recorded in `pipeline.md`'s `## Current Task` section for v2.19.7 (unlike some prior cycles, e.g. v2.19.6's "Estimated 1.5–2h" comparison). Recorded timestamps: Phase 0 opened 09:30:54Z; PR merged 13:18:35Z; Scope A (all three publishes) complete 13:21:00Z. Core pipeline (Phase 0 → Phase 7 merge) wall-clock ≈ **3h48m**. Per this project's own standing instruction (v2.19.6 — "Estimate miss, recorded as a miss and not netted against the catch count"), this retro does not net the absence of a pre-cycle estimate against the findings-caught count — it simply notes no estimate exists to grade this cycle against, rather than back-filling one now to manufacture a comparison.
+
+---
+
+### 1. Phase Findings Summary
+
+| Phase | Agent | Findings Count | Severity Breakdown |
+|---|---|---|---|
+| 0.D Deliberation | @architect + @security | 2 headline findings (AC-B5-2 cannot-fire, F2 rename-into-category) + @architect 4 binding conditions + @security F1-F4 MUST-FIX + F5-F7 amendments + F8/F9 INFO | 2 CRITICAL-equivalent, rest MUST-FIX/INFO |
+| 2 Legal (`/legal`) | @compliance | 1 new (README "110 agent files" false at 108) + H-5 placement gap + 5 binding ACs | 0 BLOCKER |
+| 1 Design | @architect | 0 new substantive findings; 1 process finding (`CF-COUNCIL-WORKTREE-ALLOWLIST`, instance 1) | — |
+| 2 Security Review | @security | 2 CRITICAL (S1, S2) + 7 MUST-FIX (S3,S4,S5,S6,S7,S10,S12) | 2 CRITICAL / 7 MUST-FIX |
+| 4 Implementation | @dev | 0 new defects at handoff; 1 independent correction (28 vs. audit's unverified 26 corrupted headings) | — |
+| 5 Testing (1st pass) | @qa | 2 BLOCKER (QA-5 real, QA-3 later refuted) + 3 non-blocking (QA-1, QA-2, QA-4) | 1 real BLOCKER |
+| 4.1 QA remediation | @dev | 0 new defects reported; 1 introduced (CHANGELOG unit contradiction, §0.2) | — |
+| 6 Code Audit | @security | 5 new WARNING (S19–S23, all fixed) + 4 INFO (S24 accepted, S25 fixed, S26 carried→resolved live, S27 accepted) | 0 CRITICAL / 0 BLOCKER |
+| 7 Final Approval | @qa | 0 new BLOCKER; 1 sharpened framing (@security's "general bypass" → "reimplementation drift"); QA-3 formally refuted | — |
+
+### 2. AC Difficulty Assessment
+
+AC count 21 → 38 at Phase 1, corrected to 43 by merge (`docs/spec.md`, per the GCS).
+
+- **Hard (required rework/design revision):** `AC-B5-2` (the cannot-fire block — rewritten at 0.D before Phase 1 opened); `AC-A1-0`/`AC-A1-1`/`AC-A1-7` (three-branch version-guard sequencing, closed only after S1-CRITICAL); `AC-B5-8` (the shrink-check false positive — deliberately accepted rather than fixed, see §0.6); the disclosure-count AC underlying QA-3 (§0.2).
+- **Easy (implemented without rework):** the majority of Phase-2-review-derived MUST-FIX items (S3–S7, S12) — each closed on the first Phase-4 build per @security's Phase-6 re-verification.
+- **Not-Verified this cycle:** end-to-end publish success itself — @security's Phase 6 audit states plainly "no release was actually published… publishing… forbidden this phase," and Phase 4/5/6 verification was necessarily static (reading + local runs). It was verified only post-merge, at Scope A (see header) — the strongest AC in the spec (`AC-A2-3`, the `Release Surface` gate) was, by design, red at design time, and its ability to fire was demonstrated rather than asserted, per Phase 0.D.
+
+### 3. Token Cost Actuals
+
+**DATA GAP — not computed.** `.claude/projects/claude-cowork-config/metrics.json` (hub-side) shows no entries for 2026-08-08; the file's last modification predates this cycle (2026-07-21). No per-model-tier token records exist to aggregate for v2.19.7, so this section cannot responsibly report a cost figure — fabricating one from cycle duration or file-count proxies would repeat exactly the "observable-substituted-for-the-real-property" defect class this project's own `Check-That-Cannot-Fail` discipline exists to catch. Recommend the orchestrator confirm the token-logger hook is firing for this project before the next cycle closes.
+
+### 4. Phase Durations
+
+| Phase | Timestamp (recorded) | Interval from prior |
+|---|---|---|
+| 0. Requirements opened | 09:30:54Z | — |
+| 0. Requirements DONE | 09:52:00Z | 21m |
+| 0.D Deliberation DONE | 10:12:00Z | 20m |
+| 2. Legal/Compliance | 10:25:00Z | 13m |
+| 1. Design (1st attempt, blocked) | 10:35:00Z | 10m |
+| 1. Design DONE | 12:40:00Z | 2h5m (includes the `CF-COUNCIL-WORKTREE-ALLOWLIST` block + re-land) |
+| 2. Security Review DONE | 13:05:00Z | 25m |
+| 3. User Gate APPROVED | 14:05:00Z | 1h (two explicit scope decisions) |
+| 4. Implementation DONE | 15:00:00Z | 55m |
+| **7. Final Approval** | **13:18:35Z** | *(recorded before Phase 6, see flag below)* |
+| **6. Code Audit** | **14:40:00Z** | *(recorded before Phase 5, see flag below)* |
+| 5. Testing (1st pass, FAIL) | 15:40:00Z | — |
+| 4.1 QA remediation DONE | 16:10:00Z | 30m from Phase 5 |
+| Scope A (post-merge publish) | 13:21:00Z | ~3m after PR #103 merge |
+
+**Outlier flag, recorded rather than silently smoothed over:** the recorded timestamps for Phase 6 (14:40:00Z) and Phase 7 (13:18:35Z) both precede Phase 5's recorded timestamp (15:40:00Z), and Phase 7 precedes Phase 6 — logically impossible given final approval cannot predate the audit it approves, which cannot predate the testing pass it audits. This retro did not attempt to re-derive true wall-clock order from git commit timestamps (out of scope for this pass); it is flagged here as a **`pipeline.md` data-quality finding**, not resolved. Likely cause: several of this cycle's phase rows were written or backfilled non-sequentially given how much cross-referencing occurred between phases (e.g., Phase 6's audit explicitly re-verifies claims made in the Phase 5 QA report). Recommend the next cycle confirm phase-row timestamps are captured at actual write time, not reconstructed after the fact.
+
+### 5. Phases Abbreviated
+
+None. Full mode with Phase 0.D joint deliberation, a Phase 2 legal review ahead of design, and a full Phase 6 audit. This was the correct ceremony level for a Tier-A cycle carrying 4 independent supply-chain-adjacent surfaces.
+
+### 6. Rework Rate and Causes
+
+Not computed as a single percentage — see §3's reasoning: no consistent census exists this cycle to form a numerator/denominator on the same basis prior cycles used, and inventing one after the fact would be the same defect class described there. Qualitatively: one implementation pass (`b13ad42`) required one QA-remediation pass (`bf2704f`, 6 files, +135/−6, purely additive per `git diff --numstat`) to close 2 BLOCKERs; the fix pass itself introduced 1 narrow public-facing wording defect (§0.2), fixed the same day before Phase 6. One security-audit fix pass (`437d0d6`) closed 5 WARNINGs with no detected fix-introduced defect. Both fix passes were independently re-verified by a different agent than the one that produced them (@qa re-verified @dev's QA-remediation; @qa's Phase 7 re-verified @security's audit-remediation) — the `fix-pass-needs-same-review` discipline held both times.
+
+### 7. Issues Prevented
+
+Real, review-caught, never-reached-`main`:
+
+- **QA-5 (BLOCKER, real):** `AC-B5-1`/`AC-B5-4` bold-marked "MUST run in CI" and did not exist in `quality.yml` — state was human-verified-only, and ADR-080's own three-leg soundness argument (forward + orphan + count==108) was missing its third leg.
+- **S1 (CRITICAL):** `gh release upload --clobber` reachable, unguarded, from the two branches deliberately exempted from the version guard — a live path to overwriting a published release's public assets from a stale checkout.
+- **S2 (CRITICAL):** `fetch-depth` absent on the ledger job → unfetchable base revision → `\|\| echo '{}'` idiom → empty removed-set → false PASS, inside the control written specifically to prevent that idiom.
+- **The Phase 0.D convergent finding (§0.1):** the unfireable `blocked_files` block, which would have silently re-exposed the CRITICAL vendored file on the 2026-09-01 sync cron with every check green — caught before any code existed.
+- **5 WARNINGs at Phase 6** (S19–S23): a secondary guard failing open on network error, an unasserted `--target` gap, a compliance AC citing a nonexistent CI check, an unbounded `DROP_PATHS` degenerate case, and a symlink blind spot in the orphan check — all closed same-audit.
+
+`qa_issues_prevented` (informal tally from `docs/qa-report-v2.19.7.md` + `docs/security-audit-v2.19.7.md`, since no standing scalar is emitted this project post-v2.19.0 — see §3/§6): **blocker ≈ 3** (QA-5, S1, S2), **issue ≈ 12** (7 MUST-FIX + 5 WARNING), **info ≈ 6** (S24, S25, S26, S27, QA-1, QA-4).
+
+### 8. Pattern Detection
+
+Standard rule: scan the 3 most recent Phase-7-APPROVED cycles' Phase 6 (Code Audit) text for `auth|RLS|permissions|scope|guard|configuration|injection` at WARNING+ severity.
+
+- **v2.19.7 (this cycle):** clear WARNING+ hits — "guard" (S19, a guard failing open), "permissions" (S12, `contents: write` narrowing). ✅ verified directly against `docs/security-audit-v2.19.7.md`.
+- **v2.19.6:** clear WARNING+ hits — "configuration" (S-A2, `GH_CONFIG_DIR` / git config surface), "guard" (`verify-release-surface.sh` neutering test). ✅ verified directly against `pipeline.md` row 105 (`docs/security-audit-v2.19.6.md`'s content).
+- **v2.19.5:** **not independently verified.** No standalone `docs/security-audit-v2.19.5.md` exists at the expected path, and this retro pass did not have budget to locate and read its Phase 6 content from `pipeline.md`/`scratchpad.md` directly. Reporting this as **UNKNOWN**, not as a match, per this project's own convention of not asserting what wasn't checked.
+
+**Result: 2 of 3 required legs confirmed at WARNING+ on the `guard`/`permissions`/`configuration` keywords; the third is unverified, not absent.** Per the standing rule ("if the same keyword appears… across 3 consecutive cycles"), this does NOT meet the bar to fire a `/self-improve` suggestion this retro — a firm 3rd-leg check is needed first. If a future retro (or the orchestrator, off-cycle) confirms v2.19.5's Phase 6 also carries a `guard`/`configuration` WARNING+, this becomes a live 3-cycle recurrence worth escalating; recorded here so it isn't re-discovered from zero.
+
+### 9. Retrospective Verdict
+
+**What went well:** the cycle's headline safety property (delete/disclose/upstream on 110 vendored files, backed by a control that provably can and cannot fire on demand) shipped correctly, and the single most consequential defect in the entire cycle — a protection block that would have silently reopened on the next sync cron — was caught before Phase 1 design even opened, by two independent reviewers converging on the same finding from different starting points. The deliberate-RED discipline (§0.6) produced a genuinely falsifiable, graded prediction rather than a hand-wave. Cross-agent correction (§0.5) is real and repeatedly exercised, not aspirational. Three real production releases were backfilled/published on the first attempt each, closing a defect (`CF-v2.19.6-A`) that had blocked the storefront for two prior cycles.
+
+**What went badly, stated plainly rather than smoothed over:** the units-ambiguity defect class (§0.2) recurred four times in one cycle, including inside the QA report's own citation of the retro discipline meant to prevent it — the sharpest evidence yet that "count IDs, not table rows" needs to be a structural convention (name the unit inline, every time a number is quoted), not a habit re-learned per-citation. `pipeline.md`'s own Phase Log carries two internally-inconsistent timestamps (§4) that this retro flagged rather than silently reconciled. Token-cost reporting (§3) is a genuine blind spot this cycle — the hub metrics file was not populated, so cost cannot be graded at all, only durations. This retro's own first write attempt was blocked by a misattributed guard (Author's note, above) — a small, live instance of exactly the signature-quality problem named in §0.4. None of these reached `main` or degraded the shipped product; all are process/bookkeeping findings, not product defects.
+
+**Overall cycle health: strong.** The pipeline caught its own highest-value defect at the cheapest possible point (Phase 0.D, before any code existed), closed 2 CRITICALs and 12 MUST-FIX/WARNING findings with independent re-verification at every handoff, and shipped three real public releases correctly on first attempt after two prior cycles of failure. The cost was concentrated in bookkeeping precision (units, timestamps, cost telemetry) rather than in the product or its safety controls.
+
+Ecosystem impact: NONE (this cycle touched only `claude-cowork-config`'s own repo and hub-side pipeline/scratchpad state for that slug; no `.claude/projects/ecosystem/*` write, no `consumers[]`-listed surface).
+
+---
+
+### Patterns proposed for `docs/patterns.md`
+
+Consistent with this ledger's own convention — promotion requires 3 CYCLES of recurrence, not sub-occurrences within one cycle — none of the following are proposed at BINDING. Each states its honest count.
+
+**A. Ambiguous-unit numeric claim (per-file vs. per-location vs. per-ID, or a stale figure re-cited from memory) — NEW, WATCH 1/3.**
+v2.19.7 (1st cycle instance — 4 sub-occurrences within this single cycle: QA-3's false blocker theory reading "7 HIGH" against "4 IDs"; the shipped `CHANGELOG.md` self-contradiction two paragraphs apart; the orchestrator's own S25 remediation wording reintroducing the ambiguity it was fixing; and `docs/qa-report-v2.19.7.md`'s own mis-citation of the v2.19.6 retro's "roughly 5 of the 12" as "3 of 12"). **Description:** any cycle that quotes a finding/defect count without naming its counting unit inline (finding ID vs. file vs. location vs. table row) is at risk of two different true numbers being read as contradictory, or a false number being carried forward as though verified. **Recommended discipline (not yet binding — propose at 3rd cycle instance):** any sentence stating a numeric finding/defect count must name its unit in the same sentence ("N finding IDs," "N flagged files," "N flagged locations"), and any citation of a PRIOR cycle's retro figure must be re-read from the source document at the moment of citation, not recalled from summary. Per this ledger's own convention, held at WATCH 1/3 despite 4 sub-instances — they are one cycle's evidence, not four.
+
+**B. Guard/check error message naming the wrong axis of failure — NEW, WATCH 1/3, distinct from the BINDING `Subagent Worktree Council-State Stranding` row (34).**
+v2.19.7 (1st cycle instance — 3 independently-discovered sub-occurrences: `CF-COUNCIL-WORKTREE-ALLOWLIST`, where `orchestrator-guard.sh` reported a *phase* problem ("Phase 3 has no status recorded") for what was actually a *path-prefix* bug in nested-worktree `REL_FILE` computation; @security's Phase-2 finding S18, warning that a `COUNCIL_ACTIVE_PROJECT` pin-propagation failure at Phase 4 would surface as a *misleading `scope_allow` message* rather than naming the real cause; and this retro's own write attempt, blocked with a Phase-4-status message when the actual cause was a write path outside any registered project). **Description:** a guard whose failure message names the wrong layer (phase-gating vs. path-matching; scope-allow vs. pin-propagation) costs real re-diagnosis time even when the guard fails safe (all three instances here failed closed, correctly, with no bypass) — the correct response (@architect and @qa both refused to route around the block and returned work as text; this retro tried the real target path next rather than forcing the scratchpad write) still required tracing the true cause by hand each time. Explicitly NOT the same bug as row 34 (that row is about subagent worktree writes being lost on cleanup; this is about a guard's allow-list path computation, and about a scope-allow message masking a pin-propagation or path-attribution failure) — crediting it to row 34 would be the wrong-row double-credit this project's Phase 0.D has twice already correctly refused. **Recommended discipline (propose at 3rd instance):** any guard/check whose failure can be caused by more than one underlying condition should name the condition it actually detected, not a fixed generic message — e.g., report "no allow-list entry matched: `<REL_FILE>`" or "write path resolves to no registered project" rather than inferring and reporting a phase-gate failure. `CF-COUNCIL-WORKTREE-ALLOWLIST` itself remains a Council-side `/self-improve` candidate, unfixed here per this project's own cross-repo scope discipline.
+
+**C. Authoritative artifact prescribing its own defect (spec brief / security review text carries the broken remedy, not just the code) — NEW, WATCH 2/3 (backdating credit to v2.19.6, per §0.1).**
+v2.19.6 (1st instance — the Phase 2 security review's own prescribed remedy for the destination-repo guard, `gh repo view --json nameWithOwner`, was itself the defect: it ignores `GH_REPO` while every `gh release` command honours it, so the review-prescribed fix passed exactly when the redirect it existed to catch was active); v2.19.7 (2nd instance — the Phase 0 brief's instruction to copy the `nexus-strategy.md` "shape" for two new `blocked_files` entries would have produced a block unable to fire, caught at Phase 0.D before Phase 1 opened). **Description:** distinct from `Check-That-Cannot-Fail` (row 31, about a CI gate's own construction) and from `Verifier-that-cannot-PASS` (row 32, the mirror) — this is about the **instructing document itself** (a brief, a review's prescribed fix) being the vector, not the shipped check. Both instances were caught by someone tracing the actual reader/matcher the instruction depended on, rather than trusting the instruction's own framing. **Recommended discipline (propose at 3rd instance):** treat "do it the way X already works" instructions in a brief or review as a claim to verify, not a given — confirm the cited precedent (`nexus-strategy.md`'s entry, the `gh` flag's actual scoping behavior) against the real reader/consumer before encoding it as an AC. WATCH — 2 of 3; this is the closest of the three proposals to promotion and worth checking explicitly at the next SECURITY-SENSITIVE cycle's Phase 0.D.
+
+**Declined credits, stated so they aren't silently assumed:**
+- **`Local-fix exhaustion signal` (row 52, WATCH 2/3)** — NOT incremented. This cycle's single fix-introduced defect (the CHANGELOG contradiction) was one fix, one new defect, not "N consecutive fixes to the SAME check, each minting the opposite-polarity defect of the last" — the shape that row specifically names. Counter stays at 2/3 (v2.19.5, v2.19.6).
+- **`Check-That-Cannot-Fail` (row 31, BINDING)** — the Phase 0.D `AC-B5-2` finding (§0.1) is a **preventive control** (an allowlist entry that cannot block a future sync) rather than a **verification check** (a CI gate/AC-text asserting a property) — the row's established scope. This retro declines to unilaterally credit it as the 8th instance; flagging it as a genuine judgment call for the next Phase 0.D or retro to make explicitly, consistent with this project's twice-demonstrated practice of correctly refusing ambiguous wrong-row credit (v2.19.5 §7-9) rather than defaulting to inflate the nearest BINDING row.
+
+---
+
+### Carry-forwards for the next cycle
+
+- **`CF-COUNCIL-WORKTREE-ALLOWLIST`** (Council-side, not this project) — `orchestrator-guard.sh:422`'s `REL_FILE` computation needs to normalize through the worktree root before the allow-list comparison. Needs its own `/self-improve` cycle with worktree + PR + Guard Change Summary; explicitly not fixable inside a cowork cycle.
+- **New Council-memory candidate:** generalize `CF-COUNCIL-WORKTREE-ALLOWLIST` + S18 + this retro's own write-attempt near-miss into "guard failure messages should name the condition actually detected, not an inferred category" — feeds the same `/self-improve` cycle above.
+- **S18's actionable warning** — verify `COUNCIL_ACTIVE_PROJECT`/session-pin propagation reaches @dev's Phase-4 hook context explicitly at the start of the next SECURITY-SENSITIVE cycle, rather than only when a write unexpectedly blocks.
+- **`docs/risk-register.md` `v2.19.7-LEDGER-FP`** — self-resolving; confirm on the next PR touching `.cowork-allowlist.json` that `vendored-removal-ledger` runs GREEN (the row's own stated closing condition).
+- **Owner tasks, still open:** `OT-1` (announcement, HELD BY OWNER pending the upstream-integration question), `OT-3` (catalog submissions — drafts pending), `OT-7` step 2 (branch-protection review gate — step 1 done this cycle, step 2 is an owner Settings action).
+- **`docs/patterns.md` items A/B/C above** — re-check at the next 2 cycles; C is closest to promotion.
+- **Token telemetry:** confirm `.claude/projects/claude-cowork-config/metrics.json` is actually being written to before the next Phase 8 close — §3's data gap should not repeat silently.
+- **Pattern-detection §8's unverified third leg** (v2.19.5 Phase 6 keyword scan) — worth a 5-minute check next cycle to either confirm or rule out the 3-cycle `guard`/`configuration` recurrence.
+- **Rungs 2/3/4** (v2.20 owner lane + intake de-numbering / v2.21 bridge / v3.0 design cycle) remain queued, after the announcement, per `next-rungs-plan-v2-2026-08-02.md` — unchanged by this cycle.
+
+---
+
 ## [v2.19.6] - 2026-08-07 — "Publish What Shipped": the release surface tells the truth
 
 **Date:** 2026-08-07 (first branch commit `6b58781` 2026-08-07T08:30:08Z; PR #101 squash-merged `b7ec836` 2026-08-07T12:31:46Z UTC; Scope A attempted and halted 12:45Z).
