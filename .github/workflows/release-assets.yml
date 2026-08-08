@@ -5,6 +5,29 @@ name: Release Assets
 # checklist). This workflow does not and cannot enforce that automatically — it is a
 # maintainer step, not a CI gate — but a tag pushed without a current scorecard means
 # the README "15 minutes" claim is shipping unverified for this release.
+#
+# ADR-079 (v2.19.7): this workflow is narrowed to VERIFICATION-ONLY. It used to build its
+# own archives and attach them via a third-party upload Action — a two-step design in
+# which this job and scripts/publish-release.sh disagreed about who owns the Release
+# (CF-v2.19.6-A: softprops took a create path when no Release existed and an UPDATE path
+# when publish-release.sh had already pre-created one, and the update path 403'd). A1
+# resolved that: publish-release.sh now attaches both archives itself, on every branch,
+# before any tag push. This job's remaining job is DETECTION, not prevention — it
+# downloads the PUBLISHED asset and re-asserts the same DROP/KEEP content rules against
+# the bytes GitHub actually serves, so a divergence between "what was asserted before
+# upload" and "what the public actually gets" becomes a detected event rather than a
+# silent premise (ADR-079 decision 3(b); docs/design-v2.19.7.md §B).
+#
+# permissions below is narrowed to read-only (it previously granted a write scope) — this
+# workflow issues no `gh release upload`/`create`/`edit` call anywhere below. This converts
+# "this workflow no longer writes" from a behavioural claim into a STRUCTURAL one
+# (AC-A1-2a): the token cannot upload or edit a Release even if a future edit
+# reintroduced a step that tried.
+#
+# The `push: tags` trigger is RETAINED — :19 below records it as the deliberate net for
+# anyone who tags with a plain `git push` rather than scripts/publish-release.sh.
+# Verification makes no write API call, so it cannot reintroduce the 403 this workflow
+# used to cause.
 
 on:
   push:
@@ -12,11 +35,11 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  build-and-upload:
-    name: Build & upload release assets
+  verify-published-assets:
+    name: Verify published release assets (detection)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,94 +47,12 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build release archives
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
-          PREFIX="cowork-starter-kit-${VERSION}/"
-          git archive --format=zip --prefix="${PREFIX}" "${TAG}" > "cowork-starter-kit-${VERSION}.zip"
-          git archive --format=tar.gz --prefix="${PREFIX}" "${TAG}" > "cowork-starter-kit-${VERSION}.tar.gz"
-          ls -lh cowork-starter-kit-${VERSION}.*
-
-      - name: Verify archive contents
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
-          ZIP="cowork-starter-kit-${VERSION}.zip"
-          LISTING="$(unzip -Z1 "${ZIP}")"
-
-          # Negative assertions — these MUST NOT appear in the archive.
-          # v2.8.0 WS5 (ADR-037): the ~10 individually-named docs/ entries collapsed to a
-          # single docs/internal/ prefix-match, which covers the whole 40-file subtree
-          # (docs/internal/{qa,security,compliance,process,planning}/) plus any future file
-          # placed there. docs/research/ and docs/project-audit-v2.6.1.md REMOVED (now public,
-          # see KEEP_PATHS below). docs/patterns.md ADDED (Council-tooling exempt, still internal).
-          DROP_PATHS=(
-            ".gitignore"
-            ".markdownlint.jsonc"
-            ".markdownlintignore"
-            "CHANGELOG.md"
-            "CONTRIBUTING.md"
-            ".github/"
-            "tests/"
-            "upstream-contribution/"
-            "scripts/install-pre-commit.sh"
-            "docs/spec.md"
-            "docs/retro.md"
-            "docs/patterns.md"
-            "docs/internal/"
-            ".gitattributes"
-          )
-          for path in "${DROP_PATHS[@]}"; do
-            if printf '%s\n' "${LISTING}" | grep -E "^cowork-starter-kit-${VERSION}/${path}" >/dev/null; then
-              echo "FAIL: DROP-list path present in archive: ${path}"
-              exit 1
-            fi
-          done
-
-          # Positive assertions — these MUST be present (guards against over-greedy export-ignore).
-          # v2.8.0 WS5: docs/research/, docs/project-audit-v2.6.1.md, docs/how-it-works.md,
-          # docs/faq.md, and TRUST.md added — all newly public credibility assets.
-          KEEP_PATHS=(
-            "VERSION"
-            "README.md"
-            "LICENSE"
-            "WIZARD.md"
-            "SETUP-CHECKLIST.md"
-            "cowork.lock.json"
-            "CLAUDE.md"
-            "TRUST.md"
-            "scripts/setup-folders.sh"
-            "scripts/setup-folders.ps1"
-            "docs/architecture.md"
-            "docs/project-audit-v2.6.1.md"
-            "docs/research/v2.2-skill-landscape.md"
-            "docs/research/v2.7-usercase-test-and-improvement-research.md"
-            "docs/how-it-works.md"
-            "docs/faq.md"
-            "vendored/agency-agents/LICENSE"
-          )
-          for path in "${KEEP_PATHS[@]}"; do
-            if ! printf '%s\n' "${LISTING}" | grep -E "^cowork-starter-kit-${VERSION}/${path}$" >/dev/null; then
-              echo "FAIL: KEEP-list path missing from archive: ${path}"
-              exit 1
-            fi
-          done
-
-          echo "PASS: archive contents verified (DROP=${#DROP_PATHS[@]}, KEEP=${#KEEP_PATHS[@]})"
-
       - name: Verify a populated Release already exists for this tag
-        # ADR-076 D2: fail-closed precondition. Pre-publishing (via
-        # scripts/publish-release.sh, run before the tag is pushed) fixes
-        # the PROCEDURE; it leaves the PRODUCER — this job — still able to
-        # mint an empty Release for anyone who tags with a plain
-        # `git push`. This step converts "silently creates an empty-bodied
-        # Release" into "loudly refuses", which is the structural close of
-        # CF-v2.19.3-A rather than a procedural one. Failure leaves the tag
-        # present with no Release — fully recoverable by running
-        # scripts/publish-release.sh, which detects the existing tag and
-        # creates the Release against it.
+        # ADR-076 D2: fail-closed precondition, retained from before A1. This is a READ
+        # (`gh release view`), not a write — it never attempted to create anything, so it
+        # is unaffected by the softprops removal above. Failure here means
+        # scripts/publish-release.sh was never run before the tag was pushed (e.g. a
+        # plain `git push --tags`) — the loud, actionable signal this step exists to give.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -119,21 +60,49 @@ jobs:
           TAG="${GITHUB_REF#refs/tags/}"
 
           if ! BODY="$(gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" --json body -q '.body' 2>/dev/null)"; then
-            echo "::error::No GitHub Release exists for tag ${TAG}. Run 'scripts/publish-release.sh' BEFORE pushing a tag — it creates the tag and a populated Release together. Refusing to attach assets to a Release this workflow would otherwise have to create with an empty body."
+            echo "::error::No GitHub Release exists for tag ${TAG}. Run 'scripts/publish-release.sh' BEFORE pushing a tag — it creates the tag, a populated Release, AND attaches both release archives, all before any tag push (ADR-079)."
             exit 1
           fi
 
           if [ -z "$BODY" ] || [ "$BODY" = "null" ]; then
-            echo "::error::Release ${TAG} exists but has an empty body. Run 'scripts/publish-release.sh ${TAG#v}' to populate it from CHANGELOG.md before assets are attached."
+            echo "::error::Release ${TAG} exists but has an empty body. Run 'scripts/publish-release.sh ${TAG#v}' to populate it from CHANGELOG.md."
             exit 1
           fi
 
           echo "Precondition PASSED — Release ${TAG} exists with a non-empty body."
 
-      - name: Upload assets to release
-        uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda  # v3.0.0
-        with:
-          files: |
-            cowork-starter-kit-*.zip
-            cowork-starter-kit-*.tar.gz
-          fail_on_unmatched_files: true
+      - name: Download published assets and verify DROP/KEEP content (detection)
+        # ADR-079 decision 3(b) / docs/spec.md AC-A1-2b. Downloads the archives GitHub
+        # actually serves for this Release and re-runs the SAME shared assertion
+        # (scripts/release-archive-assert.sh — single-sourced DROP/KEEP lists, AC-A1-4)
+        # that scripts/publish-release.sh already ran, pre-upload, against the exact
+        # bytes it was about to attach. A divergence between the two means something
+        # altered the Release's assets after publish-release.sh ran — a detected event,
+        # not a silent premise (the "the two archives should be byte-identical" assumption
+        # class that produced every finding in the last two cycles).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          PREFIX="cowork-starter-kit-${VERSION}/"
+          DOWNLOAD_DIR="$(mktemp -d)"
+
+          gh release download "$TAG" --repo "${GITHUB_REPOSITORY}" \
+            --pattern "cowork-starter-kit-*.zip" \
+            --pattern "cowork-starter-kit-*.tar.gz" \
+            --dir "$DOWNLOAD_DIR"
+
+          ZIP_FILE="${DOWNLOAD_DIR}/cowork-starter-kit-${VERSION}.zip"
+          TARGZ_FILE="${DOWNLOAD_DIR}/cowork-starter-kit-${VERSION}.tar.gz"
+
+          if [ ! -f "$ZIP_FILE" ] || [ ! -f "$TARGZ_FILE" ]; then
+            echo "::error::expected both cowork-starter-kit-${VERSION}.zip and .tar.gz to be attached to ${TAG} — found: $(ls "$DOWNLOAD_DIR")"
+            exit 1
+          fi
+
+          bash scripts/release-archive-assert.sh "$ZIP_FILE" "$PREFIX"
+          bash scripts/release-archive-assert.sh "$TARGZ_FILE" "$PREFIX"
+
+          echo "verify-published-assets PASSED — both published archives match the DROP/KEEP content rules."

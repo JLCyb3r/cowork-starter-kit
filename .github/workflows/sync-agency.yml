@@ -136,8 +136,18 @@ jobs:
 
           if [ "$OLD_LICENSE_SHA256" != "$ZERO_SHA" ] && [ "$OLD_LICENSE_SHA256" != "$NEW_LICENSE_SHA256" ]; then
             echo "::error::LICENSE hash changed! Old: ${OLD_LICENSE_SHA256} New: ${NEW_LICENSE_SHA256}"
-            echo "Upstream may have re-licensed. Run /legal review before merging this PR."
+            echo "Upstream may have re-licensed. This sync run is refusing to continue."
             echo "license_changed=true" >> "$GITHUB_OUTPUT"
+            # [C2 / AC-C2-1, v2.19.7] Fail closed with a REAL non-zero exit. Before this
+            # fix, the step only emitted ::error:: and set license_changed=true — no
+            # downstream step read that output to gate anything (verified:
+            # docs/architecture.md pre-v2.19.7 §"Pre-existing defects in the blast
+            # radius" item 3), so the run proceeded to fetch files, update the lock, and
+            # open a PR under a possibly-changed license with nothing but an annotation.
+            # Failing the job HERE aborts the run before any of that — no lock rewrite, no
+            # PR opened — matching the pattern already used for the SPDX-drift gate
+            # (":589" below) rather than leaving this one check silent.
+            exit 1
           else
             echo "license_changed=false" >> "$GITHUB_OUTPUT"
           fi
@@ -309,7 +319,22 @@ jobs:
           fi
 
           echo "requires_review=${REQUIRES_REVIEW}" >> "$GITHUB_OUTPUT"
-          echo "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"
+          # [C3 / AC-C3-1, AC-C3-2, v2.19.7] FLAGGED_FILES is built from ${file_path}
+          # values that come from upstream-controlled filenames (CF-v2.19.5-E). A bare
+          # `echo "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"` lets an embedded
+          # newline in an attacker-influenceable filename forge additional `key=value`
+          # lines in $GITHUB_OUTPUT — and since requires_review is written on the line
+          # directly above and $GITHUB_OUTPUT is last-write-wins on a duplicate key, a
+          # forged `requires_review=false` line would override the real one. Heredoc-
+          # delimiter form with a randomly-generated, collision-safe delimiter — same
+          # pattern already used 70+ lines below for the "section" output — contains any
+          # embedded newline as literal content instead of as a new $GITHUB_OUTPUT line.
+          DELIM_FF="ghadelim_$(openssl rand -hex 8)"
+          {
+            echo "flagged_files<<${DELIM_FF}"
+            printf '%s\n' "$FLAGGED_FILES"
+            echo "${DELIM_FF}"
+          } >> "$GITHUB_OUTPUT"
 
           # Compose JSONL accumulator into final JSON array for next step
           jq -s '.' "$ACCUM" > /tmp/new-files.json
@@ -443,7 +468,25 @@ jobs:
           done <<< "$NEW_SPDX_MAP"
 
           echo "spdx_changed=${SPDX_CHANGED}" >> "$GITHUB_OUTPUT"
-          echo "spdx_changed_paths=${CHANGED_PATHS}" >> "$GITHUB_OUTPUT"
+          # [C3 / AC-C3-2, v2.19.7] Identical bare-KEY=value defect to flagged_files above
+          # (":312"'s fix), same fix applied here — CHANGED_PATHS is built from
+          # upstream-controlled ${new_path} values, with the gating boolean spdx_changed
+          # written on the line directly above. This one was latent rather than live (the
+          # ADVANCE path hardcodes --arg spdx "MIT" so all entries currently bucket
+          # identically and CHANGED_PATHS is always empty in practice — see
+          # docs/architecture.md "Pre-existing defects" item 2), but the sink below (the
+          # "Fail CI if SPDX changed" step) is a run: block, a STRICTLY WORSE sink than
+          # flagged_files' action-input sink — unreachable today is a fragile mitigation,
+          # not a control, and ADR-022's stated intent arms it. Same heredoc form, not
+          # retrofitted piecemeal (the earlier form of the "section" output's own comment,
+          # 100+ lines above, already admitted this exact gap for flagged_files — do not
+          # repeat leaving a known sibling instance unswept).
+          DELIM_SPDX="ghadelim_$(openssl rand -hex 8)"
+          {
+            echo "spdx_changed_paths<<${DELIM_SPDX}"
+            printf '%s\n' "$CHANGED_PATHS"
+            echo "${DELIM_SPDX}"
+          } >> "$GITHUB_OUTPUT"
 
           if [ "$SPDX_CHANGED" = "true" ]; then
             echo "::warning::SPDX fields changed for one or more files. legal-review-required label will be added to PR."
@@ -584,9 +627,19 @@ jobs:
 
       - name: Fail CI if SPDX changed (requires explicit @compliance acknowledgment)
         if: steps.check.outputs.needs_update == 'true' && steps.spdx_check.outputs.spdx_changed == 'true'
+        # [C3 / AC-C3-2, v2.19.7] Previously `${{ steps.spdx_check.outputs.spdx_changed_paths }}`
+        # was expanded DIRECTLY inside this run: block — a `${{ }}` expansion of
+        # upstream-derived content substitutes into the script's TEXT before the shell
+        # ever runs it (GitHub Actions expression injection: content containing shell
+        # metacharacters could break out of the intended `echo` argument and execute
+        # arbitrary commands in this job's context). Passed through an `env:` var
+        # instead — the shell's own variable expansion at runtime is not vulnerable to
+        # this class the way template substitution into script TEXT is.
+        env:
+          CHANGED_PATHS: ${{ steps.spdx_check.outputs.spdx_changed_paths }}
         run: |
           echo "::error::SPDX fields changed for one or more upstream files."
-          echo "Changed paths: ${{ steps.spdx_check.outputs.spdx_changed_paths }}"
+          echo "Changed paths: ${CHANGED_PATHS}"
           echo ""
           echo "The PR has been labeled 'legal-review-required'."
           echo "A reviewer must explicitly acknowledge the SPDX change before merging."

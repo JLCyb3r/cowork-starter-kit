@@ -4,6 +4,41 @@ All notable changes to this project are documented here. This project uses [Sema
 
 ---
 
+## [2.19.7] - 2026-08-08
+
+**"Finish the Storefront, Ship What We Read."** Two convergent gaps close together. First,
+`scripts/publish-release.sh` now attaches both release archives itself, on all three of its
+branches (create, repair, idempotent-skip) — `v2.19.6`'s `CF-v2.19.6-A` (a two-step design in
+which this script and `release-assets.yml`'s upload Action disagreed about who owns the
+Release) is retired, not patched: the Action's upload step is deleted and its token narrowed
+to `contents: read`, converting "this workflow no longer writes" from a behavioral claim into
+a structural one. A new version + tag-commit precondition gates every asset write on every
+branch — the concrete risk it closes: re-running the script against an older tag from a newer
+checkout used to be able to silently replace that tag's public binaries with the wrong tree's
+content. The DROP/KEEP archive-content assertion is single-sourced into
+`scripts/release-archive-assert.sh`, run twice — once by the producer, pre-upload, and once by
+`release-assets.yml`, against the bytes GitHub actually serves — so a divergence between the
+two is a detected event, not a silent premise. `v2.19.5` and `v2.19.6` are backfilled and
+`v2.19.7` published last, so `/releases/latest` resolves to the deletion-clean tag.
+
+Second, every file in the vendored `agency-agents/` tree was read for the first time — 1
+CRITICAL and 7 HIGH findings. Two files are permanently removed (an autonomous,
+zero-confirmation persona that publishes generated content directly to public social accounts
+with no approval step, and a leaked third-party workspace reference); the removal is protected
+by a new reverse-direction orphan check (`scripts/verify-vendored-orphans.sh`, disk→lock,
+closing the one direction none of this repo's existing lock-integrity checks covered) and a
+new removal ledger (`scripts/verify-lock-removals.sh`) asserting every lock removal is a
+declared `.cowork-allowlist.json` `blocked_files` entry — both are visibility controls, not
+merge-blocking ones, until branch protection requires them (an owner-side decision, not made
+here). The two new permanent blocks use the full `category/name.md` path form plus a matching
+basename pattern; the pre-existing `nexus-strategy.md` entry, which had never actually fired
+via its exact-path list (only its basename pattern caught it), is repaired the same way. Five
+remaining HIGH findings are disclosed, not silently patched, in `vendored/README.md`, and four
+fixes are prepared for filing upstream. A LICENSE-hash-change check that used to only annotate
+now fails the sync job closed; two `$GITHUB_OUTPUT` writes carrying upstream-controlled
+filenames now use the heredoc-delimited form already used elsewhere in the same workflow,
+closing an output-injection path an embedded newline could otherwise forge.
+
 ## [2.19.6] - 2026-08-07
 
 **"Publish What Shipped."** `v2.19.4` and `v2.19.5` were each merged, retro'd, and never tagged or

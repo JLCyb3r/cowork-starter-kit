@@ -1656,6 +1656,31 @@ jobs:
             exit 1
           fi
           echo "vendored-integrity-check PASSED — ${CHECKED} files + LICENSE verified offline."
+      - name: Verify no orphaned vendored files (disk→lock direction, ADR-080)
+        # The check above iterates forward from cowork.lock.json only (lock→disk); it
+        # cannot see a file that exists under vendored/agency-agents/ with no lock entry.
+        # scripts/verify-vendored-orphans.sh is the reverse direction — see that script's
+        # header for the full rationale (docs/spec.md AC-C1-1/AC-C1-2, ADR-080 decision 2).
+        run: bash scripts/verify-vendored-orphans.sh
+
+  vendored-removal-ledger:
+    name: Vendored Removal Ledger (ADR-080)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # [CRITICAL — Phase 2 S2 / AC-B5-7a] fetch-depth: 0 is MANDATORY. At default
+          # depth 1, `git show origin/<base>:cowork.lock.json` cannot resolve on a
+          # pull_request event, and the idiom normally reached for there —
+          # `git show ... || echo '{}'` — degrades to an empty previous lock, an empty
+          # removed set, and a silent PASS: exactly the defect family this ledger exists
+          # to end, reproduced INSIDE the control written to end it. Never relax this.
+          fetch-depth: 0
+      - name: Assert every lock removal is a declared blocked_files entry
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash scripts/verify-lock-removals.sh --base "origin/${BASE_REF}" --head HEAD
 
   wizard-consistency-check:
     name: Wizard Consistency Check (audit F-8)

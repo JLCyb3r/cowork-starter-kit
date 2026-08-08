@@ -40,7 +40,20 @@ UPGRADE_THRESHOLD="2.19.0"
 # of failing closed. `semver_ge` below checks this exit status explicitly.
 parse_semver() {
   local v="$1"
-  if ! [[ "$v" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+  # [E2 / AC-E2-1, v2.19.7 — @security Phase 6 S5] Each component is bounded to at most
+  # 15 digits. Without this bound, a syntactically-well-formed-looking but numerically
+  # oversized token (e.g. "99999999999999999999.0.0", 20 digits) passes this regex, and
+  # the INTEGER comparisons in semver_ge() below (`[ "$a_major" -gt "$b_major" ]`) then
+  # exceed what bash's arithmetic can represent (~9.2e18, 19 digits) — `[` prints
+  # "integer expression expected" to stderr and returns its OWN nonzero status, which the
+  # surrounding `if` treats as "condition false" and silently falls through rather than
+  # failing closed. Verified live (pre-fix): `semver-compare.sh ge
+  # 99999999999999999999.0.0 2.18.0` printed "false" and exited 1 — a malformed input
+  # silently bucketed as a well-formed "false" comparison instead of the documented
+  # fail-closed rc=2 this function exists to guarantee. 15 digits is comfortably inside
+  # 64-bit arithmetic's safe range and far beyond any realistic major/minor/patch value,
+  # so no well-formed comparison this repo could ever produce is affected.
+  if ! [[ "$v" =~ ^([0-9]{1,15})\.([0-9]{1,15})\.([0-9]{1,15})$ ]]; then
     echo "::error::not a valid x.y.z semver: '${v}'" >&2
     return 2
   fi

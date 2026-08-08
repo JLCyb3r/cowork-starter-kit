@@ -377,13 +377,6 @@
       "content_sha256": "09ea2fb4770180b072c92100be84b808367c40ef8a3f2119cfd059206aa4c717"
     },
     {
-      "path": "marketing/marketing-carousel-growth-engine.md",
-      "sha256": "04ef895d1d9f1dd539d7d03403616b892609a9fb8a844496b36bbecf7f3e57c7",
-      "spdx": "MIT",
-      "requires_review": false,
-      "content_sha256": "04ef895d1d9f1dd539d7d03403616b892609a9fb8a844496b36bbecf7f3e57c7"
-    },
-    {
       "path": "marketing/marketing-china-ecommerce-operator.md",
       "sha256": "aa6743c68cce9dd00fd31751e9e3c2bea3987857cad332c68c7f68e683e98ba7",
       "spdx": "MIT",
@@ -613,13 +606,6 @@
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "d942feab0f50ea7b8e98cb73bdaf05226d2a6c53c6359c7380149f7545bb199d"
-    },
-    {
-      "path": "project-management/project-manager-senior.md",
-      "sha256": "70fb27cab174c97375293311211d5563c5ac257fba274450d1ca9c05b540ef2d",
-      "spdx": "MIT",
-      "requires_review": false,
-      "content_sha256": "70fb27cab174c97375293311211d5563c5ac257fba274450d1ca9c05b540ef2d"
     },
     {
       "path": "sales/sales-account-strategist.md",
