@@ -22,7 +22,8 @@ two is a detected event, not a silent premise. `v2.19.5` and `v2.19.6` are backf
 `v2.19.7` published last, so `/releases/latest` resolves to the deletion-clean tag.
 
 Second, every file in the vendored `agency-agents/` tree was read for the first time — 1
-CRITICAL and 7 HIGH findings. Two files are permanently removed (an autonomous,
+CRITICAL and 5 HIGH findings (`C-1`, `H-1` through `H-5`). Two files are permanently removed
+(an autonomous,
 zero-confirmation persona that publishes generated content directly to public social accounts
 with no approval step, and a leaked third-party workspace reference); the removal is protected
 by a new reverse-direction orphan check (`scripts/verify-vendored-orphans.sh`, disk→lock,
