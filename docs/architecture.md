@@ -13147,11 +13147,29 @@ create-vs-update blind spot one layer up.
    `$TARGET_SHA` and attaches them on **all three branches** — via the same `gh release create`
    invocation on the create branch, and via `gh release upload --clobber` on the repair and
    idempotent-skip branches.
-2. **`release-assets.yml` is narrowed to verification-only.** The `softprops/action-gh-release`
-   step (`:134-138`) is deleted. The `push: tags` trigger, the populated-body precondition
-   (`:104-131`), and the DROP/KEEP archive assertion are **retained** — `:108` records the trigger
-   as the deliberate net for anyone who tags with a plain `git push`, and verification makes no
-   write API call, so it cannot reintroduce the `403`.
+1a. **The version + tag-commit precondition is extended to all three branches (Phase-2 S1).** The
+   existing version guard is create-path-only *by deliberate design* — `publish-release.sh:168-171`
+   says so: *"never on the repair or idempotent-skip branches … so repairing a pre-floor
+   empty-bodied Release remains possible."* **That exemption was sound only while those branches
+   could edit a body.** Decision (1) grants them `gh release upload --clobber`, which is the power
+   to replace **binary assets on any existing public Release** — and both inputs read the *invoking
+   checkout* (`TARGET_SHA="$(git rev-parse HEAD)"` at `:114`; `VERSION_AT_HEAD` from the
+   working-tree file at `:180`). Running `publish-release.sh 2.19.5` from a v2.19.7 checkout would
+   reach the idempotent-skip branch unguarded and overwrite v2.19.5's public assets. Therefore,
+   **before any `gh release create` / `upload` / `edit`, on every branch**, the script asserts that
+   `git show "$TARGET_SHA":VERSION` equals the requested version — read from the **commit object,
+   never the working tree** — and that an existing Release's tag commit equals `$TARGET_SHA`.
+   **Body repair and asset upload are different capabilities and do not share one exemption:** the
+   pre-floor body-repair exemption may stand, but it does not extend to asset upload. An exemption
+   admitting a reversible body edit must not silently admit an irreversible binary replacement.
+2. **`release-assets.yml` is narrowed to verification-only, and its token is de-privileged.** The
+   `softprops/action-gh-release` step (`:134-138`) is deleted, and `permissions:` is narrowed from
+   `contents: write` (`:14-15`) to `contents: read`. The `push: tags` trigger, the populated-body
+   precondition (`:104-131`), and the DROP/KEEP archive assertion are **retained** — `:108` records
+   the trigger as the deliberate net for anyone who tags with a plain `git push`, and verification
+   makes no write API call, so it cannot reintroduce the `403`. The de-privileging converts "this
+   workflow no longer writes" from a **behavioural** claim into a **structural** one: the token
+   cannot upload or edit a Release even if a future edit reintroduced a step that tried.
 3. **The DROP/KEEP lists are single-sourced** in `scripts/release-archive-assert.sh` and called
    from two sites: **(a) prevention** — `publish-release.sh` asserts the exact archive files it is
    about to upload, immediately before the upload, with **no rebuild between assertion and upload**;
@@ -13161,8 +13179,10 @@ create-vs-update blind spot one layer up.
    *before* the tag ref exists locally (the tag is created via the Releases API), so the tree-ish is
    no longer implied by the tag: `git archive` is invoked with `$TARGET_SHA` explicitly — never
    `HEAD`, never the working tree — `--prefix=cowork-starter-kit-${VERSION}/` is preserved
-   byte-for-byte, and a post-condition asserts the published Release's tag commit equals the
-   `$TARGET_SHA` that was archived.
+   byte-for-byte, and the tag-commit equality is asserted as a **pre-condition, before any upload**
+   (decision 1a), never as a post-condition. The Phase-1 draft of this ADR said "post-condition";
+   that was wrong, and the correction matters: **a post-condition cannot un-clobber a public
+   asset.** The assertion is a gate, not a report.
 5. **The destructive printed remedy is deleted, not softened.** The `:236-250` block printed
    `git push --delete origin ${TAG} && git tag -d ${TAG}`. ADR-076 D3 is now VERIFIED (an
    API-created tag *does* raise `push: tags`), so that remedy addresses a case which never
@@ -13187,13 +13207,19 @@ hand-copied check").
 ### Consequences
 
 - Removes a two-step design whose two steps disagreed about who owns the Release.
-- **Net supply-chain reduction:** one fewer third-party GitHub Action on the publish path. This is
-  worth stating as a positive in the Guard Change Summary.
-- **No new credential, no new egress, no new token scope** is introduced.
+- **Net supply-chain reduction:** one fewer third-party GitHub Action on the publish path, **and**
+  a workflow token narrowed from `contents: write` to `contents: read`. Both are worth stating as
+  positives in the Guard Change Summary.
+- **No new credential, no new egress, no new token scope** is introduced. Token scope is *reduced*.
 - Provenance moves from a clean CI checkout to the operator's machine. This is *mostly* contained:
   `git archive <tree-ish>` reads a tree object, so dirty or untracked files cannot leak in. The
   residual risk is **the wrong tree-ish**, which the v2.19.7 backfill amplifies from one publish to
-  three — mitigated by decision (4).
+  three — mitigated by decisions (1a) and (4).
+- **A new irreversible capability is created and must be gated, not merely noted.** Before this ADR
+  the repair and idempotent-skip branches could only alter a Release *body* — a reversible, textual
+  change. After it they can replace published binaries. Decision (1a) exists because extending a
+  capability through an exemption written for a weaker capability is how a safe design becomes an
+  unsafe one without anyone editing the exemption.
 
 ### Rejected alternatives
 
@@ -13214,13 +13240,14 @@ hand-copied check").
   changes `gh release create`'s asset semantics such that create-with-assets is no longer atomic.
 - **Risk knowingly accepted:** archive provenance now depends on an operator workstation rather than
   an ephemeral clean runner. Accepted because `git archive` reads a tree object rather than the
-  working tree, the tree-ish is explicitly pinned with a tag-commit post-condition, and the post-hoc
-  CI check re-asserts the served bytes — so a compromised workstation is **detected**, not merely
-  trusted against.
+  working tree, the tree-ish is explicitly pinned with a tag-commit **pre-condition** gating every
+  branch (decision 1a), and the post-hoc CI check re-asserts the served bytes — so a compromised or
+  merely mis-checked-out workstation is **refused before it writes**, and any divergence that
+  survives is **detected**, not merely trusted against.
 
 ---
 
-## ADR-080: Vendored removals are load-bearing — dual-list blocking plus a removal ledger (v2.19.7 Scope B5)
+## ADR-080: Vendored removals are declared, not silent — dual-list blocking plus a removal ledger (v2.19.7 Scope B5)
 
 **Status:** ACCEPTED (v2.19.7)
 **Relates to:** ADR-023 (hybrid allowlist), ADR-024 (attribution block), ADR-075 (sync fail-closed accounting)
@@ -13273,6 +13300,29 @@ about `vendored/`. Editing the lock without deleting from disk is invisible and 
 3. **A new removal ledger** (`scripts/verify-lock-removals.sh`) asserts, on every lock change, that
    every path present in the previous revision's `files[]` and absent from the new revision is
    present in `blocked_files[].path`, failing closed otherwise.
+4. **The ledger's base revision is mandatory, and an unobtainable base is a hard failure
+   (Phase-2 S2).** Verified live: `grep -c "fetch-depth" .github/workflows/quality.yml` returns
+   **0**, so every checkout there is at depth 1 and `git show origin/main:cowork.lock.json` cannot
+   resolve on a `pull_request` event. The idiom normally reached for — `git show … || echo '{}'` —
+   yields an empty previous lock, an empty removed set, and a **PASS**. That would reproduce this
+   project's dominant defect family *inside the control written to end it*. Therefore the job sets
+   `fetch-depth: 0`; failure to obtain the previous lock is a **named hard failure, never a default
+   empty set** (`|| echo '{}'` and equivalents are forbidden); and the base revision is defined per
+   event rather than left implicit — `origin/${{ github.base_ref }}` on `pull_request`, the pushed
+   range's predecessor on `push`.
+5. **`blocked_files` itself may not silently shrink (Phase-2 S8, adopted).** The ledger additionally
+   asserts that no path present in the previous revision's `blocked_files[].path` is absent from the
+   new revision's. Without this, a later commit could delete a `blocked_files` entry with the ledger
+   silent (no lock removal) and the orphan check silent (no file present) — the block would quietly
+   evaporate. This is what makes "the protected set only shrinks by decision" true rather than
+   aspirational, and it is nearly free because the job already diffs two JSON revisions.
+6. **A rename is classified MOVED, not laundered into a removal (Phase-2 S9, adopted).** Where a
+   path absent from the new lock has a `content_sha256` that reappears under a different path, the
+   ledger classifies it MOVED and does not demand a `blocked_files` entry. Without this, the first
+   upstream rename would leave the maintainer only one way to green CI — adding the renamed-away
+   path to `blocked_files` — permanently degrading the very list this ADR makes consequential, under
+   the 2026-09-01 cron deadline. In-schema and in-precedent: `content_sha256` already exists on
+   every entry, and `sync-agency.yml:355-385` already performs removed/renamed classification.
 
 ### Amendment to the reviewed proposal — recorded deliberately
 
@@ -13285,9 +13335,22 @@ entry without declaring it blocked) while remaining stable over time.
 
 ### Consequences
 
-- **`blocked_files` becomes load-bearing rather than documentary**, which fixes at its root the
-  incentive that allowed defects (1) and (2) to persist unnoticed: an entry that nothing depends on
-  is an entry nothing validates.
+- **`blocked_files` gains a functional consumer — it stops being documentary.** That fixes at its
+  root the incentive which allowed defects (1) and (2) to persist unnoticed: an entry that nothing
+  reads is an entry nothing validates.
+- **Enforcement strength, stated precisely — and this ADR's own Phase-1 draft got it wrong.** That
+  draft called `blocked_files` *"load-bearing"*, which implies blocking. Live probe:
+  `required_status_checks` absent, `require_code_owner_reviews: false`,
+  `required_approving_review_count: 0`. **The ledger is a notification, not a gate**, and CODEOWNERS
+  **routes** review rather than requiring it. An undeclared removal becomes **visible in CI and in
+  the diff**; it is not prevented. It becomes blocking only if the owner enables required status
+  checks and code-owner review — the same owner-side dependency as OQ-2, and equally not an agent
+  decision.
+  **This correction is recorded rather than quietly applied, because the error is instructive:** the
+  Phase-1 draft committed the exact overclaim it documents two sections below at
+  §"Recorded but NOT scoped" (`architecture.md:3187`'s false *"CI fails…"*). Diagnosing a
+  false-enforcement claim in someone else's text is not the same as not writing one, and this repo's
+  dominant defect family is precisely a control described as stronger than it is.
 - Deletion becomes **checkable rather than inferred**. Soundness comes from the conjunction:
   forward check (lock ⊆ disk) + orphan check (disk ⊆ lock) + count == 108 ⟹ the sets are equal and
   of size 108. Naming the two literal paths across disk, lock and both allowlists supplies what the
@@ -13312,14 +13375,27 @@ in v2.19.7 scope.
 - **Future-state options:** the dual-list requirement is a workaround for two matchers that use
   different path grammars. A `$schema_version` bump could unify them into a single path-normalised
   matcher, retiring the need to write every removal twice and removing the drift surface entirely.
+  Separately — and this is the durable form — **content-hash blocking** (Phase-2 S11, declined for
+  this cycle): both lists are name-based, so an upstream rename that changes the *basename*
+  re-enters the same content as an *addition*, with the ledger, the orphan check and `AC-B5-4` all
+  silent. Blocking on the two deleted files' `content_sha256` would survive any rename; the field
+  already exists on every lock entry.
 - **Concrete revisit triggers:** (a) any `$schema_version` bump — currently forbidden by
-  `AC-SYNC-5`, which is precisely why this was not done now; (b) `blocked_files` exceeding roughly
-  ten entries, the point at which double-entry bookkeeping starts generating its own drift;
-  (c) upstream restructuring that moves or renames category directories.
-- **Risk knowingly accepted:** two lists are kept in sync by hand, and a future removal that updates
-  only `blocked_patterns` is not caught by the ledger, which checks `blocked_files` only. Accepted
-  because the alternative is a schema bump `AC-SYNC-5` forbids, and because the `blocked_patterns`
-  half is defence-in-depth rather than the primary control — the primary control (`blocked_files`)
-  is the one the ledger makes load-bearing.
+  `AC-SYNC-5`, which is precisely why the unification was not done now; (b) `blocked_files`
+  exceeding roughly ten entries, the point at which double-entry bookkeeping starts generating its
+  own drift; (c) upstream restructuring that moves or renames category directories; (d) **the first
+  sync in which a basename-changing rename is observed** — that is the trigger to implement S11's
+  content-hash blocking, and it arms no later than the 2026-09-01 cron.
+- **Risk knowingly accepted:** three risks, named rather than bundled. (i) Two lists are kept in
+  sync by hand, and a future removal that updates only `blocked_patterns` is not caught by the
+  ledger, which checks `blocked_files` only — accepted because the alternative is a schema bump
+  `AC-SYNC-5` forbids. (ii) **S11 declined for this cycle:** a basename-changing rename can
+  re-introduce deleted content as an apparent addition. Accepted because content-hash blocking is a
+  *new blocking mechanism* needing its own reader in `sync-agency.yml`, not an extension of an
+  existing one, and adding a third blocking dimension to controls being introduced in this same
+  cycle raises the chance the controls themselves are wrong — which is the exact risk this cycle
+  exists to reduce. The residual is bounded: re-entering content arrives as a reviewable addition on
+  a sync PR, not silently on `main`. (iii) Every control in this ADR is **visibility, not
+  prevention**, until the owner enables required status checks — see §Consequences.
 
 End of v2.19.7 ADR block.
