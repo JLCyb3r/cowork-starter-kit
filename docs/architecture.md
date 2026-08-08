@@ -13102,3 +13102,224 @@ produced that result; only running against real files did.
   repo's `AC-PROV-1`/`AC-PROV-4` precedent.
 
 End of v2.19.6 ADR block.
+
+---
+
+## ADR-079: Retire the `softprops/action-gh-release` upload dependency — the producer owns asset attachment end-to-end (v2.19.7 Scope A1)
+
+**Status:** ACCEPTED (v2.19.7)
+**Supersedes:** the ADR-076 D1 pre-create / D3 upload-path arrangement
+**Classification context:** SECURITY-SENSITIVE — Tier A (Guard Change Summary required)
+**Reusability:** project-specific
+
+### Context
+
+ADR-076 D1 had `scripts/publish-release.sh` pre-create the GitHub Release, with
+`.github/workflows/release-assets.yml` attaching the two archives on `push: tags`.
+
+This was proven defective at v2.19.6 by direct comparison of two real run logs, not by inference:
+
+| Run | Path taken | Outcome |
+|---|---|---|
+| `v2.19.3` (`30253778595`) | `Creating new GitHub release for tag v2.19.3...` | **success**, 2 assets |
+| `v2.19.4` (`31178636769`) | `Found release v2.19.4 (with id=366735757)` → `updateRelease` | **403 `Resource not accessible by integration`** |
+
+`softprops/action-gh-release` takes its **create** path when no Release exists — which is how
+`v2.19.0`–`v2.19.3` all succeeded — and its **update** path when one does. **Pre-creating the
+Release, which is the entire point of ADR-076 D1, is precisely what forces the update path. The
+design defeats itself, and only on real execution.**
+
+Ruled out by checking rather than assuming: workflow `permissions: contents: write` is
+byte-identical at `5fee6f9` and at `main`, and four earlier successful runs prove the token can
+write. This is an **operation-level** refusal, not an under-declared permission.
+
+Separately verified at Phase 0.D: `publish-release.sh` has **three** branches, not one —
+`:161` idempotent-skip, `:163-164` repair, `:190-195` create. Attaching assets only via
+`gh release create` would cover the create branch alone, so a re-run after a partial upload would
+hit `:161` ("already exists with a non-empty body — skipping publish"), skip assets entirely, and
+then fail the asset post-condition at `:228-252` — **permanently unrecoverable by re-running the
+script, which is the operator's only tool.** That would reproduce `CF-v2.19.6-A`'s own
+create-vs-update blind spot one layer up.
+
+### Decision
+
+1. **`publish-release.sh` attaches the assets itself.** It builds both archives from an explicit
+   `$TARGET_SHA` and attaches them on **all three branches** — via the same `gh release create`
+   invocation on the create branch, and via `gh release upload --clobber` on the repair and
+   idempotent-skip branches.
+2. **`release-assets.yml` is narrowed to verification-only.** The `softprops/action-gh-release`
+   step (`:134-138`) is deleted. The `push: tags` trigger, the populated-body precondition
+   (`:104-131`), and the DROP/KEEP archive assertion are **retained** — `:108` records the trigger
+   as the deliberate net for anyone who tags with a plain `git push`, and verification makes no
+   write API call, so it cannot reintroduce the `403`.
+3. **The DROP/KEEP lists are single-sourced** in `scripts/release-archive-assert.sh` and called
+   from two sites: **(a) prevention** — `publish-release.sh` asserts the exact archive files it is
+   about to upload, immediately before the upload, with **no rebuild between assertion and upload**;
+   **(b) detection** — `release-assets.yml` **downloads the published asset** and re-asserts against
+   the bytes GitHub actually serves.
+4. **The archive tree-ish and prefix are pinned.** After this change the script builds the archive
+   *before* the tag ref exists locally (the tag is created via the Releases API), so the tree-ish is
+   no longer implied by the tag: `git archive` is invoked with `$TARGET_SHA` explicitly — never
+   `HEAD`, never the working tree — `--prefix=cowork-starter-kit-${VERSION}/` is preserved
+   byte-for-byte, and a post-condition asserts the published Release's tag commit equals the
+   `$TARGET_SHA` that was archived.
+5. **The destructive printed remedy is deleted, not softened.** The `:236-250` block printed
+   `git push --delete origin ${TAG} && git tag -d ${TAG}`. ADR-076 D3 is now VERIFIED (an
+   API-created tag *does* raise `push: tags`), so that remedy addresses a case which never
+   triggers — and following it would have destroyed a live public Release.
+
+### Rationale for the two-call-site split (OQ-3 reconciled with the Phase 0.D F4 finding)
+
+Two options were posed at Phase 0 — decommission the trigger, or narrow the job to
+content-verification-only. **Both share a hidden flaw:** they verify an archive **rebuilt
+independently** of the one uploaded, and they verify **after** the assets are already public.
+"The two archives should be byte-identical" is exactly the assumption class that produced every
+finding in the last two cycles.
+
+Splitting prevention from detection resolves both halves. The pre-upload gate puts the assertion
+*before* publication and binds it to the exact bytes uploaded; the post-hoc check asserts the
+*served* bytes rather than a rebuild, so a divergence between the two becomes a **detected event
+rather than a silent premise**. Single-sourcing is binding because two copies of a negative list
+drift, and **a drifted DROP list fails open** — the repo already states this pattern at
+`verify-release-surface.sh:95-96` ("the SAME function `publish-release.sh` calls, not a second
+hand-copied check").
+
+### Consequences
+
+- Removes a two-step design whose two steps disagreed about who owns the Release.
+- **Net supply-chain reduction:** one fewer third-party GitHub Action on the publish path. This is
+  worth stating as a positive in the Guard Change Summary.
+- **No new credential, no new egress, no new token scope** is introduced.
+- Provenance moves from a clean CI checkout to the operator's machine. This is *mostly* contained:
+  `git archive <tree-ish>` reads a tree object, so dirty or untracked files cannot leak in. The
+  residual risk is **the wrong tree-ish**, which the v2.19.7 backfill amplifies from one publish to
+  three — mitigated by decision (4).
+
+### Rejected alternatives
+
+- **Flip the repo's `default_workflow_permissions`.** An owner-side Settings action that broadens
+  permissions repo-wide to fix one job.
+- **Change the action or its invocation.** Keeps a two-step design whose two steps disagree about
+  Release ownership.
+- **Follow the script's own printed remedy (delete + re-push the tag).** Addresses a case that never
+  triggers and would destroy a live public Release.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** if the kit ever publishes from CI rather than from an operator machine,
+  the producer/verifier split can collapse back into a single CI job with OIDC-scoped credentials,
+  making the post-hoc download check redundant rather than defence-in-depth.
+- **Concrete revisit triggers:** (a) release publication moves into CI; (b) a second maintainer
+  gains publish rights, so "the operator's machine" is no longer a single known host; (c) GitHub
+  changes `gh release create`'s asset semantics such that create-with-assets is no longer atomic.
+- **Risk knowingly accepted:** archive provenance now depends on an operator workstation rather than
+  an ephemeral clean runner. Accepted because `git archive` reads a tree object rather than the
+  working tree, the tree-ish is explicitly pinned with a tag-commit post-condition, and the post-hoc
+  CI check re-asserts the served bytes — so a compromised workstation is **detected**, not merely
+  trusted against.
+
+---
+
+## ADR-080: Vendored removals are load-bearing — dual-list blocking plus a removal ledger (v2.19.7 Scope B5)
+
+**Status:** ACCEPTED (v2.19.7)
+**Relates to:** ADR-023 (hybrid allowlist), ADR-024 (attribution block), ADR-075 (sync fail-closed accounting)
+**Classification context:** SECURITY-SENSITIVE — Tier A (Guard Change Summary required)
+**Reusability:** candidate-constituent — the "removal ledger" shape (a protected set may only shrink by explicit declaration) generalises to any pinned-dependency manifest, not just this vendored tree.
+
+### Context — three defects that compound
+
+**(1) The exact-path block has never fired.** `.cowork-allowlist.json`'s `blocked_files[]` is read
+only at `sync-agency.yml:228`, via `grep -qxF "$file_path"` — whole-line, fixed-string. `$file_path`
+is the **full repo-root-relative `category/name.md` path** from the GitHub contents API. This is
+proven by construction, not inferred: the same variable populates the lock at `:290`, and lock paths
+are `category/name.md`. The sole stored entry is the **bare basename** `nexus-strategy.md`.
+Simulation of the exact comparison:
+
+```text
+file_path=marketing/nexus-strategy.md                    => NOT blocked -> fetched
+file_path=nexus-strategy.md                              => BLOCKED
+file_path=marketing/marketing-carousel-growth-engine.md  => NOT blocked -> fetched
+```
+
+`nexus-strategy.md` is therefore protected today **only** by the separate `blocked_patterns` list,
+which is matched against the **basename** at `:236`. Had v2.19.7's two new permanent removals been
+added in that same bare-basename shape — as the Phase 0 draft instructed — every check would have
+gone green, the lock would have read 108, and the **2026-09-01 sync cron would have re-fetched both
+deleted files**, including the CRITICAL.
+
+**(2) `blocked_files` alone cannot survive a rename.** Being exact-path, it is defeated by an
+upstream rename into any other allowlisted category. The repo already wrote the control for exactly
+this failure mode, and that entry's own reason string says so: *"Exact filename block — catches
+nexus-strategy.md at any path depth (rename-into-category attack prevention)."*
+
+**(3) Nothing asserts that the protected set only shrinks by decision.** `vendored-integrity-check`
+iterates **forward from the lock only** (`quality.yml:1614`/`:1637`), its sole presence test is
+lock→disk (`:1616`), and **no disk-side enumeration exists anywhere in the repo** —
+`grep -rn "find vendored\|find \"vendored\|find .*agency-agents" scripts/ .github/` returns no
+output, and `vendor-agency.sh` (the writer) is itself lock-driven. So `CHECKED` counts **lock**
+entries and the `PASSED` line at `:1658` is literally a statement about `cowork.lock.json`, never
+about `vendored/`. Editing the lock without deleting from disk is invisible and prints `PASSED`.
+
+### Decision
+
+1. **Permanent removals get BOTH list entries.** A full `category/name.md` `blocked_files` entry
+   **and** a basename `blocked_patterns` entry. `blocked_files` for the exact path, `blocked_patterns`
+   for rename-into-category defence.
+2. **A new orphan check asserts the disk→lock direction** (`scripts/verify-vendored-orphans.sh`),
+   invoked by `quality.yml` on every PR and by `publish-release.sh` before any archive is built.
+   It is the **instrument that proves a deletion**, and it must be built **first**: the forward-only
+   check structurally cannot prove that a file was removed from disk.
+3. **A new removal ledger** (`scripts/verify-lock-removals.sh`) asserts, on every lock change, that
+   every path present in the previous revision's `files[]` and absent from the new revision is
+   present in `blocked_files[].path`, failing closed otherwise.
+
+### Amendment to the reviewed proposal — recorded deliberately
+
+The Phase 0.D security review proposed that the removed set **equal** the `blocked_files` set. That
+is **wrong across cycles and would fail on day one**: `nexus-strategy.md` is in `blocked_files` but
+was **never in the lock** (it is blocked at fetch time), so the two sets differ immediately; and on
+any later cycle the removed set is empty while `blocked_files` is not. The correct invariant is
+**subset** — `removed ⊆ blocked_files`. This preserves the intent exactly (you cannot remove a lock
+entry without declaring it blocked) while remaining stable over time.
+
+### Consequences
+
+- **`blocked_files` becomes load-bearing rather than documentary**, which fixes at its root the
+  incentive that allowed defects (1) and (2) to persist unnoticed: an entry that nothing depends on
+  is an entry nothing validates.
+- Deletion becomes **checkable rather than inferred**. Soundness comes from the conjunction:
+  forward check (lock ⊆ disk) + orphan check (disk ⊆ lock) + count == 108 ⟹ the sets are equal and
+  of size 108. Naming the two literal paths across disk, lock and both allowlists supplies what the
+  conjunction alone does not — without it, deleting two *different* files would satisfy every
+  count-based criterion.
+- **The ledger is exercised by the very change that introduces it** — v2.19.7 removes exactly two
+  lock entries, both of which must appear in `blocked_files`. It therefore cannot ship as a check
+  that never runs.
+- Two lists must now be maintained per removal. This is accepted; see the maturation path.
+
+### Recorded but NOT scoped
+
+`docs/architecture.md:3187` claims *"CI fails if any blocked file appears in `cowork.lock.json`
+files list."* **No such check exists** — the only `blocked_files` enforcement is the fetch-time
+filter at `:228`. This is the same false-documentation shape as the `CF-v2.19.5-D` "refuses to
+merge" claim. Decision (3) makes the sentence *become* true for the removal direction as a side
+effect, but it still overstates the general case. Recorded here so it is not lost; rewording is not
+in v2.19.7 scope.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** the dual-list requirement is a workaround for two matchers that use
+  different path grammars. A `$schema_version` bump could unify them into a single path-normalised
+  matcher, retiring the need to write every removal twice and removing the drift surface entirely.
+- **Concrete revisit triggers:** (a) any `$schema_version` bump — currently forbidden by
+  `AC-SYNC-5`, which is precisely why this was not done now; (b) `blocked_files` exceeding roughly
+  ten entries, the point at which double-entry bookkeeping starts generating its own drift;
+  (c) upstream restructuring that moves or renames category directories.
+- **Risk knowingly accepted:** two lists are kept in sync by hand, and a future removal that updates
+  only `blocked_patterns` is not caught by the ledger, which checks `blocked_files` only. Accepted
+  because the alternative is a schema bump `AC-SYNC-5` forbids, and because the `blocked_patterns`
+  half is defence-in-depth rather than the primary control — the primary control (`blocked_files`)
+  is the one the ledger makes load-bearing.
+
+End of v2.19.7 ADR block.
