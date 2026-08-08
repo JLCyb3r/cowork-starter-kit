@@ -79,7 +79,7 @@ MIT's AS-IS / no-warranty terms already govern this content regardless of this s
 Neither is filed upstream — the owner's decision here was deletion, not correction
 (`docs/spec.md` v2.19.7 §Settled inputs).
 
-### Disclosed findings (4 findings across 5 flagged files, in the 108 that ship)
+### Disclosed findings (4 findings across 5 flagged locations, in the 108 that ship)
 
 **H-1 — a substring deny-list gates a Python `eval()` call.**
 `vendored/agency-agents/engineering/engineering-ai-data-remediation-engineer.md:175-180`

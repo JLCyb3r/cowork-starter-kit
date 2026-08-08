@@ -34,8 +34,9 @@ merge-blocking ones, until branch protection requires them (an owner-side decisi
 here). The two new permanent blocks use the full `category/name.md` path form plus a matching
 basename pattern; the pre-existing `nexus-strategy.md` entry, which had never actually fired
 via its exact-path list (only its basename pattern caught it), is repaired the same way. 4
-remaining HIGH findings (across 5 flagged files — H-2 covers 2 files, H-5 covers a 7-file
-group counted as one) are disclosed, not silently patched, in `vendored/README.md`, and four
+remaining HIGH findings (across 5 flagged locations — H-2 covers 2 files, H-5 covers a
+7-file group counted as one location) are disclosed, not silently patched, in
+`vendored/README.md`, and four
 fixes are prepared for filing upstream. A LICENSE-hash-change check that used to only annotate
 now fails the sync job closed; two `$GITHUB_OUTPUT` writes carrying upstream-controlled
 filenames now use the heredoc-delimited form already used elsewhere in the same workflow,

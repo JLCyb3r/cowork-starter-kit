@@ -31,8 +31,20 @@
 #
 # Bash portability (@security S16): this script runs under bash 5 in CI (ubuntu-latest)
 # AND under bash 3.2 on an operator's macOS via publish-release.sh. No mapfile/readarray,
-# no associative arrays, and every array expansion is written so it is safe even if bash
-# ever evaluated it with an empty array under `set -u`.
+# no associative arrays.
+#
+# [S22 correction — Phase 6 @security] The claim this comment used to make — that every
+# array expansion here "is safe even if bash ever evaluated it with an empty array under
+# set -u" — was FALSE and has been removed rather than left as an unchecked assertion in
+# the one file whose own thesis is that claims must be checkable. `"${DROP_PATHS[@]}"`
+# against a genuinely EMPTY array under `set -u` errors "unbound variable" on bash 3.2
+# specifically (bash 4.4+ changed this behavior; this script cannot rely on that fix being
+# present). The actual protection is the non-zero-floor assertion below, run immediately
+# after both arrays are declared: it fails loudly, by design, before either loop runs, if
+# a future edit ever empties DROP_PATHS or KEEP_PATHS — which also closes the degenerate
+# case the DROP loop cannot catch on its own (a loop over zero elements "passes" having
+# verified nothing, silently defeating the "a drifted DROP list fails OPEN" property this
+# script exists to guarantee).
 
 set -euo pipefail
 
@@ -99,6 +111,23 @@ KEEP_PATHS=(
   "docs/faq.md"
   "vendored/agency-agents/LICENSE"
 )
+
+# --- [S22] Non-zero-floor assertion — MUST run before either loop below, and before the
+#     archive is even listed. A future edit that empties either array must fail loudly
+#     here, not silently "pass" a DROP/KEEP loop that iterates zero times. This is the
+#     concrete guard for the "drifted DROP list fails open" property named at :5-6. ---
+if [ "${#DROP_PATHS[@]}" -eq 0 ]; then
+  echo "ERROR: release-archive-assert: DROP_PATHS is empty — refusing to run (a DROP loop over" >&2
+  echo "  zero elements would report PASS having verified nothing, defeating this script's" >&2
+  echo "  entire purpose)." >&2
+  exit 1
+fi
+if [ "${#KEEP_PATHS[@]}" -eq 0 ]; then
+  echo "ERROR: release-archive-assert: KEEP_PATHS is empty — refusing to run (KEEP is what" >&2
+  echo "  catches a wrong-prefix/wrong-archive false PASS in DROP — see :25-30; an empty" >&2
+  echo "  KEEP_PATHS silently removes that protection)." >&2
+  exit 1
+fi
 
 # --- List archive contents. [S4] Both .zip and .tar.gz are supported — the tarball
 #     shipped entirely unasserted before this script existed (release-assets.yml only

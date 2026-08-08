@@ -19,12 +19,20 @@
 #                        two real call sites (quality.yml, publish-release.sh) never pass it.
 #   --lock FILE          defaults to "cowork.lock.json". Same test-seam rationale.
 #
-# Enumeration predicate (AC-C1-1 — binding, do not narrow): `find "$VENDORED_DIR" -type f
-# ! -name LICENSE`. NEVER `-name '*.md'` — an extension filter is blind to a non-Markdown
-# orphan (a stray .py/.sh/.json landing in the vendored tree), which is precisely the
-# defect class this script exists to close. LICENSE is excluded because it is already
-# verified against license_file_sha256 (quality.yml:1640-1650) — excluded because it is
-# checked elsewhere, not because it is unimportant.
+# Enumeration predicate (AC-C1-1 — binding, do not narrow): `find "$VENDORED_DIR"
+# ! -name LICENSE \( -type f -o -type l \)`. NEVER `-name '*.md'` — an extension filter is
+# blind to a non-Markdown orphan (a stray .py/.sh/.json landing in the vendored tree),
+# which is precisely the defect class this script exists to close. LICENSE is excluded
+# because it is already verified against license_file_sha256 (quality.yml:1640-1650) —
+# excluded because it is checked elsewhere, not because it is unimportant.
+#
+# [S23 fix — Phase 6 @security] `-type f` alone matches regular files only — a SYMLINK is
+# `-type l` and was invisible to this enumeration. `git archive` includes symlinks in both
+# release archives regardless, and the forward check (quality.yml's vendored-integrity-
+# check, `[ ! -f "$vfile" ]`) FOLLOWS symlinks rather than rejecting them, so it does not
+# catch this either — an orphaned symlink could ship in a release archive with neither
+# conjunct in ADR-080's soundness argument (lock⊆disk, disk⊆lock) ever seeing it. `-type l`
+# is added alongside `-type f`, not in place of it.
 #
 # Exit: 0 = every file under $VENDORED_DIR (except LICENSE) has a cowork.lock.json
 #           files[] entry
@@ -78,7 +86,7 @@ while IFS= read -r vfile; do
     FAIL=1
     ORPHANS=$((ORPHANS + 1))
   fi
-done < <(find "$VENDORED_DIR" -type f ! -name LICENSE)
+done < <(find "$VENDORED_DIR" ! -name LICENSE \( -type f -o -type l \))
 
 # A zero-scan run must never silently report success — same house pattern as
 # quality.yml's vendored-integrity-check and lock-content-sha-cross-check (a check that

@@ -166,8 +166,34 @@ assert_version_at_target() {
 
 assert_tag_commit_matches() {
   local tag="$1" target_sha="$2"
-  local existing_tag_commit=""
-  existing_tag_commit="$(gh api "repos/${EXPECTED_REPO}/commits/${tag}" --jq '.sha' 2>/dev/null)" || existing_tag_commit=""
+  local existing_tag_commit="" gh_stderr rc
+  # [S19 — Phase 6 @security] `gh api repos/{repo}/commits/{tag}` returns exit 1 for BOTH
+  # "the tag does not exist yet" (a real HTTP 422, "No commit found for SHA: <tag>" —
+  # verified live against this repo) AND for a transient failure (network, auth,
+  # rate-limit). Those are NOT the same outcome: the former is legitimately vacuous (no
+  # existing tag to conflict with — proceed); the latter must be fatal, never a silent
+  # empty default, or this precondition degrades into exactly the `|| <empty default>`
+  # shape verify-lock-removals.sh's own header names and forbids for the identical
+  # reason, 170 lines away in the same cycle. Distinguish by inspecting stderr for the
+  # specific "HTTP 422" this repo's API genuinely returns for a not-yet-existing tag —
+  # anything else (no HTTP status at all, a different status, a timeout) is fatal.
+  gh_stderr="$(mktemp)"
+  existing_tag_commit="$(gh api "repos/${EXPECTED_REPO}/commits/${tag}" --jq '.sha' 2>"$gh_stderr")"
+  rc=$?
+  if [ "$rc" -ne 0 ]; then
+    if grep -q 'HTTP 422' "$gh_stderr"; then
+      existing_tag_commit=""   # vacuous: tag genuinely does not exist yet — proceed
+    else
+      echo "ERROR: refusing to write release assets for ${tag} — could not determine whether an" >&2
+      echo "  existing tag conflicts with this checkout. 'gh api repos/${EXPECTED_REPO}/commits/${tag}'" >&2
+      echo "  failed for a reason other than 'tag does not exist' (no HTTP 422 in its output), so this" >&2
+      echo "  is treated as a hard failure, not a silent vacuous pass (S19). Raw gh output:" >&2
+      sed 's/^/    /' "$gh_stderr" >&2
+      rm -f "$gh_stderr"
+      return 1
+    fi
+  fi
+  rm -f "$gh_stderr"
   if [ -n "$existing_tag_commit" ] && [ "$existing_tag_commit" != "$target_sha" ]; then
     echo "ERROR: refusing to write release assets for ${tag} — the EXISTING tag points at commit" >&2
     echo "  ${existing_tag_commit}, but this checkout is at ${target_sha}. Uploading assets built" >&2
@@ -363,9 +389,22 @@ else
     exit 1
   fi
   # [AC-A1-0] Same precondition as the repair/idempotent-skip branches, gating the asset
-  # attachment about to happen in the SAME `gh release create` call below. No existing
-  # tag commit to compare (part b is vacuous — this call is what creates the tag).
+  # attachment about to happen in the SAME `gh release create` call below.
+  #
+  # [S20 fix — Phase 6 @security] This branch is reached whenever `gh release view "$TAG"`
+  # fails — which is true both when the TAG is absent and when the tag exists but has NO
+  # Release yet (e.g. a plain `git push --tags` with no Release ever created for it). The
+  # prior comment here assumed "no Release" meant "no tag" and skipped
+  # assert_tag_commit_matches as vacuous; that assumption is false, and `gh` does not
+  # protect against it either: `gh release create <tag>` against an EXISTING tag reuses
+  # that tag and IGNORES `--target` — so if the existing tag points at commit Y while this
+  # checkout (and its passing VERSION check) is at a different commit X, the archives get
+  # built from X but attached to a Release created at the tag's real commit Y. Calling
+  # assert_tag_commit_matches here closes that: it already returns 0 (vacuous pass) when
+  # no tag exists at all, so this is a pure widening, not a behavior change on the
+  # no-tag-no-Release path that is the common case.
   assert_version_at_target "$VERSION" "$TARGET_SHA" || exit 1
+  assert_tag_commit_matches "$TAG" "$TARGET_SHA" || exit 1
 
   # --- 6. Create the tag, the populated Release, AND attach both archives — ALL in one
   #     atomic `gh release create` call (AC-A1-1). ---
