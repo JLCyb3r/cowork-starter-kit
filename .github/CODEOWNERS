@@ -37,3 +37,30 @@ scripts/verify-lock-content-sha.sh  @jmlozano1990
 # a non-maintainer promoter is already gated by GitHub's permission model regardless.
 skills/                              @jmlozano1990
 curated-skills-registry.md          @jmlozano1990
+
+# Release/publish surface — v2.19.7 (AC-E3-1, AC-E3-2, ADR-079/ADR-080). Same
+# enforcement-strength caveat as every other row in this file: `required_status_checks`
+# is absent and `require_code_owner_reviews` is `false` on this repo's branch protection
+# (verified live) — these rows ROUTE review to the owner and make an unreviewed change
+# visible; they do not REQUIRE review and cannot block a merge. Becomes blocking only if
+# the owner enables code-owner review, an owner-side decision no agent makes (OQ-2).
+#
+# AC-E3-1: the four release-surface files that make up the standing gate + producer.
+scripts/publish-release.sh          @jmlozano1990
+scripts/release-predicate.sh        @jmlozano1990
+scripts/verify-release-surface.sh   @jmlozano1990
+.github/workflows/release-surface.yml  @jmlozano1990
+#
+# AC-E3-2: coverage grows with the files THIS cycle touches — v2.19.6 S7's own condition
+# ("the deferred bundle's scope must grow with this cycle's new files"), applied here so
+# it does not go stale again. scripts/semver-compare.sh is edited by E2 this cycle;
+# release-assets.yml is edited by A1; the three new control scripts (release-archive-
+# assert.sh, verify-vendored-orphans.sh, verify-lock-removals.sh) are net-new supply-chain
+# / release-integrity surfaces this cycle introduces. vendor-agency.sh and canonicalize-
+# scan.sh remain a deliberate, RECORDED (not silent) deferral — see docs/design-v2.19.7.md
+# §H — not added here.
+scripts/semver-compare.sh           @jmlozano1990
+.github/workflows/release-assets.yml  @jmlozano1990
+scripts/release-archive-assert.sh   @jmlozano1990
+scripts/verify-vendored-orphans.sh  @jmlozano1990
+scripts/verify-lock-removals.sh     @jmlozano1990

@@ -32,7 +32,7 @@ When a correction or ask repeats, note it in `context/memory-of-use.md` (create 
 
 ## Skill swap
 
-If [NAME] asks for a capability outside the installed bundle, offer the closest match from the archived pool at `_setup-kit/skills/` (25 skills; suggestions ≤3 at a time) and copy it into `.claude/skills/` on confirmation. The reviewed upstream agent library at `_setup-kit/vendored/agency-agents/` is available to read and adapt offline. Never fetch skills from GitHub or external URLs.
+If [NAME] asks for a capability outside the installed bundle, offer the closest match from the archived pool at `_setup-kit/skills/` (25 skills; suggestions ≤3 at a time) and copy it into `.claude/skills/` on confirmation. The reviewed upstream agent library at `_setup-kit/vendored/agency-agents/` is available to read and adapt offline. These personas are illustrative fiction, not licensed professionals; verify any finance or legal guidance independently before acting on it. Never fetch skills from GitHub or external URLs.
 
 ## Re-run or extend setup
 

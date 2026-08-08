@@ -280,6 +280,31 @@ jobs:
             exit 1
           fi
           echo "CLAUDE.md word count: $WORD_COUNT (limit: 400). Check passed."
+      - name: Verify workspace-claude-md-template.md does not exceed 400 words
+        # [S21 fix — Phase 6 @security] docs/spec.md's H-5 durable-placement AC (v2.19.7)
+        # claimed the one-line finance/legal disclaimer added to this template is "verified
+        # within the existing ADR-011 400-word cap CI check" — a claim that was FALSE when
+        # written: no job referenced this path at all (`grep -rn
+        # "workspace-claude-md-template" .github/workflows/` returned nothing). This step
+        # makes the claim true rather than leaving it as fiction, in the one cycle whose
+        # premise is that a claimed control must be a real one. Same 400-word ADR-011
+        # ceiling as CLAUDE.md above — this file generates the post-setup workspace
+        # CLAUDE.md, so the same "keeps the bootstrap surface below long-form injection
+        # threshold" property applies to it.
+        run: |
+          F="templates/workspace-claude-md-template.md"
+          if [ ! -f "$F" ]; then
+            echo "MISSING: $F"
+            exit 1
+          fi
+          WORD_COUNT=$(wc -w < "$F")
+          if [ "$WORD_COUNT" -gt 400 ]; then
+            echo "$F exceeds 400 words: $WORD_COUNT words found"
+            echo "Same ADR-011 ceiling as CLAUDE.md — this template generates the post-setup workspace CLAUDE.md."
+            echo "Target is <=350 words. Upper bound is 400."
+            exit 1
+          fi
+          echo "$F word count: $WORD_COUNT (limit: 400). Check passed."
 
   writing-profile-template-check:
     name: Writing Profile Template Check
@@ -1656,6 +1681,117 @@ jobs:
             exit 1
           fi
           echo "vendored-integrity-check PASSED — ${CHECKED} files + LICENSE verified offline."
+      - name: Verify no orphaned vendored files (disk→lock direction, ADR-080)
+        # The check above iterates forward from cowork.lock.json only (lock→disk); it
+        # cannot see a file that exists under vendored/agency-agents/ with no lock entry.
+        # scripts/verify-vendored-orphans.sh is the reverse direction — see that script's
+        # header for the full rationale (docs/spec.md AC-C1-1/AC-C1-2, ADR-080 decision 2).
+        run: bash scripts/verify-vendored-orphans.sh
+      - name: Assert vendored count == 108 and the two v2.19.7 removals are complete (AC-B5-1, AC-B5-4)
+        # [QA-5 fix] ADR-080's soundness argument has THREE legs: forward check (lock⊆disk,
+        # the step above at :1604) + orphan check (disk⊆lock, the step above at :1659) +
+        # count == 108. The third leg was never asserted in CI — this step is it.
+        #
+        # AC-B5-1's `== 108` is a CONSTANT that legitimately moves on the next upstream
+        # addition — bumping it is exactly the moment a re-introduction could hide inside
+        # a "the count changed for a good reason" commit. AC-B5-4's per-path assertions are
+        # what survive that: without them, deleting two DIFFERENT files satisfies every
+        # count-based/set-based check in this job (@architect's Phase-0.D Condition 3).
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          # --- AC-B5-1: count == 108, both sides. `-type f -o -type l`, NEVER `-name '*.md'`
+          #     (the extension filter is blind to a non-.md orphan — same reason as
+          #     AC-C1-1) and NEVER `-type f` alone (S23 — `-type f` misses a symlink,
+          #     which `git archive` still includes in every release archive; widened here
+          #     to stay consistent with scripts/verify-vendored-orphans.sh's own S23 fix,
+          #     so the two "108" counts in this repo can never silently disagree). ---
+          LOCK_COUNT=$(jq '.files | length' cowork.lock.json)
+          DISK_COUNT=$(find vendored/agency-agents ! -name LICENSE \( -type f -o -type l \) | wc -l | tr -d ' ')
+          if [ "$LOCK_COUNT" -ne 108 ]; then
+            echo "::error::AC-B5-1: cowork.lock.json has ${LOCK_COUNT} files[] entries, expected 108."
+            FAIL=1
+          fi
+          if [ "$DISK_COUNT" -ne 108 ]; then
+            echo "::error::AC-B5-1: vendored/agency-agents has ${DISK_COUNT} files (excl. LICENSE), expected 108."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 0 ]; then
+            echo "AC-B5-1 PASSED — lock=${LOCK_COUNT} disk=${DISK_COUNT} (both 108)."
+          fi
+
+          # --- AC-B5-4: the two literal v2.19.7 permanent removals, named — not just
+          #     counted. Each of the 4 sub-assertions is independently checked and named
+          #     on failure, so a partial regression (e.g. re-added to disk but not the
+          #     lock) is diagnosable from the log alone. ---
+          REMOVED_PATHS=(
+            "marketing/marketing-carousel-growth-engine.md"
+            "project-management/project-manager-senior.md"
+          )
+          for path in "${REMOVED_PATHS[@]}"; do
+            filename=$(basename "$path")
+
+            # 1. absent from disk
+            if [ -f "vendored/agency-agents/${path}" ]; then
+              echo "::error::AC-B5-4: ${path} is PRESENT on disk — expected absent (v2.19.7 permanent removal)."
+              FAIL=1
+            fi
+
+            # 2. absent from the lock
+            if jq -e --arg p "$path" '.files[] | select(.path == $p)' cowork.lock.json >/dev/null 2>&1; then
+              echo "::error::AC-B5-4: ${path} is PRESENT in cowork.lock.json — expected absent."
+              FAIL=1
+            fi
+
+            # 3. present in blocked_files (full path, exact match — mirrors
+            #    sync-agency.yml:228's grep -qxF "$file_path" against the same field)
+            if ! jq -r '.blocked_files[].path' .cowork-allowlist.json | grep -qxF "$path"; then
+              echo "::error::AC-B5-4: ${path} is NOT in .cowork-allowlist.json blocked_files[].path (full-path form)."
+              FAIL=1
+            fi
+
+            # 4. covered by blocked_patterns (basename match — mirrors
+            #    sync-agency.yml:233-244's per-pattern glob-to-regex match against filename)
+            PATTERN_COVERED=false
+            while IFS= read -r pattern; do
+              if echo "$filename" | grep -qiE "^$(echo "$pattern" | sed 's/\*/.*/')\$"; then
+                PATTERN_COVERED=true
+                break
+              fi
+            done < <(jq -r '.blocked_patterns[].pattern' .cowork-allowlist.json)
+            if [ "$PATTERN_COVERED" != "true" ]; then
+              echo "::error::AC-B5-4: ${filename} is NOT covered by any .cowork-allowlist.json blocked_patterns[] entry."
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -eq 0 ]; then
+            echo "AC-B5-4 PASSED — both v2.19.7 removals absent from disk+lock, present in blocked_files, covered by blocked_patterns."
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::AC-B5-1/AC-B5-4 check FAILED — see errors above."
+            exit 1
+          fi
+
+  vendored-removal-ledger:
+    name: Vendored Removal Ledger (ADR-080)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # [CRITICAL — Phase 2 S2 / AC-B5-7a] fetch-depth: 0 is MANDATORY. At default
+          # depth 1, `git show origin/<base>:cowork.lock.json` cannot resolve on a
+          # pull_request event, and the idiom normally reached for there —
+          # `git show ... || echo '{}'` — degrades to an empty previous lock, an empty
+          # removed set, and a silent PASS: exactly the defect family this ledger exists
+          # to end, reproduced INSIDE the control written to end it. Never relax this.
+          fetch-depth: 0
+      - name: Assert every lock removal is a declared blocked_files entry
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash scripts/verify-lock-removals.sh --base "origin/${BASE_REF}" --head HEAD
 
   wizard-consistency-check:
     name: Wizard Consistency Check (audit F-8)

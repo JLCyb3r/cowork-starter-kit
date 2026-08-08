@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.19.6-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.19.7-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
 [![GitHub stars](https://img.shields.io/github/stars/jmlozano1990/Cowork-Starter-Kit?style=social)](https://github.com/jmlozano1990/Cowork-Starter-Kit)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -17,6 +17,14 @@
 - **The business of running a life alongside the work** — budgets, routines, and the small recurring tasks that are easier to hand off than to keep remembering
 
 Cowork builds around the shape you bring — no persona to pick, no template to hunt for.
+
+---
+
+## See it in action
+
+![Animated demo of Cowork building a personalized workspace, then proposing fixes to its own friction that you confirm before they apply](assets/setup-demo.svg)
+
+A synthetic demo of the real interview — describe a goal, confirm a skill bundle, answer one quick turn, and land on a personalized workspace with skills already installed — then keep watching: the workspace notices recurring friction, proposes a fix you confirm, and applies it only with your consent, logged and reversible. **In a hurry?** One open-ended question is enough to get a working bundle — everything else is optional customization or can be answered later.
 
 ---
 
@@ -38,14 +46,6 @@ That's it. Cowork reads the project instructions and walks you through personali
 > **Alternative paths:** Type `/setup-wizard` to run or redo setup explicitly. Or paste `examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions for a fully self-contained onboarding from message one.
 >
 > **No Cowork yet?** Use the manual path: open `SETUP-CHECKLIST.md` and follow every step by hand.
-
----
-
-## See it in action
-
-![Animated demo of Cowork building a personalized workspace, then proposing fixes to its own friction that you confirm before they apply](assets/setup-demo.svg)
-
-A synthetic demo of the real interview — describe a goal, confirm a skill bundle, answer one quick turn, and land on a personalized workspace with skills already installed — then keep watching: the workspace notices recurring friction, proposes a fix you confirm, and applies it only with your consent, logged and reversible. **In a hurry?** One open-ended question is enough to get a working bundle — everything else is optional customization or can be answered later.
 
 ---
 
@@ -165,7 +165,7 @@ You describe your goal in plain language. The wizard routes to the closest prese
 ### Highlights
 
 - **Open-ended goal discovery** — no preset menu. The wizard turns your description into a draft you shape: Path A drafts a close preset match, Path B offers two draft directions for overlapping presets, Path C drafts a custom team from the unified pool — three equally first-class starting drafts, not a fast path and a fallback.
-- **Unified skill pool** — 25 skills (`skills/<slug>/SKILL.md`) consolidated into a single canonical source, including an authenticity pass (`anti-ai-slop`) and a periodic GTD review (`weekly-review`). The wizard composes your bundle from this pool regardless of which path it takes.
+- **Unified skill pool** — 25 offerable skills, tracked in `curated-skills-registry.md` and consolidated into a single canonical source under `skills/<slug>/SKILL.md` — that directory also hosts 4 mandatory-infrastructure skills (`self-apply`, `self-archive`, `self-upgrade`, `pull-updates`) installed unconditionally, outside this count — including an authenticity pass (`anti-ai-slop`) and a periodic GTD review (`weekly-review`). The wizard composes your bundle from the 25-skill pool regardless of which path it takes.
 - **Selection presets as suggestions** — 7 named presets in `selection-presets.md` are starting templates the wizard suggests, not exclusive choices. Users confirm and customize from there.
 - **Draft-then-shape bundle building** — the wizard proposes a skill bundle as a draft you shape, surfacing a few suggestions at a time and adding more whenever you ask. You confirm when it's right. No batch-install surprises.
 - **A workspace that maintains itself** — a personal mini-Council watches for recurring friction and proposes a fix in plain language; a Steward proposes archiving stale files; `pull-updates` checks your installed skills against the curated pool and offers safe, per-item updates. All three are confirm-first, verified, and reversible on failure — see "Two things this kit does," above.
@@ -197,7 +197,7 @@ The same discipline governs everything the workspace does to itself — noticing
 
 ## Supply-Chain Integrity
 
-All upstream content from `msitarzewski/agency-agents` is SHA-pinned in `cowork.lock.json` and **ships vendored inside this repo** at `vendored/agency-agents/` — 110 agent files, each fetched at the pinned commit, checksum-verified against the lock, and attribution-injected (ADR-024) before commit. CI re-verifies the vendored tree against the lock on every pull request (`vendored-integrity-check`), fully offline. Nothing is downloaded at runtime — sessions need no GitHub access. The `/sync-agency` CI workflow opens a PR on every upstream SHA bump — no content reaches users without human review. See **[TRUST.md](TRUST.md)** for the full threat model.
+All upstream content from `msitarzewski/agency-agents` is SHA-pinned in `cowork.lock.json` and **ships vendored inside this repo** at `vendored/agency-agents/` — 108 agent files, each fetched at the pinned commit, checksum-verified against the lock, and attribution-injected (ADR-024) before commit. CI re-verifies the vendored tree against the lock on every pull request (`vendored-integrity-check`), fully offline. Nothing is downloaded at runtime — sessions need no GitHub access. The `/sync-agency` CI workflow opens a PR on every upstream SHA bump — no content reaches users without human review. See **[TRUST.md](TRUST.md)** for the full threat model.
 
 > **Trust boundary:** The `cowork.lock.json` file is the integrity anchor for upstream content. If you cloned this repo from a fork or modified the lock file locally, the supply-chain guarantees do not apply. Always install from a trusted clone of cowork-starter-kit's main repository.
 

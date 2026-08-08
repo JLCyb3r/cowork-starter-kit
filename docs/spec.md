@@ -6700,3 +6700,344 @@ handling exit 2 in a comparator wrapper or in the gate body would have done (and
 (`1.3.1.1`, `1.3.2.1` are both). The producer-capability reason survives a hypothetical future
 `2.19.4.1`, which the floor reason would not.
 
+---
+
+# Product Spec — Cowork Starter Kit v2.19.7 "Finish the Storefront, Ship What We Read"
+
+> **Cycle:** finish the halted v2.19.6 Scope A, and ship only vendored content that has been read.
+> **Version bump:** 2.19.6 → 2.19.7 (**PATCH** — confirmed, not inherited. No new user-facing feature surface: no skill, no preset, no wizard step. There is no project-local `docs/naming-conventions.md` — that file governs Council's own cycles; cowork's convention is plain SemVer (`CHANGELOG.md:3`), and its precedent settles it: v2.19.1–v2.19.6 were all release-hygiene / CI-hardening cycles that added scripts and CI jobs and stayed PATCH.)
+> **Status:** Phase 1 — Design (finalized by @architect from the Phase 0 draft, on `release/v2.19.7-finish-the-storefront`)
+> **Date:** 2026-08-08T12:40:00Z
+> **Baseline:** `main` @ `fe25660`, VERSION `2.19.6`, tree clean, 0 open issues, 0 open PRs.
+> **Classification:** **SECURITY-SENSITIVE — Tier A, Guard Change Summary REQUIRED** (settled by @security at Phase 0.D; GCS authored at **Phase 6** against the as-built diff). **COMPLIANCE-SENSITIVE co-occurs** (@compliance ran `/legal` before `/design`; APPROVE WITH CONDITIONS, 0 BLOCKERS).
+> **ADRs:** ADR-079 (retire the `softprops` upload dependency), ADR-080 (vendored removals are load-bearing).
+> **Hard deadline in scope:** `CF-v2.19.5-B` arms on the **2026-09-01** sync cron.
+
+---
+
+## Problem
+
+Two independent gaps converge on the announcement blocker (`OT-1`):
+
+1. **The storefront does not work.** `/releases/latest` resolves to `v2.19.4` with **0 assets**; `v2.19.5` and `v2.19.6` were never tagged. A visitor following the announcement link gets an empty release page. The repo's own standing gate (`Release Surface`) is failing right now because of it — **3 consecutive failures**, latest a *scheduled* run 2026-08-08T07:14Z. Root cause is proven, not inferred (`CF-v2.19.6-A`; see ADR-079).
+2. **The vendored third-party tree had never been read.** Reading all 110 files found **1 CRITICAL (`C-1`) and 5 HIGH (`H-1`–`H-5`) findings**, plus 13 MEDIUM and 21 LOW severity-tallies counted by affected file rather than by finding ID (the two units differ; the finding-ID count is the one every downstream claim in this cycle uses), while confirming the supply chain itself is clean (0 malicious, 0 exfiltration, 110/110 hashes match the pin, 0 orphans). Announcing a kit whose pitch is that unvetted third-party content is dangerous, while shipping an unread third-party tree, falsifies the pitch at the moment it matters most.
+
+**The one functional idea:** everything the announcement points at is true and works. A visitor can download a release with files in it, and every file in that download has been read.
+
+## Target users
+
+- **Primary — the prospective public visitor.** Needs a "Latest release" link resolving to a real, downloadable ZIP, and a reasonable basis to trust the third-party content inside it has been vetted.
+- **Secondary — the solo maintainer.** Needs a release pipeline with no forgettable manual step, a vendored-curation model that survives future syncs without per-sync re-application, and CI gates that fail for the reason they claim.
+
+## Settled inputs — do not re-open
+
+- **Owner decision, LOCKED 2026-08-07:** delete 2 vendored files, disclose 5, file 4 upstream PRs. **Never edit vendored bytes** — the per-sync re-apply burden on a solo repo was the decisive factor. Encoded below, not evaluated.
+- **`vendored/` cannot be excluded from the release ZIP** (`README.md:200`, `TRUST.md:21`, `WIZARD.md:26`, `WIZARD.md:310`).
+- **`CF-v2.19.6-A` root cause is PROVEN** — see ADR-079.
+- **The script's own printed remedy (delete + re-push the tag) is WRONG** and would destroy a live public Release. It is removed this cycle, not followed (`AC-A1-6`).
+
+---
+
+## Scope A — Unblock the storefront
+
+### A1 — `publish-release.sh` uploads assets itself
+
+- **[CRITICAL — Phase 2 S1] AC-A1-0 — the version + tag-commit precondition binds ALL THREE branches, before any public write.** Today the version guard is **create-path-only by deliberate design**: `publish-release.sh:168-171` states it is asserted *"never on the repair or idempotent-skip branches … so repairing a pre-floor empty-bodied Release remains possible."* **That exemption was safe only while those branches could edit a body.** `AC-A1-1` grants them `gh release upload --clobber` — the power to replace **binary assets on any existing public Release**. Both inputs read the *invoking checkout*: `TARGET_SHA="$(git rev-parse HEAD)"` (`:114`) and `VERSION_AT_HEAD="$(tr -d '[:space:]' < VERSION)"` (`:180`, the working-tree file).
+
+  **Concrete path, no malice required:** running `publish-release.sh 2.19.5` from a checkout whose HEAD is v2.19.7 reaches the idempotent-skip branch **unguarded** and replaces v2.19.5's public assets with v2.19.7 content. `AC-A1-1`'s own NC(b) *mandates* re-running against an existing tag, driving straight into it.
+
+  **Requirements:**
+  1. BEFORE any `gh release create`, `gh release upload`, or `gh release edit`, on **all three branches**, the script SHALL assert (a) `git show "$TARGET_SHA":VERSION` equals the requested `VERSION` — read from the **commit object, never the working tree** — and (b) where a Release already exists for the tag, its tag commit equals `$TARGET_SHA`.
+  2. **Body repair and asset upload are different capabilities and MUST NOT share one exemption.** The pre-floor body-repair exemption may be retained, but it SHALL NOT extend to asset upload. An exemption that admits a reversible body edit must not silently admit an irreversible binary replacement.
+  - *NC:* from a checkout at v2.19.7, run `publish-release.sh 2.19.5` against a fixture Release carrying a live asset → MUST REFUSE **before** any upload, naming the VERSION mismatch. Pre-fix it reaches `:161` and clobbers.
+
+- **AC-A1-1 — assets on all three script branches.** `publish-release.sh` has three branches (`:161` idempotent-skip, `:163-164` repair, `:190-195` create). WHEN `publish-release.sh` completes successfully for a tag, THEN `gh release view <tag> --json assets` SHALL return ≥2 assets (`.zip` + `.tar.gz`) **regardless of which branch was taken**, with no separate workflow step. The create branch attaches via the same `gh release create` invocation; the repair and idempotent-skip branches attach via `gh release upload --clobber`, **gated by `AC-A1-0`**.
+  - *NC (a):* stub out the upload call against a fixture tag → `assets` returns `[]`, reproducing today's live `v2.19.4` state.
+  - *NC (b) — the branch control:* run the script **twice** against the same fixture tag, **from a checkout whose committed `VERSION` matches that tag** (required by `AC-A1-0`), deleting one asset between runs → the **second** run MUST restore it. Pre-fix the second run hits `:161`, skips assets entirely, then fails the poll at `:228-252` — permanently unrecoverable by re-running the script, which is the operator's only tool.
+  - *Rationale:* `CF-v2.19.6-A` **was** a create-path-vs-update-path divergence. A fix handling only the create path reproduces the identical blind spot one layer up.
+
+- **[EARS-REVISED] AC-A1-2a — no post-publish write attempt.** WHEN a tag matching `v*` is pushed, THEN the repository SHALL NOT execute any workflow step that issues `gh release upload` or `gh release edit` against a Release that already has ≥1 asset.
+  - *NC:* push a fixture tag after the fix → no workflow run attempts a write API call against the Release.
+  - *Why split:* the prior single AC was **vacuously true if the workflow were deleted entirely**, including the DROP/KEEP assertions it exists to preserve — it could not distinguish "correctly narrowed" from "wrongly decommissioned". `AC-A1-2b` carries that weight.
+
+- **[EARS-REVISED] AC-A1-2b — DROP/KEEP assertions bind the uploaded bytes.** WHERE a release archive is produced by any path, the DROP-list and KEEP-list assertions SHALL execute against that archive **before** it is attached to a public Release, and SHALL fail closed. Two call sites, one implementation:
+  - **(a) Prevention — authoritative.** `publish-release.sh` runs the assertions on the exact archive files it is about to upload, immediately before `gh release create` / `gh release upload`, with **no rebuild between assertion and upload**.
+  - **(b) Detection — post-hoc.** `release-assets.yml` **downloads the published asset from the Release** and re-runs the same assertions against the bytes GitHub actually serves.
+  - Both call `scripts/release-archive-assert.sh` (`AC-A1-4`).
+  - **[S4] Both artifacts SHALL be asserted.** `release-assets.yml:30-32` builds a `.zip` **and** a `.tar.gz`, but `:39` lists only the ZIP (`unzip -Z1`), so **the tarball ships today entirely unasserted**. The assertion SHALL cover both archives. If any artifact is knowingly left unasserted, the spec SHALL name it and state why — silence is not an option.
+  - *NC (a):* inject a `docs/internal/` path into a fixture archive → the pre-upload gate REFUSES and **no Release is created**. Run the same injection into the **`.tar.gz` only** → MUST also REFUSE (pre-fix it passes).
+  - *NC (b):* point the post-hoc job at a fixture asset containing a DROP-list path → job fails naming the path.
+
+- **[S5] AC-A1-2c — `release-archive-assert.sh` has no DROP-without-KEEP mode, and takes the prefix from its caller.** The existing DROP loop **fails open**: it fails only when it *finds* a match (`release-assets.yml:66-72`), so a wrong archive prefix matches nothing and the loop reports PASS. Today only the KEEP loop catches that (it uses `if ! … grep`), which makes KEEP an **undocumented load-bearing dependency** of DROP's correctness.
+  - The shared script SHALL refuse to run DROP assertions without also running KEEP assertions — no flag, no mode, no code path that yields a DROP-only result.
+  - The archive prefix SHALL be passed in by the caller, never re-derived inside the script, so the assertion and the artifact cannot disagree about what they are inspecting.
+  - *NC:* invoke the assert script with a deliberately wrong prefix → MUST fail. Pre-fix, a wrong prefix makes DROP silently pass.
+
+- **[S13] AC-A1-3 — no rebuild between assert and upload.** The archive paths passed to `scripts/release-archive-assert.sh` SHALL be identical to those passed to the upload command in the same invocation, and no `git archive` invocation SHALL appear between the assert call and the upload call.
+  - *NC (greppable, not a checklist):* in `scripts/publish-release.sh`, the line range between the `release-archive-assert.sh` call and the first subsequent `gh release create|upload` SHALL contain **0** occurrences of `git archive` — `awk` the span and assert `grep -c 'git archive'` == 0. Insert a rebuild into a fixture copy → the assertion returns ≥1 and fails.
+  - *Rationale:* "the two archives should be byte-identical" is the assumption class that produced every finding in the last two cycles.
+
+- **[S3] AC-A1-4 — DROP/KEEP lists are single-sourced.** The DROP-list and KEEP-list arrays SHALL exist in exactly one file (`scripts/release-archive-assert.sh`), sourced by both call sites.
+  - *NC (re-scoped — the Phase-1 wording could not pass):* `grep -rln 'DROP_PATHS=(' scripts/ .github/workflows/ | wc -l` SHALL equal **1**. The previous repo-wide form was unpassable: `grep -rn 'DROP_PATHS=('` returns **4** today — including this spec's own sentences — and would still return 4 after a perfect implementation. Verified: the re-scoped form returns **1** today (`release-assets.yml`) and must still return 1 after the list moves.
+  - *Rationale:* two copies of a negative list drift, and a drifted DROP list fails **open**. Pattern already stated at `verify-release-surface.sh:95-96`.
+
+- **AC-A1-5 — `release-assets.yml` narrowed, trigger retained, token de-privileged.** The `softprops/action-gh-release` step (`:134-138`) SHALL be deleted. The `push: tags` trigger, the populated-body precondition (`:104-131`), and the DROP/KEEP assertion SHALL be retained.
+  - **[S12] `permissions:` SHALL be narrowed from `contents: write` (`:14-15`) to `contents: read`**, since the workflow retains no write step after this change.
+  - *Consequence worth naming:* this **upgrades `AC-A1-2a` from a behavioural assertion to a structural impossibility** — the workflow's token cannot upload or edit a Release even if a future edit reintroduced a step that tried. It also strengthens ADR-079's supply-chain-reduction line: one fewer third-party action **and** a de-privileged token.
+  - *NC:* `grep -c 'softprops/action-gh-release' .github/workflows/release-assets.yml` → `1` today, `0` after; `grep -c 'contents: write'` → `1` today, `0` after; `grep -c 'push:'` still ≥1 after.
+  - *Rationale:* `:108` records the trigger as the deliberate net for anyone who tags with a plain `git push`. Verification makes no write API call, so it cannot reintroduce the `403`.
+
+- **AC-A1-6 — the destructive printed remedy is DELETED, not reduced.** Verified: `publish-release.sh` has **no tag-deletion code path** — `grep -n 'tag -d\|push --delete\|gh release delete' scripts/publish-release.sh` returns exactly one hit, `:245`, inside an `echo … >&2`. The Phase 0 AC ("exercise the printed remedy → must be REFUSED") therefore tested a path the script cannot take and **passed trivially** — a check that cannot fail.
+  - **Assertion:** `grep -c 'push --delete\|tag -d' scripts/publish-release.sh` == **0** (it is `1` today). The `:236-250` block is deleted, not softened.
+  - *NC:* the current file returns `1` and fails this assertion.
+  - **Sub-clause:** `AC-PUB-13`'s "check `gh run list` before any tag operation" is **printed operator advice at `:241`, not an executed check**. Fine as a human-procedure control, but it MUST NOT be described as code. If retained as a claimed control it moves to `CONTRIBUTING.md` as an explicit human step.
+
+- **AC-A1-7 — pin the archive tree-ish and prefix.** After A1 the script builds the archive **before** the tag ref exists locally (the tag is created via the Releases API), so the tree-ish is no longer implied by the tag.
+  - `git archive` SHALL be invoked with `$TARGET_SHA` explicitly — never `HEAD`, never the working tree.
+  - `--prefix=cowork-starter-kit-${VERSION}/` SHALL be preserved byte-for-byte (a changed top-level directory name across three backfilled ZIPs is user-visible).
+  - **[S1 correction] PRE-condition, not post-condition:** where a Release already exists for the tag, its tag commit SHALL be asserted equal to `$TARGET_SHA` **before any upload occurs** (this is `AC-A1-0`(b)). The Phase-1 wording said "post-condition" while its own NC said "refuses *before* upload" — those are different controls, and **a post-condition cannot un-clobber a public asset.** The assertion is a gate, not a report.
+  - *NC:* build at the wrong SHA on a fixture → REFUSES **before** upload, with no Release created and no asset replaced.
+  - *Rationale:* provenance moves from a clean CI checkout to the operator's machine. `git archive <tree-ish>` reads a tree object, so dirty/untracked files cannot leak in; the residual risk is **the wrong tree-ish**, which A2 amplifies from one publish to three.
+
+### A2 — Backfill v2.19.5 and v2.19.6, then publish v2.19.7, in strict ascending order
+
+DECISION SETTLED. The standing gate checks *every* dated CHANGELOG entry ≥ v2.18.0, so skipping the backfill leaves a scheduled CI job permanently failing. Both versions were fully merged and retro'd. `/releases/latest` resolving to the deletion-clean v2.19.7 is achieved by publishing v2.19.7 **last**. v2.19.4 asset/body backfill is **out of scope** (it already has a populated body, S6 PASS).
+
+@security accepted the decision while **declining the "already on the internet" framing**: that is true about *exposure* and a non-answer about *endorsement* — a Release is affirmatively published, curated, and dated. Accepted anyway, because a permanently-red standing gate trains the maintainer to ignore the one check watching the public surface. Hence the three caveat conditions.
+
+- **AC-A2-1 — three releases, ascending, each complete.** `gh release list` SHALL show `v2.19.5`, `v2.19.6`, `v2.19.7`, each with a non-empty body and ≥2 assets, published in ascending order.
+  - *NC:* stub the publish loop to skip one version on a fixture → the assertion names the missing tag.
+- **AC-A2-2 — each backfilled tag points at the commit where it shipped.** Each backfilled tag SHALL point at the commit whose `VERSION` file equals that tag's version. "Ascending order" alone is satisfied by tagging all three at `main`, which destroys the entire justification for backfilling ("publishes what already shipped, *at the commit where it shipped*").
+  - *Implementation:* already enforced by `publish-release.sh:181-188` on the create path. This AC asserts the **property**; the existing guard is its implementation.
+  - *NC:* attempt a backfill publish at the wrong commit on a fixture → `:181-188` REFUSES with the VERSION-mismatch error.
+- **AC-A2-3 — latest resolves to v2.19.7.** *NC:* publish out of order on a fixture → resolves to the wrong tag, reproducing today's live `WRONG-LATEST`.
+- **AC-A2-4 — the standing gate goes green.** Re-run `Release Surface` via `workflow_dispatch` after A1+A2 → **PASS**, 0 `MISSING-TAG`, 0 `WRONG-LATEST`.
+  - *NC:* **none needed — the gate is RED right now** (3 consecutive failures, latest scheduled 2026-08-08T07:14Z). Its ability to fire is demonstrated rather than asserted. This is the strongest control in the cycle.
+
+#### A2 backfill caveat (binding)
+
+- **AC-A2-5 — caveat placement.** The caveat SHALL appear in the **first lines** of both backfilled release bodies, above the changelog excerpt — not as a footnote. `body_names_version()` is satisfied by a bare dotted-version match, so **no existing post-condition notices placement**; this needs its own assertion.
+  - *NC:* `grep` the published body for the caveat text and assert it appears before the first `##` changelog header; a footnote-placed caveat fails.
+- **AC-A2-6 — caveat scope is the whole set.** The caveat SHALL name **both** the 2 removed files **and** the 5 disclosed HIGH findings. The backfilled archives predate B3's disclosure note too.
+  - *NC:* a caveat naming only the deletions fails — it leaves the 5 unnamed in exactly the artifacts that still contain them (the same one-field-instead-of-the-hop shape as C3).
+- **[S13] AC-A2-7 — caveat lands at create time.** The caveat SHALL be part of the notes file passed to `gh release create`, never applied by a later `gh release edit`, so no window exists in which the two backfilled Releases are live without it.
+  - *NC (greppable, not a checklist):* in `scripts/publish-release.sh`, the caveat text SHALL appear only in the notes-file composition and **never** as an argument to `gh release edit` — assert that the line range from the first caveat reference to the `gh release create` call contains **0** occurrences of `gh release edit`. Move the caveat to a post-create `edit` in a fixture copy → the assertion returns ≥1 and fails.
+
+> **Rejected alternative, recorded so Phase 4 does not rediscover it:** backfill bodies with **no assets** (the standing gate does not check assets — S8). Rejected: it requires a new `--no-assets` branch on the one script in the repo that performs irreversible public writes, days before an announcement, to mitigate an exposure that is already public — and it makes the three publishes non-uniform.
+
+---
+
+## Scope B — Ship only what we've read (owner decision LOCKED)
+
+- **B1** — delete `vendored/agency-agents/marketing/marketing-carousel-growth-engine.md` (the CRITICAL).
+- **B2** — delete `vendored/agency-agents/project-management/project-manager-senior.md` (leaked third-party workspace).
+- **B3** — new kit-authored disclosure section in `vendored/README.md` covering the 5 remaining HIGH findings.
+- **B4** — 4 upstream PRs via `upstream-contribution/` to `msitarzewski/agency-agents`, mapped 1:1 to H-1 / H-2 / H-4 / H-5.
+- **B5** — lock/allowlist consistency: lock 110 → 108, plus the blocking entries below.
+
+### B5 — lock and allowlist consistency
+
+- **[S6] AC-B5-1 — counts, asserted in CI, over ALL file types.** `jq '.files | length' cowork.lock.json` == **108** AND `find vendored/agency-agents -type f ! -name LICENSE | wc -l` == **108**.
+  - **This assertion MUST run in CI**, not in a Phase-4 transcript. It is the only disk-side integer in the cycle; run by hand it is an observation, not a check.
+  - **`-name '*.md'` is FORBIDDEN as the enumeration predicate.** It blinds the check to every non-Markdown file: verified live, `find … -type f` returns **111** against `find … -name '*.md'`'s **110**. An extension filter means an upstream `.py`, `.sh`, or `.json` landing in the vendored tree is invisible to both this count and the orphan check — the precise blindness `CF-v2.19.5-B` exists to close.
+  - `LICENSE` is the sole legitimate non-`.md` file and is excluded here because it is already covered by `license_file_sha256` at `quality.yml:1640-1650` — excluded because it is checked elsewhere, not because it is unimportant.
+  - *NC:* set the lock to 107 on a fixture → the job fails naming both counts. Drop a `vendored/agency-agents/testing/stray.py` into a fixture tree → the count assertion fails (pre-fix, `-name '*.md'` ignores it).
+
+- **[EARS-REVISED — MUST-FIX] AC-B5-2 — `blocked_files` entries use the FULL `category/name.md` path form.** `.cowork-allowlist.json` `blocked_files[]` SHALL gain exactly 2 entries, each with `path`, `permanent: true`, and `reason`, where `path` is the **full `category/name.md` form**:
+  - `marketing/marketing-carousel-growth-engine.md`
+  - `project-management/project-manager-senior.md`
+
+  **This explicitly overrides the Phase 0 draft's instruction to copy "the existing `nexus-strategy.md` shape." That shape is broken.** See ADR-080 §Context (1) for the full proof. Copied literally, both new entries would never match, and the **2026-09-01 sync cron would re-fetch both deleted files** while every check stayed green and the lock still read 108.
+
+  `$schema_version` stays `"1.0"` — `AC-SYNC-5` is not implicated.
+  - *NC (firing):* feed a fixture category listing through the `:228` comparison → **`BLOCKED (exact path)`** printed for each of the two paths; remove either entry → that file is fetched.
+
+- **[MUST-FIX] AC-B5-3 — matching `blocked_patterns` entries (rename-into-category defence).** `.cowork-allowlist.json` `blocked_patterns[]` SHALL gain 2 entries matching the **basenames** `marketing-carousel-growth-engine.md` and `project-manager-senior.md`.
+  - `blocked_files` is exact-path; `blocked_patterns` is **basename**-matched (`:233-244`). `nexus-strategy.md` carries **both**, and that entry's own reason string states why: *"catches nexus-strategy.md at any path depth (rename-into-category attack prevention)."* Giving the two new permanent removals `blocked_files` only means an upstream rename into any other allowlisted category walks straight past. **The repo already wrote the control for exactly this failure mode.**
+  - *NC (firing):* fixture listing with the file under a **different** allowlisted category (e.g. `sales/marketing-carousel-growth-engine.md`) → still `BLOCKED`. Remove the pattern entry → fetched.
+
+- **AC-B5-4 — the two literal paths are named across all three surfaces.** For each of the two paths:
+  1. absent from disk — `test ! -f vendored/agency-agents/<path>`
+  2. absent from `cowork.lock.json` — `jq -e '.files[] | select(.path=="<path>")'` returns non-zero
+  3. present in `.cowork-allowlist.json` `blocked_files[].path` **and** covered by a `blocked_patterns` entry
+  - **[S7] These assertions MUST run in CI**, not in a Phase-4 transcript — and if only one of `AC-B5-1` and `AC-B5-4` could be automated, **this is the one that must be.** `AC-B5-1`'s `== 108` is a *constant* that will be legitimately bumped on the first upstream addition, at which point it stops saying anything about these two files. `AC-B5-4`'s per-path `jq -e` **survives every count change** and is therefore the only durable anti-reintroduction control in the cycle.
+  - *Rationale:* as previously written, **deleting two different files satisfied every AC in B5.** Count plus set-equality verifies "there are 108 of something", not "the CRITICAL is gone."
+  - *NC:* restore either file and re-run → all three sub-assertions fail naming that path.
+
+- **AC-B5-5 — existing checks still pass at 108.** `vendored-integrity-check` and `scripts/verify-lock-content-sha.sh` both PASS at 108.
+
+- **AC-B5-6 — firing negative control for the REMOVAL (binding sequencing).** The existing `vendored-integrity-check` iterates **forward from the lock only** and cannot detect a file on disk absent from the lock, so B5's "we actually deleted it" claim has no real check without C1. **Binding sequencing: C1's orphan check is implemented FIRST, as shared infrastructure, and is the instrument that proves B5.**
+  - *NC:* restore ONE deleted file from git history while the lock stays at 108 → the orphan check goes **RED** naming the restored path; re-delete → **GREEN**.
+  - **Verified TRUE at Phase 0.D on three independent lines** — see ADR-080 §Context (3).
+  - **Soundness comes from the conjunction:** forward check (lock ⊆ disk) + orphan check (disk ⊆ lock) + count == 108 ⟹ the sets are equal and of size 108. `AC-B5-4` supplies the naming the conjunction alone does not.
+  - **This sequencing MUST NOT be relaxed at Phase 4 for scheduling convenience.**
+
+- **AC-B5-7 — lock removals are load-bearing on `blocked_files`.** WHEN `cowork.lock.json` changes such that one or more `files[].path` entries present in the previous revision are absent from the new revision, THEN every removed path SHALL be present in `.cowork-allowlist.json` `blocked_files[].path`, and the check SHALL fail closed otherwise.
+  - **Subset, not equality** — see ADR-080 §Amendment. Equality fails on day one (`nexus-strategy.md` is in `blocked_files` but was never in the lock) and again on any later cycle with an empty removed set.
+  - *Effect:* `blocked_files` gains a **functional consumer** — it stops being documentary — and the gap that nothing asserted the protected set only shrinks by decision is closed (with `AC-B5-8`).
+  - **[S10] Enforcement strength, stated precisely: this is visibility, not blocking.** Live probe: `required_status_checks` absent, `require_code_owner_reviews: false`, `required_approving_review_count: 0`. An undeclared removal becomes **visible in CI and in the diff**; it is **not prevented**. The ledger is a notification, not a gate. It becomes blocking only if the owner enables required status checks — the same owner-side dependency as **OQ-2**, and equally not an agent decision. The word "load-bearing" is deliberately **not** used here: it implies blocking, and this cycle's whole premise is that a control must not be described as stronger than it is.
+  - *NC:* remove a lock entry on a fixture without adding it to `blocked_files` → job fails naming the path. **This cycle's own PR is the control's first live exercise** — it removes exactly 2 entries, both of which must appear in `blocked_files`. The control therefore cannot ship as a check that never runs.
+
+- **[CRITICAL — Phase 2 S2] AC-B5-7a — the ledger's base revision is mandatory, and an unobtainable base is a HARD FAILURE.** Verified live: `grep -c "fetch-depth" .github/workflows/quality.yml` returns **0**, so every checkout in that workflow is at default depth 1. On a `pull_request` event there is no `origin/main` in the clone, and `git show origin/main:cowork.lock.json` **cannot resolve**. The idiom normally reached for — `git show … || echo '{}'` — yields an empty previous lock ⇒ an empty removed set ⇒ **PASS**. That is this project's dominant defect family reproduced *inside the control written to end it*, on the very PR that introduces it.
+  1. The ledger job SHALL set `fetch-depth: 0` (or otherwise guarantee the base revision is present).
+  2. **Failure to obtain the previous `cowork.lock.json` SHALL be a hard, named failure.** It SHALL NOT default to an empty object, an empty array, or an empty removed set. A `|| echo '{}'` fallback, or any equivalent, is **explicitly forbidden**.
+  3. **Event behaviour is defined here rather than left to fall out of the implementation.** On `pull_request`, the base revision is the PR's base ref (`origin/${{ github.base_ref }}`). On `push`, it is the pushed range's predecessor (`HEAD~1`, or `github.event.before` where that is a real commit). If neither resolves to a readable lock blob, the job fails closed with a named error.
+  - *NC:* run the ledger job with `fetch-depth: 1` and a removal present → it MUST fail (unobtainable base), **not** pass. Pre-fix, this exact configuration passes green with a removal in the diff.
+
+- **[S8 — ADOPTED] AC-B5-8 — `blocked_files` itself may not silently shrink.** The subset form floors the removed set but nothing stops a *later* commit deleting a `blocked_files` entry: the ledger sees no lock removal, and the orphan check sees a file that is not present. Both stay silent, and the block quietly evaporates.
+  - The ledger SHALL additionally assert that **no path present in the previous revision's `blocked_files[].path` is absent from the new revision's**.
+  - Nearly free — the job already diffs two JSON revisions — and it is what makes ADR-080's "the protected set only shrinks by decision" actually true rather than aspirational.
+  - *NC:* delete a `blocked_files` entry on a fixture → job fails naming the removed path.
+
+- **[S9 — ADOPTED] AC-B5-9 — a rename is classified MOVED, not laundered into a removal.** The ledger as specified cannot distinguish a rename from a removal, so on the first upstream rename the **only** way to green CI would be to add the renamed-away path to `blocked_files` — permanently degrading the very list this cycle makes load-bearing, and doing so under the 2026-09-01 cron deadline.
+  - WHERE a path absent from the new lock has a `content_sha256` that reappears under a **different** path in the new lock, the ledger SHALL classify it **MOVED** and SHALL NOT require a `blocked_files` entry for it.
+  - In-schema and in-precedent: `content_sha256` already exists on every entry, and `sync-agency.yml:355-385` already performs removed/renamed classification for the PR-body table — this reuses an established repo pattern rather than inventing one.
+  - *NC:* rename a path in a fixture lock, preserving its `content_sha256` → classified MOVED, job passes with no `blocked_files` entry. Change the content as well as the path → classified REMOVED, job fails until declared.
+
+---
+
+## Scope C — Deadline-bound carry-forwards (2026-09-01 sync cron)
+
+### C1 — `CF-v2.19.5-B` orphan detection
+
+Not firing today (0 real orphans, confirmed) but prospective — and it is the mechanism `AC-B5-6` depends on, so it lands this cycle either way.
+
+- **[S6] AC-C1-1 — reverse-direction check, over ALL file types.** A check SHALL assert that **every file** under `vendored/agency-agents/` — enumerated as `find vendored/agency-agents -type f ! -name LICENSE`, **not** `-name '*.md'` — has a `cowork.lock.json` entry (the reverse of today's direction).
+  - **The extension filter is forbidden here for the same reason as `AC-B5-1`:** `-type f` returns 111 against `-name '*.md'`'s 110, so an upstream `.py`, `.sh`, or `.json` orphan would be invisible to the very check built to catch orphans. `LICENSE` is excluded because `quality.yml:1640-1650` already verifies it against `license_file_sha256`.
+  - *NC:* add `vendored/agency-agents/testing/orphan-fixture.md` absent from the lock → job fails naming the orphan; remove → passes. **Second NC:** add `vendored/agency-agents/testing/orphan-fixture.py` → job MUST also fail (pre-fix, an extension-filtered enumeration ignores it).
+- **[EARS-REVISED] AC-C1-2 — orphans cannot ship in an archive.** WHILE any release archive is being produced, IF a file exists under `vendored/agency-agents/` with no `cowork.lock.json` entry, THEN the producing path SHALL fail closed and no archive SHALL be attached to a Release.
+  - *Implementation:* `scripts/verify-vendored-orphans.sh` is invoked (a) by `quality.yml`'s `vendored-integrity-check` job on every PR, and (b) by `publish-release.sh` **before** the archive is built.
+  - *NC:* place an orphan in a fixture tree and run the publish path → REFUSES before `git archive`, no Release created.
+  - *Rationale:* `vendored/` is not `export-ignore`d, so any orphan ships in every ZIP. (The Phase 0 wording offered a disjunction — "runs before … *or* the archive step re-runs the assertion" — two designs with different failure modes and no stated oracle.)
+
+### C2 — `CF-v2.19.5-D` LICENSE check does not fail closed
+
+`sync-agency.yml:137-143` emits `::error::` and sets `license_changed=true`, but **no downstream step reads that output to gate anything** — verified: it is consumed only at `:537`, a row in the PR body table.
+
+- **AC-C2-1 — fail closed with a real non-zero exit.** *NC:* point the step at a fixture upstream LICENSE whose hash differs from the pinned `license_file_sha256` → the step MUST exit non-zero, not sail past a logged `::error::`.
+- **AC-C2-2 — `docs/architecture.md:2854`'s "refuses to merge" claim is corrected** to match what is true after C2-1, per whichever OQ-2 branch the user gate selects. *NC:* `grep` for the corrected wording; the current text fails.
+
+### C3 — `CF-v2.19.5-E` `$GITHUB_OUTPUT` injection
+
+`sync-agency.yml:274` builds `FLAGGED_FILES` from `${file_path}:${pattern}` (attacker-influenceable via a malicious upstream filename) then writes it with a bare `echo "flagged_files=${FLAGGED_FILES}" >> "$GITHUB_OUTPUT"` (`:312`). A newline forges additional `key=value` lines. `requires_review` is written on the line directly above (`:311`) and **last-write-wins**, so a forged line overrides it; readers at `:538`, `:551`, and the `security-review-required` **label** at `:581` all consume the forged value.
+
+- **AC-C3-1 — heredoc-delimiter form with a collision-safe random delimiter.** *NC:* feed a fixture `file_path` containing an embedded newline plus a forged `requires_review=false` line → pre-fix a downstream step reads the forged value; post-fix the newline is contained and no forged line appears.
+
+- **[MUST-FIX] AC-C3-2 — the fix covers the whole hop, not the one field.** `spdx_changed_paths` (`:446`) has the **identical** bare-`KEY=value` defect with its gating boolean directly above it (`:445`), and a **strictly worse sink**: `${{ }}` expanded inside a `run:` block at `:589` (shell, not data), versus `flagged_files`' action-input sink at `:553`.
+  - **Latent, not live** — the ADVANCE path hardcodes `--arg spdx "MIT"` (`:292`) and all files bucket to MIT, so `:589` is unreachable today. **Unreachability is a fragile mitigation, not a control**, and ADR-022's stated intent arms it.
+  - **Assertion:** every `$GITHUB_OUTPUT` write carrying upstream-derived content uses the heredoc form (`:312` and `:446` at minimum), AND no `${{ steps.*.outputs.* }}` expansion of upstream-derived content appears inside any `run:` block.
+  - *Scope note, so the sweep is complete rather than silently partial:* `latest_sha` (`:79`, `:525-529`, `:599`) is a GitHub-API hex SHA and is **NOT** in scope.
+  - *Rationale:* the correct heredoc form already exists 47 lines earlier (`:394-399`), and **that block's own comment (`:388-393`) admits the `flagged_files` precedent was "not retrofitted here"** — the authors knew of one instance and did not sweep for siblings. Do not repeat that.
+  - *NC:* a fixture that fixes only `:312` fails the sweep assertion at `:446`.
+
+---
+
+## Scope D — Storefront truth
+
+- **AC-D1-1 — release body links the changelog (S7 FAIL).** Body generation SHALL include a `### Full changelog` section linking `CHANGELOG.md#<anchor>`, per `public-artifact-strategy §7`. `release-predicate.sh`'s `body_names_version()` is satisfied by a bare dotted-version match, which is why bodies pass the producer's own check while failing the strategy.
+  - *NC:* `grep -ci changelog` against the live `v2.19.4` body returns **0** (verified); post-fix ≥1.
+- **AC-D2-1 — IA order.** `grep -n '^## ' README.md` SHALL show `Who is this for` → `See it in action` → `Quick start`.
+  - *NC:* the current file fails this exact assertion — verified live: `13 Who is this for` → `23 Quick start` → `44 See it in action`.
+- **[EARS-REVISED] AC-D3-1 — a cited verification path must verify.** WHEN a reader executes the command cited at `README.md:168`, THEN the count it returns SHALL equal the count stated in that sentence; IF no such command can be cited, THEN the sentence SHALL cite no path.
+  - Today the sentence reads "25 skills (`skills/<slug>/SKILL.md`)". The count is right (29 dirs − 4 machinery = 25); the cited path is wrong — a reader following it counts 29.
+  - *NC:* run the currently cited command → returns 29 against a stated 25, failing the assertion. (The Phase 0 wording — "reworded so the cited path does not imply…" — had no pass/fail oracle.)
+
+---
+
+## Scope E — Re-verified S-A items
+
+- **AC-E1-1 — S-A3: the failure signal survives the command substitution.** `verify-release-surface.sh:304` calls `evidence_body` via `$( )`. `evidence_body`'s `exit 2` (`:153`, the "gh unavailable" fail-closed hard stop) **exits only the subshell**, degrading into a per-tag `MISSING-RELEASE` with `FAILED++`. The caller SHALL check `$?` explicitly and distinguish rc=2 (real error, propagate) from rc=1 (missing release), per the pattern already used for the SPDX-drift step.
+  - **NC MECHANISM SPECIFIED:** the rc=2 path requires `gh` absent from `PATH`. The control MUST use a **`PATH`-prepended shim directory containing a fake `gh` that exits non-zero** — **never `PATH` subtraction**. In v2.19.6 the `AC-PUB-14` control filtered `PATH`, which on `ubuntu-latest` deleted `bash` (it shares `/usr/bin` with `gh`) and died at exit 127. Repeating that mechanism would produce a control that cannot pass for the right reason.
+  - *Calibration:* S-A3's live consequence is a false `MISSING-RELEASE` — **noisy and fail-CLOSED, not fail-open**. Correct fix, but not a HIGH-severity effort sink.
+- **AC-E2-1 — S-A9: malformed input fails closed.** `semver-compare.sh ge 99999999999999999999.0.0 2.18.0` SHALL return `rc=2`.
+  - *NC:* the unpatched script returns `rc=1` with `[: 99999999999999999999: integer expected` on stderr — reproduced live at lines 63-64. The fix MUST NOT break any well-formed comparison (regression-run the suite).
+- **[S10 — reworded] AC-E3-1 — S-A10: CODEOWNERS coverage.** `.github/CODEOWNERS` SHALL **assign `@jmlozano1990` as code owner** for `publish-release.sh`, `release-predicate.sh`, `verify-release-surface.sh`, `release-surface.yml`.
+  - **Enforcement strength, stated precisely — this is a routing control, not a gate.** Live probe: `required_status_checks` absent, `require_code_owner_reviews: false`, `required_approving_review_count: 0`. CODEOWNERS therefore **routes** review to the owner and makes an unreviewed change visible; it does **not** require review, and it cannot block a merge. The word "require" is reserved for controls that actually block.
+  - *Becomes blocking only if* the owner enables code-owner review in branch protection — the same owner-side dependency as **OQ-2**, and equally not an agent decision.
+  - *NC:* `grep -c` for the four returns **0** today (verified); ≥4 after.
+- **AC-E3-2 — coverage grows with the files this cycle touches.** `AC-E3-1`'s 4 paths do not discharge the v2.19.6 S7 condition ("the deferred bundle's scope must grow with this cycle's new files"). Verified: **zero** CODEOWNERS matches for all nine release/supply-chain paths. Added here at minimum:
+  - `scripts/semver-compare.sh` (**edited this cycle by E2**)
+  - `.github/workflows/release-assets.yml` (**edited this cycle by A1**)
+  - the three new control scripts: `scripts/release-archive-assert.sh`, `scripts/verify-vendored-orphans.sh`, `scripts/verify-lock-removals.sh`
+  - `vendor-agency.sh` / `canonicalize-scan.sh` are a **judgment call, not binding** — **deferred this cycle, and the deferral is recorded here rather than left silent.**
+  - *NC:* `grep -c` for each added path returns 0 today.
+
+---
+
+## Scope F — Compliance (binding)
+
+- **AC-COMPLIANCE-1 — the README count becomes true.** `grep -c "110 agent files" README.md` → **0** after the cycle; the cited count SHALL equal `find vendored/agency-agents -name '*.md' | wc -l` (108).
+  - **Finding present in neither the brief, the audit, nor either 0.D review:** `README.md:200` claims "110 agent files" and becomes **FALSE at 108**. Same defect class as D3 — a public storefront claim that fails its own verification — landing in the cycle whose premise is "everything the announcement points at is true."
+  - *NC:* the current README returns 110 and fails today.
+- **AC-COMPLIANCE-2 — B3 exists and is complete.** The new `vendored/README.md` section SHALL (a) be headed as **kit-authored**, distinct from the regenerated upstream section above it; (b) name all **5** disclosed findings with **path:line** citations; (c) name the upstream repo and state that PRs were filed.
+  - *NC:* a version naming only 4 of 5, or omitting path:line, fails a reviewer checklist item added for this purpose.
+- **AC-COMPLIANCE-3 — H-5 durable placement.** A one-line advice-disclaimer for the finance/legal vendored subset SHALL be added to `templates/workspace-claude-md-template.md` (and/or root `CLAUDE.md`), verified within the existing **ADR-011 400-word cap CI check**. Measured headroom: template 354 words (46 free), root `CLAUDE.md` 339 (61 free); a ~19-word line fits.
+  - *NC:* the current template fails the grep; **and the word-count check MUST still PASS after the addition** — a regression control, not just a presence check.
+  - *Placement reasoning, specific to this repo's lifecycle:* a `vendored/README.md`-only disclaimer is **insufficient** — `WIZARD.md:310` moves `vendored/` *including its README* into `_setup-kit/` at handover, and `WIZARD.md:26` establishes the real encounter path as a **direct offline read by path**. A user reading `finance/finance-tax-strategist.md` never has the disclosure in context. `vendored/README.md` remains necessary as the disclosure-of-record; it is not sufficient as what a live session sees.
+- **AC-COMPLIANCE-4 — H-4 disclosure names Art. 9 specifically.** B3's H-4 text SHALL name "special category data" / "GDPR Art. 9" and cross-reference the corpus's own internal contradiction (`support/support-legal-compliance-checker.md:125-131` already classifies `health_information` as `sensitive_data` / `explicit_consent` / `special_protection: true`, **in the same corpus at the same pin**).
+  - *NC:* a version saying only "dark patterns", without the health-data / Art. 9 angle, fails review — that legal category is the thing a developer adapting the persona actually needs to see.
+  - *GDPR posture:* **no live obligation attaches to the kit** — inert reference Markdown, no processing; `TRUST.md:7` establishes no server/telemetry/account, and `vendored/README.md:27-29` confirms these personas are not yet installable as live skills. Controllership attaches to a downstream adopter. **No DPIA triggered for this cycle** — the disclosure should note in one sentence that a downstream adopter deploying health-status inference at scale would likely warrant one.
+- **AC-COMPLIANCE-5 — B3 provenance marker.** An explicit "authored by Cowork Starter Kit, not upstream" line, mirroring `THIRD-PARTY-NOTICES.md`'s existing `<!-- DO-NOT-REGENERATE -->` convention (`:61`) rather than inventing a new one.
+  - *NC:* absent it, a reader parsing top-to-bottom could attribute the disclosed-findings prose to upstream.
+
+### B3 wording rules (7 — binding on @dev)
+
+1. **Cite path:line for every claim** — a checkable claim is the strongest defence available.
+2. **Describe the artifact, never the author** — the subject of every sentence is the file/code/pattern, never a named or inferable individual.
+3. **Reuse the audit's own exculpatory finding near-verbatim** ("none of this is an attack; each finding is a sincere upstream design choice or an inherited defect").
+4. **Frame against known literature, not conclusory verdicts** ("substring deny-lists are a well-documented bypassable pattern"), not "a vulnerability the maintainer failed to fix".
+5. **State the upstream-PR remediation posture** — good-faith collaborative correction, not a public callout.
+6. **Note MIT's AS-IS / no-warranty terms already govern** this content.
+7. **No competence adjectives** ("sloppy", "reckless") — descriptive-technical only ("branches on an inferred value", "no disclaimer text present", "12 headings show non-UTF8-clean byte sequences").
+
+### Licence axis — verified, not trusted
+
+`THIRD-PARTY-NOTICES.md` is a **whole-package notice**: it enumerates files only by reference (`:57`), never by name or count, and `110` does not appear in it. It regenerates only on an upstream SHA bump, which B5 does not perform. **No edit required at 108.** Attribution stays coherent (`grep -rln` for both deleted paths outside `vendored/` → only `cowork.lock.json` plus a dated historical compliance snapshot). Outbound licence clean (MIT/MIT). **B4: zero CLA/DCO/sign-off** in upstream's live `CONTRIBUTING.md` / PR template / `.github` — ordinary fork-and-PR.
+
+---
+
+## Scope G — B3 and B4 acceptance (previously ZERO ACs — both HIGH gaps)
+
+- **AC-B3-1 — the disclosure note exists and is complete.** `vendored/README.md` SHALL contain a kit-authored section naming all **5** remaining HIGH findings — H-1 (`eval()` behind a bypassable deny-list, `engineering-ai-data-remediation-engineer.md:198`), H-2 (26 corrupted headings across 2 files), H-4 (dark-pattern + inferred-health-flag persona), H-5 (7 finance/legal files with fabricated credentials and no advice disclaimer) — each with a path:line citation, and naming `msitarzewski/agency-agents` as the upstream source.
+  - *NC:* remove any one finding from the section → `grep -c` for the finding IDs returns <5 and a reviewer checklist item fails.
+  - *Note:* the 13 MEDIUM and 21 LOW audit findings are disclosed in aggregate by this note; no per-file action.
+- **AC-B4-1 — 4 upstream PRs are filed and recorded.** Four PR URLs SHALL be recorded in the cycle artifacts, mapped 1:1 to H-1 / H-2 / H-4 / H-5.
+  - **Filing, not acceptance, is the deliverable** — whether upstream accepts any of the 4 is outside this cycle's control and gates nothing. (This was previously stated in *Assumptions*, not as an AC.)
+  - *NC:* fewer than 4 recorded URLs, or a URL not resolving to `msitarzewski/agency-agents`, fails.
+  - *Granularity:* H-2 may span 2 files as one PR — either granularity satisfies the brief, non-blocking.
+  - *Constraint:* C-1 and H-3 are deleted locally per the owner's locked call — deletion, not correction — so they are **not** filed upstream.
+
+---
+
+## Out of scope (each with a destination)
+
+| Item | Destination |
+|---|---|
+| P-1 (18 dangling `ai/` refs), P-2 (`qa-playwright-capture.sh`), P-3 (`tools:` at conversion) | Vendoring checklist / `docs/owner-tasks.md` |
+| 13 MEDIUM + 21 LOW audit findings | Disclosed in aggregate via B3; no per-file action |
+| Re-audit of release machinery | Done 2026-08-07; would re-derive itself |
+| `CF-v2.19.5-A` (`files[].sha256` zero readers) | Needs a `$schema_version` bump `AC-SYNC-5` forbids |
+| v2.19.4 asset/body backfill | Already has a populated body (S6 PASS); not named in A2 |
+| Owner block `OT-7` step 2 / `OT-3` / `OT-1` | Owner-held, after this cycle |
+| Rungs 2/3/4 | After the announcement |
+| Upstream `agency-agents` axis | **NO LANE** (5/5 council 2026-08-04) — do not reopen |
+| SPDX-drift step's structurally unreachable `exit 1` (`architecture.md:2856`) | Awareness only, not fixed here |
+| **`architecture.md:3187`'s false claim** — *"CI fails if any blocked file appears in `cowork.lock.json` files list."* No such check exists; the only `blocked_files` enforcement is the fetch-time filter. Same false-doc-claim shape as C2's "refuses to merge". | Recorded in ADR-080 §"Recorded but NOT scoped". `AC-B5-7` makes it *become* true for the removal direction as a side effect, but the sentence still overstates the general case. Not scoped for rewording this cycle. |
+| **Repairing the existing `nexus-strategy.md` entry** to `marketing/nexus-strategy.md` | @architect recommends it (one line, same file, retires a latent false-safety claim) but flags it as a **scope call for the user gate**, not taken unilaterally. The file remains protected by `blocked_patterns` either way. |
+
+---
+
+## Open Questions
+
+- **OQ-1 — ANSWERED.** A1 needs its own MUST-FIX list; it does **not** ride the cycle classification. (a) the DROP/KEEP assertion is currently coupled to the archive it verifies and A1 decouples them → `AC-A1-2b`; (b) provenance moves from a clean CI checkout to the operator's machine — *mostly* contained, since `git archive <tree-ish>` reads a tree object so dirty/untracked files cannot leak in; the residual risk is **the wrong tree-ish**, which A2 amplifies from one publish to three → `AC-A1-7`; (c) the block A1 obsoletes contains the destructive printed remedy → `AC-A1-6`. **Not introduced:** no new credential, no new egress, no new token scope — and it **retires** `softprops/action-gh-release`, a net supply-chain reduction worth stating as a positive in the GCS.
+- **OQ-2 — UNRESOLVED BY DESIGN. Routed to the user gate (Phase 3).** C2's exit-code fix does not by itself make `architecture.md`'s "refuses to merge" true, because `required_status_checks` is **empty** (verified live): a maintainer can merge over any red check today, including the SPDX step that already has a real `exit 1`. Closing it requires an explicit choice — **(a)** add the job as a required status check in branch protection, an **owner-side GitHub Settings change no agent can make**, combined with `AC-C2-1`; or **(b)** correct `architecture.md` to describe what is actually true (flagged-for-mandatory-human-review, matching the CODEOWNERS gate already on supply-chain files). **@architect does not decide this.**
+- **OQ-3 — ANSWERED, reconciled with the Phase 0.D F4 finding.** See `AC-A1-2b`, `AC-A1-3`, `AC-A1-4`, `AC-A1-5` and ADR-079.
+
+## Assumptions
+
+- **CONFIRMED:** owner decision locked; `vendored/` cannot be excluded; `Release Surface` gate failing live for the stated reasons (3 consecutive failures); `required_status_checks` empty.
+- **ESTIMATED:** B4's 4 PRs map 1:1 to H-1/H-2/H-4/H-5 (H-2 may span 2 files as one PR) — either granularity satisfies the brief, non-blocking.
+- **UNTESTED:** whether upstream accepts any of the 4 PRs — outside this cycle's control, gates nothing.
+- **STATED LIMITS, carried rather than hidden:** it could not be proven that `verify-release-surface.sh:153`'s `exit 2` is *exhaustively* unreachable behind the `:104`/`:116` preflights — "largely, not provably"; and `AC-C3-2`'s **source** reachability (can a GitHub upstream actually serve a path containing an embedded newline?) is inherited from C3, not independently confirmed.
+- **Public-ZIP surface, INFO / owner awareness, no action:** the release ZIP ships this repo's own `docs/security-audit-*.md`, `security-review-*.md`, `qa-report-*.md`, `risk-register.md` — the DROP list is a *negative* list, and only `docs/spec.md`, `docs/retro.md`, `docs/patterns.md` and `docs/internal/` are excluded. The repo is public, so this changes discoverability, not exposure, and is arguably intentional under ADR-037's radical-transparency convention. **`docs/design-v2.19.7.md` lands under the same convention** when it ships with the implementation at Phase 4. Recorded as a conscious choice, not an oversight.
+

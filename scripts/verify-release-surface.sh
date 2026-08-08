@@ -301,7 +301,27 @@ while IFS= read -r tok; do
   fi
 
   # --- Stage 4b: RELEASE conjunct (existence + body predicate). ---
-  if ! BODY="$(evidence_body "$tok")"; then
+  # [E1 / AC-E1-1, v2.19.7 — @security Phase 6 S-A3] evidence_body()'s `exit 2` ("gh
+  # unavailable", :151-154 above — a fail-closed hard stop) is called here inside a
+  # `$( )` command substitution, which bash ALWAYS runs in a subshell — `exit 2` there
+  # terminates only that subshell, and the CALLER only ever sees a non-zero return code
+  # via `$?`. The prior form (`if ! BODY="$(evidence_body "$tok")"; then`) collapsed
+  # EVERY non-zero return — rc=1 (a real MISSING-RELEASE) and rc=2 (a hard environment
+  # error) alike — into the same MISSING-RELEASE branch, degrading a "gh not available"
+  # hard stop into noisy-but-safe (fail-CLOSED, not fail-open per S-A3's calibration) per-
+  # tag findings. Captured with `set +e`/`set -e` bracketing (same idiom already used
+  # above for $SEMVER_CMP calls) so `$?` can be read explicitly BEFORE any other command
+  # overwrites it, and rc=2 is propagated rather than silently downgraded.
+  set +e
+  BODY="$(evidence_body "$tok")"
+  BODY_RC=$?
+  set -e
+  if [ "$BODY_RC" -eq 2 ]; then
+    echo "::error::release-surface: evidence_body(${tok}) returned a hard environment error (rc=2) —" >&2
+    echo "  propagating rather than degrading to a per-tag MISSING-RELEASE finding." >&2
+    exit 2
+  fi
+  if [ "$BODY_RC" -ne 0 ]; then
     echo "::error::release-surface: ${tok} MISSING-RELEASE — tag exists but no GitHub Release." >&2
     echo "  Remedy: same producer; it creates tag and Release atomically (ADR-076)." >&2
     FAILED=$((FAILED + 1))

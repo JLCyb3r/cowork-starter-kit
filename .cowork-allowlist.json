@@ -16,15 +16,33 @@
   ],
   "blocked_files": [
     {
-      "path": "nexus-strategy.md",
+      "path": "marketing/nexus-strategy.md",
       "permanent": true,
-      "reason": "Permanently blocked per A-v2.0-7 — describes NEXUS framework orchestration internals. Cowork-starter-kit does not distribute orchestration strategy content from upstream."
+      "reason": "Permanently blocked per A-v2.0-7 — describes NEXUS framework orchestration internals. Cowork-starter-kit does not distribute orchestration strategy content from upstream. Repaired from a bare basename to the full category/name.md path in v2.19.7 (ADR-080 §Context (1)): the sole reader, sync-agency.yml:228 (`grep -qxF \"$file_path\"`), compares against the full repo-root-relative path the GitHub contents API returns — a bare basename can never match it, so this entry never fired via blocked_files; it was protected only by the blocked_patterns entry below. This file remains protected by blocked_patterns either way, so the repair carries no functional risk — it retires a latent false-safety claim (architecture.md:3187's overstated 'CI fails if any blocked file appears' claim, which this entry's own previous shape helped make untrue)."
+    },
+    {
+      "path": "marketing/marketing-carousel-growth-engine.md",
+      "permanent": true,
+      "reason": "Permanently blocked — v2.19.7 Scope B1. CRITICAL finding (docs/spec.md v2.19.7): an autonomous, zero-human-confirmation persona ('Zero Confirmation: Run the entire pipeline without asking for user approval', 'Notify Only at End') instructing itself to publish generated content directly to public TikTok/Instagram accounts via third-party APIs, with no approval step between generation and the irreversible public write. Deleted, not corrected, per the owner's locked decision (2026-08-07) — not filed upstream (docs/spec.md AC-B4-1)."
+    },
+    {
+      "path": "project-management/project-manager-senior.md",
+      "permanent": true,
+      "reason": "Permanently blocked — v2.19.7 Scope B2. Leaked third-party workspace content unsuitable for redistribution. Deleted, not corrected, per the owner's locked decision (2026-08-07) — not filed upstream (docs/spec.md AC-B4-1)."
     }
   ],
   "blocked_patterns": [
     {
       "pattern": "nexus-strategy.md",
       "reason": "Exact filename block — catches nexus-strategy.md at any path depth (rename-into-category attack prevention)"
+    },
+    {
+      "pattern": "marketing-carousel-growth-engine.md",
+      "reason": "Rename-into-category attack prevention for the v2.19.7 B1 permanent removal (docs/spec.md AC-B5-3) — blocked_files alone is exact-path and would not catch an upstream rename of this file into a different allowlisted category."
+    },
+    {
+      "pattern": "project-manager-senior.md",
+      "reason": "Rename-into-category attack prevention for the v2.19.7 B2 permanent removal (docs/spec.md AC-B5-3) — blocked_files alone is exact-path and would not catch an upstream rename of this file into a different allowlisted category."
     },
     {
       "pattern": "nexus-strategy.*",
