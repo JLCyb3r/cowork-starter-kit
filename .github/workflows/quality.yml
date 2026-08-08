@@ -1662,6 +1662,88 @@ jobs:
         # scripts/verify-vendored-orphans.sh is the reverse direction — see that script's
         # header for the full rationale (docs/spec.md AC-C1-1/AC-C1-2, ADR-080 decision 2).
         run: bash scripts/verify-vendored-orphans.sh
+      - name: Assert vendored count == 108 and the two v2.19.7 removals are complete (AC-B5-1, AC-B5-4)
+        # [QA-5 fix] ADR-080's soundness argument has THREE legs: forward check (lock⊆disk,
+        # the step above at :1604) + orphan check (disk⊆lock, the step above at :1659) +
+        # count == 108. The third leg was never asserted in CI — this step is it.
+        #
+        # AC-B5-1's `== 108` is a CONSTANT that legitimately moves on the next upstream
+        # addition — bumping it is exactly the moment a re-introduction could hide inside
+        # a "the count changed for a good reason" commit. AC-B5-4's per-path assertions are
+        # what survive that: without them, deleting two DIFFERENT files satisfies every
+        # count-based/set-based check in this job (@architect's Phase-0.D Condition 3).
+        run: |
+          set -euo pipefail
+          FAIL=0
+
+          # --- AC-B5-1: count == 108, both sides. -type f, NEVER -name '*.md' (the
+          #     extension filter is blind to a non-.md orphan — same reason as AC-C1-1). ---
+          LOCK_COUNT=$(jq '.files | length' cowork.lock.json)
+          DISK_COUNT=$(find vendored/agency-agents -type f ! -name LICENSE | wc -l | tr -d ' ')
+          if [ "$LOCK_COUNT" -ne 108 ]; then
+            echo "::error::AC-B5-1: cowork.lock.json has ${LOCK_COUNT} files[] entries, expected 108."
+            FAIL=1
+          fi
+          if [ "$DISK_COUNT" -ne 108 ]; then
+            echo "::error::AC-B5-1: vendored/agency-agents has ${DISK_COUNT} files (excl. LICENSE), expected 108."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 0 ]; then
+            echo "AC-B5-1 PASSED — lock=${LOCK_COUNT} disk=${DISK_COUNT} (both 108)."
+          fi
+
+          # --- AC-B5-4: the two literal v2.19.7 permanent removals, named — not just
+          #     counted. Each of the 4 sub-assertions is independently checked and named
+          #     on failure, so a partial regression (e.g. re-added to disk but not the
+          #     lock) is diagnosable from the log alone. ---
+          REMOVED_PATHS=(
+            "marketing/marketing-carousel-growth-engine.md"
+            "project-management/project-manager-senior.md"
+          )
+          for path in "${REMOVED_PATHS[@]}"; do
+            filename=$(basename "$path")
+
+            # 1. absent from disk
+            if [ -f "vendored/agency-agents/${path}" ]; then
+              echo "::error::AC-B5-4: ${path} is PRESENT on disk — expected absent (v2.19.7 permanent removal)."
+              FAIL=1
+            fi
+
+            # 2. absent from the lock
+            if jq -e --arg p "$path" '.files[] | select(.path == $p)' cowork.lock.json >/dev/null 2>&1; then
+              echo "::error::AC-B5-4: ${path} is PRESENT in cowork.lock.json — expected absent."
+              FAIL=1
+            fi
+
+            # 3. present in blocked_files (full path, exact match — mirrors
+            #    sync-agency.yml:228's grep -qxF "$file_path" against the same field)
+            if ! jq -r '.blocked_files[].path' .cowork-allowlist.json | grep -qxF "$path"; then
+              echo "::error::AC-B5-4: ${path} is NOT in .cowork-allowlist.json blocked_files[].path (full-path form)."
+              FAIL=1
+            fi
+
+            # 4. covered by blocked_patterns (basename match — mirrors
+            #    sync-agency.yml:233-244's per-pattern glob-to-regex match against filename)
+            PATTERN_COVERED=false
+            while IFS= read -r pattern; do
+              if echo "$filename" | grep -qiE "^$(echo "$pattern" | sed 's/\*/.*/')\$"; then
+                PATTERN_COVERED=true
+                break
+              fi
+            done < <(jq -r '.blocked_patterns[].pattern' .cowork-allowlist.json)
+            if [ "$PATTERN_COVERED" != "true" ]; then
+              echo "::error::AC-B5-4: ${filename} is NOT covered by any .cowork-allowlist.json blocked_patterns[] entry."
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -eq 0 ]; then
+            echo "AC-B5-4 PASSED — both v2.19.7 removals absent from disk+lock, present in blocked_files, covered by blocked_patterns."
+          fi
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "::error::AC-B5-1/AC-B5-4 check FAILED — see errors above."
+            exit 1
+          fi
 
   vendored-removal-ledger:
     name: Vendored Removal Ledger (ADR-080)

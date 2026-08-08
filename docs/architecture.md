@@ -13384,12 +13384,35 @@ in v2.19.7 scope.
   re-enters the same content as an *addition*, with the ledger, the orphan check and `AC-B5-4` all
   silent. Blocking on the two deleted files' `content_sha256` would survive any rename; the field
   already exists on every lock entry.
+- **REPAIRED classification (v2.19.7 QA-1, declined for this cycle on the same S11 grounds).**
+  `scripts/verify-lock-removals.sh`'s `AC-B5-8` shrink check does a literal path-string diff on
+  `blocked_files[].path` across two lock/allowlist revisions, with no concept of "this entry's
+  path string changed but the same file is still protected." v2.19.7 itself hit this: repairing
+  `nexus-strategy.md`'s `blocked_files` entry from a bare basename to its full
+  `marketing/nexus-strategy.md` path (§Context (1)) reads to the ledger as a removal, because the
+  literal string `"nexus-strategy.md"` really is absent from the new revision — a **false positive
+  against `AC-B5-8`'s intent** (no protection lost — the file stays blocked by both the repaired
+  `blocked_files` entry and the untouched `blocked_patterns` entry) but a **true positive against
+  the check as built** (see `docs/risk-register.md` `v2.19.7-LEDGER-FP` for the accepted-risk
+  record of this exact, already-observed instance). A **REPAIRED** classification — symmetric with
+  the existing lock-side **MOVED** classification (`AC-B5-9`): where an old `blocked_files[].path`
+  is absent from the new revision but a *different* current entry's basename/pattern still covers
+  the same underlying file, classify it REPAIRED rather than SHRUNK — would close this class going
+  forward. **Declined now, for this cycle, on the same reasoning as S11:** adding a third
+  classification dimension to a removal-detection control introduced in this same cycle raises the
+  odds the control itself is wrong, which is the exact risk this cycle exists to reduce. The
+  residual is bounded and already precedented: a `blocked_files` path repair remains a reviewable,
+  visible red check on its own introducing PR, not a silent pass.
 - **Concrete revisit triggers:** (a) any `$schema_version` bump — currently forbidden by
   `AC-SYNC-5`, which is precisely why the unification was not done now; (b) `blocked_files`
   exceeding roughly ten entries, the point at which double-entry bookkeeping starts generating its
   own drift; (c) upstream restructuring that moves or renames category directories; (d) **the first
   sync in which a basename-changing rename is observed** — that is the trigger to implement S11's
-  content-hash blocking, and it arms no later than the 2026-09-01 cron.
+  content-hash blocking, and it arms no later than the 2026-09-01 cron; (e) **the second time a
+  `blocked_files` path repair (not a removal) trips `AC-B5-8`** — that is the trigger to implement
+  REPAIRED classification above; a single instance (v2.19.7's own) is handled by the accepted-risk
+  record instead of new control logic, but a second instance would mean this is a recurring shape,
+  not a one-off.
 - **Risk knowingly accepted:** three risks, named rather than bundled. (i) Two lists are kept in
   sync by hand, and a future removal that updates only `blocked_patterns` is not caught by the
   ledger, which checks `blocked_files` only — accepted because the alternative is a schema bump

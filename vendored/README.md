@@ -51,8 +51,13 @@ findings from a maintainer read of the vendored tree, not content from
 regeneration of the sections above this marker.
 
 All 110 files pinned at the time of this read (`pinned_commit_sha` above) were read in
-full for this cycle. Two were permanently removed (below); five findings remain in the
-108 files that ship today. None of this is an attack; each finding is a sincere upstream
+full for this cycle. Two were permanently removed (below); **4 findings (H-1, H-2, H-4,
+H-5) remain disclosed** in the 108 files that ship today. Counted by flagged *location*
+rather than by finding ID — H-2's 2 corrupted files counted separately, H-5's 7-file
+fabricated-persona group counted as the single item it was found and filed as — that
+same disclosure covers **5 flagged locations**. Both numbers are correct; they count
+different things, and both are used below so neither reads as a typo of the other. None
+of this is an attack; each finding is a sincere upstream
 design choice or an inherited defect, consistent with how the rest of this corpus reads —
 recorded here because a kit whose pitch is "unvetted third-party content is a real risk"
 should not itself ship an unread third-party tree. Findings are disclosed rather than
@@ -74,7 +79,7 @@ MIT's AS-IS / no-warranty terms already govern this content regardless of this s
 Neither is filed upstream — the owner's decision here was deletion, not correction
 (`docs/spec.md` v2.19.7 §Settled inputs).
 
-### Disclosed findings (5, in the 108 files that ship)
+### Disclosed findings (4 findings across 5 flagged files, in the 108 that ship)
 
 **H-1 — a substring deny-list gates a Python `eval()` call.**
 `vendored/agency-agents/engineering/engineering-ai-data-remediation-engineer.md:175-180`

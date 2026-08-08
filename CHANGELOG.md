@@ -32,12 +32,22 @@ declared `.cowork-allowlist.json` `blocked_files` entry — both are visibility 
 merge-blocking ones, until branch protection requires them (an owner-side decision, not made
 here). The two new permanent blocks use the full `category/name.md` path form plus a matching
 basename pattern; the pre-existing `nexus-strategy.md` entry, which had never actually fired
-via its exact-path list (only its basename pattern caught it), is repaired the same way. Five
-remaining HIGH findings are disclosed, not silently patched, in `vendored/README.md`, and four
+via its exact-path list (only its basename pattern caught it), is repaired the same way. 4
+remaining HIGH findings (across 5 flagged files — H-2 covers 2 files, H-5 covers a 7-file
+group counted as one) are disclosed, not silently patched, in `vendored/README.md`, and four
 fixes are prepared for filing upstream. A LICENSE-hash-change check that used to only annotate
 now fails the sync job closed; two `$GITHUB_OUTPUT` writes carrying upstream-controlled
 filenames now use the heredoc-delimited form already used elsewhere in the same workflow,
 closing an output-injection path an embedded newline could otherwise forge.
+
+**Known, accepted CI signal on this PR:** the `vendored-removal-ledger` job (added this cycle)
+is expected to run RED once, on this PR's own introducing commit — repairing the
+`nexus-strategy.md` `blocked_files` path (above) reads to the ledger's literal path-string
+check as a removal. No protection is lost (the file stays blocked by the repaired full path
+*and* its unchanged basename pattern); this is a false positive against the check's *intent*,
+not a real regression. See `docs/risk-register.md` `v2.19.7-LEDGER-FP` for the accepted-risk
+record and `docs/architecture.md` ADR-080 §Maturation Path for the REPAIRED-classification
+follow-up this could motivate in a future cycle.
 
 ## [2.19.6] - 2026-08-07
 
