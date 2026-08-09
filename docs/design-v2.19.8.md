@@ -405,6 +405,7 @@ Staged implementation files require Phase 3 (User Gate) APPROVED.
 | `AC-B5-TIER` positive leg | projection of the **prose-only** edit | `e973f987…` — **identical to base** | The Phase-4 edit as planned does not move the projection. The Tier-B claim is demonstrated under the actual change, not argued. |
 | `AC-B5-TIER` **firing** NC | projection of a fixture with `marketing/nexus-strategy.md` → `.mc` | `5fb8ed0b…` — **different** | A single character in one `blocked_files[].path` moves the sha256. The falsifier can fail. |
 | `AC-B-APPEND` | `git diff --numstat` over the 7 protected files | `492 0` (`docs/spec.md`), `76 0` (`docs/architecture.md`), no other rows | **Zero deletions** across the protected set at Phase 1. |
+| ShellCheck clean | `shellcheck scripts/verify-ledger-annotations.sh` | **exit 0**, 0 findings | First run reported 8 × `SC2295` (info) on the `${US}` field splitting. Fixed at Phase 1 rather than handed to @dev: this repo's bar is *ShellCheck 0 findings* (v2.19.7 precedent), and a tolerated info is how a real finding hides. Verifier behaviour re-confirmed byte-for-byte identical after the fix — same exit 1, same 13/6 split, same six IDs. |
 
 **Expected `AC-B5-TIER` values, for @dev and @qa — do not recompute the base from memory.**
 Base (`c8342d7`) and required head value: `e973f98739d46e3d42b8cbb5567872794d270276eff6f77f7ac547972f1ff44d`.
