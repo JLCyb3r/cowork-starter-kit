@@ -7621,3 +7621,83 @@ the rest of the line byte-identical. This is the only line in the repository mat
 
 AC-OT3-2-DISPOSITION: INDETERMINATE
 
+---
+
+## Phase-6 addendum — 2026-08-09 (S7/S8/S9, @security)
+
+**Append-only. The three sections below correct narrative/rationale/NC text elsewhere in this
+document; none of the text they correct is edited in place — see the cited line ranges for the
+original, byte-unchanged record. This addendum is itself outside the LA-09 anchor
+(`^AC-OT3-2-DISPOSITION: `), which continues to match exactly the token line above and nothing
+else.**
+
+### S7 (WARNING) — `AC-B-VERIFY-3`'s binding form no longer matches shipped code
+
+`AC-B-VERIFY-3` (the bullet list beginning *"Token available ⇒ the probe MUST complete"*, original
+text at what was `:7267-7269` at Phase 1/3, and the *"404 is deliberately EXECUTED, not FAILED"*
+restatement immediately below it, originally `:7272-7278`) said `HTTP 404`, unqualified, is always
+`EXECUTED`. **That was true of the code at Phase 1/3 and is false of the code shipped at Phase 6.**
+
+Phase 6 S3 tightened the live probe's 404 matcher: only GitHub's documented `Branch not protected`
+message is `EXECUTED` (a meaningful negative answer); `Branch not found` (also HTTP 404 — a
+different answer wearing the same status code, confirmed live against a deliberately wrong branch
+name) now falls through to `FAILED`, alongside every other could-not-ask case
+(`401`/`403`/`5xx`/transport error/`gh` missing/unparseable body). Full reasoning, the live
+counter-example, and the stated observational limit are in `docs/design-v2.19.8.md`'s own Phase-6
+addendum under §C.3 (S23 refinement) and the script's SECTION 2 header comment — not repeated here.
+
+**Binding form, corrected (supersedes the unqualified `HTTP 404` bullets above for all purposes
+going forward):**
+
+- **Token available** ⇒ the probe MUST complete. `2xx` with a parseable JSON object, or `HTTP 404`
+  carrying GitHub's `Branch not protected` message specifically, are both **EXECUTED**. Anything
+  else — `401`/`403`/`5xx`, transport error, `gh` absent, unparseable body, **and `HTTP 404`
+  carrying any other message (e.g. `Branch not found`)** — is **FAILED**, exit 1.
+
+**The concrete risk this closes:** the unqualified original, read on its own, would lead a future
+maintainer to "restore conformance" by reverting the S3 tightening — reopening the exact laundering
+path (a misaimed probe printing a false recorded-negative) this cycle's own thesis exists to close.
+The addendum, not the original bullets, is the binding text from this point forward.
+
+### S8 (INFO) — `AC-B-VERIFY-CI-PERMS`'s justifying narrative is stale
+
+The rationale at what was `:7336`, *"This job would be the **only** one in the file handing
+`GH_TOKEN` to a script"*, was true when written and is false after Phase-6 S1 — that same job no
+longer hands `GH_TOKEN` to anything; the `env:` block was removed entirely so SECTION 2 takes its
+`SKIPPED (no token)` path in CI. **The AC's actual requirement is unaffected and still passes**:
+`permissions: { contents: read }` is still declared on the job, and `quality.yml`'s `permissions:`
+block count is still **3 → 4** with this job's addition — re-verified this session:
+`grep -c 'permissions:' .github/workflows/quality.yml` → `4`. Only the *reason given* for requiring
+the declaration was tied to a token hand-off that no longer happens; the declaration itself remains
+the correct least-privilege default regardless of whether this job ever holds a token, which is the
+stronger and now-accurate justification going forward.
+
+### S9 (INFO, pre-existing) — `AC-B-VERIFY-CI-PERMS`'s own NC could not check what it claimed
+
+The NC at what was `:7342-7343`, `` `grep -A2 'ledger-annotations:' .github/workflows/quality.yml`
+shows the block ``, does not show the block. Verified this session:
+
+```
+$ grep -A2 'ledger-annotations:' .github/workflows/quality.yml
+  ledger-annotations:
+    name: Ledger Annotations (v2.19.8)
+    runs-on: ubuntu-latest
+$ grep -A3 'ledger-annotations:' .github/workflows/quality.yml
+  ...
+    permissions:
+$ grep -A4 'ledger-annotations:' .github/workflows/quality.yml
+  ...
+    permissions:
+      contents: read  # S24 — least privilege; the script only ever READS this repo's API
+```
+
+`-A2` stops at `runs-on:`, one line short of even the `permissions:` key and three lines short of
+its `contents: read` value — a check that cannot check what it claims, the exact pattern this
+repository's own `docs/patterns.md` has promoted to BINDING. Predates the Phase-6 fix pass; not a
+regression, but left uncorrected it is a known-broken control sitting inside the cycle whose thesis
+is that broken controls get named and fixed, not carried.
+
+**Corrected NC, verified against the real file this session:** `grep -A4 'ledger-annotations:'
+.github/workflows/quality.yml` shows both the `permissions:` key and its `contents: read` value —
+the actual block — and the file's `permissions:` count is `4` (re-run above, S8).
+
