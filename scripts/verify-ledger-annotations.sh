@@ -40,7 +40,12 @@
 #     content under an untrusted-data boundary (AC-A4); putting any part of that boundary
 #     inside the verification harness would place untrusted input inside the control that
 #     guards it.
-#     CHECKABLE:  grep -nE '(curl|wget|nc |ht''tps?://)' on this file returns NOTHING.
+#     CHECKABLE:  the exact egress-scan command is in docs/design-v2.19.8.md §C.4 and is
+#                 DELIBERATELY NOT REPRODUCED HERE. Writing the pattern into this file
+#                 makes the file match its own scan, and a check that matches itself
+#                 cannot distinguish a real hit from its own documentation — which is the
+#                 same "cannot fail / cannot cleanly pass" defect family this script
+#                 exists to catch. Run it from §C.4; the pass condition is ZERO output.
 #
 # (4) NO BARE LINE NUMBERS IN ASSERTIONS. Not one assertion below keys on a line number;
 #     every one keys on content. A verifier that committed the defect it detects would be
@@ -84,8 +89,16 @@ fi
 
 FAIL=0
 CHECKED=0
-FAILED=0
+FAILED=0        # STATIC-ANCHOR failures only. Never incremented by SECTION 2.
+PROBE_FAILED=0  # SECTION 2 failures only.
 UTC_NOW="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+# UNITS ARE DECLARED, NOT INFERRED. CHECKED counts STATIC ANCHORS (SECTION 1) and nothing
+# else; the live probe is a separate population and is counted separately. This repo has
+# been bitten four times in one cycle by a count whose unit was left implicit — once
+# inside the very document arguing for counting precision (docs/patterns.md WATCH item).
+# An earlier revision of THIS script reported "7 of 19 static anchors" after a probe
+# failure, when only 6 static anchors had failed. Same defect, caught by running it.
 
 # ---------------------------------------------------------------------------
 # SECTION 1 — STATIC ANCHORS (LA-01 .. LA-10b, 19 total)
@@ -290,7 +303,7 @@ else
     echo "        silent pass. Provide a token to make the probe mandatory."
   elif ! command -v gh >/dev/null 2>&1; then
     echo "::error::verify-ledger-annotations: LP-01 FAILED at ${UTC_NOW} — a token is available but 'gh' is not on PATH, so the probe could not be attempted." >&2
-    FAIL=1; FAILED=$((FAILED + 1))
+    FAIL=1; PROBE_FAILED=$((PROBE_FAILED + 1))
   else
     # LP-01 — currency evidence for docs/risk-register.md's v2.19.5-CODEOWNERS-1 row,
     # whose stated closing condition is `require_code_owner_reviews` confirmed enabled.
@@ -308,7 +321,7 @@ else
         printf '%s\n' "$PROBE_OUT" | sed 's/^/    /'
       else
         echo "::error::verify-ledger-annotations: LP-01 FAILED at ${UTC_NOW} — probe returned success but the body is not a JSON object. Could not ask, rather than asked-and-answered." >&2
-        FAIL=1; FAILED=$((FAILED + 1))
+        FAIL=1; PROBE_FAILED=$((PROBE_FAILED + 1))
       fi
     elif grep -q 'HTTP 404' "$PROBE_ERR" 2>/dev/null; then
       echo "  LP-01 EXECUTED at ${UTC_NOW} — HTTP 404: branch protection is NOT configured on main."
@@ -317,7 +330,7 @@ else
     else
       echo "::error::verify-ledger-annotations: LP-01 FAILED at ${UTC_NOW} — a token was available but the probe did not complete (rc=${PROBE_RC}). This is 'could not ask', not 'the answer was no'." >&2
       sed 's/^/    /' "$PROBE_ERR" >&2 || true
-      FAIL=1; FAILED=$((FAILED + 1))
+      FAIL=1; PROBE_FAILED=$((PROBE_FAILED + 1))
     fi
     rm -f "$PROBE_ERR"
   fi
@@ -326,9 +339,10 @@ fi
 # ---------------------------------------------------------------------------
 
 if [ "$FAIL" -ne 0 ]; then
-  echo "::error::verify-ledger-annotations: FAILED — ${FAILED} of ${CHECKED} static anchor(s), plus any probe failure above, did not resolve. Each is named with the file it was searched in." >&2
+  # Both units are named on the same line, and neither is folded into the other.
+  echo "::error::verify-ledger-annotations: FAILED — ${FAILED} of ${CHECKED} STATIC ANCHORS did not resolve, and ${PROBE_FAILED} LIVE PROBE(S) failed. These are two separate populations; the probe is not one of the ${CHECKED}. Each failure is named above with the file it was searched in." >&2
   exit 1
 fi
 
-echo "verify-ledger-annotations: PASS — ${CHECKED} static anchor(s) resolved; SECTION 2 completed at ${UTC_NOW}."
+echo "verify-ledger-annotations: PASS — ${CHECKED} of ${CHECKED} static anchors resolved; 0 live-probe failures; SECTION 2 completed at ${UTC_NOW}."
 exit 0

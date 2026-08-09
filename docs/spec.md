@@ -7256,14 +7256,67 @@ string, every citation in that string is repaired, not only the one that prompte
       never a bare "verification failed."
     - **`AC-B-VERIFY-2` (zero-scan guard, house pattern):** a run in which `CHECKED == 0` exits 1.
       A check that never checked anything is not a passing check.
-    - **`AC-B-VERIFY-3` (live-probe segregation, from `B-1`):** live-API probes run in their own
-      section with pass condition ***"probe executed, output recorded with a UTC timestamp"*** —
-      **never** "reproduces." Live API state is not a reproducible fixture. A probe section failure
-      means the probe did not execute, not that its value changed.
-    - **`AC-B-VERIFY-4` (hygiene, @security S15):** null-delimited iteration per ADR-084; **no
-      third-party network calls anywhere in the verifier.** Its only egress is `gh` against this
-      repository's own API. This keeps the Scope A/E third-party boundary out of the verification
-      harness entirely.
+    - **`AC-B-VERIFY-3` (live-probe segregation, from `B-1`) — [P3] REWRITTEN per @security S23,
+      because the `[P1]` form had NO REACHABLE FAILURE STATE.** Its only defined failure was "the
+      probe did not execute," and the design excused exactly that whenever the token was absent —
+      a section that cannot fail, inside the script written to catch checks that cannot fail.
+      Binding form:
+      - **No token available** ⇒ `SKIPPED (no token)`, printed loudly, **build passes**. A
+        static-anchor regression is what this script exists for; making it hostage to token
+        availability lets the unimportant half veto the important half.
+      - **Token available** ⇒ the probe MUST complete. `2xx` with a parseable JSON object, or
+        `HTTP 404`, are both **EXECUTED**. Anything else — `401`/`403`/`5xx`, transport error,
+        `gh` absent, unparseable body — is **FAILED**, exit 1.
+      - Pass condition remains ***"probe executed, output recorded with a UTC timestamp"***,
+        **never** "reproduces." Live API state is not a reproducible fixture.
+      - **`404` is deliberately EXECUTED, not FAILED — a narrowing of S23, flagged for @security
+        at Phase 6 rather than applied silently.** This endpoint 404s when branch protection is
+        simply not configured, which is the API healthily answering *"no protection"* — the exact
+        currency evidence `v2.19.5-CODEOWNERS-1` watches for, and a state `OT-7` step 2 could
+        legitimately produce. Failing on it would break the probe precisely when it reports the
+        answer being watched for. The preserved distinction is **"the API answered, and the answer
+        was no"** vs **"we could not ask."**
+      - **NC (firing, mandatory):** with a syntactically valid but rejected token
+        (`GH_TOKEN=ghp_0000000000000000000000000000000000AB`) the run MUST exit 1 with
+        `LP-01 FAILED`. Demonstrated at `[P3]`: `gh: Bad credentials (HTTP 401)`.
+    - **`AC-B-VERIFY-4` (hygiene, @security S15) — [P3] made MECHANICALLY CHECKABLE.** @security
+      could not audit either half at Phase 2 because the file had been deleted; both now have a
+      third-party-runnable command with a stated pass condition:
+      - **Null-delimited iteration** per ADR-084. Check:
+        `grep -nE 'while[^|]*read' scripts/verify-ledger-annotations.sh` returns exactly one
+        non-comment line, `while IFS= read -r -d '' RECORD; do`, paired with a `printf '%s\0'`
+        producer.
+      - **Zero third-party egress.** Check:
+        `grep -nE '(curl|wget|nc |https?://)' scripts/verify-ledger-annotations.sh` → **zero
+        output**. The only egress is `gh` against this repository's own API. **The pattern is
+        deliberately NOT written into the script**: the first reconstruction documented it inline
+        and the header line matched its own scan, so the check could not cleanly pass. A check that
+        matches itself cannot distinguish a real hit from its own documentation.
+    - **[P3] `AC-B-VERIFY-5` (scope visibility — LOAD-BEARING, do not relax).** Every anchor names
+      **the file it searches**. A repo-wide `grep` is forbidden. Concrete attack: this repository
+      vendors **108 third-party files** under `vendored/agency-agents/`, refreshed by the
+      `sync-agency` cron — a repo-wide anchor could be satisfied by a decoy string planted upstream,
+      turning a ledger anchor green without anyone touching the ledger. Per-file scoping makes the
+      vendored tree structurally incapable of satisfying any anchor, because no anchor names a path
+      inside it. Reuses The-Council ADR-198 §Decision 2.
+      **NC:** every `grep -cE` in the script passes an explicit `"$TARGET"`; the script contains no
+      `grep -r` and no unscoped `grep`.
+    - **[P3] `AC-B-VERIFY-6` (conjunctive anchors, @security S21).** An anchor that tracks two
+      co-located facts MUST require **both**. `LA-05a` previously matched only the comment
+      `Check blocked files`, not the `grep -qxF "$file_path"` reader it claimed to track — replace
+      the reader, keep the comment, and the anchor stayed GREEN while its claim went FALSE. An
+      anchor that survives the deletion of the thing it tracks is not an anchor.
+      **NC (firing, demonstrated at `[P3]`):** against a fixture with the reader line deleted and
+      the comment retained, `LA-05a` reports
+      `FAILED — conjunct did not resolve … Expected >=1 match for /grep -qxF "\$file_path"/, got 0`.
+      The pre-S21 form returns PASS against that same fixture.
+    - **[P3] `AC-B-VERIFY-7` (units are declared, never inferred).** The static-anchor population
+      and the live-probe population are counted by **separate counters** and both are named in the
+      summary line. Found by running it: the first reconstruction reported `7 of 19 static anchors`
+      after a probe failure when only **6** static anchors had failed. This is the
+      `docs/patterns.md` units-ambiguity WATCH item, self-inflicted and self-caught.
+      **NC:** a run with a rejected token prints `… 6 of 19 STATIC ANCHORS … and 1 LIVE PROBE(S)
+      failed. These are two separate populations; the probe is not one of the 19.`
     - **[P1] `AC-B-VERIFY-CI`:** the script is invoked by a new `ledger-annotations` job in
       `.github/workflows/quality.yml`, modeled on the existing `vendored-removal-ledger` job.
       Rationale: the named defect class is **citations rotting over time**. A verifier that runs
@@ -7277,6 +7330,21 @@ string, every citation in that string is repaired, not only the one that prompte
         possible if Phase 1 wires `scripts/verify-ledger-annotations.sh` into `quality.yml` — that
         changes the surface COUNT, not the TIER."* `.github/workflows/` is a Tier B surface. No GCS
         is incurred. `AC-B-CODEOWNERS` still forbids the CODEOWNERS row.
+      - **[P3] `AC-B-VERIFY-CI-PERMS` (@security S24, binding):** the job MUST declare
+        `permissions:` / `contents: read`. Verified rather than assumed: `quality.yml` has
+        **3** `permissions:` blocks today, all `contents: read`, all on jobs that are read-only and
+        pass no token to a script. This job would be the **only** one in the file handing `GH_TOKEN`
+        to a script and — without the block — the only token-bearing job with no declaration. The
+        live repo default is `read`, but that is a **Settings toggle the owner can flip without
+        touching this diff**, so relying on it makes the job's privilege depend on state outside the
+        file. Declaring it converts a behavioural assumption into a structural one, the same upgrade
+        ADR-079 made for `release-assets.yml`.
+        **NC:** `grep -A2 'ledger-annotations:' .github/workflows/quality.yml` shows the block, and
+        the file's `permissions:` count goes **3 → 4**.
+      - **[P3] Job-count correction:** `quality.yml` currently has **32** jobs
+        (`grep -cE '^  [a-z][a-z0-9-]*:$'`), not the 30 the `[P1]` design doc stated. This job makes
+        **33**. Corrected because a wrong count inside a design doc is the defect this cycle exists
+        to stop.
 11. **`AC-B-APPEND` — append-only deletion check (C-3).** `git diff --numstat <base>..HEAD` reports
     **0 deleted lines** for every file in the protected set:
     `docs/risk-register.md`, `docs/retro.md`, `docs/security-audit-v2.19.6.md`,
@@ -7318,11 +7386,25 @@ Record-side only. **No live GitHub Release write of any kind, and no tag push, f
      `4bfc704` (`git show 4bfc704:VERSION` → `1.0.0`) and `66c09af` (`git show 66c09af:VERSION` → `1.1.1`);
    - a `## Release surface` subsection in the CHANGELOG **preamble** (above the first version
      section) stating the repo-wide invariant and enumerating its three exceptions, so a reader who
-     never scrolls to line 1069 still sees the complete, honest picture;
+     never scrolls to the `## [1.1.1]` section still sees the complete, honest picture;
    - `docs/risk-register.md`'s `AC-PUB-10` row moves from `OPEN` to
      `CLOSED (disposition recorded, v2.19.8)`.
+   - **[P3, BINDING] `AC-C2-NOCOUNT` — the preamble note MUST NOT contain a population count.**
+     Name **only** the three exceptions (`1.0.0`, `1.1.1`, `2.0.1`) and state the invariant
+     qualitatively. Two independent reasons, either sufficient:
+     **(a)** the count already went wrong twice inside this cycle's own design doc (`47 versions`,
+     `44/47`; the real population is 50 sections / 49 tags / 48 agree / 51 union / 3 mismatches),
+     so shipping one into the **public** CHANGELOG would plant a fresh off-by-N citation defect in
+     the document written to end them; **(b)** any population count is **stale on the next
+     release** — `50` becomes `51` at v2.19.9 with nobody touching the preamble, and `CHANGELOG.md`
+     is a growing file, which is exactly what the content-anchoring rule forbids. The three
+     exception IDs are stable by construction: they can only change through a deliberate tagging
+     act that would edit this note anyway.
    - **NC:** `grep -c '^## Release surface' CHANGELOG.md` → 1; and
      `grep -c 'never tagged, never released' CHANGELOG.md` → 2 (one per version).
+   - **NC for `AC-C2-NOCOUNT` (firing):** within the `## Release surface` preamble block,
+     `grep -cE '\b(4[0-9]|5[0-9])\b'` → **0**. No two-digit population figure in the forties or
+     fifties may appear in that block. Neither `LA-10a` nor `LA-10b` anchors a count, deliberately.
 3. **[P1] `AC-C3` — no-live-write boundary, extended to all three tags (@security S11).** The
    Phase-0 NC covered `v2.0.1` only, which was correct for a scope in which `v1.0.0`/`v1.1.1` were
    undecided; `AC-C2` decides them, so the boundary must cover them. Assert, base and head:
@@ -7495,10 +7577,16 @@ without the absolute path.
 - **[CONFIRMED]** `AC-PUB-10`'s two CHANGELOG citations are stale — re-verified at `c8342d7`:
   real positions 1116 and 1069.
 - **[CONFIRMED, `[P1]`]** `.cowork-allowlist.json` carries **two** stale citations, not one.
-- **[CONFIRMED, `[P1]`]** Repo-wide set difference between CHANGELOG sections and remote tags is
-  **exactly three items** — `1.0.0` and `1.1.1` (section, no tag) and `2.0.1` (tag, no section).
-  All 44 other versions have both. Computed with `comm` over
+- **[CONFIRMED, `[P1]`, POPULATION FIGURES CORRECTED AT `[P3]`]** Repo-wide set difference between
+  CHANGELOG sections and remote tags is **exactly three items** — `1.0.0` and `1.1.1`
+  (section, no tag) and `2.0.1` (tag, no section). Computed with `comm` over
   `grep -oE '^## \[[0-9][0-9.]*\]' CHANGELOG.md` and `git ls-remote --tags origin`.
+  **Full population, all six cells re-derived: 50 sections / 49 tags / 48 agree / 2 section-only /
+  1 tag-only / 51 union.** The `[P1]` text said "all 44 other versions have both" — wrong; the
+  agreeing count is **48**. The 3-mismatch figure reproduces exactly and is the only figure
+  Decision `AC-C2` rests on. Recorded as a correction rather than silently replaced, because a
+  population count was the thing that drifted and `AC-C2-NOCOUNT` now forbids one reaching the
+  public CHANGELOG for exactly that reason.
 - **[CONFIRMED, `[P1]`]** The commits for both unpublished versions exist and are unambiguous:
   `git show 4bfc704:VERSION` → `1.0.0`; `git show 66c09af:VERSION` → `1.1.1`. Retroactive tagging is
   technically **possible** — it is rejected on grounds, not on impossibility.

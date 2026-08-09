@@ -193,9 +193,40 @@ Computed at `c8342d7`, `comm` over `grep -oE '^## \[[0-9][0-9.]*\]' CHANGELOG.md
 == remote tags with NO CHANGELOG section ==   2.0.1
 ```
 
-**Exactly three mismatches across 47 versions.** Every other version has a CHANGELOG section, a remote tag, *and* a GitHub Release. `gh release list` confirms the Releases page begins at **v1.1.0** (2026-04-16) — v1.0.0 (2026-04-15) predates the first Release by a day, and v1.1.1 shipped the same day as v1.1.0 and simply never got its own tag.
+**[CORRECTED at the Phase-3 gate — the previous revision said "three mismatches across 47 versions" and "44/47", and neither figure was re-derived.]** Full population, every cell computed this session with `comm`:
 
-**So this repo's convention is a 1:1 CHANGELOG↔tag↔Release invariant, satisfied 44/47 times and never written down.** That is the real finding, and it reframes the question. The defect is not "two versions lack tags." The defect is **an unstated invariant with three silent violations** — which is precisely this cycle's named defect class (an authoritative artifact asserting something its own contents contradict), sitting in the version history rather than in the ledger.
+| Cell | Count |
+|---|---|
+| CHANGELOG version sections | **50** |
+| Remote tags | **49** |
+| **Agree** (section AND tag) | **48** |
+| Section-only (no tag) | **2** — `1.0.0`, `1.1.1` |
+| Tag-only (no section) | **1** — `2.0.1` |
+| Distinct versions (union) | **51** |
+| **Mismatches** | **3** |
+
+The **3-mismatch figure reproduces exactly** and Decision D2 rests only on it. The population figures do not: `47` was neither the section count (50) nor the agreeing count (48) — it appears to have been derived from an arithmetic that was never run. @security's correction offered `47` as "the count that agree"; that is **48**. Both figures were wrong, in different directions, which is why this table computes all six cells rather than asserting a headline.
+
+`gh release list` confirms the Releases page begins at **v1.1.0** (2026-04-16) — `v1.0.0` (2026-04-15) predates the first Release by a day, and `v1.1.1` shipped the same day as `v1.1.0` and simply never got its own tag.
+
+**So this repo observes a 1:1 CHANGELOG↔tag↔Release invariant, satisfied 48 of 51 times and never written down.** That reframes the question. The defect is not "two versions lack tags." It is **an unstated invariant with three silent violations** — this cycle's named defect class (an authoritative artifact asserting something its own contents contradict), sitting in the version history rather than in the ledger.
+
+> **BINDING ON `AC-C2`, and this is the load-bearing consequence of the correction.**
+> The CHANGELOG preamble note **MUST NOT contain a population count.** Name **only the three
+> exceptions** — `1.0.0`, `1.1.1`, `2.0.1` — and state the invariant qualitatively.
+>
+> Two independent reasons, either sufficient:
+> 1. **It already went wrong twice.** `47` and `44/47` were both wrong in a design doc that
+>    two reviewers read. Writing a population count into the **public CHANGELOG** would ship
+>    a fresh off-by-N citation defect into the very document meant to end them.
+> 2. **Any population count is stale on the next release.** `50` becomes `51` at v2.19.9
+>    without anyone touching the preamble. A number that rots by design is precisely what
+>    `LA-05c` exists to forbid, and the preamble is a **growing file**. The three exception
+>    IDs are stable: they can only change if someone tags one of them, which is a deliberate
+>    act that would come with editing this note anyway.
+>
+> `LA-10a` anchors `^## Release surface` and `LA-10b` requires exactly 2 occurrences of
+> `never tagged, never released` — neither anchors a count, deliberately.
 
 Both commits exist and are unambiguous: `git show 4bfc704:VERSION` → `1.0.0`; `git show 66c09af:VERSION` → `1.1.1`. **Retroactive tagging is therefore genuinely possible.** It is rejected on grounds, not on impossibility — these are two real options.
 
@@ -252,62 +283,143 @@ One re-runnable, content-anchored command per Scope B annotation. Exit 0 iff eve
 
 **What it is NOT:** it does not check that an annotation says something *true*. It checks that every anchor an annotation cites still **resolves to the thing it names**. That is the rot this cycle exists to stop, and overclaiming the script's reach would be the exact false-control shape the repo has been closing for three cycles.
 
-### C.2 The anchor table — every row run against the real file at `c8342d7`
+### C.2 The anchor table — ALL 19, one row per script record
 
-| ID | Annotation | Anchor (file searched + pattern) | Live result | Status |
-|---|---|---|---|---|
-| `LA-01` | `CF-v2.19.6-A` relocated | `docs/risk-register.md` ← `CF-v2.19.6-A` | 1 match (line 14) | PASS |
-| `LA-02a` | `CF-v2.19.5-B` closure cmd | `scripts/verify-vendored-orphans.sh` exists | file present | PASS |
-| `LA-02b` | `CF-v2.19.5-D` closure cmd | `.github/workflows/sync-agency.yml` ← `exit 1` | matches present | PASS |
-| `LA-02c` | `CF-v2.19.5-E` closure cmd | `.github/workflows/sync-agency.yml` ← `flagged_files<<` | matches present | PASS |
-| `LA-03` | `S-A3`/`S-A9`/`S-A10` real location | `docs/security-audit-v2.19.6.md` ← `S-A3\|S-A9\|S-A10` | 6 matches (15, 21, 22, 202, 327, 348) | PASS |
-| `LA-04a` | `AC-PUB-10` v1.0.0 anchor | `CHANGELOG.md` ← `^## \[1\.0\.0\]` | **1116** (spec said 1038) | PASS — spec corrected |
-| `LA-04b` | `AC-PUB-10` v1.1.1 anchor | `CHANGELOG.md` ← `^## \[1\.1\.1\]` | **1069** (spec said 991) | PASS — spec corrected |
-| `LA-05a` | allowlist reader anchor | `.github/workflows/sync-agency.yml` ← `Check blocked files` | **237** (string said 228) | PASS — **defect found** |
-| `LA-05b` | allowlist false-claim anchor | `docs/architecture.md` ← `CI fails if any blocked file` | **3191** (string said 3187) | PASS — **defect found, second one** |
-| `LA-06` | `v2.19.7-LEDGER-FP` row | `docs/risk-register.md` ← `v2.19.7-LEDGER-FP` | 1 match (line 13) | PASS |
-| `LA-07` | retro invented condition | `docs/retro.md` ← `the next PR touching` | 1 match (line 198) | PASS |
-| `LA-08` | OneSkill tracked row | `docs/owner-tasks.md` ← `ONESKILL KIT-VS-SKILL FIT` | 0 matches | **RED — correct**; Phase-4 target |
+> **Rebuilt at the Phase-3 gate (S19).** The previous table listed **12** rows against a
+> **19**-record script and folded `LA-03a/b/c` into a single `LA-03`. Seven IDs — `LA-03b`,
+> `LA-03c`, `LA-04c`, `LA-05c`, `LA-09`, `LA-10a`, `LA-10b` — were named and counted
+> elsewhere in this document but given **neither a file nor a pattern anywhere in it**, so
+> §D.1's re-derivability guarantee was false for seven of nineteen. It is now true for all
+> nineteen.
+>
+> **Row count is itself the anti-drift control:** this table has 19 rows, `anchor_records()`
+> emits 19 records, and the script prints `CHECKED=19`. Three surfaces, one number. Add an
+> anchor without adding a row and the three disagree. The three commands, exactly:
+>
+> ```
+> grep -cE '^\| `LA-[0-9a-c]+` \| (\*\*)?`(exists|min1|eq:[0-9]|all)`' docs/design-v2.19.8.md
+> grep -cE '^"LA-[0-9]' scripts/verify-ledger-annotations.sh
+> bash scripts/verify-ledger-annotations.sh --no-probes 2>&1 | tail -1   # reports "of 19"
+> ```
+>
+> **The first command was wrong on its first run and the failure is instructive.** The obvious
+> form, `grep -cE '^\| .LA-[0-9]'`, returns **20** — it also matches a row in the §Controls
+> table further down whose first cell happens to begin `` `LA-05c` ``. An unscoped count over a
+> document containing more than one table counts the wrong population, which is **ADR-198's
+> scope-visibility incident reproduced inside the control written to enforce scope visibility**.
+> The form above is anchored on the mode cell, which only §C.2 rows have.
+>
+> @security's *membership* for the seven differed from the real one — it listed `LA-04c`,
+> `LA-05c`, `LA-09`, `LA-10a`, `LA-10b` "plus both `AC-C2` legs", but **`LA-10a` and `LA-10b`
+> ARE the two `AC-C2` legs**, and `LA-03b`/`LA-03c` were missed. The count of seven was right
+> by coincidence of two offsetting errors. Recorded because it is the same double-count that
+> produced S18, reached independently from the other side — which is evidence the ID scheme
+> itself invited it, not that two reviewers were careless.
 
-**Two anchor populations, counted separately so neither number flatters the other:**
+Every row run against the real tree this session. `←` marks the file searched; **scope is part of the citation**, never implied.
 
-- **Backward-looking anchors — 11 of 11 resolve against the real tree at `c8342d7`** (`LA-01` … `LA-07`, excluding `LA-08`). These describe state that already exists; every one had to resolve now, and every one does.
-- **Forward-looking anchors — 8, all correctly RED at Phase 1** (`LA-04c`, `LA-05c`, `LA-08`, `LA-09`, `LA-10a`, `LA-10b`, plus the two `AC-C2` legs). These describe state Phase 4 creates. A forward anchor that passed at Phase 1 would be the bug.
+| ID | Mode | File searched | Pattern | Result | Status |
+|---|---|---|---|---|---|
+| `LA-01` | `min1` | `docs/risk-register.md` | `CF-v2\.19\.6-A` | 1 | PASS |
+| `LA-02a` | `exists` | `scripts/verify-vendored-orphans.sh` | — | present | PASS |
+| `LA-02b` | `min1` | `.github/workflows/sync-agency.yml` | `exit 1` | 8 | PASS |
+| `LA-02c` | `min1` | `.github/workflows/sync-agency.yml` | `flagged_files<<` | 1 | PASS |
+| `LA-03a` | `min1` | `docs/security-audit-v2.19.6.md` | `S-A3` | 5 | PASS |
+| `LA-03b` | `min1` | `docs/security-audit-v2.19.6.md` | `S-A9` | 3 | PASS |
+| `LA-03c` | `min1` | `docs/security-audit-v2.19.6.md` | `S-A10` | 3 | PASS |
+| `LA-04a` | `eq:1` | `CHANGELOG.md` | `^## \[1\.0\.0\]` | 1 | PASS — replaces the stale `:1038` |
+| `LA-04b` | `eq:1` | `CHANGELOG.md` | `^## \[1\.1\.1\]` | 1 | PASS — replaces the stale `:991` |
+| `LA-04c` | `eq:1` | `CHANGELOG.md` | `^## \[2\.0\.1\]` | 0 | **RED — forward**, `AC-C1` |
+| `LA-05a` | **`all`** | `.github/workflows/sync-agency.yml` | `Check blocked files` **AND** `grep -qxF "\$file_path"` | 1 and 1 | PASS — **conjunctive per S21** |
+| `LA-05b` | `min1` | `docs/architecture.md` | `CI fails if any blocked file` | 3 | PASS — replaces the stale `:3187` |
+| `LA-05c` | `eq:0` | `.cowork-allowlist.json` | `[A-Za-z0-9_./-]+\.(md\|yml\|sh\|json):[0-9]+` | 1 | **RED — forward**, `AC-B5-2` widened NC |
+| `LA-06` | `min1` | `docs/risk-register.md` | `v2\.19\.7-LEDGER-FP` | 1 | PASS |
+| `LA-07` | `min1` | `docs/retro.md` | `the next PR touching` | 1 | PASS |
+| `LA-08` | `eq:1` | `docs/owner-tasks.md` | `ONESKILL KIT-VS-SKILL FIT` | 0 | **RED — forward**, C-5 |
+| `LA-09` | `eq:1` | `docs/spec.md` | `^AC-OT3-2-DISPOSITION: (DETERMINATE\|INDETERMINATE)$` | 0 | **RED — forward**, `AC-A3` |
+| `LA-10a` | `eq:1` | `CHANGELOG.md` | `^## Release surface` | 0 | **RED — forward**, `AC-C2` leg 1 |
+| `LA-10b` | `eq:2` | `CHANGELOG.md` | `never tagged, never released` | 0 | **RED — forward**, `AC-C2` leg 2 |
 
-`Production validation: 11/11 backward-looking anchors PASS · 8/8 forward-looking anchors correctly RED · 19 total, run against production state, zero fixtures`
+#### S18 resolved — the number of record is 13 PASS / 6 RED
 
-`LA-05a` and `LA-05b` are why the loop exists. Both returned a **different answer than the spec assumed**, and both were invisible to any fixture. `LA-05c` is the widened control that catches the second one; it is RED today, which is how its ability to fail is known rather than claimed.
+`Production validation: 13 of 19 static anchors PASS · 6 correctly RED (all forward-looking) · 0 live-probe failures · run against production state, zero fixtures`
+
+The two figures in the previous revision were `13/6` (Controls table, pipeline row) and `11/8` (§C.2 prose). **`13/6` is correct; `11/8` was wrong.** Cause, stated plainly: the `11/8` sentence enumerated the forward set as *"`LA-04c`, `LA-05c`, `LA-08`, `LA-09`, `LA-10a`, `LA-10b`, plus the two `AC-C2` legs"* — and `LA-10a`/`LA-10b` **are** those two legs. Six forward anchors were counted as eight, and two backward anchors were silently dropped so the totals still reached 19. Neither figure was re-derived from the script; both were written from memory of a run.
+
+That is this cycle's own defect — a count carried forward instead of re-derived — committed inside the document that defines the control against it. Fourth instance this cycle (`CHANGELOG.md:1038` at 0.D; `AC-A3` and `AC-B5-2` at Phase 1; this at Phase 3), and the second I authored personally. It is recorded here rather than quietly corrected, because the correction is cheap and the pattern is the deliverable.
+
+**`LA-05a` and `LA-05b` are why the production loop exists.** Both returned a different answer than the spec assumed, and both were invisible to any fixture. **`LA-05c` fires RED today**, which is how its ability to fail is known rather than claimed.
+
+#### S21 — `LA-05a` was anchoring the wrong thing, and the fix is proven
+
+The single-pattern form matched `Check blocked files`, a **comment**, not the `grep -qxF "$file_path"` reader it claimed to track. Replace the reader and leave the comment and the anchor stays GREEN while its claim becomes FALSE. An anchor that survives the deletion of the thing it tracks is not an anchor.
+
+Now `mode=all`, conjunctive on both, with each conjunct's count printed. **Proven against a fixture** built by deleting only the reader line and keeping the comment (`comment present: 1, reader deleted: 0`):
+
+```
+LA-05a FAILED — conjunct did not resolve in .github/workflows/sync-agency.yml.
+Expected >=1 match for /grep -qxF "\$file_path"/, got 0.
+```
+
+The pre-S21 form returns PASS against that same fixture. That difference is the whole finding.
 
 ### C.3 Structure
 
 ```
-scripts/verify-ledger-annotations.sh [--repo-root DIR]
+scripts/verify-ledger-annotations.sh [--repo-root DIR] [--no-probes]
 
-SECTION 1 — STATIC ANCHORS (LA-01 .. LA-08)
+SECTION 1 — STATIC ANCHORS (LA-01 .. LA-10b, 19 records)
   Deterministic, offline, reproducible from a clean checkout.
   Pass condition: every anchor resolves in the FILE IT NAMES.
-  Failure: `::error::verify-ledger-annotations: <LA-ID> — <anchor> did not
-           resolve in <file>` ; sets FAIL=1 ; CONTINUES (report all, not first).
+  Modes: exists | min1 | eq:N | all (conjunctive, \036-separated patterns) [S21]
+  Failure: `::error::... <LA-ID> FAILED — anchor did not resolve in <file>.
+           Expected <N> for /<pattern>/, got <M>.` ; FAIL=1 ; CONTINUES.
+  Counter: FAILED. Counts STATIC ANCHORS ONLY.
 
-SECTION 2 — LIVE PROBES (LP-01 ..)          [B-1 / AC-B-VERIFY-3]
-  Pass condition: "probe executed, output recorded with a UTC timestamp."
-  NEVER "reproduces" — live API state is not a reproducible fixture.
-  A FAILURE here means THE PROBE DID NOT EXECUTE, never that a value changed.
-  LP-01: `gh api repos/:owner/:repo/branches/main/protection`
-         — currency evidence for v2.19.5-CODEOWNERS-1. Recorded, never asserted.
+SECTION 2 — LIVE PROBE (LP-01)                            [rewritten per S23]
+  NO TOKEN AVAILABLE   -> SKIPPED (no token). Printed loudly. Build PASSES.
+  TOKEN AVAILABLE:
+      2xx + JSON object -> EXECUTED, output recorded with UTC timestamp
+      HTTP 404          -> EXECUTED, recorded as a meaningful NEGATIVE answer
+      anything else     -> FAILED, exit 1  (401/403/5xx, network, gh missing,
+                                            unparseable body)
+  Counter: PROBE_FAILED. Separate population; never folded into CHECKED.
+  Pass condition is NEVER "reproduces" — live state is not a fixture.
 
 ZERO-SCAN GUARD                              [AC-B-VERIFY-2]
-  CHECKED == 0 -> exit 1. House pattern, verify-vendored-orphans.sh:94-97.
+  CHECKED == 0 -> exit 1. House pattern (verify-vendored-orphans.sh).
 
-EXIT  0 = every static anchor resolved AND every live probe executed
-      1 = usage error, unreadable input, missing tool, zero-scan, or any failure
+EXIT  0 = every static anchor resolved, AND SECTION 2 succeeded or skipped
+          for a declared, printed reason
+      1 = usage error, unreadable input, zero-scan, any static-anchor failure,
+          or a probe failure while a token was available
 ```
+
+**S23 — SECTION 2 previously had no reachable failure state.** Its only defined failure was "the probe did not execute," and §C.5 excused exactly that when the token was absent. A section that cannot fail is not a check — the finding this whole script exists to prevent, committed inside the script. Now split as above, and **proven**: `GH_TOKEN=ghp_0000…00AB` (valid shape, rejected by the API) yields
+
+```
+LP-01 FAILED at <UTC> — a token was available but the probe did not complete (rc=1).
+    gh: Bad credentials (HTTP 401)
+```
+
+**One refinement of S23, flagged rather than applied silently.** S23 says any non-200 must fail; **HTTP 404 is excluded here on purpose.** This endpoint 404s when branch protection is simply *not configured* — the API healthily answering "no protection," which is precisely the currency evidence `v2.19.5-CODEOWNERS-1` watches for and a state `OT-7` step 2 could legitimately produce. Failing on it would break the probe exactly when it reports the answer we want. The preserved distinction is **"the API answered, and the answer was no"** versus **"we could not ask."** Every genuine could-not-ask case still fails. @security should confirm or overrule this narrowing at Phase 6.
+
+**A units defect found by running it, and fixed.** The first reconstruction reported `7 of 19 static anchors` after a probe failure when only **6** static anchors had failed — the probe was being folded into the static population. `FAILED` and `PROBE_FAILED` are now separate counters and the summary names both units on one line: `6 of 19 STATIC ANCHORS … and 1 LIVE PROBE(S) failed. These are two separate populations; the probe is not one of the 19.` This is the `docs/patterns.md` units-ambiguity WATCH item, self-inflicted and self-caught.
 
 ### C.4 Binding design constraints
 
-1. **Scope visibility (ADR-198 fold-in).** Every anchor names the file it searched. `grep -q <pattern>` across the repo is forbidden; `grep -q <pattern> <named-file>` is required. A pattern matching *somewhere* is a different claim from a pattern matching *where the annotation says it is*.
-2. **Null-delimited iteration** where any list is iterated, per ADR-084 (@security S15).
-3. **No third-party network calls.** The only egress is `gh` against this repository's own API (`AC-B-VERIFY-4`). This keeps Scope A/E's third-party boundary out of the verification harness — a verifier that reaches guildskills.com would put the untrusted-content boundary inside the control that guards it.
+1. **Scope visibility (ADR-198 fold-in) — LOAD-BEARING, do not relax.** Every anchor names the file it searched. A repo-wide `grep -q <pattern>` is **forbidden**; `grep -q <pattern> <named-file>` is required. A pattern matching *somewhere* is a different claim from a pattern matching *where the annotation says it is*.
+   **The concrete attack @security named:** this repository vendors **108 third-party files** under `vendored/agency-agents/`, refreshed from upstream by the `sync-agency` cron. A repo-wide anchor could be satisfied by a decoy string planted in any one of them — an upstream commit could turn a ledger anchor green without touching the ledger. Per-file scoping makes the vendored tree structurally unable to satisfy any anchor, because no anchor names a path inside it.
+   **CHECKABLE:** every `grep -cE` in the script passes `"$TARGET"`; the script contains no `grep -r` and no unscoped `grep`.
+2. **Null-delimited iteration** for any list iteration, per ADR-084 (@security S15).
+   **CHECKABLE:** `grep -nE 'while[^|]*read' scripts/verify-ledger-annotations.sh` returns exactly one non-comment line, `while IFS= read -r -d '' RECORD; do`, and its producer is `printf '%s\0'`. Verified this session: one comment line and one real loop, correctly paired.
+3. **No third-party network calls** (`AC-B-VERIFY-4`). The only egress is `gh` against this repository's own API. This keeps Scope A/E's third-party boundary out of the verification harness — a verifier that reached `guildskills.com` would put untrusted input inside the control that guards it.
+   **CHECKABLE — this is the exact command, and the script deliberately does not contain it:**
+   ```
+   grep -nE '(curl|wget|nc |https?://)' scripts/verify-ledger-annotations.sh
+   ```
+   Pass condition: **zero output** (grep exit 1). Verified this session: clean.
+   **Why the command lives here and not in the script's header:** the first reconstruction documented it inline, and the header line *matched its own pattern* — the scan returned a hit on its own documentation, so a reviewer could not distinguish a real hit from the comment describing the check. A check that matches itself cannot cleanly pass. The pattern was moved out; the script now returns zero.
 4. **No line numbers in the script's own assertions.** The script must not commit the defect it detects. Its *header comments* may cite `file:line` for narrative only, and must be marked as narrative — this repo's existing verifiers do carry such comments (e.g. `verify-vendored-orphans.sh` cites `quality.yml:1614`), and that is tolerated in prose but forbidden in an assertion.
 5. **Test seams via `--flag` only**, never environment variables, matching the house convention (`--vendored-dir`, `--lock`, `--base`, `--head`). Real call sites never pass them.
 6. **`set -euo pipefail`**, `::error::` prefix on every failure line, bash-3.2 portable (this repo enforces bash-3.2 portability in CI).
@@ -320,6 +432,8 @@ New job in `.github/workflows/quality.yml`, modeled on `vendored-removal-ledger`
   ledger-annotations:
     name: Ledger Annotations (v2.19.8)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # S24 — least privilege; the script only ever READS this repo's API
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Verify every ledger annotation's citation still resolves
@@ -330,11 +444,13 @@ New job in `.github/workflows/quality.yml`, modeled on `vendored-removal-ledger`
 
 Notes, each deliberate:
 
-- **No `if: github.event_name == 'pull_request'`.** Unlike `vendored-removal-ledger`, this check needs no base revision — it is a point-in-time property of the working tree, so it should also run on `push`. Citation rot is not a PR-only event.
+- **`permissions: { contents: read }` — added per S24, and verified rather than assumed.** `grep -c 'permissions:' .github/workflows/quality.yml` returns **3**, all `contents: read`, and all three sit on jobs that are read-only and hand no token to a script. This job would be the **only** one in the file passing `GH_TOKEN` to a script, and — without this block — the only token-bearing job with no permissions declaration. The live repo default is `read`, but that is a **Settings toggle the owner can flip without touching this diff**, so relying on it makes the job's privilege depend on state outside the file. Declaring it converts a behavioural assumption into a structural one, the same upgrade ADR-079 made for `release-assets.yml`.
+- **No `if: github.event_name == 'pull_request'`.** Unlike `vendored-removal-ledger`, this check needs no base revision — it is a point-in-time property of the working tree, so it must also run on `push`. Citation rot is not a PR-only event.
 - **No `fetch-depth: 0`.** Nothing diffs against a base. Adding it would be cargo-culted from the neighbouring job.
-- **`GH_TOKEN`** is required for Section 2's live probe only. Section 1 is fully offline; the script must degrade Section 2 to a recorded "probe unavailable" rather than fail the build when the token is absent — a *static-anchor* regression is the finding, and coupling it to token availability would make the important half of the check hostage to the unimportant half.
-- **NOT added to `.github/CODEOWNERS`** (`AC-B-CODEOWNERS` / @security S12).
-- **Not a required status check.** Branch protection remains an owner-held decision (`OT-7` step 2), unchanged here.
+- **`GH_TOKEN` gates SECTION 2 only, and the degradation is now precise (S23).** Token absent ⇒ `SKIPPED (no token)`, printed loudly, build passes — a static-anchor regression is the finding, and coupling it to token availability would let the unimportant half veto the important half. Token present ⇒ the probe **must** complete or the build fails. In CI the token is always present, so **SECTION 2 is effectively mandatory on every CI run**; the skip path exists for offline local reproduction, not as a CI escape hatch.
+- **NOT added to `.github/CODEOWNERS`** (`AC-B-CODEOWNERS` / @security S12). Confirmed untouched.
+- **Not a required status check.** Branch protection remains owner-held (`OT-7` step 2), unchanged here.
+- **Job count context:** `quality.yml` currently has **32** jobs (`grep -cE '^  [a-z][a-z0-9-]*:$'`), not the 30 stated in the previous revision. This job makes 33. Corrected because a wrong count in a design doc is the defect this cycle exists to stop.
 
 ---
 
