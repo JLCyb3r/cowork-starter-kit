@@ -13,7 +13,7 @@
 
 ### Worktree discipline
 
-`Worktree discipline: SKIPPED (COUNCIL_EXPECTED_BASE_SHA not set)` — verified by `printenv COUNCIL_EXPECTED_BASE_SHA` (exit 1, unset). This cycle is **not** a Council worktree cycle: it runs on a branch **inside the cowork repo**, mirroring v2.19.7 (`release/v2.19.7-finish-the-storefront` → PR #103). Base verified live: `git -C /Users/macbookpro/claude-cowork-config rev-parse HEAD` → `c8342d75242830c6b9691bfb44ff46ced4af11ea`, clean tree, level with `origin/main`. Running The-Council's `pre-spawn-check.sh` here would be a category error, not a skipped control — it validates Council-repo worktree branches (same reasoning recorded at v2.19.7 Phase 1).
+`Worktree discipline: SKIPPED (COUNCIL_EXPECTED_BASE_SHA not set)` — verified by `printenv COUNCIL_EXPECTED_BASE_SHA` (exit 1, unset). This cycle is **not** a Council worktree cycle: it runs on a branch **inside the cowork repo**, mirroring v2.19.7 (`release/v2.19.7-finish-the-storefront` → PR #103). Base verified live: `git -C /Users/macbookpro/claude-cowork-config rev-parse HEAD` → `c8342d75242830c6b9691bfb44ff46ced4af11ea`, clean tree, level with `origin/main`. Running the upstream orchestration repo's `pre-spawn-check.sh` here would be a category error, not a skipped control — it validates that repo's own worktree branches (same reasoning recorded at v2.19.7 Phase 1).
 
 ### Buy-vs-Build
 
@@ -23,14 +23,14 @@
 
 Four-source Reuse Radar run 2026-08-09.
 
-- **Source 1 — Reuse Registry** (`The-Council/docs/reuse-registry.md`): present, grepped `-inE 'citation|anchor|ledger|annotation|verif|grep'`. No code row matches a ledger-annotation verifier (RA-007 = stack detection, RA-013 = LM Studio adapter). **One high-value non-code hit** — see the REUSE row below.
-- **Source 2 — Scaffold index** (`The-Council/examples/scaffolds/INDEX.md`): **not present** (`ls` → No such file or directory) — skipped, not silently dropped. This cycle stands up no new app/service/CLI surface, so a scaffold would not apply regardless.
-- **Source 3 — CS catalog + ADR tags** (`The-Council/docs/constituent-systems.md`): present, grepped `-inE 'citation|ledger|annotation|verif'` → **zero matches**.
+- **Source 1 — Reuse Registry** (the upstream pipeline tooling's reuse registry): present, grepped `-inE 'citation|anchor|ledger|annotation|verif|grep'`. No code row matches a ledger-annotation verifier (RA-007 = stack detection, RA-013 = LM Studio adapter). **One high-value non-code hit** — see the REUSE row below.
+- **Source 2 — Scaffold index** (the upstream pipeline tooling's scaffold index): **not present** (`ls` → No such file or directory) — skipped, not silently dropped. This cycle stands up no new app/service/CLI surface, so a scaffold would not apply regardless.
+- **Source 3 — CS catalog + ADR tags** (the upstream pipeline tooling's constituent-systems catalog): present, grepped `-inE 'citation|ledger|annotation|verif'` → **zero matches**.
 - **Source 4 — SoS interfaces** (`.claude/projects/ecosystem/sos-interfaces.json`): present, 8 entries enumerated (producers: `confidante` ×4, `pillar-os`, `@cs1/substrate`, `cs-4`). **None applies** — `claude-cowork-config`'s registry entry carries `"parents": []`, so it sits under no SoS umbrella and consumes no ecosystem interface contract.
 
 | Component | Registry hit (grep pasted) | OSS candidate | Scaffold | Decision | Basis |
 |---|---|---|---|---|---|
-| Content-anchored citation rule (the policy, not the code) | **HIT** — `grep -inE 'citation\|anchor' docs/reuse-registry.md` → `:16 "file:line (line numbers rot; a rotted citation still looks authoritative). See ADR-198 §Risk (1)."` and `:82 "a row's consumers cell is reproduced by a re-runnable command with its scope visible, not by frozen file:line citations."` | n/a — internal policy | n/a | **REUSE** | The-Council's ADR-198 §Decision 2 already settled this exact rule portfolio-side. This cycle adopts its **stronger** form rather than re-deriving the weaker one — see §A.3. |
+| Content-anchored citation rule (the policy, not the code) | **HIT** — `grep -inE 'citation\|anchor' docs/reuse-registry.md` → `:16 "file:line (line numbers rot; a rotted citation still looks authoritative). See ADR-198 §Risk (1)."` and `:82 "a row's consumers cell is reproduced by a re-runnable command with its scope visible, not by frozen file:line citations."` | n/a — internal policy | n/a | **REUSE** | The upstream pipeline tooling's ADR-198 §Decision 2 already settled this exact rule portfolio-side. This cycle adopts its **stronger** form rather than re-deriving the weaker one — see §A.3. |
 | `scripts/verify-ledger-annotations.sh` | No row | No candidate — a bash verifier over this repo's own eight named annotations is not a general problem anyone has packaged; an external dependency would also violate `AC-B-VERIFY-4` (no third-party network calls) and add supply-chain surface to a truth-repair cycle | n/a | **EXTEND** | Extends three in-repo house patterns rather than starting from a blank file: `scripts/verify-vendored-orphans.sh` (zero-scan `CHECKED == 0` guard, `::error::` prefix, `--flag` test seams, `set -euo pipefail`), `scripts/verify-lock-removals.sh` (base-vs-head diffing, named-failure reporting), `scripts/release-archive-assert.sh` (single-sourced assertion invoked from two call sites). Read this session, not recalled. |
 
 **No BUILD rows.** No new dependency is introduced; no license gate is triggered; `ATTRIBUTIONS.md` is unchanged.
@@ -120,7 +120,10 @@ Walked path by path against the Tier A row set:
 
 `B1 verification: N/A-BY-SHORT-CIRCUIT — verified at the guard source, not assumed @ 2026-08-09T13:50:00Z`
 
-Read `The-Council/scripts/guards/scope-check.sh` this session. At `:708-712`:
+Read the upstream scope guard's source (`scripts/guards/scope-check.sh`) this session — it
+short-circuits for any write inside a registered external project's root, before that project's
+`scope_allow.standard[]` is ever read, which is the entire basis for the empty
+`scope_allow_delta` below. At `:708-712`:
 
 ```bash
 # --- External project: allow all writes within the project root ---
@@ -132,7 +135,7 @@ fi
 
 This returns **before** `scope_allow.standard[]` is ever read. Every §D path is inside `/Users/macbookpro/claude-cowork-config/`, so the short-circuit governs all of them and `scope_allow.standard` is never consulted. This reproduces @security's v2.19.7 Phase-2 self-correction (a HIGH scope-allow finding prepared, premise checked, finding **withdrawn**, PASS 25/25).
 
-**The `scope_allow_delta` trap, named so it is not walked into.** Populating `scope_allow_delta.add[]` with the eleven §D paths would require editing `The-Council/.claude/agents/dev.md`'s `scope_allow:` block. That block is the **literal Tier A row** in Council policy — the same shape as @security's S12 CODEOWNERS trap, one repo over. It would flip this cycle to Tier A and re-incur the GCS, **for entries the guard would never read**, and it would violate `AC-E-S8`. The correct block is empty, and the reason is a finding rather than an omission.
+**The `scope_allow_delta` trap, named so it is not walked into.** Populating `scope_allow_delta.add[]` with the eleven §D paths would require editing the upstream pipeline tooling's dev-agent `scope_allow:` declaration. That declaration is the **literal Tier A row** in the upstream repo's own policy — the same shape as @security's S12 CODEOWNERS trap, one repo over. It would flip this cycle to Tier A and re-incur the GCS, **for entries the guard would never read**, and it would violate `AC-E-S8`. The correct block is empty, and the reason is a finding rather than an omission.
 
 ```yaml
 scope_allow_delta:
@@ -560,7 +563,7 @@ All paths relative to `/Users/macbookpro/claude-cowork-config/`. Scope resolves 
 | `docs/architecture.md` §ADR-080 body | Append-only; the `:3187` correction goes **forward** into ADR-081, not in place |
 | `docs/spec.md` v2.19.4 `AC-OT3-2` checkbox | Historical record; its `- [ ]` state was accurate then |
 | `upstream-contribution/travisvn-*.md`, `claudepluginhub-*.md`, `guildskills-*.md` | `AC-E2` / `AC-E3` / `AC-E4` — `test ! -e` must hold |
-| Any file under `/Users/macbookpro/The-Council/` | `AC-E-S8` |
+| Any file under the upstream pipeline tooling's own private repo | `AC-E-S8` |
 
 ### D.1 The pre-commit gate blocked the script, and the block is correct
 
