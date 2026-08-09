@@ -56,8 +56,9 @@
   resolves — and is superseded here by the job-ID pair that does.
 - **`AC-PUB-10` — CLOSED (disposition recorded, v2.19.8).** The row above's two CHANGELOG
   citations (`CHANGELOG.md:1038` for `v1.0.0`, `CHANGELOG.md:991` for `v1.1.1`) were stale;
-  re-verified this session at content-anchored positions: `grep -n '^## \[1\.0\.0\]' CHANGELOG.md`
-  → line 1116; `grep -n '^## \[1\.1\.1\]' CHANGELOG.md` → line 1069. `v2.0.1`'s missing CHANGELOG
+  re-verified this session at content-anchored positions, citations that resolve on re-run rather
+  than a number that will drift: `grep -n '^## \[1\.0\.0\]' CHANGELOG.md`;
+  `grep -n '^## \[1\.1\.1\]' CHANGELOG.md`. `v2.0.1`'s missing CHANGELOG
   section is backfilled this cycle (`AC-C1`). The full disposition — documented-unpublished, no
   retroactive tag or Release for either `v1.0.0` or `v1.1.1` — is `docs/design-v2.19.8.md` §B and
   `docs/spec.md` `AC-C2`; the CHANGELOG's own `## Release surface` preamble (added this cycle)

@@ -548,12 +548,21 @@ The NC fixture must produce something **other** than that; the observed value fo
 
 #### AC-B5-TIER-2 — Phase 4 addendum, default-deny projection
 
-**Addendum, not a revision** of the `AC-B5-TIER` row above, whose positive allow-list projection
-(`{schema, allowed_categories, blocked_files: [...{path, permanent}], blocked_patterns:
-[...{pattern}], requires_review}`) stays the Phase-1/3-demonstrated control. The gap: a positive
-allow-list is silent on any key **added later** — a new control-bearing field would need someone
-to remember to add it to the projection, and until they do it is invisibly excluded. Inverted to
-**default-deny**, proven this session:
+**Addendum, not a revision** of the `AC-B5-TIER` row above, whose positive allow-list projection —
+the literal, runnable command, corrected here per @qa's Phase-5 finding (the row above's own
+paraphrase read `{schema, ...}`, a bareword that resolves `.schema` = `null` against this file;
+the real key is `$schema_version` and requires explicit index syntax) —
+
+```
+jq -S '{schema: .["$schema_version"], allowed_categories, blocked_files: [.blocked_files[] | {path, permanent}], blocked_patterns: [.blocked_patterns[] | {pattern}], requires_review}'
+```
+
+Re-run against base (`c8342d7`) and head, this session: **`e973f98739d46e3d42b8cbb5567872794d270276eff6f77f7ac547972f1ff44d`, identical to the value already recorded above** — the corrected command reproduces the same hash the Phase-1 control cites, confirming that value was always correct and only the abbreviated paraphrase above it was wrong.
+
+This positive allow-list form is the Phase-1/3-demonstrated control. The gap it still has: it is
+silent on any key **added later** — a new control-bearing field would need someone to remember to
+add it to the projection, and until they do it is invisibly excluded. Inverted to **default-deny**,
+proven this session:
 
 ```
 del(.reason, .description, .notes) | .blocked_files |= map(del(.reason))

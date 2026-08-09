@@ -683,10 +683,10 @@ each of the three tags per OT-8.
 at v2.19.6 QA (10.3 above); the following re-verifies all three against the shipped v2.19.7 code,
 live, this session, and gives each a re-runnable command:
 
-- **S-A3 CLOSED** — `grep -n 'AC-E1-1, v2.19.7' scripts/verify-release-surface.sh` → line 304
+- **S-A3 CLOSED** — `grep -n 'AC-E1-1, v2.19.7' scripts/verify-release-surface.sh` resolves
   (`evidence_body()`'s rc=2 now propagates instead of collapsing into `MISSING-RELEASE`).
 - **S-A9 CLOSED** — `bash scripts/semver-compare.sh ge 99999999999999999999.0.0 2.18.0` exits `2`
   (fail-closed on an oversized component, reproduced live).
-- **S-A10 CLOSED** — `grep -n 'release-predicate.sh' .github/CODEOWNERS` → line 50, `@jmlozano1990`
-  (the release-predicate.sh gap named in S-A10 is filled; all four release-critical paths now have
-  a real code owner).
+- **S-A10 CLOSED** — `grep -n 'release-predicate.sh' .github/CODEOWNERS` resolves to
+  `@jmlozano1990` (the release-predicate.sh gap named in S-A10 is filled; all four release-critical
+  paths now have a real code owner).
