@@ -629,3 +629,23 @@ Plus two before Scope A executes: **S-A6** (`mktemp`) and **S-A7** (halt-state p
 
 The remaining WARNINGs (S-A3, S-A5, S-A8) and all INFO items are recordable as carry-forwards and do
 not gate this merge.
+
+---
+
+## v2.19.8 amendment — S-A3 / S-A9 / S-A10 closed-by-v2.19.7
+
+**Additive record, not a revision of the verdict above.** `docs/spec.md`'s v2.19.7 section
+(`AC-E1-1`, `AC-E2-1`, `AC-E3-1`) fixed all three; each re-verified live this session against the
+shipped code, not the commit message.
+
+- **S-A3 CLOSED** — `evidence_body()`'s `exit 2` no longer collapses into every non-zero return.
+  `grep -n 'AC-E1-1, v2.19.7' scripts/verify-release-surface.sh` resolves to the caller comment
+  naming the fix; the surrounding code checks `$?` explicitly and propagates rc=2 rather than
+  degrading it to a per-tag `MISSING-RELEASE`.
+- **S-A9 CLOSED** — `semver_ge`'s fail-closed contract now holds for oversized components.
+  Reproduced live: `bash scripts/semver-compare.sh ge 99999999999999999999.0.0 2.18.0` exits `2`
+  (`::error::malformed semver input to 'ge' — failing closed, not defaulting to false`).
+- **S-A10 CLOSED** — the CODEOWNERS deferral list gap (`release-predicate.sh` absent) is closed.
+  `grep -n 'release-predicate.sh' .github/CODEOWNERS` resolves to `@jmlozano1990`; all four
+  release-critical paths (`publish-release.sh`, `release-predicate.sh`, `verify-release-surface.sh`,
+  `release-surface.yml`) now carry a real (non-upstream, non-inert) code owner.

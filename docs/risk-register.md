@@ -32,6 +32,38 @@
   the anchor form too, in one shared definition (`scripts/release-predicate.sh`) — see
   `docs/architecture.md` ADR-077 §D1/§D2.
 
+## Closed at v2.19.8 (additive closures — the OPEN rows above are left byte-unchanged; this section is the ledger-truth-repair record, per `docs/spec.md` Scope B)
+
+- **`CF-v2.19.6-A` — CLOSED.** The row above (`403 Resource not accessible by integration` on the
+  update path) is superseded: `v2.19.7`'s recommended fix — `publish-release.sh` uploading
+  assets itself, retiring the `release-assets.yml` upload dependency entirely — shipped and is
+  live-verified. `gh release view v2.19.7 --json assets` returns exactly 2 assets
+  (`cowork-starter-kit-2.19.7.tar.gz`, `cowork-starter-kit-2.19.7.zip`), re-run this session.
+- **`v2.19.7-LEDGER-FP` — CLOSED.** The row above documents the self-predicted RED on the
+  `vendored-removal-ledger` job, on v2.19.7's own introducing commit. Confirmed via
+  `gh api repos/jmlozano1990/cowork-starter-kit/actions/jobs/93105955137` (part of workflow run
+  `31258671814`, branch `release/v2.19.7-finish-the-storefront`): job `Vendored Removal Ledger
+  (ADR-080)`, `conclusion: failure` — the predicted RED, reproduced. Its GREEN counterpart, once
+  the repaired `.cowork-allowlist.json` was on `main`, is confirmed via
+  `gh api repos/jmlozano1990/cowork-starter-kit/actions/jobs/93117624498` (workflow run
+  `31263420714`, branch `qa/v2.19.7-retro`): same job name, `conclusion: success`. A second
+  independent GREEN confirmation exists at job `93124881727` (run `31266301310`, branch
+  `docs/v2.19.7-upstream-pr-urls`), also `conclusion: success`. **Note on identifier spaces
+  (binding per `docs/spec.md` Scope B item 6):** the RED workflow-run ID `31258671814` and the
+  three job IDs (`93105955137` RED, `93117624498`/`93124881727` GREEN) were re-resolved live this
+  session via `gh api .../actions/jobs/<id>`, not copied forward on trust; the previously-recorded
+  workflow-run ID pair (`31264226626`/`31264226226`) 404s against the live API — neither
+  resolves — and is superseded here by the job-ID pair that does.
+- **`AC-PUB-10` — CLOSED (disposition recorded, v2.19.8).** The row above's two CHANGELOG
+  citations (`CHANGELOG.md:1038` for `v1.0.0`, `CHANGELOG.md:991` for `v1.1.1`) were stale;
+  re-verified this session at content-anchored positions, citations that resolve on re-run rather
+  than a number that will drift: `grep -n '^## \[1\.0\.0\]' CHANGELOG.md`;
+  `grep -n '^## \[1\.1\.1\]' CHANGELOG.md`. `v2.0.1`'s missing CHANGELOG
+  section is backfilled this cycle (`AC-C1`). The full disposition — documented-unpublished, no
+  retroactive tag or Release for either `v1.0.0` or `v1.1.1` — is `docs/design-v2.19.8.md` §B and
+  `docs/spec.md` `AC-C2`; the CHANGELOG's own `## Release surface` preamble (added this cycle)
+  carries the reader-facing record.
+
 ## Maintenance
 
 Add a row here when a future Phase 2/Phase 6 security review accepts a risk under an explicit condition rather than fully resolving it. Remove (or move to a "Closed" note, as above) a row once the accepting cycle's condition is fully discharged — cite the closing cycle/doc when doing so.

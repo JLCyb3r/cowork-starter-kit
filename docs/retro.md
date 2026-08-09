@@ -108,6 +108,17 @@ AC count 21 → 38 at Phase 1, corrected to 43 by merge (`docs/spec.md`, per the
 
 **DATA GAP — not computed.** `.claude/projects/claude-cowork-config/metrics.json` (hub-side) shows no entries for 2026-08-08; the file's last modification predates this cycle (2026-07-21). No per-model-tier token records exist to aggregate for v2.19.7, so this section cannot responsibly report a cost figure — fabricating one from cycle duration or file-count proxies would repeat exactly the "observable-substituted-for-the-real-property" defect class this project's own `Check-That-Cannot-Fail` discipline exists to catch. Recommend the orchestrator confirm the token-logger hook is firing for this project before the next cycle closes.
 
+**[v2.19.8 root-cause correction, 2026-08-09]: reclassified from "no data exists" to "data was
+misfiled."** Root cause is The-Council's `token-logger.sh` resolving the target project solely
+from `registry.json`'s `active_project` field; cowork cycles run behind a session pin that keeps
+`active_project` at `self`, so this cycle's token records were logged under the `self` project's
+metrics file, not this project's. This correction reclassifies the **diagnosis only** — it does
+**not** claim the missing v2.19.7 data was located or relocated; whatever was logged under `self`
+for 2026-08-08 has not been recovered or moved into this project's record, and no Council-side
+file was touched to produce this correction. Fixing `token-logger.sh`'s pin-blindness is
+explicitly out of scope for a `claude-cowork-config` cycle (`docs/spec.md` `AC-E-S8`); it belongs
+to a future `/self-improve` cycle.
+
 ### 4. Phase Durations
 
 | Phase | Timestamp (recorded) | Interval from prior |
@@ -196,6 +207,13 @@ v2.19.6 (1st instance — the Phase 2 security review's own prescribed remedy fo
 - **New Council-memory candidate:** generalize `CF-COUNCIL-WORKTREE-ALLOWLIST` + S18 + this retro's own write-attempt near-miss into "guard failure messages should name the condition actually detected, not an inferred category" — feeds the same `/self-improve` cycle above.
 - **S18's actionable warning** — verify `COUNCIL_ACTIVE_PROJECT`/session-pin propagation reaches @dev's Phase-4 hook context explicitly at the start of the next SECURITY-SENSITIVE cycle, rather than only when a write unexpectedly blocks.
 - **`docs/risk-register.md` `v2.19.7-LEDGER-FP`** — self-resolving; confirm on the next PR touching `.cowork-allowlist.json` that `vendored-removal-ledger` runs GREEN (the row's own stated closing condition).
+  **[v2.19.8 dated correction, 2026-08-09]: this closing condition was invented at this retro.**
+  `docs/risk-register.md`'s own `v2.19.7-LEDGER-FP` row says `SELF-RESOLVING AT MERGE` and never
+  asserted a "confirm on the next PR" condition — that phrasing originated here, not in the row it
+  describes. The original line above is left byte-unchanged as the record of how this retro
+  actually read at write time; the real closure is `docs/risk-register.md`'s new
+  `## Closed at v2.19.8` section, citing CI job `93105955137` (RED, run `31258671814`) and job
+  `93117624498` (GREEN, run `31263420714`), both reproduced live via `gh api .../actions/jobs/<id>`.
 - **Owner tasks, still open:** `OT-1` (announcement, HELD BY OWNER pending the upstream-integration question), `OT-3` (catalog submissions — drafts pending), `OT-7` step 2 (branch-protection review gate — step 1 done this cycle, step 2 is an owner Settings action).
 - **`docs/patterns.md` items A/B/C above** — re-check at the next 2 cycles; C is closest to promotion.
 - **Token telemetry:** confirm `.claude/projects/claude-cowork-config/metrics.json` is actually being written to before the next Phase 8 close — §3's data gap should not repeat silently.
@@ -569,6 +587,19 @@ I am proposing this as a new `docs/patterns.md` WATCH row (§9), not backing it 
 4. `CF-v2.19.5-B` — orphan `vendored/` files are invisible to the lock-driven check; **armed live** by the two renames confirmed this cycle (`engineering/*` → `security/*`, outside the allowlist).
 5. `CF-v2.19.5-D` — the LICENSE check's `::error::` never exits non-zero; annotates but does not block.
 6. `CF-v2.19.5-E` — `flagged_files` output injection can suppress the `security-review-required` label.
+
+   **[v2.19.8 ledger-truth repair — CF-v2.19.5-B/D/E all CLOSED, at this, their real location
+   (not v2.19.6's §11, which a prior brief mis-cited).** Each verified content-anchored, this
+   session, against the shipped v2.19.7 code:
+   - `CF-v2.19.5-B` (orphan `vendored/` files invisible to the lock-driven check) — CLOSED.
+     `test -f scripts/verify-vendored-orphans.sh` succeeds; the disk→lock reverse-direction
+     orphan check shipped at v2.19.7.
+   - `CF-v2.19.5-D` (LICENSE check's `::error::` never exits non-zero) — CLOSED.
+     `grep -n 'exit 1' .github/workflows/sync-agency.yml` resolves 8 matches, including the
+     LICENSE branch.
+   - `CF-v2.19.5-E` (`flagged_files` output-injection risk) — CLOSED.
+     `grep -n 'flagged_files<<' .github/workflows/sync-agency.yml` resolves 1 match — the
+     heredoc-delimiter form that closes the injection surface.
 7. `AC-OT3-2` (GuildSkills kit-vs-skill taxonomy) — still FAIL/OPEN, carried from v2.19.4, no surface overlap with this cycle.
 8. `v2.19.4`'s missing git tag/GitHub Release — found at the v2.19.4 retro, explicitly folded into this cycle's scope note as a dependency but **not itself an AC of this cycle** (this cycle's own `AC-REL-BODY-3` targets the mechanism, not the specific v2.19.4 artifact) — status at this retro's write time not re-checked, out of scope; recommend the next session confirm before any further release claim relies on it.
 
