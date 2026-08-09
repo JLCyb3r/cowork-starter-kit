@@ -13426,3 +13426,79 @@ in v2.19.7 scope.
   prevention**, until the owner enables required status checks — see §Consequences.
 
 End of v2.19.7 ADR block.
+
+---
+
+## ADR-081: The record is content-anchored, and two versions are recorded as unpublished rather than retroactively tagged (v2.19.8 Scopes B and C)
+
+- **Status:** Accepted at Phase 1, 2026-08-09. Subject to the user gate (Phase 3); both decisions below are stated with their rejected alternatives so the gate can overturn either on the record.
+- **Cycle:** v2.19.8 "Polish the Carryovers" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B (PR required, Guard Change Summary NOT required) · COMPLIANCE-SENSITIVE. Re-run against the final file list at Phase 1: **CONFIRMED**, no flip in either direction.
+- **Reusability:** `project-specific`. The verifier's anchor table is bound to this repository's own eight annotations and eight named files. The *rule* it enforces is not project-specific and is not being minted here — it already exists portfolio-side as The-Council ADR-198 §Decision 2, and this ADR **reuses** it rather than re-deriving it (see §Context (3)).
+- **Supersedes:** nothing. **Amends:** ADR-080 §Context (1) — see §Amendment.
+
+### Context
+
+**(1) A claim about an artifact was carried forward instead of re-derived from the artifact — eight times, one habit.** Phase 0.D found three instances; Phase 1 found two more, both *inside the spec written to fix the first three*. `docs/risk-register.md`'s `AC-PUB-10` row cited `CHANGELOG.md:1038` and `:991`; real positions **1116** and **1069**. `.cowork-allowlist.json`'s `nexus-strategy.md` `reason` string cited `sync-agency.yml:228`; real position **238**. The failure mode is **silent, not loud**: at the v2.19.6 revision, line 1069 was v1.0.0, so a stale line citation resolves to the *wrong release* rather than to nothing.
+
+**(2) The `.cowork-allowlist.json` defect is doubled, and the Phase-0 control could not have caught the second half.** That same `reason` string carries a **second** bare citation — `architecture.md:3187`, real position **3191**. The Phase-0 negative control (`grep -n 'sync-agency.yml:[0-9]'` → 0 matches) returns 0 after repairing only the first, and reports PASS with a stale citation still in the string. A check that cannot fail against half the defect it was written for is the exact shape `docs/patterns.md` tracks. The control is widened to a general bare-`file:line` pattern over the whole file, which returns **1** today — its ability to fail is demonstrated, not asserted.
+
+**(3) The rule this cycle needs already exists, one repo over, in a stronger form.** The-Council's **ADR-198 §Decision 2** settled the identical question portfolio-side: *"a row's consumers cell is reproduced by a re-runnable command with its scope visible, not by frozen `file:line` citations — line numbers rot, and a rotted citation is worse than none because it still looks authoritative."* It carries a refinement this cycle's Phase-0 rule lacked: **the grep's scope must be visible in the artifact.** Its supporting incident is directly on point — a v0.32.2 claim of "9 consumers, grep-confirmed this session" was honestly verified and still wrong, because the grep was silently scoped to one subdirectory; the real count was 11. Adopted here in the stronger form. This is a REUSE, recorded as one.
+
+**(4) `AC-PUB-10`'s three-version mismatch is an unstated invariant, not two missing tags.** Computed at `c8342d7` — `comm` over `grep -oE '^## \[[0-9][0-9.]*\]' CHANGELOG.md` and `git ls-remote --tags origin`: **exactly three mismatches across 47 versions.** `1.0.0` and `1.1.1` have CHANGELOG sections and no tag; `2.0.1` has a tag and no section. Every other version has a section, a tag, and a Release (`gh release list` confirms the Releases page begins at v1.1.0). So the repository observes a 1:1 CHANGELOG↔tag↔Release invariant **44/47 times and has never written it down** — which is this cycle's own defect class living in the version history rather than in the ledger.
+
+### Decision
+
+**D1 — Content-anchored citations, enforced by a CI-run verifier, in ADR-198's stronger form.**
+No citation into a growing file may be a bare `file:line` in text this cycle writes. Every citation is a re-runnable `grep -n '<anchor>' <named-file>` — and **the named file is part of the citation**, not just the pattern. `scripts/verify-ledger-annotations.sh` enforces it over twelve anchors; a new `ledger-annotations` job in `.github/workflows/quality.yml` runs it on every push and pull request.
+
+Wiring it into CI is the load-bearing half. The defect class is **rot over time**, not error at write time. A verifier that runs once at Phase 5 and never again does not address rot. Direct precedent: v2.19.7's QA-5 was a BLOCKER precisely because ACs said "MUST run in CI" and the check existed only by hand.
+
+The rule binds text this cycle **writes**. Historical text it does not touch keeps its bare citations as a frozen record. Where a string is rewritten, **every** citation in that string is repaired, not only the one that prompted the rewrite (§Context (2)).
+
+**D2 — `v1.0.0` and `v1.1.1` are recorded as developed-and-merged-but-never-published. No retroactive tag. No retroactive Release.**
+
+Deliverables: a dated `> **Release surface:**` note under each CHANGELOG heading anchored on `4bfc704` / `66c09af` (`git show <sha>:VERSION` → `1.0.0` / `1.1.1`); a `## Release surface` subsection in the CHANGELOG **preamble** stating the invariant and enumerating all three exceptions; `AC-PUB-10` moved `OPEN` → `CLOSED (disposition recorded, v2.19.8)`.
+
+Retroactive tagging was **possible** — both commits exist and are unambiguous — and is rejected on grounds, not impossibility. Four costs, three verified live this session:
+
+1. It contradicts a locked owner decision (Scope C is record-side only; `AC-C3` extends the no-live-write boundary to all three tags).
+2. `scripts/publish-release.sh` structurally refuses both: create path → `VERSION_AT_HEAD=2.19.7` ≠ requested → `exit 1`. **The script's own comment names `publish-release.sh 1.0.0` as the negative control for that guard.** Running a script's documented negative control as the repair mechanism is an admission the mechanism is wrong.
+3. **New at Phase 1, raised by nobody earlier:** `.github/workflows/release-assets.yml` triggers on `push: tags: 'v*'` — a trigger v2.19.7 *deliberately retained* as "the net for anyone who tags with a plain `git push`". Its first step is fail-closed on "no Release exists for this tag" and its second requires **both** archives attached. A tag-only backfill therefore leaves permanent red runs in the repo's public Actions history; a full backfill requires hand-building two 2026-04 archives from a 2026-08 checkout, outside the repo's only release mechanism.
+4. It is irreversible in the way that matters: deleting a published Release is itself a visible public event, whereas this decision can be reversed silently at any time.
+
+**The preamble subsection is the part that makes this the better option, not merely the cheaper one.** A note at CHANGELOG line 1069 is honest and invisible. Stating the invariant and its three exceptions where a reader lands converts *"an undocumented invariant with three silent violations"* into *"a documented invariant with three recorded exceptions"* — a strictly better state than the backfill reaches, since the backfill would fix two anomalies and leave the invariant **still unstated**, so the next gap would be silent again.
+
+**Precision the record must carry:** these versions were **developed and merged to `main`; they were never tagged and never published.** Not "never developed," not "withdrawn." That distinction is the difference between an honest record and a flattering one.
+
+**D3 — The Tier-B classification ships with its own falsifier.**
+`AC-B5-TIER` projects both revisions of `.cowork-allowlist.json` onto its control-bearing keys (`$schema_version`, `allowed_categories`, `blocked_files[].path/.permanent`, `blocked_patterns[].pattern`, `requires_review`) and requires identical sha256. Only `reason` / `description` / `notes` may differ. **Any projection difference ⇒ Tier A snaps back and a Guard Change Summary is owed before merge.** It ships with a mandatory firing negative control: the projection must produce a *different* sha256 against a fixture in which one `blocked_files[].path` character is altered. Paired with `AC-B-CODEOWNERS`, which forbids adding the new script to `.github/CODEOWNERS` — a Tier A row, and a trap that reflexive coverage-growth would walk straight into.
+
+### Consequences
+
+- **Positive.** The named defect class acquires an enforcement mechanism that outlives the cycle. Eleven stale or invented claims become re-runnable. The version-history invariant becomes stated. The Tier-B downgrade becomes falsifiable rather than argued.
+- **Negative, named.** The CHANGELOG↔tag invariant remains **44/47 in machine-checkable form** and 47/47 only in prose — a tool that enumerates tags still sees two versions missing. `.github/workflows/quality.yml` gains a job and the CI surface grows by one.
+- **Explicitly not claimed.** `verify-ledger-annotations.sh` does **not** check that an annotation is *true*. It checks that every anchor still resolves to the thing it names. Overclaiming its reach would be the false-control shape this repo has been closing for three cycles, committed inside the control written to end it.
+- **Visibility, not prevention.** The new job is not a required status check; branch protection remains owner-held (`OT-7` step 2). Same posture as ADR-080's controls, stated so it is not misread.
+
+### Amendment to ADR-080 (forward correction — this file is append-only)
+
+ADR-080's amendment section cites `docs/architecture.md:3187` for the claim *"CI fails if any blocked file appears in `cowork.lock.json` files list."* **The real position is 3191** (`grep -n 'CI fails if any blocked file' docs/architecture.md`). Corrected **forward, here**, rather than in place: ADR text is append-only under this repo's convention, and editing a historical ADR to make it look correct is the same instinct D1 exists to correct. This is the third occurrence of that one stale citation; the other two are `.cowork-allowlist.json`'s `reason` string (repaired at Scope B item 5, since it is a live JSON value rather than a historical record) and `docs/spec.md`'s v2.19.7 out-of-scope table (left byte-unchanged as frozen record).
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) tag and publish both unpublished versions with an explicit backfill caveat, once `scripts/publish-release.sh` grows a `--backfill-historical` mode that decouples the requested version from `VERSION_AT_HEAD` and can attach archives built from an arbitrary tree-ish; (b) lower `verify-release-surface.sh`'s `v2.18.0` floor so the CHANGELOG↔tag invariant is machine-checked rather than documented, once the anchor-form predicate is generalized — already named in ADR-077 §Maturation Path option (a) and ADR-078 option (b); (c) generalize `verify-ledger-annotations.sh` from a hand-maintained anchor table into a scanner that extracts `grep -n '<anchor>' <file>` citations directly from the documents and re-runs each one, retiring the table entirely; (d) promote the content-anchoring rule from a per-cycle discipline to a repo-wide pre-commit check rejecting any new bare `file:line` in a growing file; (e) leave both versions permanently unpublished and treat the preamble record as the terminal state.
+- **Concrete revisit triggers:** (i) a **third** CHANGELOG↔tag mismatch appears — one is an accident, two is history, three is a process defect and the invariant needs enforcement rather than documentation, which arms option (b) or (d); (ii) `publish-release.sh` gains a historical-backfill mode for any other reason, making option (a) nearly free; (iii) an external consumer — a catalog listing, a package index, a security scanner — is found to key off the tag list rather than `CHANGELOG.md`, converting a documentation gap into a functional one; (iv) `verify-release-surface.sh`'s floor drops below `v2.18.0` for any reason, at which point all three mismatches become live gate findings; (v) the anchor table exceeds roughly twenty entries, or a second cycle adds annotations to it by hand — either is the trigger for option (c), since a hand-maintained table of anchors is itself a thing that rots; (vi) `verify-ledger-annotations.sh` reports its **first real RED on a PR that did not intend to touch an annotation** — that is the empirical proof the rot hypothesis is correct and justifies option (d).
+- **Risk knowingly accepted:** four risks, named rather than bundled. (i) The CHANGELOG↔tag invariant stays machine-unverifiable — a tag-enumerating tool still sees two versions missing, and the mitigation is documentary, depending on a reader reaching the CHANGELOG preamble. Accepted because the alternative costs two irreversible public writes, a bypass of the repo's only release mechanism, and at minimum one permanent red CI run, to close a discoverability gap in versions 16 weeks old and superseded 44 times. (ii) The anchor table is **hand-maintained**, so an annotation added by a future cycle without a matching table row is unverified and silently so — the verifier cannot detect an anchor nobody told it about. Accepted for now, and it is exactly what triggers (v) and option (c) are for; the zero-scan guard bounds the worst case to "checked fewer things than it should," never to "checked nothing and passed." (iii) The verifier proves **resolution, not truth** — an annotation can cite a perfectly resolving anchor and still say something false, and no control in this ADR catches that. Accepted, and stated in §Consequences rather than left for a reader to discover. (iv) `AC-B5-TIER`'s projection is a **hand-written key list**; a future schema addition of a new control-bearing key would not be projected, and the falsifier would pass while a real control changed. Accepted because `$schema_version` is frozen by `AC-SYNC-5`, which makes a silent schema addition structurally unlikely — and trigger (i) of ADR-080's own maturation path (any `$schema_version` bump) is the point at which this projection must be re-derived rather than inherited.
+
+### References
+
+- `docs/spec.md` v2.19.8 — `AC-A3`, `AC-B5-2`, `AC-B5-TIER`, `AC-B-CODEOWNERS`, `AC-B-APPEND`, `AC-B-VERIFY-1..4`, `AC-B-VERIFY-CI`, `AC-C1`, `AC-C2`, `AC-C3`, `AC-C3-CAPTURE`, `AC-E2`, `AC-E5-NC`
+- `docs/design-v2.19.8.md` §B (disposition, both options costed), §C (verifier), §D (file-by-file plan)
+- ADR-077 §Maturation Path (a), ADR-078 §Maturation Path (b) — the named route to machine-checking the invariant
+- ADR-080 §Context (1), §Maturation Path — amended forward above
+- The-Council `docs/architecture.md` ADR-198 §Decision 2 / §Risk (1) — the reused rule and its supporting incident
+- @security Phase 0.D Round 2: S10 (`AC-B5-TIER`), S11 (three-tag boundary), S12 (CODEOWNERS trap), S13 (`AC-E5-NC` by clause), S14 (`requires_review`, carried), S15 (verifier hygiene), S16 (`publish-release.sh` untouched)
+- @compliance Phase 2: L1 (travisvn disposition split into permanent-by-our-choice / undetermined), L5 (403 as a technical access control)
+
+End of v2.19.8 ADR block.
