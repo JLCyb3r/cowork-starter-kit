@@ -21,8 +21,8 @@
 #
 # --- FOUR INVARIANTS, EACH MECHANICALLY CHECKABLE BY A THIRD PARTY ---
 #
-# (1) SCOPE VISIBILITY [AC-B-VERIFY-5; ADR-081 §Context (3), reusing The-Council ADR-198
-#     §Decision 2]. Every anchor names THE FILE IT SEARCHES. A pattern matching somewhere
+# (1) SCOPE VISIBILITY [AC-B-VERIFY-5; ADR-081 §Context (3), reusing the upstream pipeline
+#     tooling's ADR-198 §Decision 2]. Every anchor names THE FILE IT SEARCHES. A pattern matching somewhere
 #     in the repo is a DIFFERENT CLAIM from a pattern matching where the annotation says
 #     it is. NEVER convert a per-file grep here into a repo-wide one: this repository
 #     vendors 108 third-party files under vendored/agency-agents/, which is precisely
