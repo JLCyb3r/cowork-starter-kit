@@ -399,9 +399,11 @@ SECTION 2 — LIVE PROBE (LP-01)                            [rewritten per S23]
   NO TOKEN AVAILABLE   -> SKIPPED (no token). Printed loudly. Build PASSES.
   TOKEN AVAILABLE:
       2xx + JSON object -> EXECUTED, output recorded with UTC timestamp
-      HTTP 404          -> EXECUTED, recorded as a meaningful NEGATIVE answer
+      HTTP 404 'Branch not protected' -> EXECUTED, recorded as a meaningful NEGATIVE
+                                            answer [tightened, Phase-6 S3 — 'Branch not
+                                            found' is a DIFFERENT 404 and falls through]
       anything else     -> FAILED, exit 1  (401/403/5xx, network, gh missing,
-                                            unparseable body)
+                                            unparseable body, 'Branch not found')
   Counter: PROBE_FAILED. Separate population; never folded into CHECKED.
   Pass condition is NEVER "reproduces" — live state is not a fixture.
 
@@ -422,6 +424,23 @@ LP-01 FAILED at <UTC> — a token was available but the probe did not complete (
 ```
 
 **One refinement of S23, flagged rather than applied silently.** S23 says any non-200 must fail; **HTTP 404 is excluded here on purpose.** This endpoint 404s when branch protection is simply *not configured* — the API healthily answering "no protection," which is precisely the currency evidence `v2.19.5-CODEOWNERS-1` watches for and a state `OT-7` step 2 could legitimately produce. Failing on it would break the probe exactly when it reports the answer we want. The preserved distinction is **"the API answered, and the answer was no"** versus **"we could not ask."** Every genuine could-not-ask case still fails. @security should confirm or overrule this narrowing at Phase 6.
+
+**Phase-6 disposition (S3, WARNING) — @security confirmed the argument, then found the
+implementation looser than it.** The distinction above is right, and the CI evidence at S1
+strengthens it (faced with a real 403 the script correctly refused to call it a negative answer).
+But the matcher as written was `grep -q 'HTTP 404'` — the whole status line, nothing more. Probed
+live: `branches/main/protection` → `200` (protection IS configured); a **deliberately wrong**
+branch name, `branches/nonexistent-branch-xyz/protection` → `404`, `gh: Branch not found (HTTP
+404)`. Two different answers wearing the same status code. A misaimed probe (a rename, a typo, a
+future default-branch change) would have printed *"branch protection is NOT configured"* as
+recorded evidence for a risk-register row — a citation asserting something it did not verify,
+inside the cycle built to stop exactly that. **Tightened to require GitHub's own documented
+message, `Branch not protected`; `Branch not found` (or anything else) now falls through to
+FAILED.** Stated as a limit, not a verified end-to-end case: protection is currently *enabled* on
+`main`, and disabling it on this shared public repo to manufacture the `Branch not protected`
+response was refused (`no-destructive-test-on-live-resource`). The tightened matcher rests on
+GitHub's documented message text plus the observed `Branch not found` counter-example — not on an
+observed positive.
 
 **A units defect found by running it, and fixed.** The first reconstruction reported `7 of 19 static anchors` after a probe failure when only **6** static anchors had failed — the probe was being folded into the static population. `FAILED` and `PROBE_FAILED` are now separate counters and the summary names both units on one line: `6 of 19 STATIC ANCHORS … and 1 LIVE PROBE(S) failed. These are two separate populations; the probe is not one of the 19.` This is the `docs/patterns.md` units-ambiguity WATCH item, self-inflicted and self-caught.
 
@@ -470,6 +489,41 @@ Notes, each deliberate:
 - **NOT added to `.github/CODEOWNERS`** (`AC-B-CODEOWNERS` / @security S12). Confirmed untouched.
 - **Not a required status check.** Branch protection remains owner-held (`OT-7` step 2), unchanged here.
 - **Job count context:** `quality.yml` currently has **32** jobs (`grep -cE '^  [a-z][a-z0-9-]*:$'`), not the 30 stated in the previous revision. This job makes 33. Corrected because a wrong count in a design doc is the defect this cycle exists to stop.
+
+#### Phase-6 correction (S1, CRITICAL) — the YAML block above and the `GH_TOKEN` note above it were both wrong
+
+**Left byte-unchanged above as the record of what this cycle believed at Phase 1/3; corrected here,
+forward, per this file's own `AC-B-APPEND` convention.** CI proved both statements false on this
+cycle's own first Phase-4 push (run `31315509218`, reproduced at `31316499420`):
+
+```
+LP-01 FAILED — a token was available but the probe did not complete (rc=1).
+    gh: Resource not accessible by integration (HTTP 403)
+```
+
+`branches/{branch}/protection` requires `administration: read`. `permissions: { contents: read }`
+(S24, the block two notes above) does not grant it and never will under least-privilege — granting
+`administration: read` to a job whose probe only *records* information would hand it repo-admin
+read on a public repo for that purpose, which is a strictly worse trade than the one S24 was written
+to prevent. **This was structural from the moment S24 and the live probe were designed together,
+not a flake discovered later** — the two requirements are in direct tension, and nothing in Phase 1
+tested the probe under the actual job-scoped token, only under an ambient `gh auth status` session.
+
+**The fix, shipped at Phase 6:** the `env: GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` line is **removed**
+from the real `ledger-annotations` job (the YAML block above is now stale on that one line; the real
+job carries an inline comment pointing here). With no token in the job's environment, SECTION 2 takes
+its own `SKIPPED (no token)` path — loud, non-blocking — and SECTION 1's 19 static anchors remain
+fully enforced, unaffected.
+
+**What this changes about the control's promise, stated plainly rather than left implicit:** the
+sentence above claiming *"SECTION 2 is effectively mandatory on every CI run"* is **false as of this
+fix** and was never true under `contents: read` — the probe cannot execute in CI at the permission
+level S24 requires, structurally, not situationally. The live probe (`LP-01`) is now an
+**owner-side or local-only check**: it runs and can fail when a developer or the owner re-runs
+`scripts/verify-ledger-annotations.sh` locally with their own authenticated `gh` session (which
+carries broader scopes than a workflow's `GITHUB_TOKEN`), never inside this repo's CI. `AC-B-VERIFY-3`
+and `AC-B-VERIFY-CI` (`docs/spec.md`) are satisfied by SECTION 1 running on every push/PR; the live
+probe's CI mandate, as originally written, is retracted here rather than left standing uncorrected.
 
 ---
 

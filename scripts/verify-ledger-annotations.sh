@@ -283,6 +283,21 @@ fi
 #
 # Separated from SECTION 1 rather than interleaved: merging them would hand SECTION 2's
 # non-reproducibility to SECTION 1, which IS reproducible and is where regressions show.
+#
+# [Phase-6 S1 correction, CRITICAL] THIS REPO'S CI DOES NOT SUPPLY A TOKEN, DELIBERATELY,
+# AND SECTION 2 IS NOT MANDATORY IN CI. An earlier revision of docs/design-v2.19.8.md
+# claimed the opposite ("SECTION 2 is effectively mandatory on every CI run") — false,
+# and disproved by CI itself: `branches/{branch}/protection` requires `administration:
+# read`, which this job's `permissions: { contents: read }` (S24, least-privilege) does
+# not grant and never will — granting it would hand a probe that only records information
+# the same read-scope as a repo admin, on a public repo. `secrets.GITHUB_TOKEN` under
+# `contents: read` therefore 403s here on EVERY push and PR, structurally, not as a
+# flake (reproduced live, run 31315509218/31316499420). The `ledger-annotations` job in
+# .github/workflows/quality.yml no longer passes GH_TOKEN as of this fix, so SECTION 2
+# takes its own SKIPPED (no token) path on every CI run; it is now an owner-side/local
+# check only (a developer's own authenticated `gh` session, run locally, carries broader
+# scopes than a workflow's GITHUB_TOKEN). SECTION 1's 19 static anchors are unaffected —
+# see docs/design-v2.19.8.md §C.5's Phase-6 correction for the full record.
 # ---------------------------------------------------------------------------
 
 echo "verify-ledger-annotations: SECTION 2 — live probe"
@@ -323,8 +338,23 @@ else
         echo "::error::verify-ledger-annotations: LP-01 FAILED at ${UTC_NOW} — probe returned success but the body is not a JSON object. Could not ask, rather than asked-and-answered." >&2
         FAIL=1; PROBE_FAILED=$((PROBE_FAILED + 1))
       fi
-    elif grep -q 'HTTP 404' "$PROBE_ERR" 2>/dev/null; then
-      echo "  LP-01 EXECUTED at ${UTC_NOW} — HTTP 404: branch protection is NOT configured on main."
+    elif grep -q 'Branch not protected' "$PROBE_ERR" 2>/dev/null; then
+      # [Phase-6 S3 — @security] The prior form matched bare 'HTTP 404', which is the
+      # SAME status code GitHub returns for a branch that does not exist at all
+      # (`Branch not found`, confirmed live against branches/nonexistent-branch-xyz).
+      # Those are two different answers wearing the same status code: "the branch
+      # exists and has no protection" (the meaningful negative this probe wants) versus
+      # "we could not even find what we asked about" (a probe misfire — wrong branch
+      # name, a rename, a typo). The prior form could not tell them apart and would
+      # have printed the recorded-negative claim below for either one. Tightened to
+      # require GitHub's own documented message string. LIMIT, stated rather than
+      # implied: this was not observed positively — protection is currently ENABLED on
+      # `main` (this probe's own live run above returns 200), and manufacturing the
+      # `Branch not protected` case would mean disabling protection on this shared
+      # public repo, which was refused. This branch rests on GitHub's documented
+      # message text plus the observed `Branch not found` counter-example, not on an
+      # observed positive.
+      echo "  LP-01 EXECUTED at ${UTC_NOW} — HTTP 404 'Branch not protected': branch protection is NOT configured on main."
       echo "  LP-01 RESULT (recorded, not asserted): a meaningful negative answer, not a probe failure."
       echo "        v2.19.5-CODEOWNERS-1 remains OPEN; OT-7 step 2 has not landed."
     else

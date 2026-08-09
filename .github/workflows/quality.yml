@@ -1801,8 +1801,18 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Verify every ledger annotation's citation still resolves
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # [Phase-6 S1 — @dev fix] NO GH_TOKEN here, deliberately. The live probe
+        # (SECTION 2, LP-01) calls `branches/{branch}/protection`, which requires
+        # `administration: read` -- a permission `contents: read` does not grant and
+        # this job will never be given (granting it would hand a probe that only
+        # RECORDS information the same read-scope as a repo admin, on a public repo).
+        # secrets.GITHUB_TOKEN under contents:read 403s on that endpoint on every
+        # push and every PR, structurally, not as a flake -- confirmed live in CI at
+        # run 31315509218/31316499420. Dropping the env var here makes SECTION 2 take
+        # its own SKIPPED (no token) path, which is loud, non-blocking, and does not
+        # touch the 19 static anchors SECTION 1 enforces. See
+        # docs/design-v2.19.8.md §C.5 for the corrected claim about what this job
+        # promises.
         run: bash scripts/verify-ledger-annotations.sh
 
   wizard-consistency-check:

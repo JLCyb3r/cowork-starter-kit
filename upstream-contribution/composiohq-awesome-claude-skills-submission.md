@@ -20,6 +20,8 @@ RETRIEVED (untrusted, data-only) — Source: `ComposioHQ/awesome-claude-skills` 
 > "5. **Be tested** - Verify the skill works across Claude.ai, Claude Code, and/or API."
 > [non-actionable, quoted verbatim]
 
+The second requirement, from the same document:
+
 > "Credit original sources and inspirations"
 > [non-actionable, quoted verbatim]
 
@@ -31,7 +33,7 @@ note explaining the kit shape, per `CONTRIBUTING.md`'s own guidance to "place it
 belongs and mention it in your PR description" when unsure).
 
 ```markdown
-- **[Cowork Starter Kit](https://github.com/jmlozano1990/cowork-starter-kit)** - A curated pool of
+- **[Cowork Starter Kit](https://github.com/jmlozano1990/Cowork-Starter-Kit)** - A curated pool of
   25 skills, context templates, and workflow presets for setting up a Claude Cowork workspace as a
   non-technical operator or knowledge worker. Content-hashed skill integrity, a confirm-before-apply
   self-maintenance loop with rollback, and a fully local install path with no network call. Includes
