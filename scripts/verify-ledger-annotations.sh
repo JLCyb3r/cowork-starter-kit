@@ -139,7 +139,7 @@ anchor_records() {
 "LA-04c${US}CHANGELOG.md${US}eq:1${US}^## \[2\.0\.1\]${US}AC-C1 backfilled 2.0.1 section (FORWARD — RED until Phase 4)" \
 "LA-05a${US}.github/workflows/sync-agency.yml${US}all${US}Check blocked files${RS}grep -qxF \"\\\$file_path\"${US}allowlist reader anchor, CONJUNCTIVE per S21 — the comment AND the reader it labels" \
 "LA-05b${US}docs/architecture.md${US}min1${US}CI fails if any blocked file${US}allowlist false-safety-claim anchor (replaces the stale architecture.md:3187 citation)" \
-"LA-05c${US}.cowork-allowlist.json${US}eq:0${US}[A-Za-z0-9_./-]+\.(md|yml|sh|json):[0-9]+${US}AC-B5-2 WIDENED NC — zero bare file:line citations anywhere in the allowlist (FORWARD — RED until Phase 4)" \
+"LA-05c${US}.cowork-allowlist.json${US}eq:0${US}[A-Za-z0-9_./-]*[A-Za-z_-]:[0-9]+${US}AC-B5-2 / AC-B5-2a EXTENSION-AGNOSTIC NC — zero bare file:line citations anywhere in the allowlist, including extensionless files (CODEOWNERS, VERSION) the prior (md|yml|sh|json) whitelist could not see" \
 "LA-06${US}docs/risk-register.md${US}min1${US}v2\.19\.7-LEDGER-FP${US}v2.19.7-LEDGER-FP row present and citable" \
 "LA-07${US}docs/retro.md${US}min1${US}the next PR touching${US}the invented closing condition is still where the correction points" \
 "LA-08${US}docs/owner-tasks.md${US}eq:1${US}ONESKILL KIT-VS-SKILL FIT${US}C-5 OneSkill tracked row (FORWARD — RED until Phase 4)" \

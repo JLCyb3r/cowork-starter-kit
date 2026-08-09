@@ -363,6 +363,25 @@ Expected >=1 match for /grep -qxF "\$file_path"/, got 0.
 
 The pre-S21 form returns PASS against that same fixture. That difference is the whole finding.
 
+#### AC-B5-2a — Phase 4 widening, LA-05c made extension-agnostic
+
+**Addendum, not a revision of the table above** (the §C.2 table's `LA-05c` row is left
+byte-unchanged as the record of the pattern this cycle shipped at Phase 1/3; this note documents
+what @dev widened at Phase 4, same convention as S21's addendum above it). The Phase-1/3 `EXPR`,
+`[A-Za-z0-9_./-]+\.(md|yml|sh|json):[0-9]+`, requires an extension from a 4-member whitelist —
+it cannot see a stale citation into `CODEOWNERS:21` or `VERSION:1`, both real files in this repo
+with no extension, and `CODEOWNERS` is the file this cycle's own text discusses most (Scope B
+item 3's real-location repairs, the `AC-B-CODEOWNERS` prohibition, S-A10's CODEOWNERS-coverage
+closure). **Proven live, this session:** the old pattern returns 0 against a fixture line reading
+`stale citation: CODEOWNERS:21 and VERSION:1 here` — a miss — while the widened pattern,
+`[A-Za-z0-9_./-]*[A-Za-z_-]:[0-9]+`, returns 1 against the same fixture, and returns matches for
+all four of `sync-agency.yml:228`, `architecture.md:3187`, `CODEOWNERS:21`, `VERSION:1` against a
+combined fixture — a strict superset of the old pattern's catch, not a replacement with different
+gaps. Re-run against the real `.cowork-allowlist.json` at Phase 4: 0 matches, same PASS the
+narrower pattern reported — no false positive introduced. The row count, record count, and
+`CHECKED` total are unaffected (still 19/19/19); only `LA-05c`'s own `EXPR` and description
+changed, in the script only, which is where §C.2 already says the enforcement mechanism lives.
+
 ### C.3 Structure
 
 ```
@@ -526,6 +545,37 @@ Staged implementation files require Phase 3 (User Gate) APPROVED.
 **Expected `AC-B5-TIER` values, for @dev and @qa — do not recompute the base from memory.**
 Base (`c8342d7`) and required head value: `e973f98739d46e3d42b8cbb5567872794d270276eff6f77f7ac547972f1ff44d`.
 The NC fixture must produce something **other** than that; the observed value for the documented one-character fixture is `5fb8ed0b629df38f9de2077dc6cb2e2e2350dafc091c183587b1f76dbb442824`. If the head projection is anything but the first value, **Tier A snaps back and a GCS is owed before merge.**
+
+#### AC-B5-TIER-2 — Phase 4 addendum, default-deny projection
+
+**Addendum, not a revision** of the `AC-B5-TIER` row above, whose positive allow-list projection
+(`{schema, allowed_categories, blocked_files: [...{path, permanent}], blocked_patterns:
+[...{pattern}], requires_review}`) stays the Phase-1/3-demonstrated control. The gap: a positive
+allow-list is silent on any key **added later** — a new control-bearing field would need someone
+to remember to add it to the projection, and until they do it is invisibly excluded. Inverted to
+**default-deny**, proven this session:
+
+```
+del(.reason, .description, .notes) | .blocked_files |= map(del(.reason))
+```
+
+Only the three known prose-only fields are excluded (top-level `.description`/`.notes`, plus
+`.blocked_files[].reason`); everything else — including any key added to the schema in a future
+cycle — is in scope by default. Run against base (`c8342d7`) and head:
+`90a37d92384bd51730f13c515872a6d8889dfaaa86f2d244127b88f1ccad5899` — **identical**, so the
+Tier-B claim holds under the stricter form too, not only under the form that happened to be
+written before this repair existed. Note, stated rather than silently left: this default-deny
+form does **not** exclude `.blocked_patterns[].reason` (the old positive form did, via `{pattern}`
+selection) — deliberate, since the entire point of default-deny is that an unlisted field is
+in-scope rather than silently dropped; a future edit to a `blocked_patterns[].reason` string would
+now correctly move this hash, where the old form would have missed it.
+
+**Second, independent firing NC (`AC-B5-TIER-2`'s own falsifier):** the existing NC alters one
+`blocked_files[].path` character; this one alters `.upstream` instead, proving the new form
+doesn't accidentally exclude top-level scalar fields either.
+`... | .upstream = "msitarzewski/agency-agent"` (one character short of the real
+`msitarzewski/agency-agents`) → `8e272c442f9b80482fea377712e6c3af39e41910fbab3f9bbfbcf5eca2dc746f`
+— different from the base/head value above. The falsifier can fail on a second, independent axis.
 
 **Pre-state capture (`AC-C3-CAPTURE`), executed at ① and recorded in the PR:**
 

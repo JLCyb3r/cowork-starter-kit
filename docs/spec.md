@@ -7619,5 +7619,5 @@ the rest of the line byte-identical. This is the only line in the repository mat
 `^AC-OT3-2-DISPOSITION: `, and `AC-A3` requires it to stay that way
 (`grep -c '^AC-OT3-2-DISPOSITION: ' docs/spec.md` → 1, before and after).
 
-AC-OT3-2-DISPOSITION: PENDING-PHASE-4
+AC-OT3-2-DISPOSITION: INDETERMINATE
 

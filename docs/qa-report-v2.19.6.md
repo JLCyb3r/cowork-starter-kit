@@ -674,3 +674,19 @@ What remains owner-only after merge: running Scope A itself (ascending order, ha
 time; `OT-7` step 2 (enabling the CODEOWNERS review gate) remains a separate, already-tracked owner
 action, unaffected by this cycle; confirming the offline smoke-test scorecard is current before
 each of the three tags per OT-8.
+
+---
+
+## v2.19.8 amendment — S-A3 / S-A9 / S-A10 closed-by-v2.19.7
+
+**Additive record.** This report already noted S-A3 as fixed and S-A9/S-A10 as accepted/documented
+at v2.19.6 QA (10.3 above); the following re-verifies all three against the shipped v2.19.7 code,
+live, this session, and gives each a re-runnable command:
+
+- **S-A3 CLOSED** — `grep -n 'AC-E1-1, v2.19.7' scripts/verify-release-surface.sh` → line 304
+  (`evidence_body()`'s rc=2 now propagates instead of collapsing into `MISSING-RELEASE`).
+- **S-A9 CLOSED** — `bash scripts/semver-compare.sh ge 99999999999999999999.0.0 2.18.0` exits `2`
+  (fail-closed on an oversized component, reproduced live).
+- **S-A10 CLOSED** — `grep -n 'release-predicate.sh' .github/CODEOWNERS` → line 50, `@jmlozano1990`
+  (the release-predicate.sh gap named in S-A10 is filled; all four release-critical paths now have
+  a real code owner).

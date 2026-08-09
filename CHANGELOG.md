@@ -2,6 +2,37 @@
 
 All notable changes to this project are documented here. This project uses [Semantic Versioning](https://semver.org/).
 
+## Release surface
+
+This project maintains a CHANGELOG↔tag↔GitHub-Release invariant: a version documented here is
+also tagged and published as a GitHub Release, and vice versa. That invariant has three named
+exceptions, each recorded at its own section below with a dated `> **Release surface:**` note:
+
+- **`1.0.0`** and **`1.1.1`** — have a CHANGELOG section, were merged to `main`, but were **never
+  tagged, never released**.
+- **`2.0.1`** — has an origin tag but **no CHANGELOG section** until this note; backfilled
+  (v2.19.8) from the real commit range, sourced not fabricated.
+
+No retroactive tag or Release is created for any of the three (`docs/design-v2.19.8.md` §B). This
+section is the reader-facing record of that decision so the exceptions are documented rather than
+silently discoverable only by diffing tags against sections.
+
+---
+
+## [2.19.8] - 2026-08-09
+
+**"Polish the Carryovers."** Documentation-only ledger-truth repair (zero new user-facing feature
+surface): eight ledger annotations that had drifted from what they cited are corrected, each with
+a re-runnable content-anchored command instead of a bare line number — `scripts/verify-ledger-
+annotations.sh` (new, wired into CI as `ledger-annotations`) checks all 19 anchors and fails
+naming the specific one that broke, closing the exact defect class this cycle exists to stop. The
+`v1.0.0`/`v1.1.1`/`v2.0.1` CHANGELOG↔tag↔Release gap (see `## Release surface` above) is
+documented, not retroactively published. `AC-OT3-2` (GuildSkills kit-vs-skill fit, open since
+v2.19.4) is resolved to `INDETERMINATE` with a cited, dated quotation. One upstream submission
+draft is prepared (`ComposioHQ/awesome-claude-skills`, never filed); `travisvn` stays blocked on
+two independent barriers and `claudepluginhub.com` stays owner-only, both recorded rather than
+routed around.
+
 ---
 
 ## [2.19.7] - 2026-08-08
@@ -868,6 +899,35 @@ Doc-only patch: Extended Thinking + Opus onboarding guidance added to three user
 
 ---
 
+## [2.0.1] — 2026-05-07
+
+> **Release surface:** the opposite exception from `1.0.0`/`1.1.1` below — this version **was**
+> tagged (`v2.0.1`) and **was** published as a GitHub Release, but had no CHANGELOG section until
+> this backfill (v2.19.8), sourced from the real commit range (`e62b9b2`), not fabricated. See
+> this file's preamble `## Release surface` section (added v2.19.8) for the full invariant.
+
+**Hotfix — `sync-agency.yml` shipped non-functional in v2.0.0.** Heredoc content inside a `run: |`
+block started at column 0, breaking the YAML block scalar; GitHub Actions could not parse the
+file and `workflow_dispatch` never registered. Fixes [#12](https://github.com/jmlozano1990/cowork-starter-kit/issues/12) (ADR-027).
+
+**Fixed:**
+- Extracted the static `THIRD-PARTY-NOTICES.md` template body into
+  `.github/templates/THIRD-PARTY-NOTICES.template.md`. Replaced the broken heredoc with
+  `envsubst` (3-var allow-list) + `awk` LICENSE injection, eliminating the YAML+heredoc-indent
+  collision entirely.
+- `CONTRIBUTING.md` — added a "CI Workflow Quality Baseline" section: every new CI workflow file
+  must pass `yaml.safe_load` locally before merge, and after its first push to `main`,
+  `gh api .../workflows/<id>` must show the expected `name:` field and full triggers list. Closes
+  the class of defect this hotfix exists to fix (P2 pattern from the v2.0 retrospective).
+- **Bonus:** resolves v2.0 finding A5 (heredoc delimiter collision risk, #16) — the template
+  extraction removes the heredoc entirely, so #16 is superseded rather than separately fixed.
+
+**Single squashed commit:** `e62b9b2` — "v2.0.1 hotfix — sync-agency.yml YAML structure fix
+(resolves #12) (#22)". `git diff --stat v2.0.0..v2.0.1`: 8 files, +552/−38, principally
+`.github/workflows/sync-agency.yml` and the new `THIRD-PARTY-NOTICES.template.md`.
+
+---
+
 ## [2.0.0] — 2026-05-07
 
 **Dynamic Workspace Architect — upstream content integration via msitarzewski/agency-agents.** Major supply-chain infrastructure: SHA-pinned lock file, fail-closed allowlist, monthly sync CI, prompt-injection content scan, attribution injection (ADR-024 full MIT block), THIRD-PARTY-NOTICES.md. All 8 Phase 2 MUST-FIX security items resolved. Presets relocated to `examples/` (v1.x symlink preserved for v2.0.x).
@@ -1068,6 +1128,11 @@ Doc-only patch: Extended Thinking + Opus onboarding guidance added to three user
 
 ## [1.1.1] - 2026-04-16
 
+> **Release surface:** merged to `main` at `66c09af` (`git show 66c09af:VERSION` → `1.1.1`) —
+> never tagged, never released. Developed and merged the same day as `1.1.0`; the release
+> surface for this version was simply never created. See this file's preamble
+> `## Release surface` section (added v2.19.8) for the repo-wide invariant and its exceptions.
+
 **Zero-paste setup** — adds `CLAUDE.md` at repo root so Cowork auto-runs the onboarding wizard when you open the project. No copy-paste required.
 
 **New files:**
@@ -1114,6 +1179,11 @@ Doc-only patch: Extended Thinking + Opus onboarding guidance added to three user
 ---
 
 ## [1.0.0] - 2026-04-15
+
+> **Release surface:** merged to `main` at `4bfc704` (`git show 4bfc704:VERSION` → `1.0.0`) —
+> never tagged, never released. Predates this repo's first GitHub Release
+> (`v1.1.0`, 2026-04-16) by a day. See this file's preamble `## Release surface` section (added
+> v2.19.8) for the repo-wide invariant and its exceptions.
 
 Initial release.
 
