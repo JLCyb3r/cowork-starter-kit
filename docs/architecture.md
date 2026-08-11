@@ -13697,8 +13697,16 @@ no third target. The decision is unchanged; only the reason it was right changes
 **best-effort / inspection-class**: the write is durable, its *read* at session start is not
 guaranteed. Skill Studio's target-resolution rationale and its user-facing advisory line are corrected
 to say so. The enforcing clauses — the slug charset gate, the kit-checkout guard, the literal-string
-write, the block-scoped token scan, the idempotency marker — are **byte-unchanged**, because not one
-of them ever depended on the premise.
+write, the block-scoped token scan, the idempotency marker — are **byte-unchanged**, proven by an
+instrument (`FROZEN v2`, `docs/design-v2.19.9.md` §A.4) that freezes every step-8 sub-step body and
+every step-8 safety bullet, subtracting only the two lines this cycle licenses to change (sub-step
+3's lead and sub-step 9's advisory line). The complement form is deliberate: an enumeration can only
+freeze what its author thought of, which is how the first version of this instrument froze five
+clause *descriptions* while leaving three clause *bodies* — including the operative slug-charset
+gate — free to be silently reverted. Coverage: 80 lines,
+`sha256 5f243f28e714e5e9fa201241ef553cabbd869ad904854801c67d9780d082cafb`, with firing negative
+controls proven against 8.1, 8.6, 8.7 and 8.8, and PASS controls proven against both licensed edits.
+None of these clauses ever depended on the premise.
 
 **D2 — The forward rule, and it is the reusable half of this record: an ADR may not cite a prose
 document line as sole authority for a behavioral claim about the platform.**
