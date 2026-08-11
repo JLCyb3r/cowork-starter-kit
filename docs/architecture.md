@@ -21,7 +21,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-007 | Skill File Format v1.1 — folder/SKILL.md with YAML Frontmatter | ACCEPTED |
 | ADR-008 | CI Expansion v1.1 — Starter File and Skill Format Enforcement | ACCEPTED |
 | ADR-009 | Wizard UX Format Standard | ACCEPTED (extended by v1.2) |
-| ADR-010 | CLAUDE.md as Universal Dynamic Wizard Entry Point (v1.2) | ACCEPTED |
+| ADR-010 | CLAUDE.md as Universal Dynamic Wizard Entry Point (v1.2) | ACCEPTED (premise superseded by ADR-082) |
 | ADR-011 | Dynamic Wizard State Machine and Word Budget Architecture | ACCEPTED |
 | ADR-012 | Skill Discovery Hybrid Architecture — Tier 1/Tier 2 Model | ACCEPTED |
 | ADR-013 | Writing Profile Architecture — Universal Artifact for All Workspaces | ACCEPTED |
@@ -64,14 +64,14 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-043 | Adapt-vs-Author Sourcing Policy for the Skills Pool (GD-1 codification) — source-scan preference order (in-repo vendored → in-repo pool → permissive external); ADOPT only on shape+domain+license fit (Cowork "shape" = ADR-015 9-section template, which no external Agent-Skills-standard collection uses); authoring from a cited multi-source evidence base IS the "proper job" when no tested source fits; full ADR-024 ceremony on any future ADOPT | ACCEPTED |
 | ADR-044 | Skill Studio Generative Path + `skill-studio` Meta-Skill CI-Exemption (v2.11.0 Increment 1) — a top-level `.claude/skills/skill-studio/` free-form meta-skill (setup-wizard precedent) runs an interview→propose→confirm→author→install→validate→refine loop that emits ADR-015 9-section skills into the *user's own* workspace; exempt from every pool/registry/wizard-consistency CI gate (all glob-scoped to `skills/*` or `examples/*`); generated-skill safety governed by baked-in WS-SAFETY + Phase 2 review of the generator, not CI; Anthropic conversational skill-creation tool cited as prior art for the loop (internal, prose-only) | ACCEPTED (§Maturation Path (d) narrowed by ADR-052) |
 | ADR-045 | Portable Structural Validator — Standalone + Documented Manual-Sync Parity (v2.11.0 KDQ-2) — `scripts/skill-studio-validate.sh` hand-mirrors `skill-depth-check`'s 9 `REQUIRED_SECTIONS` + `MIN_LINES=60` as a dependency-free, file-path-parameterized, offline script that persists into user workspaces via the WIZARD.md Step-7 `_setup-kit/scripts/` handover; shared-source CI refactor (Option a) deferred to avoid a `.github/workflows/*` edit that would break AC-VALID-4 and escalate ceremony; parity held by a `# SYNC-SOURCE:` header + an ADR-015/016-amendment sync rule | ACCEPTED |
-| ADR-046 | Proactive-Surfacing Target = Auto-Loaded Workspace CLAUDE.md + Skill-Scoped Idempotency Marker (v2.12.0 Increment 2a, KDQ-1/2/3) — surfacing writes each generated skill's `## Proactive skill behavior` block into the workspace's auto-loaded `CLAUDE.md` (the only surface Cowork loads each session, WIZARD.md:3), not the inert-until-re-paste `project-instructions.txt`; paired skill-scoped HTML-comment marker `<!-- skill-studio:proactive:<slug> -->` gives update-in-place idempotency; absent-file → skip-with-message, section-absent → create-section; AC-SAFE-5 extended to protect the kit-checkout root `CLAUDE.md`; zero CI/registry/pool footprint (ADR-044/045 exemption envelope preserved; note the repo-root CLAUDE.md's own safety-rule + word-count CI jobs stay green as non-regression since this cycle never edits the root file) | ACCEPTED |
+| ADR-046 | Proactive-Surfacing Target = Auto-Loaded Workspace CLAUDE.md + Skill-Scoped Idempotency Marker (v2.12.0 Increment 2a, KDQ-1/2/3) — surfacing writes each generated skill's `## Proactive skill behavior` block into the workspace's auto-loaded `CLAUDE.md` (the only surface Cowork loads each session, WIZARD.md:3), not the inert-until-re-paste `project-instructions.txt`; paired skill-scoped HTML-comment marker `<!-- skill-studio:proactive:<slug> -->` gives update-in-place idempotency; absent-file → skip-with-message, section-absent → create-section; AC-SAFE-5 extended to protect the kit-checkout root `CLAUDE.md`; zero CI/registry/pool footprint (ADR-044/045 exemption envelope preserved; note the repo-root CLAUDE.md's own safety-rule + word-count CI jobs stay green as non-regression since this cycle never edits the root file) | ACCEPTED (basis amended by ADR-083; decision unchanged) |
 | ADR-047 | Path C Zero-Coverage Setup-Trigger Hook — Additive "Author One for You" Offer + Bundle-Folding Resumption (v2.12.0 Increment 2a, KDQ-4/5) — `WIZARD.md:97` zero-coverage branch offers both "author one for you" (invoke skill-studio, Q1 goal carried as DATA) and the existing pool routing, neither replacing the other; WIZARD.md-only locus (Single-Source Rule; setup-wizard pointer declined); control returns to F4 with the generated slug folded into the bundle so `cowork-profile.md`/`skills-as-prompts.md`/`CLAUDE.md` stay consistent; Attribution Rule 15–17 + notes 54/56/74 byte-unchanged | ACCEPTED |
 | ADR-048 | Two-Axis Skill Studio Eval-Loop — Quality (with/without per-criterion, strict-exceed bar) + Behavioral-Adherence (N=3 observe-at-intent) grading inserted as a new grade-before-install step 7 (nine-step loop); "declare installed" milestone relocates from step 6 to step 7; in-session only (offline contract); WS-EVAL FAIL → refine, WS-EVALSAFE FAIL → delete+author; thin-`## Example` skip returns to refine and is never a pass; closes ADR-044's deferred with/without benchmark + v2.12.0 AC-SEC-S5 honest-limit + F1 (v2.13.0 Increment 2b, AQ-1/3/4) | ACCEPTED |
 | ADR-049 | Observe-at-Intent Containment for WS-EVALSAFE — narration framing (exercise has no execution channel; destructive tool call observed as inert quoted text, never issued) + permission-boundary backstop (no destructive op pre-approved during grading; native permission prompt DENIES + records FAIL); AC-EVALSAFE-3 real-execution fallback declined entirely; honest Phase-1 finding that no in-prose harness hook is buildable — grading-modality scope-down (intent-as-text for every clause class, execution for none), NOT a tool-class narrowing and NOT a scratch-path fallback (v2.13.0 Increment 2b, AQ-7) | ACCEPTED |
 | ADR-050 | CI Enforcement — new fail-closed `skills-allowlist-check` job (top-level `.claude/skills/` == exactly {setup-wizard, skill-studio}; exit 2 absent-dir / exit 1 stray-or-missing / exit 0 clean) + `link-check-external` resilience (host-exclude shields.io + contributor-covenant.org AND drop `continue-on-error: true` — a flagged real behavior change) as two independent, separately-reviewable diffs (v2.13.0 Increment 2b, AQ-5) | ACCEPTED |
 | ADR-051 | Promote-to-Pool Ceremony (v2.14.0 Increment 2c) — a documented top-level `PROMOTE.md` procedure (NOT a `.claude/skills/` meta-skill, NOT a 10th loop step) that turns a graded local skill into a **PR-gated** Tier-1 pool addition: eligibility gate = real `## Example` + **fresh** WS-EVAL/WS-EVALSAFE re-run at promotion time (AQ-8=b, never a stored tally) + forbidden-token re-scan + collision/reserved-name refusal + honest-limit body personal-data confirmation (renders verbatim public-bound text) + plain-language user confirm; write targets `skills/<slug>/SKILL.md` + a Tier-1 registry row with a self-referential pinned-merge-SHA `source_url` (AQ-9, passes `registry-url-check` unchanged); reuses CONTRIBUTING.md's 4-pattern scan + DCO + human merge — zero new CI machinery | ACCEPTED |
 | ADR-052 | Deliberate Supersession of ADR-044 §Maturation Path (d) (v2.14.0) — records three narrowings of the originally-anticipated promote ceremony: (i) CMP byte-mirror dropped by default, fires only on explicit `core_skills` membership (AQ-14); (ii) ADR-024 external-MIT attribution block does not apply to a user-authored skill with no upstream — replaced by self-ref `source_url` + DCO; (iii) ADR-043's adapt-vs-author reclassified for this surface as a DCO-governed community contribution (@compliance N/A) | ACCEPTED |
-| ADR-053 | Workspace Memory-of-Use — Single Lazy-Created `context/memory-of-use.md` Ledger + Fixed-Size CLAUDE.md Pointer (v2.15.0 Loop 1 Increment 1, KDQ-1/AQ-15/19/20) — one canonical file (memory + ledger, not two) parallel to the `context/writing-profile.md` convention; created lazily on first note-worthy friction (NOT scaffolded empty into every workspace); 6-column WATCH-ledger table (`docs/patterns.md` port at workspace scale); a fixed-size (≤35-word, non-scaling) `## Noticing friction` pointer added to `templates/workspace-claude-md-template.md`, growing content externalized to the context file, never inlined into any auto-loaded surface (ADR-046 CI-exemption envelope re-confirmed: PROD-VAL 0 CI globs); bounded growth via a dated `## Archive` section (AC-MEM-5) | ACCEPTED |
+| ADR-053 | Workspace Memory-of-Use — Single Lazy-Created `context/memory-of-use.md` Ledger + Fixed-Size CLAUDE.md Pointer (v2.15.0 Loop 1 Increment 1, KDQ-1/AQ-15/19/20) — one canonical file (memory + ledger, not two) parallel to the `context/writing-profile.md` convention; created lazily on first note-worthy friction (NOT scaffolded empty into every workspace); 6-column WATCH-ledger table (`docs/patterns.md` port at workspace scale); a fixed-size (≤35-word, non-scaling) `## Noticing friction` pointer added to `templates/workspace-claude-md-template.md`, growing content externalized to the context file, never inlined into any auto-loaded surface (ADR-046 CI-exemption envelope re-confirmed: PROD-VAL 0 CI globs); bounded growth via a dated `## Archive` section (AC-MEM-5) | ACCEPTED (auto-load premise corrected by ADR-082) |
 | ADR-054 | Per-Calendar-Day Occurrence Counting via the Ledger's Own `Last updated` Field (v2.15.0 Loop 1 Increment 1, KDQ-7/0.D-F1/AQ-16) — resolves the "at most once per session" counting unit against the honest Phase-1 finding that **no session-boundary signal is observable to a prose instruction layer** (ADR-049 parallel); redefines the observable unit to **calendar day** using the ledger's self-owned `Last updated` date (a value the kit controls and a `date`-comparison can deterministically check), yielding a genuinely firing negative control (same-day repeat → no increment → stays `1/3`; distinct-day repeat → `+1`); the residual — friction-signature equivalence + faithful date read/write — is named inspection-class (an ADR-049-style fixture-transcript behavioral backstop); signature matching is normalized-exact (fuzzy/semantic merge is a labeled LLM-behavioral judgment, biased toward NOT merging); terminal reset only at the `3/3`-PROPOSE event | ACCEPTED |
 | ADR-055 | Two-Layer Data-Not-Instruction Control with an Honest Coverage Map (v2.15.0 Loop 1 Increment 1, KDQ-3/0.D-F2/AQ-17) — the reused 6-token CONTRIBUTING.md:129 forbidden-token scan is kept **unforked** (no approval-verb widening — that would fork the shared cross-repo recipe AND cry-wolf on legitimate approval-workflow friction notes) and is honestly scoped as an injection-**shape** tripwire, proven live this session to FIRE on an injection-shape fixture and to demonstrably NOT fire on an approval-verb-only fixture; the auto-approve threat is carried **structurally** by AC-PROPOSE-2/3 (the increment is architecturally incapable of writing an instruction file or marking CONFIRMED without an explicit user response — ADR-049's remove-the-execution-channel move) backstopped by AC-SAFEKDQ3-2 observe-at-intent (3rd genuinely-distinct call site of the pattern) | ACCEPTED |
 | ADR-056 | Write-Channel Containment Posture — Inspection-Class + Behavioral + Human-Boundary Allow-List, Honestly Weaker Than v2.15's Structural No-Write-Channel (v2.16.0 Loop 1 Increment 2, AQ-24 — THE HEADLINE) — resolves the central question HONESTLY: in a prose kit with no code-execution layer there is **no** structural write-prevention for the in-workspace allow-list; a two-layer map (Layer 1 = a genuine narrow structural cross-workspace bound that survives — the kit's own repo files are not in the workspace runtime; Layer 2 = the in-workspace allow-list is inspection-class + behavioral + human-boundary, NOT structural — `.cowork-allowlist.json` governs `/sync-agency` fetch, NOT runtime Write/Edit); Layer 2 hardened by a testable firing-refusal control + WYSIWYG literal-diff human confirmation + verifier/rollback; BINDS the Phase-3 Security Summary to state the posture is WEAKER than v2.15.0, owner gates on that trade, never on the word "mechanized" | ACCEPTED |
@@ -82,7 +82,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-061 | Behavior-Surface Relocation — Apply/Verify/Rollback/SECGATE Machinery Moves from the Lazily-Created Ledger to a Mandatory Deny-Listed `self-apply` Skill (v2.16.0 Phase-5 Rework, REWORK-1 reachability + REWORK-2 self-integrity) — @qa's independent Phase-5 pass found all 12 enumerated controls sound but two defects OUTSIDE them: the whole safety machinery was authored inside the body of the LAZILY-created `context/memory-of-use.md` (ADR-053, never scaffolded, bootstrap pointers circular, WIZARD never copies it, Mode-B has no on-disk fallback → unreachable the first time it is needed), and nothing protected its governing prose from the bookkeeping write channel (AC-APPLY-4a guards only the `Note` cell). Relocates the convention + machinery into a MANDATORY installed skill `.claude/skills/self-apply/SKILL.md` (WIZARD installs it unconditionally at Step 4, Mode A + B → REWORK-1 closed) that is added to the AC-APPLY-3 HARD DENY-LIST (deny-first, wins over the `.claude/skills/*/SKILL.md` allow glob → the machinery can never rewrite its own rules → REWORK-2 closed by relocation, stronger than an in-place integrity check); `context/memory-of-use.md` reverts to DATA-only (data-not-instruction line + skill pointer + Ledger table + Archive). New AC-REACH-1 + AC-INTEGRITY-1, two firing controls (reachability fixture + self-modify-refusal fixture); honest limit named (install-step + deny-list are inspection-class, same as ADR-056 Layer 2, but strictly better than a lazily-created self-writable file) | ACCEPTED |
 | ADR-062 | Path-Channel Rollback — Reversible-Move-Log (`mv dest source`) + Out-of-Band Content Fingerprint, NOT a Content Pre-Image (v2.17.0 Steward, AQ-1a, AC-ROLLBACKMOVE-1/2, W-4) — resolves AQ-1a: v2.16's content pre-image does NOT generalize to a move (it captures bytes; a move preserves bytes and changes location, so the correct inverse is a location op, not a byte restore). The rollback primitive is a reversible-move-log recording `(source, dest, length+checksum fingerprint)`; rollback normalizes to the AC-ROLLBACKMOVE-2 terminal state (exactly one copy at source, zero at dest, byte-identical to the fingerprint), NOT a blind `mv dest source`. Fingerprint anchored out-of-band in the session transcript per ADR-059's non-apply-writable posture; on-disk move-log is untrusted until checked against it (swapped archive/log → rollback REFUSES). | ACCEPTED |
 | ADR-063 | Positive Move-ALLOW-List / Default-Deny-by-Namespace, NOT Expanded Deny-First Blocklist (v2.17.0 Steward, AQ-8, AC-DENY-1, AQ-6) — inverts the move gate to fail-safe: a file is move-eligible ONLY IF it affirmatively matches the user-content predicate (a plain content file OUTSIDE every protected namespace) AND its destination is the archive convention. Default is DENY; a new load-bearing file added anywhere tomorrow is denied automatically (forgetting to allow = over-conservative refusal, a safe false-negative). Deny-first was rejected: FW-1 proved it already failed at authoring (superset-of-content-lists still missed 6 load-bearing paths), and per-file enumeration is an unbounded forever-obligation. The default-deny-by-NAMESPACE floor (`.claude/**`, all root config/dotfiles, all `context/**`, any `*.json`, `.mcp.json`) also DISSOLVES the AQ-6 lockstep risk — no per-file duplication with self-apply's content deny-list is needed. | ACCEPTED |
-| ADR-064 | Destination Gating + Archive Convention `context/.archive/` (v2.17.0 Steward, AQ-3, AC-DENY-2, FW-2, W-1) — the move DESTINATION is gated against the same protected set as the source, not merely collision-checked: a move may NOT CREATE a load-bearing/auto-loaded file by relocation (`.claude/skills/<x>/SKILL.md`, `global-instructions.md`/`CLAUDE.md` where absent). Destinations are constrained to the archive convention `context/.archive/<original-basename>.<UTC-timestamp>` (dot-prefixed → non-auto-loaded, mirrors the existing `context/.apply-backups/` precedent). W-1 binding: the archive tree MUST be gitignored/non-published and on the Content Exclusion list (never read by `/sync` or any external channel — token-bearing content risk). Layout preserves reversible-move-back and does not foreclose a future reversible-delete/reap. | ACCEPTED |
+| ADR-064 | Destination Gating + Archive Convention `context/.archive/` (v2.17.0 Steward, AQ-3, AC-DENY-2, FW-2, W-1) — the move DESTINATION is gated against the same protected set as the source, not merely collision-checked: a move may NOT CREATE a load-bearing/auto-loaded file by relocation (`.claude/skills/<x>/SKILL.md`, `global-instructions.md`/`CLAUDE.md` where absent). Destinations are constrained to the archive convention `context/.archive/<original-basename>.<UTC-timestamp>` (dot-prefixed → non-auto-loaded, mirrors the existing `context/.apply-backups/` precedent). W-1 binding: the archive tree MUST be gitignored/non-published and on the Content Exclusion list (never read by `/sync` or any external channel — token-bearing content risk). Layout preserves reversible-move-back and does not foreclose a future reversible-delete/reap. | ACCEPTED (auto-load premise corrected by ADR-082) |
 | ADR-065 | Read-Only, Scoped-Enumerated Reference-Integrity Check (v2.17.0 Steward, AQ-1b/C1, AC-VERIFYMOVE-3, AQ-5, FW-4) — before a move lands, the verifier greps a DEFINED, ENUMERATED set of convention files (`folder-structure.md`, `skills-as-prompts.md`, `global-instructions.md`, root `CLAUDE.md`, `cowork-profile.md`, every `.claude/skills/*/SKILL.md`, every `context/*.md`) for a literal reference to the source path/basename. A live reference → refuse at propose-time OR FAIL the verifier + rollback. The check is READ-ONLY (FW-4): detect-and-refuse/warn only, NEVER auto-rewrite a pointer (an unconfirmed content edit riding a move confirmation would be a SECGATE bypass). Grounded: `context/memory-of-use.md:7` carries a live pointer to `self-apply/SKILL.md`. Residual (W-2): a reference phrased in prose without the literal path is a NAMED accepted limit, mapped to reversibility. | ACCEPTED |
 | ADR-066 | Sibling `self-archive` Skill (not extend `self-apply`) + Path-Channel SECGATE Re-Instantiation (v2.17.0 Steward, AQ-4, FW-4, FW-3, hld §7) — the path-channel machinery lives in a NEW mandatory-installed, deny-listed sibling skill `.claude/skills/self-archive/SKILL.md`, not bolted onto `self-apply`, keeping each verification module focused on ONE operation TYPE (hld §7's warning against one over-loaded verifier; content-edit verification ≠ path-op verification). `self-archive` is on its own move deny-list (can never archive itself — mirrors ADR-061 self-integrity for the new channel). SECGATE re-instantiated for the PATH channel (ADR-058 B1/B2 pattern): the two-turn confirm renders the literal `source→dest` pair computed from the ACTUAL op, never from `Note`/detector-supplied path text; fresh yes required. Closes FW-3 (S1 HIGH-at-composition) via source+dest deny-completeness + WYSIWYG. | ACCEPTED |
 | ADR-067 | Per-Workspace Install Manifest = standalone `cowork.install.json` (KDQ-MANIFEST; NOT an extension of the archived lock copy) — on the apply hard deny-list; disjoint key space from `cowork.lock.json` (v2.18.0 Substrate F4) | ACCEPTED |
@@ -102,6 +102,9 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-028 (amendment v2.19.5) | v2.5 implementation-record correction: the shipped verify compared NEW-HEAD bytes to the OLD-pin stored hash (not what ADR-028 specified); post-fix trust model stated in writing, including the named absence of any enforced human review gate over newly-pinned content | ACCEPTED |
 | ADR-079 | Retire the `softprops/action-gh-release` upload dependency — `scripts/publish-release.sh` attaches both release archives itself on all three of its branches (create/repair/idempotent-skip), gated by a new version + tag-commit precondition on every asset write; `release-assets.yml` narrowed to verification-only (downloads the published asset, re-asserts DROP/KEEP) with `permissions: contents: read`; DROP/KEEP lists single-sourced into `scripts/release-archive-assert.sh`; the destructive printed tag-delete remedy deleted, not softened (v2.19.7 Scope A1) | ACCEPTED |
 | ADR-080 | Vendored removals are declared, not silent — permanent removals get BOTH a full-path `blocked_files` entry and a basename `blocked_patterns` entry (the exact-path list alone never fires against the GitHub-contents-API path form); a new reverse-direction orphan check (`scripts/verify-vendored-orphans.sh`, disk→lock) is the instrument that proves a deletion, built and CI-wired before the deletions themselves; a new removal ledger (`scripts/verify-lock-removals.sh`) asserts every lock removal is a declared `blocked_files` entry across two lock revisions (subset invariant, MOVED-classification for renames, `blocked_files` itself may not silently shrink) — visibility, not a merge gate, until the owner enables required status checks (v2.19.7 Scope B5/C1) | ACCEPTED |
+| ADR-082 | The `CLAUDE.md` auto-load premise is false, and the sweep that finds it must not be filtered by `export-ignore` (v2.19.9 Scope A) — supersedes ADR-010's premise; Cowork attaches a connected folder as a browsable source rather than injecting root `CLAUDE.md` as system context, so no kit surface may assert unconditional auto-load or project-folder skill auto-discovery; the correctness sweep runs over `git grep` on tracked files, never over `git archive` output | ACCEPTED |
+| ADR-083 | ADR-046's target holds; its basis does not — a prose doc line may never be the sole authority for a behavioral claim about the platform (v2.19.9 Scope A/D) — the workspace `CLAUDE.md` remains the proactive-surfacing target as best-effort/inspection-class; the discriminator sentence resting on circular authority (`WIZARD.md:3`, itself an unverified assertion site this cycle corrects) is retired | ACCEPTED |
+| ADR-084 | Starter sync is asserted, not assumed — inline `starter-sync-check` with minimal normalization, a slot-presence control, and a positive data-locality allow-list (v2.19.9 Scope C) — also lands `personal-assistant` into ADR-040's draft-first rollout, absent since `33fd22c` (v2.9.0) for word-budget reasons and unshipped for 10 releases | ACCEPTED |
 
 ---
 
@@ -13502,3 +13505,324 @@ ADR-080's amendment section cites `docs/architecture.md:3187` for the claim *"CI
 - @compliance Phase 2: L1 (travisvn disposition split into permanent-by-our-choice / undetermined), L5 (403 as a technical access control)
 
 End of v2.19.8 ADR block.
+
+---
+
+# v2.19.9 — "Truth Repair: the entry point that never fired" (Phase 1)
+
+> Phase 1 design document: `docs/design-v2.19.9.md`. Citations below are **content-anchored** per
+> ADR-081 §D1 — each is a re-runnable `grep -n '<anchor>' <named-file>`. Line numbers, where given,
+> are navigational only and pinned to `f06f0cff9304b83ba96d5c91f55ce3ebbb88588c`.
+
+## ADR-082: The `CLAUDE.md` auto-load premise is false, and the sweep that finds it must not be filtered by `export-ignore` (v2.19.9 Scope A)
+
+- **Status:** Accepted at Phase 1, 2026-08-11. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.9 "Truth Repair: the entry point that never fired" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B (PR required, Guard Change Summary NOT required) · COMPLIANCE-SENSITIVE = NO. Re-run against the final file list at Phase 1: **CONFIRMED**, no flip.
+- **Reusability:** `candidate-constituent`. Decision 2 (a distribution property must never filter a correctness sweep) is domain-independent and applies to any repository that uses `export-ignore`, `.npmignore`, `.dockerignore` or a publish allowlist. Decision 1 is project-specific.
+- **Supersedes:** the **premise** of ADR-010, not its whole record — see §Scope of supersession. **Corrects:** the auto-load premise as it is carried in ADR-053 and ADR-064's index rows.
+
+### Context
+
+**(1) The claim is false, and it failed in production before it was ever written down.** A
+non-technical user opened the kit folder as a Cowork Project and typed a greeting; the reply carried
+zero tool calls and no workspace awareness. Only an explicit instruction to read the context made the
+wizard fire. Cowork attaches a connected folder as a browsable source; it does not inject the root
+`CLAUDE.md` as system context. Anthropic documents automatic instruction-file loading for its
+terminal-based coding tool, via a walk-up from the working directory — a mechanism whose precondition
+Cowork's sandboxed working directory does not satisfy. There is no vendor statement either way about
+Cowork specifically; the owner's session is the direct observation. *(Paraphrase-plus-citation. No
+vendor text is quoted verbatim — this record ships.)*
+
+**(2) The decision was made, then unmade, and no cycle re-decided it.** v1.0 shipped a
+`WIZARD.md`-primary path that failed in production for this exact reason. v1.1 fixed it by promoting
+`project-instructions-starter.txt`, precisely because a pasted instruction file is injected before
+intent classification. v1.2 then asserted that `CLAUDE.md` was auto-loaded as system context —
+asserted, never tested — and inverted the architecture back. The kit has shipped against a
+known-failed design for 18 versions.
+Anchors: `grep -n 'Cowork.s intent classifier intercepted' docs/retro.md` ·
+`grep -n 'system context injected before intent classification' docs/retro.md`
+
+**(3) 🔴 The instrument used to find the defect is unreliable in three directions, and the third was
+still open at Phase 1.** The token sweep (`auto-load|auto load|auto-discover|auto discover`) fails on:
+*completeness* — it returns **zero** hits on the single most-cited defect site, whose text says
+"runs automatically" rather than "auto-load"
+(`grep -n 'runs automatically on your first message' WIZARD.md`); *soundness* — three of its hits are
+**true sentences that must never be touched**, so a `0 hits` control literally requires deleting them
+(`grep -n 'It is not auto-loaded' WIZARD.md`); and *scope* — **the sweep was run over `git archive`
+output, so `export-ignore` filtered it.** Re-run over tracked files at Phase 1:
+
+```
+git grep -cliE 'auto-load|auto load|auto-discover|auto discover' HEAD --   → 28 files
+```
+
+against the **12** the cycle was scoped on. **16 files and 72 hit-lines were invisible.** The owner
+had already ruled on the generalizable rule when adding `CONTRIBUTING.md` to scope — *export-ignore
+is a distribution property and must never filter a correctness sweep* — but the rule was applied to
+one file rather than re-running the sweep, so it never generalized. Two of the sixteen are **standing
+normative surfaces, not dated records**: `docs/internal/process/OUTPUT-STRUCTURE.md` (present-tense,
+carries `primary` twice) and `docs/internal/planning/assumptions.md`, whose own header instructs
+*"Review this register before Phase 1 (architecture)"* while recording the opposite conclusion.
+Anchors: `grep -n 'Review this register before Phase 1' docs/internal/planning/assumptions.md` ·
+`grep -n 'REOPENED and REVERSED' docs/internal/planning/assumptions.md`
+
+**(4) Fourteen of the sixteen hidden files, and nine of the twelve in-scope prose hits, are dated
+historical records.** Rewriting them would falsify the evidence trail of the v1.2 inversion this
+cycle exists to diagnose — the record of *what was believed and when* is the deliverable.
+
+### Decision
+
+**D1 — The premise is corrected forward, never in place.**
+No kit surface may state or imply an unconditional or guaranteed load of the root `CLAUDE.md` as
+system context at Cowork session start, nor project-folder `.claude/skills/` auto-discovery. ADR-010's
+**record body is byte-unchanged**; its index row gains a status annotation, which is this
+repository's existing convention (twelve annotated rows in nine distinct forms already —
+`grep -cE '^\| ADR-[0-9]+ \| .* \| ACCEPTED \(' docs/architecture.md`). Historical records —
+dated design memos, research files, QA reports, security reviews, the release ledger — are
+**annotated, never rewritten**; the correction is dated and appended beside them.
+
+**D2 — A distribution property must never filter a correctness sweep. This is the generalizable rule,
+and it is binding on the instrument, not on a file list.**
+Any completeness pass that asks *"where else does this claim appear?"* runs over **tracked files**
+(`git grep … HEAD --`), never over `git archive` output, `.gitattributes` `export-ignore`, or any
+publish allowlist. `export-ignore` answers *"does a stranger receive this in the ZIP?"* — a question
+about distribution. It cannot answer *"is this repository internally consistent?"* — a question about
+correctness. Conflating them is how a repository ships a dated correction while the file every
+contributor reads first keeps asserting the thing being corrected.
+
+**D3 — A token search is never the completeness instrument on its own.**
+Semantic predicates are paired with a paraphrase denylist, and every negative control is checked
+against the true-usage set before it is bound. A control whose green state requires deleting a true
+sentence, or editing a frozen region, is rejected as defective **before** it becomes an AC — not
+discovered at Phase 5.
+
+### Scope of supersession
+
+Superseded: ADR-010's **premise** (`grep -n 'Layer 1a — Auto-load' docs/architecture.md`) and every
+downstream claim resting on it, including the "Layer 1a / Layer 1b" framing that ranks the two entry
+routes. **Not** superseded: ADR-010's decision to have a single universal entry document, ADR-011's
+400-word bootstrap ceiling, and the wizard state machine — all of which stand on their own grounds
+and are untouched.
+
+### Consequences
+
+The kit gains an honest entry story and loses a false one. Two closed security dispositions must be
+re-stated on corrected grounds (Scope D) — and the honest net is **not** a downgrade: exposure at
+rest is unchanged, expected frequency falls, but **detectability and review incentive both get
+materially worse**, because a nondeterministic read cannot be bound by a firing negative control the
+way a deterministic every-session load can. The exposure did not fall. The attention did.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) an executable sweep-instrument check wired into CI, so the
+  tracked-files rule is enforced rather than documented; (b) a live Cowork paste transcript that
+  settles the INFERRED premise empirically and upgrades it to VERIFIED; (c) folding the two standing
+  internal surfaces (`OUTPUT-STRUCTURE.md`, `assumptions.md`) into the corrected set.
+- **Concrete revisit triggers:** (a) Anthropic publishes a definitive statement about Cowork's
+  handling of a connected folder's root instruction file — in **either** direction; (b) a future
+  cycle's sweep is found to have been scoped on `git archive` output again; (c) any new
+  `export-ignore` entry is added to `.gitattributes`, which widens the blind spot this ADR closes.
+- **Risk knowingly accepted:** D2 is enforced by convention and review, not by a check. A future
+  cycle can still scope a sweep on `git archive` output and nothing will go red. This was accepted
+  rather than built because the fix is a *habit* with many valid spellings, and a CI check that
+  guessed at the spelling would be a check that cannot fail. The premise itself remains **INFERRED**,
+  not VERIFIED: the strongest evidence is one direct production observation plus a mechanism argument.
+  It is recorded as inferred, and no AC in this cycle depends on it being more than that.
+
+---
+
+## ADR-083: ADR-046's target holds; its basis does not — a prose doc line may never be the sole authority for a behavioral claim about the platform (v2.19.9 Scope A/D)
+
+- **Status:** Accepted at Phase 1, 2026-08-11. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.9 (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B · COMPLIANCE-SENSITIVE = NO.
+- **Reusability:** `candidate-constituent`. The citation-provenance rule below is domain-independent and is the reusable half of this record.
+- **Amends:** ADR-046 (basis only). **Holds:** ADR-046's decision, unchanged. **Does not touch:** ADR-044, which is an older and independent authority.
+
+### Context
+
+**(1) ADR-046's decision rests on a sentence that is now known to be false.** Its stated basis
+discriminates between two write targets on the ground that one of them is loaded every session:
+`grep -n 'the only surface Cowork loads each session' docs/architecture.md`. That discriminator is
+exactly the claim ADR-082 retires.
+
+**(2) The authority was circular, and that is the deeper defect.** ADR-046's index row cites
+`WIZARD.md:3` as its authority. `WIZARD.md:3` is itself an unverified assertion site — one this very
+cycle corrects (`grep -n 'The primary entry point is' WIZARD.md`). A decision record cited a prose
+document; the prose document cited nothing. Neither ever touched the platform. **The chain terminated
+in a sentence somebody wrote, and was treated as if it terminated in an observation.**
+
+**(3) The decision survives its basis anyway, and this is the whole point.** The two candidate
+targets were the workspace `CLAUDE.md` and a manual Settings paste that a disk write cannot refresh.
+Once the discriminator dies, the comparison is no longer *deterministic vs nondeterministic* — it is
+**best-effort vs inert-until-the-user-re-pastes.** A write that is *sometimes* read still beats a
+write that is *never* read without a manual step the user has not been asked to take. And there is
+no third target. The decision is unchanged; only the reason it was right changes.
+
+### Decision
+
+**D1 — ADR-046's target is retained, on a restated basis.** The workspace `CLAUDE.md`, section
+`## Proactive skill behavior`, remains the proactive-surfacing target. Its character is restated as
+**best-effort / inspection-class**: the write is durable, its *read* at session start is not
+guaranteed. Skill Studio's target-resolution rationale and its user-facing advisory line are corrected
+to say so. The enforcing clauses — the slug charset gate, the kit-checkout guard, the literal-string
+write, the block-scoped token scan, the idempotency marker — are **byte-unchanged**, because not one
+of them ever depended on the premise.
+
+**D2 — The forward rule, and it is the reusable half of this record: an ADR may not cite a prose
+document line as sole authority for a behavioral claim about the platform.**
+A behavioral claim about an external runtime is admissible as an ADR basis only when it carries one
+of: (a) vendor documentation, cited and paraphrased; (b) a recorded direct observation, dated, with
+what was run and what was seen; or (c) an explicit `[INFERRED]` tag naming the inference and what
+would falsify it. A citation to another in-repo prose file is **none of these** — it relocates the
+claim, it does not ground it. Where no such authority exists, the claim is tagged `[INFERRED]` and
+the decision is written so that it survives the inference being wrong. **ADR-046 would have passed
+this rule** — as (c), tagged, with its target choice argued from best-effort-beats-inert. It failed
+only by claiming certainty it never had.
+
+**D3 — The Phase-2 gate on `skill-studio` stays MANDATORY, unconditionally.** Over-determined on
+three independent grounds, stated affirmatively so the next reviewer inherits the strength rather
+than the doubt: (1) the governing principle's own text is *"regardless of blast radius"*, written to
+be immune to exactly this re-characterization
+(`grep -n 'regardless of blast radius' docs/hld.md`); (2) **ADR-044** is an older, separate authority
+that never mentioned auto-load; (3) the gate has a demonstrated catch — a proven marker breakout —
+that is premise-independent. Removing any one ground leaves the gate standing on the other two.
+
+### Consequences
+
+`skill-studio`'s step 8 keeps its target and loses its overclaim. The user-facing advisory line
+stops telling the user something untrue at the moment of the write — which was the highest-value
+single line in the cycle, because it is spoken aloud to an end user rather than merely stored.
+The single-target limitation is now visible rather than hidden behind a confident basis.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) **the KDQ this cycle names but does not build** — a genuinely
+  auto-applying, UI-entered instruction target that Cowork reads deterministically, which would let
+  step 8 write somewhere the read is guaranteed and would convert this whole record from
+  inspection-class to executable; (b) a two-target write (workspace file **and** a
+  re-paste-prompting Settings artifact) with an idempotency marker shared across both; (c) an
+  in-product read-back confirmation that proves the block was actually loaded, converting the
+  inspection-class link into an observable one.
+- **Concrete revisit triggers:** (a) Cowork ships a UI-entered instruction surface that is
+  documented as read at session start — option (a) becomes buildable the day this exists; (b) the
+  live paste transcript carried to v2.19.10 returns a determinate answer about whether the workspace
+  file is read; (c) `skill-studio` gains a second write target for any reason, which makes "there is
+  no third target" — the load-bearing clause of D1 — no longer true.
+- **Risk knowingly accepted:** the surfacing write remains the **only inspection-class link in the
+  step-8 chain** (8.1, 8.2 and 8.5 are all executable and proven-firing). Its benefit is now
+  falsified while its cost — persistent model-authored instruction text with a proven marker-breakout
+  history — is unchanged, so the ratio inverted and the write is retained **knowingly**, because no
+  third target exists, not because the write is safe and not because the file is loaded. Accepted
+  rather than fixed because every alternative requires a platform capability that does not exist
+  today; building around its absence would add machinery whose own risk exceeds the risk it removes.
+
+---
+
+## ADR-084: Starter sync is asserted, not assumed — inline `starter-sync-check`, minimal normalization, positive data-locality allow-list (v2.19.9 Scope C)
+
+- **Status:** Accepted at Phase 1, 2026-08-11. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.9 (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B. **`AC-TR-TIER-2` binds this record:** the assertion lands **inline in `.github/workflows/quality.yml`** and **no file is added to or modified in `scripts/`**. A new enforcement script would place this cycle in the Tier-A-equivalent set and make a Guard Change Summary owed at Phase 2.
+- **Reusability:** `candidate-constituent`. The normalize-the-minimum rule and the positive-allow-list-over-exemption rule are domain-independent.
+- **Completes:** ADR-040's rollout — see §D4. **Extends:** ADR-016's CMP byte-mirror pattern. **Rests on:** ADR-019 for the data-locality carve-in.
+
+### Context
+
+**(1) The seven starters are a replicated set with no sync guard, and the drift is live and
+CI-green right now.** `examples/personal-assistant/project-instructions-starter.txt` reads *"as a
+team"* where the other six read *"as a draft team"*.
+
+**(2) The cardinality of the preset set is a duplicated literal, and the duplicates disagree.**
+`starter-file-check` hard-codes a six-preset loop with `personal-assistant` absent and gates on
+`-lt 6`; `starter-safety-rule-check` globs all seven but also gates on `-lt 6`; four
+`ENFORCED_EXAMPLES` literals elsewhere correctly carry seven. The concrete consequence: **delete the
+`personal-assistant` starter today and `starter-safety-rule-check` passes** — six files remain and
+`-lt 6` is false. A 7→6 regression is silent. Anchors:
+`grep -n 'for example in study research writing project-management creative business-admin' .github/workflows/quality.yml` ·
+`grep -c 'ENFORCED_EXAMPLES="study research project-management writing creative business-admin personal-assistant"' .github/workflows/quality.yml`
+
+**(3) 🔴 The `personal-assistant` gap is not drift. It is an unlanded piece of ADR-040 that shipped
+wrong for ten releases.** `git show --stat 33fd22c -- 'examples/*/project-instructions-starter.txt'`
+returns **exactly six files**, `personal-assistant` absent, and the commit body states verbatim:
+*"personal-assistant held byte-unchanged to protect 4-word headroom."* The omission was deliberate,
+recorded, and then never followed up. **`personal-assistant` users have received pre-v2.9.0 framing
+since v2.9.0 because a word budget blocked the edit and nothing tracked the debt.** The 4-word
+headroom is still in force today (396/400).
+
+**(4) The variation surface is small and fully measured.** Six files are 40 lines; PA is 44. The
+diff is exactly five hunks: three templated slots (title, area/skill roster, the Q2 question), the
+one-word drift, and PA's four-line `## Data locality` block.
+
+### Decision
+
+**D1 — Normalize the minimum, not the line.** The three templated slots are normalized by
+**anchored substring substitution**, not whole-line replacement. Every byte normalized is a byte no
+longer asserted. The Q2 line is the decisive case: whole-line normalization would stop asserting its
+trailing safety sentence — *"Cowork always asks before deleting, moving, or overwriting any file or
+folder"* — turning the one line where assertion matters most into a check that cannot fail. The
+invariant prefixes and that whole trailing sentence stay in the compare.
+
+**D2 — Three parts, each with a control that can go red.** (a) strip PA's data-locality block —
+anchored to `## Finishing`, which is itself inside the compared region, so an over-deleting stripper
+removes `## Finishing` too and the compare goes red; the stripper cannot fail silently — then `cmp`
+all seven against a **runtime-computed** reference, never a checked-in golden file (a golden file is
+a second copy of the same set, which is the duplication defect being fixed). (b) A **slot-presence
+control**: exactly one of each placeholder per file post-normalization, which is what proves the
+normalizer ran rather than silently no-op'ing against changed upstream wording. (c) The positive
+allow-list of D3.
+
+**D3 — A positive data-locality allow-list, not an exemption.** `personal-assistant` **MUST**
+contain `## Data locality`; the other six **MUST NOT**. Both legs asserted. ADR-019 scopes
+data-locality defaults to presets handling sensitive categories, and PA is the spend-data preset; a
+paste-only PA user has no folder access, so the starter is their **only** instruction surface —
+stripping the block would remove the sole protection from the one preset that needs it. **A positive
+assertion is default-deny; a carve-out is a hole.**
+
+**D4 — The cardinality fix is agreement, not increment, and the digit disappears.** Both jobs adopt
+the existing `ENFORCED_EXAMPLES` literal — copied verbatim from the CMP job's copy, which is named
+canonical — and derive the count with `wc -w`. **No third list is authored and the number is never
+written as a digit again**, including in the two error-message strings that would otherwise keep
+teaching the wrong cardinality. Wherever a set's cardinality is a duplicated literal, the fix is
+single-sourcing or a cross-literal agreement assertion, never incrementing the one literal found
+wrong. **This lands `personal-assistant` into ADR-040's rollout**, ten releases late, at a cost of
+one word (396 → 397, under the 400 cap).
+
+**D5 — The starter bodies are byte-frozen for this cycle** except that single word. Shared-line
+content replicates across all seven, so PA's 397 sets the cycle's shared-line growth budget at three
+words. There is no safe cut: PA's unique text is its title, its skill roster (cutting a skill is a
+functional change), a templated slot, and ADR-019 security content. The freeze is the instrument
+precisely *because* no cut is safe.
+
+### Consequences
+
+The guard closes a rollout that already silently missed a file — demonstrated, not hypothetical.
+The word budget that caused the miss remains in force and is now visible as a constraint rather than
+an invisible one; the next feature that needs shared-line growth will hit it deliberately.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) generate the starters from a single template plus a per-preset data
+  file, retiring the replication entirely and making sync structurally impossible to break rather
+  than merely detectable; (b) externalize shared starter prose to a context file per ADR-046
+  §Maturation Path (b), which is the standing relief valve if a future cycle needs shared-line
+  growth beyond the three-word budget; (c) a standing `skill-studio-freeze-check` job pinning the
+  hash of the frozen safety clauses, which this cycle deliberately declined — see the trigger below.
+- **Concrete revisit triggers:** (a) any starter reaches 400 words, at which point the byte-freeze
+  stops being a constraint and becomes a blocker and option (a) or (b) must be taken; (b) an eighth
+  preset is added, which is the first real test of whether the cardinality single-sourcing actually
+  held; (c) a second preset legitimately needs its own security block, which turns D3's
+  one-preset allow-list into a list and makes the positive-assertion shape worth re-deriving;
+  (d) a future cycle edits `skill-studio`'s frozen safety clauses, which is the moment option (c)
+  earns its standing cost.
+- **Risk knowingly accepted:** `AC-TR-TIER-1`'s freeze assertion is run as a documented Phase-5/6
+  command rather than a standing CI job, so it is **inspection-class after this cycle** — nothing
+  prevents a future cycle from editing those eighteen lines silently. Accepted because the condition
+  is cycle-scoped and a permanent gate levies an unbounded tax (every future legitimate edit goes
+  red until someone hand-updates a hash literal) that a patch cycle has no mandate to impose. The
+  assertion, its firing negative control and its PASS control are all recorded in
+  `docs/design-v2.19.9.md` §A.4 so the standing version is ten lines of YAML away whenever the owner
+  wants it. Separately accepted: the sync check compares **normalized** bytes, so a change made
+  identically across all seven files passes — it detects divergence, never wrongness.
+
+End of v2.19.9 ADR block.
