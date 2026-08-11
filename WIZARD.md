@@ -1,6 +1,6 @@
 # Cowork Setup Wizard
 
-> **Users:** The primary entry point is `CLAUDE.md` at the repo root — open this folder as a Cowork Project and the dynamic wizard runs automatically on your first message. Alternatively, type `/setup-wizard` or paste a preset's `project-instructions-starter.txt` into Project Settings > Custom Instructions. This file (`WIZARD.md`) is the authoritative interview script source — not a runtime entry point.
+> **Users:** Open this folder as a Cowork Project, then ask Cowork to read `CLAUDE.md` if the dynamic wizard does not begin on its own — or paste a preset's `project-instructions-starter.txt` into Project Settings > Custom Instructions, or type `/setup-wizard`. This file (`WIZARD.md`) is the authoritative interview script source — not a runtime entry point.
 
 ---
 

@@ -7758,8 +7758,9 @@ blockquote with **zero CI guard against cross-preset drift**, and that drift is 
 
 - **Stack:** prose/markdown + CI kit. Only executable surface touched: `.github/workflows/quality.yml`.
 - **ADR discipline:** record **bodies** are append-only. **Index-table rows MAY carry a status
-  annotation** — this repo's own convention, twelve annotated rows in nine distinct forms. Highest
-  existing ADR at Phase 1 start: **ADR-081**.
+  annotation** — this repo's own convention, **eight** annotated rows at this cycle's base `f06f0cf`
+  (index-scoped count, pinned to the base SHA; see `ADR-082` Decision D1 for the derivation and for
+  why a whole-file scan over-counts). Highest existing ADR at Phase 1 start: **ADR-081**.
 - **400-word `CLAUDE.md` cap** (ADR-011): `CLAUDE.md` is not in the edit list; byte-unchanged at 348/400.
 - **400-word starter cap:** `personal-assistant` is at **396/400** — 4 words of headroom.
 - **CMP byte-mirror fan-out — VERIFIED NOT APPLICABLE.** Zero mirrored copies of `skill-studio`/`setup-wizard` under `examples/*/.claude/skills/`.
@@ -7838,8 +7839,14 @@ constraint that forced the change. Full derivation in `docs/design-v2.19.9.md` �
   from `ENFORCED_EXAMPLES` via `wc -w`, so the digit is never written again.
 
 - AC: the annotation-convention precedent is cited as `docs/architecture.md:64` (ADR-044's row)
-  → **`:64` is ADR-043's row; ADR-044's is `:65`** — Reason: off-by-one. The precedent is also
-  **stronger** than claimed: twelve annotated rows in nine distinct forms, not one.
+  → **`:64` is ADR-043's row; ADR-044's is `:65`** — Reason: off-by-one.
+  **🔴 CORRECTED at 2.D (orchestrator-verified): this entry's own follow-on claim — "stronger than
+  claimed: twelve annotated rows in nine distinct forms" — was itself wrong**, and for the same
+  hazard the neighboring `:5333` entry below names: a whole-file `uniq -c` double-counts the frozen
+  duplicate ADR Index inside the historical design memo. The honest, index-scoped count is **eight**
+  annotated rows at this cycle's base `f06f0cf` (see `ADR-082` Decision D1 for the derivation) —
+  still a real, standing precedent, just a smaller one than claimed. The `:64`/`:65` off-by-one
+  stands as originally found.
 
 - AC: "annotate ADR-010's index row" → **Scoped to `:24` only; `:5333` is frozen** — Reason:
   `grep -cE '^\| ADR-010 \|'` returns **2**. The second is inside a `​```markdown` replacement block in

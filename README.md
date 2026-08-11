@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.19.8-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.19.9-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
 [![GitHub stars](https://img.shields.io/github/stars/jmlozano1990/Cowork-Starter-Kit?style=social)](https://github.com/jmlozano1990/Cowork-Starter-Kit)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -33,17 +33,25 @@ A synthetic demo of the real interview — describe a goal, confirm a skill bund
 - Toggle **Extended Thinking** ON in Cowork before you start
 - Select the most capable model available in your plan from the model dropdown
 
+Two routes. Pick either.
+
+### Route 1 — Open the folder as a Cowork Project
+
 1. **[Download ZIP](https://github.com/jmlozano1990/cowork-starter-kit/archive/refs/heads/main.zip)** — unzip anywhere on your computer
 2. Open Claude Cowork → create a new Project → point it at the unzipped folder
-3. Start talking — the wizard runs automatically
+3. Start talking, then ask Cowork to read `CLAUDE.md` if setup does not begin on its own
 
-That's it. Cowork reads the project instructions and walks you through personalized setup.
+### Route 2 — Paste the starter into Project Settings
+
+1. **[Download ZIP](https://github.com/jmlozano1990/cowork-starter-kit/archive/refs/heads/main.zip)** — unzip anywhere on your computer
+2. Open `examples/<name>/project-instructions-starter.txt` and copy the whole file
+3. Paste it into Project Settings > Custom Instructions, then start talking
 
 **Setup ends with a clean handover.** When the wizard finishes, it replaces `CLAUDE.md` with your personalized workspace instructions and archives the entire installer into `_setup-kit/` (moved, never deleted) — your project folder contains your files, not setup machinery.
 
 **Setup works fully offline.** Everything the wizard installs ships inside the ZIP — skills are copied from the local `skills/` folder, never downloaded. If Claude mentions it can't reach github.com or the internet during setup, that's normal and blocks nothing (see the troubleshooting section in `SETUP-CHECKLIST.md`). Web access is only needed for optional web research features, never for setup.
 
-> **Alternative paths:** Type `/setup-wizard` to run or redo setup explicitly. Or paste `examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions for a fully self-contained onboarding from message one.
+> **Already set up?** Type `/setup-wizard` to run or redo setup explicitly.
 >
 > **No Cowork yet?** Use the manual path: open `SETUP-CHECKLIST.md` and follow every step by hand.
 
@@ -80,7 +88,7 @@ Its answer to the third — **self-integrity**: every self-modifying path (propo
 
 ## How it works
 
-Open this folder as a Cowork Project. Cowork auto-loads `CLAUDE.md` as system context and runs the setup wizard the moment you start talking — one open-ended goal question, a bundle confirm, one quick turn for name/role/deadlines, and an optional voice-calibration turn. No terminal required. No paste required. **Zero runtime fetches, fully reviewable supply chain** — everything the wizard installs already ships inside this repo; nothing is downloaded during setup (see "Why trust it" above).
+Open this folder as a Cowork Project. Cowork attaches it as a browsable source, and the setup wizard begins once it reads `CLAUDE.md` — one open-ended goal question, a bundle confirm, one quick turn for name/role/deadlines, and an optional voice-calibration turn. No terminal required. No paste required. **Zero runtime fetches, fully reviewable supply chain** — everything the wizard installs already ships inside this repo; nothing is downloaded during setup (see "Why trust it" above).
 
 ```
 You                                Cowork
@@ -88,8 +96,8 @@ You                                Cowork
  |  Open the cowork-starter-kit       |
  |  folder as a Cowork Project        |
  | ---------------------------------> |
- |                                    |  Auto-loads CLAUDE.md
- |                                    |  as system context
+ |                                    |  Attaches the folder
+ |                                    |  as a browsable source
  |                                    |
  |  Start conversation                |
  | ---------------------------------> |
@@ -116,10 +124,10 @@ You                                Cowork
  | ---------------------------------> |  Explicit fallback — redo setup
 ```
 
-**Two alternative entry paths** if you can't open the folder directly:
-
-- Paste `examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions — a fully self-contained copy of the same interview, no folder access needed.
-- Type `/setup-wizard` inside any Cowork project to invoke the wizard explicitly.
+**If you can't open the folder directly,** see Route 2 above — paste
+`examples/<name>/project-instructions-starter.txt` into Project Settings > Custom Instructions, a
+fully self-contained copy of the same interview, no folder access needed. `/setup-wizard` inside any
+Cowork project also invokes the wizard explicitly, on either route.
 
 ---
 
@@ -151,7 +159,7 @@ You describe your goal in plain language. The wizard routes to the closest prese
 
 **Each preset includes:**
 
-- `project-instructions-starter.txt` — self-contained manual entry path: paste into Project Settings > Custom Instructions to run the same interview without opening the repo folder (functionally equivalent to `CLAUDE.md` auto-load)
+- `project-instructions-starter.txt` — self-contained paste entry path: paste into Project Settings > Custom Instructions to run the same interview without opening the repo folder
 - `global-instructions.md` — proactive skill trigger rules (session behavior) with writing profile integration
 - `context/about-me.md` — fill in your name, role, and goals
 - `context/working-rules.md` — safe defaults (includes confirm-before-delete rule)

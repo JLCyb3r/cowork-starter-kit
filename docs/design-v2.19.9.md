@@ -252,71 +252,85 @@ still). Nothing is right-aligned, so no padding is required.
 awk 'NR>=87 && NR<=140 && /^ \|/ { if (substr($0,2,1)!="|" || substr($0,39,1)!="|") print NR": "$0 }' README.md
 ```
 
-### A.4 — `AC-TR-TIER-1`'s freeze range: the assertion, and its two controls
+### A.4 — `AC-TR-TIER-1`'s freeze range: the assertion, and its controls (`FROZEN v2`)
 
-**Scope, resolved to content anchors** (line numbers are navigational, valid at `f06f0cf`):
+**🔴 SUPERSEDES the original enumeration-based instrument (2.D, S1/S3).** The first version of this
+instrument named four regions (R1–R4) by content anchor. @security's Phase-2 binding fix for S1 added
+a fifth (R0, the slug-charset gate, step 8.1) — and @architect's own Phase-5-equivalent pass at 2.D
+found that even the R0-extended instrument still left **two** enforcing clauses covered by **neither**
+representation: the block-scoped forbidden-token scan (step 8.6) and the idempotency marker (step
+8.8). *"Had I implemented the binding AC exactly as worded, S3 would have remained unresolved."*
+Enumeration is exactly the failure mode this correction closes — **you can only enumerate what you
+thought of.**
 
-| Region | Anchor | Lines @ base | Count |
-|---|---|---|---|
-| R1 — step 8 sub-step 2 | `2. **Kit-checkout guard, extended.**` | `:135` | 1 |
-| R2 — sub-step 3's two behavioral bullets | `   - If \`CLAUDE.md\` does not exist…` → `   - If \`CLAUDE.md\` exists but has no…` | `:139–:140` | 2 |
-| R3 — step 8 sub-step 5 | `5. **Compose the block as a literal string…` → `   Avoid em dashes in the free-text triggers…` | `:144–:155` | 12 |
-| R4 — the three frozen safety bullets | `- **Slug charset gate…(step 8.1).**` → `- **Bounded triggers carried into the surfaced block (step 8.4).**` | `:199–:201` | 3 |
-| | | **total** | **18** |
-
-**Why content anchors and not line numbers:** `AC-TR-D1` licenses an edit at `:137`, which sits
-*between* R1 and R2. Any line-numbered freeze assertion is invalidated by the very edit it exists to
-supervise. This is the same failure mode as A.1's `NR < 190`, and it is caught here for the same
-reason.
+**The settlement is a COMPLEMENT formulation, not a longer enumeration:** freeze the *entirety* of
+step 8 (all nine sub-steps) plus the *entirety* of the safety-bullet section, then **subtract** the
+two lines `AC-TR-D1` licenses to change. Nothing inside either block can be silently weakened without
+being named, because nothing inside either block is excluded except by name.
 
 **The assertion — one command, single pass, file order preserved:**
 
 ```bash
 FROZEN() { sed -n \
-  -e '/^2\. \*\*Kit-checkout guard, extended\.\*\*/p' \
-  -e '/^   - If `CLAUDE.md` does not exist at the workspace root/,/^   - If `CLAUDE.md` exists but has no/p' \
-  -e '/^5\. \*\*Compose the block as a literal string/,/^   Avoid em dashes in the free-text triggers/p' \
-  -e '/^- \*\*Slug charset gate before any embed or path use (step 8\.1)\./,/^- \*\*Bounded triggers carried into the surfaced block (step 8\.4)\./p' \
-  "$1"; }
+  -e '/^### 8\. Surface into workspace instructions$/,/^### 9\. Offer to refine$/p' \
+  -e '/^## Safety this loop enforces on every generation$/,/^---$/p' "$1" \
+ | sed -e '/^### 9\. Offer to refine$/d' -e '/^---$/d' \
+       -e '/^3\. \*\*Resolve the target\.\*\*/d' \
+       -e '/^9\. \*\*Advisory line\.\*\*/d'; }
 
-# 1. CONTROL-INTEGRITY GATE — run first. MUST be exactly 18.
+# 1. CONTROL-INTEGRITY GATE — run first. MUST be exactly 80.
 FROZEN .claude/skills/skill-studio/SKILL.md | wc -l
 
 # 2. THE ASSERTION — head must equal base.
 FROZEN .claude/skills/skill-studio/SKILL.md | shasum -a 256
-# MUST be: 9f81a5e04e49203f5f3856a2e33117fce9b809050fd9baf92d90a6023ca85838
+# MUST be: 5f243f28e714e5e9fa201241ef553cabbd869ad904854801c67d9780d082cafb
 ```
 
-**Both controls run this session, on the live file — pasted, not asserted:**
+**Why this is a strict superset of the R0–R4 instrument, and why that is sufficient:** step 8's
+sub-steps 1, 2, 4, 5, 6, 7, 8 and the entire safety-bullet section are now frozen verbatim (only
+sub-steps 3 and 9 are named out, by exact bold-lead line, and it is those two lines `AC-TR-D1` and
+the `:178` advisory correction license). **Freezing more of a Tier-B file cannot change its tier** —
+`AC-TR-TIER-1` only requires that the named clauses be provably byte-identical; a superset that also
+covers 8.6 and 8.8 satisfies it *a fortiori*. `ADR-083 §D1` therefore needs no narrowing to stay
+honest — its claim that all five enforcing clauses (slug charset gate, kit-checkout guard,
+literal-string write, block-scoped token scan, idempotency marker) are byte-unchanged is now backed
+by a single proof, not four fragments with two known gaps.
 
-| Leg | Command | Result |
-|---|---|---|
-| Baseline | `FROZEN SKILL.md \| shasum -a 256` | `9f81a5e04e49203f5f3856a2e33117fce9b809050fd9baf92d90a6023ca85838` |
-| **Firing negative control** — mutate one word **inside** R4 (`WHOLE-STRING` → `WHOLESTRING`) | `sed 's/WHOLE-STRING/WHOLESTRING/' SKILL.md \| FROZEN` | `47842347b706e43a72dac92268cbe524955732e30d88b53595608c6522d7f026` → **RED. The assertion fires.** |
-| **PASS control** (`Verifier-that-cannot-PASS`, BINDING since v2.19.5) — mutate text **outside** every frozen region (`target-resolution rationale`, part of the `:137` edit surface) | `sed 's/target-resolution rationale/…/' SKILL.md \| FROZEN` | `9f81a5e04e49203f5f3856a2e33117fce9b809050fd9baf92d90a6023ca85838` → **unchanged. The assertion can go green,** and it correctly ignores the licensed edit. |
-| Control-integrity | `FROZEN SKILL.md \| wc -l` | `18` — an anchor typo yields ≠ 18 and is caught before the hash is trusted. |
+**Eight legs, all run this session against the live file — pasted, not asserted:**
 
-The PASS-leg is the one that matters most: it proves the freeze is scoped to the *enforcing clauses*
-and does **not** accidentally cover the *rationale* `AC-TR-D1` is licensed to change. Without it, a
-freeze that trivially always-fires would have blocked the cycle's own correction.
+| # | Leg | Command | Result |
+|---|---|---|---|
+| 1 | Control-integrity | `FROZEN SKILL.md \| wc -l` | `80` |
+| 2 | Baseline | `FROZEN SKILL.md \| shasum -a 256` | `5f243f28e714e5e9fa201241ef553cabbd869ad904854801c67d9780d082cafb` |
+| 3 | **S1 attack** — revert the whole-string slug gate at `:130` to a line-oriented `grep -qE` | `sed '130s#.*#   grep -qE ...#' SKILL.md \| FROZEN \| shasum -a 256` | `5c9afbc3608590ca4d24497e7fcf1312f0bae4727c459266b00ff570ec9e1975` → **RED. Fires.** |
+| 4 | **Weaken 8.6** — drop `Ignore` from the block-scoped forbidden-token pattern at `:160` | `sed '160s#.*#   grep -inE ...#' SKILL.md \| FROZEN \| shasum -a 256` | `c9973a7e0955d1970bbf868efd987101ca66f91827827de7b9a350719b790870` → **RED. Fires.** Previously uncovered by R0–R4. |
+| 5 | **Weaken 8.7** — drop the confirm-before-write requirement at `:165` | `sed '165s#.*#7. Write silently...#' SKILL.md \| FROZEN \| shasum -a 256` | `635a0ef9293f9cdaf758f4d23531e5b59e15372e827601ce7dc0e8c8aeeb6ba9` → **RED. Fires.** |
+| 6 | **Weaken 8.8** — let a re-run append a second block instead of replacing in place at `:174` | `sed '174s#.*#   - 1 match: append...#' SKILL.md \| FROZEN \| shasum -a 256` | `358b6dc4e0a26de233c8db82c013ebd067df8a77ab95a3b104547fb8f80fd680` → **RED. Fires.** Previously uncovered by R0–R4. |
+| 7 | **PASS control** — the licensed `:137` edit (target-resolution rationale, `AC-TR-D1`) | re-run `FROZEN` after landing `:137` | Re-run required post-edit (§ below) — must equal leg 2's hash. |
+| 8 | **PASS control** — the licensed `:178` edit (advisory line, `AC-TR-D1`) | re-run `FROZEN` after landing `:178` | Re-run required post-edit (§ below) — must equal leg 2's hash. |
 
-**Where this runs — a real choice, stated with its trade-off, because the recommendation is not
-free:**
+Legs 1–6 are pre-edit and proven this session. Legs 7–8 are the `Verifier-that-cannot-PASS` discharge
+(BINDING since v2.19.5) and can only be run **after** `:137` and `:178` land — a freeze that never
+goes green on the cycle's own licensed edit would be a check that cannot pass. @dev re-runs all eight
+legs post-edit per the Phase-4 instruction and reports the hashes; a changed leg-2 hash post-`:137`/
+`:178` is the failure this control exists to catch.
 
-- **Option 1 (RECOMMENDED) — a documented Phase-5/Phase-6 command, no CI change.** @qa runs the
-  three legs above at Phase 5; @security re-runs them at Phase 6. **Pro:** `quality.yml`'s diff stays
-  confined to exactly the C1/C2 surface `AC-TR-TIER-2` governs, which minimises the Tier B surface;
-  the condition is cycle-scoped and gets a cycle-scoped instrument; zero standing tax. **Con:** it is
+**Where this runs — unchanged from the original recommendation, now on the stronger instrument:**
+
+- **Option 1 (RECOMMENDED) — a documented Phase-5/Phase-6 command, no CI change.** @qa runs all eight
+  legs at Phase 5; @security re-runs them at Phase 6. **Pro:** `quality.yml`'s diff stays confined to
+  exactly the C1/C2 surface `AC-TR-TIER-2` governs, which minimises the Tier B surface; the condition
+  is cycle-scoped and gets a cycle-scoped instrument; zero standing tax. **Con:** it is
   inspection-class after this cycle — nothing stops a *future* cycle from editing those clauses
   silently.
 - **Option 2 — a standing `skill-studio-freeze-check` job in `quality.yml` pinning the hash.**
   **Pro:** permanent tripwire on genuinely security-critical prose; catches drift forever. **Con:**
-  every future legitimate edit to those 18 lines goes red until someone hand-updates a hash literal
+  every future legitimate edit to those 80 lines goes red until someone hand-updates a hash literal
   — an unbounded tax levied by a patch cycle, on a surface no one has asked to freeze permanently.
 
 **Recommendation: Option 1.** A cycle-scoped condition should not silently become a permanent gate;
 that is a decision the owner should take deliberately, on its own merits, in its own cycle. Option 2
-is recorded as **ADR-084 §Maturation Path** revisit-trigger (b) so it is a named future option
+is recorded as **ADR-084 §Maturation Path** revisit-trigger (c) so it is a named future option
 rather than a road not taken. **The owner can overturn this at the Phase 3 gate at zero design cost
 — Option 2 is ~10 lines of YAML and the hash is already computed above.**
 
@@ -396,6 +410,47 @@ Two routes. Pick either.
    edit. It is not in the raw token surface (it contains no `auto-` token) — it is a
    **completeness-pass catch by the paraphrase denylist**, the same instrument that found
    `WIZARD.md:3`.
+
+### A.6 — `AC-TR-A2`'s unguarded seam: a table-driven exact-count check for the outside-ADR lines
+
+**🔴 2.D finding (@qa), closed here.** `AC-TR-A2`'s firing negative control guards only the 24
+frozen ADR-body lines (`git diff` shows 0 modified/deleted lines inside any `^#{2,3} ADR-` block).
+The 7 annotate-only and 4 leave lines in `docs/architecture.md` (§A.2) sit **outside** any ADR
+block, with **no mechanical non-regression check at all** — a @dev slip that rewrites one of them
+instead of annotating/leaving it is invisible to `AC-TR-A2`'s own control. **The check must assert
+EXACT COUNTS, not presence:** @architect proved the presence form is a check that cannot fail —
+`"The wizard leads with your"` and `"the Workspace Co-Builder"` each occur **3** times in the live
+file, so rewriting the target line still leaves 2 hits and a presence-only (`grep -c … -ge 1`) form
+goes green.
+
+**The verified anchor table — count, not presence, each re-derived against the live file this
+session:**
+
+| # | Site (§A.2 disposition) | Anchor (exact substring, `grep -cF`) | Expected count |
+|---|---|---|---|
+| 1 | `### Exact-line bindings for @dev` memo pair — **annotate-only** | `This step substitutes for the \`CLAUDE.md\` auto-load path — it tells Cowork to run the Dynamic Workspace Architect automatically when you start talking.` | **2** |
+| 2 | `### TASK 1 — Open-Question Resolutions` OQ-1 — **annotate-only** | `functionally equivalent to \`CLAUDE.md\` auto-load` | **1** |
+| 3 | `### TASK 3 — Naming Gate` line-24 body — **annotate-only** | `This step substitutes for the \`CLAUDE.md\` auto-load path — it tells Cowork to run {{WIZARD_REF}} automatically when you start talking.` | **1** |
+| 4 | `### TASK 3 — Naming Gate` Option (a)/(b)/(c) line-10 "keep verbatim" — **annotate-only** | `Cowork auto-loads \`CLAUDE.md\` and` | **3** |
+| 5 | `#### 4.3 examples/<preset>/global-instructions.md injection` — **leave** | `kit auto-loading carries the rule into every session without user paste` | **1** |
+| 6 | `#### 4.6 CHANGELOG.md` fenced paste block, 3 lines — **leave** | `auto-loaded via` | **3** |
+
+Rows 1–4 sum to **7** (the annotate-only count); rows 5–6 sum to **4** (the leave count) —
+reconciles exactly against §A.2's 7/4 split. **Non-regression form (each row, both legs proven this
+session):**
+
+```bash
+# Pre-fix (this cycle's own landed state) — every row's actual count MUST equal Expected.
+grep -cF '<anchor>' docs/architecture.md   # MUST equal the table's Expected count, exactly
+
+# Firing leg — proven: mutating any ONE occurrence (e.g. rewriting rather than annotating one of
+# the 3 "Cowork auto-loads `CLAUDE.md` and" lines) drops that row's count below Expected. A count
+# strictly LESS than Expected is the regression signal; a presence check (`-ge 1`) would stay green
+# on 2/3 mutated.
+```
+
+**Where this runs:** Option 1, same as `AC-TR-TIER-1` (§A.4) — a documented Phase-5/Phase-6 command,
+no CI change. @qa runs the six rows at Phase 5; @security re-runs them at Phase 6.
 
 ---
 
@@ -566,8 +621,8 @@ design spends **0** of it.
 | 3 | `SETUP-CHECKLIST.md` | `:10` | **normative** | Remove *"This is the **manual fallback path**. The primary path is…"* and the auto-load clause. Carries **1 of the 2 live `primary` hits** — `AC-TR-B2`. |
 | | | `:24` | **normative** | Remove *"This step substitutes for the `CLAUDE.md` auto-load path"*. Rest of the (long) paragraph byte-unchanged. |
 | | | `:61` | **normative** | Corrects the **`.claude/skills/` auto-discovery** predicate, not the `CLAUDE.md` one. Local Cowork loads account-synced skills; project-folder auto-discovery is a cloud-session behavior. |
-| 4 | `.claude/skills/skill-studio/SKILL.md` | `:137` | **normative** | Rewrite the *target-resolution rationale only*: (a) the load at session start is not guaranteed; (b) the write is retained as **best-effort / inspection-class**; (c) restate "no third target" as an explicit non-regression. **One line in, one line out is preferred but not required** — the freeze assertion is content-anchored (§A.4). |
-| | | `:178` | **normative — highest value in the cycle** | User-facing runtime string spoken aloud. `Added to CLAUDE.md (auto-loaded each session)` → a truthful advisory. **Sub-step 9 is NOT in the frozen set** (frozen: 2, 3's bullets, 5) — verified. |
+| 4 | `.claude/skills/skill-studio/SKILL.md` | `:137` | **normative** | Rewrite the *target-resolution rationale only*: (a) the load at session start is not guaranteed; (b) the write is retained as **best-effort / inspection-class**; (c) restate "no third target" as an explicit non-regression. **🔴 CORRECTED at 2.D (`FROZEN v2`): one line in, one line out is REQUIRED, not preferred.** The bold lead `3. **Resolve the target.**` MUST survive byte-exact — `FROZEN v2` (§A.4) deletes the line by matching that exact lead, so a reworded lead is a `FROZEN v2` scope hole (the edit would land outside the deletion pattern and inside the frozen capture), and a multi-line replacement is a Tier-A-triggering edit to the frozen region either way. Both proven to go RED against the live instrument. |
+| | | `:178` | **normative — highest value in the cycle** | User-facing runtime string spoken aloud. `Added to CLAUDE.md (auto-loaded each session)` → a truthful advisory. **🔴 CORRECTED at 2.D:** under `FROZEN v2` (§A.4), sub-steps 1, 2, 4, 5, 6, 7, 8 and the entire safety-bullet section are frozen; only sub-steps 3 and 9 are named out. **Same REQUIRED constraint as `:137`:** one line in, one line out, and the bold lead `9. **Advisory line.**` MUST survive byte-exact, for the identical reason — `FROZEN v2` deletes this line by matching that exact lead. |
 | | | `:199` | **annotate-only, FROZEN** | Never edited. Inside R4. Any edit → Tier A. |
 | | | `:135`, `:139–:140`, `:144–:155`, `:199–:201` | **FROZEN, 18 lines** | `AC-TR-TIER-1`. Assertion + both controls in §A.4. |
 | 5 | `docs/research/v2.7-usercase-test-and-improvement-research.md` | `:61`, `:62`, `:110` | **annotate-only** | Dated historical record; content **is** the provenance of the v1.2 inversion. One dated annotation block at the head of the section. Never rewrite. |

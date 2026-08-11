@@ -134,7 +134,7 @@ Wire the just-installed skill's triggers into the workspace's own proactive-inst
 
 2. **Kit-checkout guard, extended.** Reuse step 5's detection: if `WIZARD.md` is present at the workspace root, this IS the kit checkout. Refuse to write `CLAUDE.md` (and any `examples/*/global-instructions.md`) and tell the user the generated skill is local-dev-only. Stop here on a kit checkout — do not continue to the remaining sub-steps.
 
-3. **Resolve the target.** The target is the workspace's auto-loaded `CLAUDE.md`, section `## Proactive skill behavior` — never `project-instructions.txt` (a manual Settings paste that a disk write cannot refresh) and never a file literally named `global-instructions.md` (no end-user workspace has one).
+3. **Resolve the target.** The target is the workspace's `CLAUDE.md`, section `## Proactive skill behavior` — a best-effort, inspection-class write: the file is durable, but its read at Cowork session start is not guaranteed. There is no third target: never `project-instructions.txt` (a manual Settings paste that a disk write cannot refresh) and never a file literally named `global-instructions.md` (no end-user workspace has one).
 
    - If `CLAUDE.md` does not exist at the workspace root, emit exactly `No CLAUDE.md workspace-instructions file found` and stop — create no file.
    - If `CLAUDE.md` exists but has no `## Proactive skill behavior` section, plan to create it (appended after `## Every session`) — this is normal operation, not an error.
@@ -175,7 +175,7 @@ Wire the just-installed skill's triggers into the workspace's own proactive-inst
 
    After any number of runs for the same slug, the marker count must remain exactly 1. If the write fails for any reason (e.g. the target is not writable), surface the error and stop — never fail silently or crash the loop.
 
-9. **Advisory line.** After a successful write, tell the user: "Added to CLAUDE.md (auto-loaded each session). If you also keep proactive rules in your pasted Custom Instructions, re-paste project-instructions.txt to stay in sync."
+9. **Advisory line.** After a successful write, tell the user: "Added to CLAUDE.md. Cowork reads it when it opens or re-reads your workspace files, which isn't guaranteed every session — if you want this rule to apply reliably, also add it to your pasted Custom Instructions (project-instructions.txt)."
 
 ### 9. Offer to refine
 

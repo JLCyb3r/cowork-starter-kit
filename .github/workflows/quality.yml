@@ -164,10 +164,14 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Check starter files exist for all examples
         run: |
+          # v2.19.9 (ADR-084 D4): ENFORCED_EXAMPLES is single-sourced from the CMP job's copy
+          # (quality.yml:795, named canonical by AC-TR-C1) rather than a fourth hard-coded list.
+          # EXPECTED is derived via wc -w so the cardinality digit is never written again.
+          ENFORCED_EXAMPLES="study research project-management writing creative business-admin personal-assistant"
+          EXPECTED=$(echo "$ENFORCED_EXAMPLES" | wc -w | tr -d ' ')
           MISSING=0
           COUNT=0
-          # v2.0.0: examples/ replaces presets/ (ADR-021/ADR-026)
-          for example in study research writing project-management creative business-admin; do
+          for example in $ENFORCED_EXAMPLES; do
             if [ ! -f "examples/$example/project-instructions-starter.txt" ]; then
               echo "MISSING: examples/$example/project-instructions-starter.txt"
               MISSING=1
@@ -175,14 +179,14 @@ jobs:
               COUNT=$((COUNT + 1))
             fi
           done
-          if [ "$COUNT" -lt 6 ]; then
-            echo "Only $COUNT/6 starter files found"
+          if [ "$COUNT" -lt "$EXPECTED" ]; then
+            echo "Only $COUNT/$EXPECTED starter files found"
             MISSING=1
           fi
           if [ "$MISSING" -eq 1 ]; then
             exit 1
           fi
-          echo "All 6 starter files present."
+          echo "All $COUNT starter files present."
 
   starter-safety-rule-check:
     name: Starter Safety Rule Check
@@ -191,10 +195,12 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Check safety rule in all starter files
         run: |
+          # v2.19.9 (ADR-084 D4): same single-sourced ENFORCED_EXAMPLES as starter-file-check.
+          ENFORCED_EXAMPLES="study research project-management writing creative business-admin personal-assistant"
+          EXPECTED=$(echo "$ENFORCED_EXAMPLES" | wc -w | tr -d ' ')
           SAFETY_RULE="Always ask for explicit confirmation before deleting"
           MISSING=0
           COUNT=0
-          # v2.0.0: examples/ replaces presets/ (ADR-021/ADR-026)
           for f in examples/*/project-instructions-starter.txt; do
             COUNT=$((COUNT + 1))
             if ! grep -q "$SAFETY_RULE" "$f"; then
@@ -202,14 +208,93 @@ jobs:
               MISSING=1
             fi
           done
-          if [ "$COUNT" -lt 6 ]; then
-            echo "Only $COUNT/6 starter files found — expected 6"
+          if [ "$COUNT" -lt "$EXPECTED" ]; then
+            echo "Only $COUNT/$EXPECTED starter files found — expected $EXPECTED"
             exit 1
           fi
           if [ "$MISSING" -eq 1 ]; then
             exit 1
           fi
           echo "Safety rule present in all $COUNT starter files."
+
+  starter-sync-check:
+    name: Starter Sync Check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: Normalize + compare all 7 starters for shared-content drift (ADR-084)
+        run: |
+          # v2.19.9 (ADR-084): inline, modeled on the CMP byte-mirror job (quality.yml:786+).
+          # No file is added to or modified in scripts/ — AC-TR-TIER-2 binds this placement.
+          ENFORCED_EXAMPLES="study research project-management writing creative business-admin personal-assistant"
+          EXPECTED=$(echo "$ENFORCED_EXAMPLES" | wc -w | tr -d ' ')
+
+          # NORMALIZE strips PA's legitimate ## Data locality block (anchored to ## Finishing,
+          # which is itself inside the compared region — an over-deleting stripper removes
+          # ## Finishing too and the compare goes red, so the stripper cannot fail silently),
+          # then normalizes the minimum: three templated slots, by anchored substring, never
+          # whole-line. The Q2 line's trailing safety sentence ("Cowork always asks before
+          # deleting, moving, or overwriting any file or folder.") stays in the compare — it is
+          # the one line where assertion matters most, and whole-line normalization would have
+          # stopped asserting it.
+          NORMALIZE() {
+            awk '/^## Data locality$/{skip=1; next} /^## Finishing$/{skip=0} skip==0' "$1" \
+              | sed -E \
+                  -e 's/^(# Cowork Setup — Paste-Only Starter \().*(\)$)/\1@@PRESET@@\2/' \
+                  -e 's/This area is \*\*.*$/This area is @@AREA@@/' \
+                  -e 's/(Ask together: name; ).*(; any deadlines)/\1@@Q2@@\2/'
+          }
+
+          REF_PRESET=$(echo "$ENFORCED_EXAMPLES" | awk '{print $1}')
+          NORMALIZE "examples/$REF_PRESET/project-instructions-starter.txt" > /tmp/starter-ref.txt
+
+          FAIL=0
+          for preset in $ENFORCED_EXAMPLES; do
+            f="examples/$preset/project-instructions-starter.txt"
+            NORMALIZE "$f" > "/tmp/starter-$preset.txt"
+
+            # Slot-presence control — proves the normalizer actually ran (a silently no-op'ing
+            # sed, from a changed upstream anchor, yields zero placeholders and must fail here,
+            # before cmp reports a spurious green or a confusing red).
+            for slot in '@@PRESET@@' '@@AREA@@' '@@Q2@@'; do
+              # `|| true`: grep -c exits 1 on a zero count, which is a real, expected result
+              # here (a broken anchor), not an error — under this job's default `set -e`, an
+              # unguarded assignment would abort the script instead of letting the check fire.
+              COUNT=$(grep -cF "$slot" "/tmp/starter-$preset.txt" || true)
+              if [ "$COUNT" -ne 1 ]; then
+                echo "SLOT-PRESENCE FAIL: $f — expected exactly 1 occurrence of $slot, found $COUNT"
+                FAIL=1
+              fi
+            done
+
+            if ! cmp -s "/tmp/starter-$preset.txt" /tmp/starter-ref.txt; then
+              echo "DRIFT: $f differs from the normalized reference ($REF_PRESET) outside the templated slots"
+              diff -u /tmp/starter-ref.txt "/tmp/starter-$preset.txt" || true
+              FAIL=1
+            fi
+
+            # Positive data-locality allow-list (ADR-019 / ADR-084 D3) — NOT an exemption. Both
+            # legs asserted: personal-assistant MUST carry the block; the other six MUST NOT.
+            HAS_DL=$(grep -c '^## Data locality$' "$f" || true)
+            if [ "$preset" = "personal-assistant" ]; then
+              if [ "$HAS_DL" -ne 1 ]; then
+                echo "DATA-LOCALITY FAIL: personal-assistant MUST contain '## Data locality' — found $HAS_DL"
+                FAIL=1
+              fi
+            else
+              if [ "$HAS_DL" -ne 0 ]; then
+                echo "DATA-LOCALITY FAIL: $preset MUST NOT contain '## Data locality' — found $HAS_DL"
+                FAIL=1
+              fi
+            fi
+          done
+
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "All $EXPECTED starters are byte-identical after normalization; data-locality allow-list holds."
 
   skill-format-check:
     name: Skill Format Check

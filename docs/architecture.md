@@ -7194,6 +7194,13 @@ SKIP (V44-S5 external project; cowork is a downstream consumer of v43 framework,
 
 ### Exact-line bindings for @dev
 
+> **v2.19.9 annotation (2026-08-11, ADR-082 §D1 — annotate-only, never rewrite):** Edit 4's
+> `SETUP-CHECKLIST.md:24` before/after pair below asserts `CLAUDE.md` auto-load as the mechanism
+> — a premise ADR-082 corrects. This memo is a frozen record of a past (v2.5.4) edit and is left
+> byte-unchanged; rewriting it would make the record disagree with the edit it documents. The
+> *live* line this memo produced, `SETUP-CHECKLIST.md:24`, is corrected directly under this
+> cycle's Scope A.
+
 #### TIER 1 — README.md line 1 (hero rewrite) — BINDING
 
 **Current (verbatim, line 1):**
@@ -8938,6 +8945,12 @@ Risk knowingly accepted:   -> 5   (was 2)
 ### TASK 1 — Open-Question Resolutions (BINDING)
 
 > *ISO 15288 — Decision Management Process.*
+>
+> **v2.19.9 annotation (2026-08-11, ADR-082 §D1 — annotate-only, never rewrite):** OQ-1's reasoning
+> below cites README:112's claim that the starter path is "functionally equivalent to `CLAUDE.md`
+> auto-load" — a premise ADR-082 corrects. This is a dated Phase-1 decision record for a past cycle
+> and is left byte-unchanged; the correction lands directly at the live `README.md:154` site under
+> this cycle's Scope A.
 
 #### OQ-1 (WS1 mechanism) — BIND: **full self-contained regeneration** (NOT thin pointer). ADR-038.
 
@@ -9410,6 +9423,13 @@ User confirms or adjusts. Proceed to F4.
 ### TASK 3 — Naming Gate: replacement copy for ALL THREE options (owner picks Gate-Decision-1)
 
 > *ISO 15288 — Design Definition Process.*
+>
+> **v2.19.9 annotation (2026-08-11, ADR-082 §D1 — annotate-only, never rewrite):** the line-24 body
+> and Option (a)'s line-10/line-61 "keep verbatim" copy below cite `CLAUDE.md` auto-load as the
+> mechanism — a premise ADR-082 corrects. This is a dated, owner-decided Phase-1 naming-gate record
+> ("keep verbatim" at line 24's replacement is the owner's literal choice) and is left byte-unchanged;
+> the live `SETUP-CHECKLIST.md:10`/`:24`/`:61` lines this gate produced are corrected directly under
+> this cycle's Scope A.
 
 `SETUP-CHECKLIST.md` carries "Dynamic Workspace Architect" at **lines 10, 24, 61** — the only live surface still using the term (CHANGELOG.md is append-only historical, EXEMPT). Line 24 also carries "confirms the preset you chose" which AC-DLG-5 requires be removed regardless of naming choice. The **line-24 body is the same three-way, non-hierarchical draft framing in all three options**; only the wizard's *name token* differs. Below, `{{WIZARD_REF}}` marks the only varying span.
 
@@ -13576,10 +13596,21 @@ cycle exists to diagnose — the record of *what was believed and when* is the d
 No kit surface may state or imply an unconditional or guaranteed load of the root `CLAUDE.md` as
 system context at Cowork session start, nor project-folder `.claude/skills/` auto-discovery. ADR-010's
 **record body is byte-unchanged**; its index row gains a status annotation, which is this
-repository's existing convention (twelve annotated rows in nine distinct forms already —
-`grep -cE '^\| ADR-[0-9]+ \| .* \| ACCEPTED \(' docs/architecture.md`). Historical records —
-dated design memos, research files, QA reports, security reviews, the release ledger — are
-**annotated, never rewritten**; the correction is dated and appended beside them.
+repository's existing convention — **eight** annotated rows at this cycle's base `f06f0cf`, pinned
+rather than asserted, and counted with an index-scoped command so a whole-file scan cannot
+double-count the frozen duplicate ADR Index inside the historical design memo at `:5324+`:
+
+```
+awk '/^## ADR Index$/{f=1} f && /^## ADR-001:/{exit} f' docs/architecture.md \
+  | grep -E '^\| ADR-' \
+  | awk -F'|' '{s=$4; gsub(/^ +| +$/,"",s); if (s!="ACCEPTED" && s!="PROPOSED") c++} END{print c+0}'
+```
+
+Returns `8` at `f06f0cf`. Returns `12` at this cycle's own HEAD, once its four new annotations
+(ADR-010, ADR-046, ADR-053, ADR-064) land — a real increase this cycle causes, not a re-count of the
+same eight. Historical records — dated design memos, research files, QA reports, security reviews,
+the release ledger — are **annotated, never rewritten**; the correction is dated and appended beside
+them.
 
 **D2 — A distribution property must never filter a correctness sweep. This is the generalizable rule,
 and it is binding on the instrument, not on a file list.**
@@ -13814,7 +13845,13 @@ an invisible one; the next feature that needs shared-line growth will hit it del
   held; (c) a second preset legitimately needs its own security block, which turns D3's
   one-preset allow-list into a list and makes the positive-assertion shape worth re-deriving;
   (d) a future cycle edits `skill-studio`'s frozen safety clauses, which is the moment option (c)
-  earns its standing cost.
+  earns its standing cost; (e) **S2 (2.D, security):** `starter-sync-check` declares its own
+  job-level `permissions: {contents: read}` (precedent: the `ledger-annotations` job) rather than a
+  workflow-level default, on a per-job-for-this-patch-cycle basis — all four pre-existing
+  `permissions:` blocks in `quality.yml` were re-verified already `contents: read`, so a top-level
+  default would break no job. Revisit if a future cycle finds itself re-adding the same per-job
+  block to a fifth or sixth job — the repetition is the signal a workflow-level default has become
+  cheaper than continuing to name it per job.
 - **Risk knowingly accepted:** `AC-TR-TIER-1`'s freeze assertion is run as a documented Phase-5/6
   command rather than a standing CI job, so it is **inspection-class after this cycle** — nothing
   prevents a future cycle from editing those eighteen lines silently. Accepted because the condition
