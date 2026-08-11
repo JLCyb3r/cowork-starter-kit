@@ -239,11 +239,19 @@ jobs:
           # deleting, moving, or overwriting any file or folder.") stays in the compare — it is
           # the one line where assertion matters most, and whole-line normalization would have
           # stopped asserting it.
+          # 2.D correction (@qa, item 2): the original AREA substitution discarded the whole
+          # line tail, including the per-preset skill roster ("core skills X, Y, Z; optional
+          # A, B") -- so a silently duplicated skill inside one preset's own roster would go
+          # undetected (everything else stays byte-identical, the tail is normalized away
+          # before the compare). AREA is now anchored to the preset name only, and the roster
+          # gets its own placeholder PLUS a standalone duplicate-check below (not part of the
+          # cmp, since rosters legitimately differ across presets by design).
           NORMALIZE() {
             awk '/^## Data locality$/{skip=1; next} /^## Finishing$/{skip=0} skip==0' "$1" \
               | sed -E \
                   -e 's/^(# Cowork Setup — Paste-Only Starter \().*(\)$)/\1@@PRESET@@\2/' \
-                  -e 's/This area is \*\*.*$/This area is @@AREA@@/' \
+                  -e 's/This area is \*\*[^*]+\*\*/This area is **@@AREA@@**/' \
+                  -e 's/: core skills [^.]*\.$/: @@ROSTER@@./' \
                   -e 's/(Ask together: name; ).*(; any deadlines)/\1@@Q2@@\2/'
           }
 
@@ -258,7 +266,7 @@ jobs:
             # Slot-presence control — proves the normalizer actually ran (a silently no-op'ing
             # sed, from a changed upstream anchor, yields zero placeholders and must fail here,
             # before cmp reports a spurious green or a confusing red).
-            for slot in '@@PRESET@@' '@@AREA@@' '@@Q2@@'; do
+            for slot in '@@PRESET@@' '@@AREA@@' '@@ROSTER@@' '@@Q2@@'; do
               # `|| true`: grep -c exits 1 on a zero count, which is a real, expected result
               # here (a broken anchor), not an error — under this job's default `set -e`, an
               # unguarded assignment would abort the script instead of letting the check fire.
@@ -272,6 +280,19 @@ jobs:
             if ! cmp -s "/tmp/starter-$preset.txt" /tmp/starter-ref.txt; then
               echo "DRIFT: $f differs from the normalized reference ($REF_PRESET) outside the templated slots"
               diff -u /tmp/starter-ref.txt "/tmp/starter-$preset.txt" || true
+              FAIL=1
+            fi
+
+            # Roster duplicate check (2.D item 2, partial remedy — see ADR-084 §Maturation Path
+            # trigger (f) for the honest limit this does NOT cover). No skill name may repeat
+            # within one preset's own core+optional roster. Proven firing: duplicating a skill
+            # inside a roster is caught and named; this check is independent of the cmp above.
+            ROSTER_LINE=$(grep 'This area is' "$f")
+            CORE_TEXT=$(echo "$ROSTER_LINE" | sed -E 's/^.*core skills ([^;]+);.*$/\1/')
+            OPT_TEXT=$(echo "$ROSTER_LINE" | sed -E 's/^.*optional ([^.]+)\..*$/\1/')
+            DUP=$(printf '%s\n%s\n' "$CORE_TEXT" "$OPT_TEXT" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$' | sort | uniq -d || true)
+            if [ -n "$DUP" ]; then
+              echo "ROSTER-DUPLICATE FAIL: $f — skill name(s) appear more than once: $DUP"
               FAIL=1
             fi
 

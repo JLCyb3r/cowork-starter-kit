@@ -55,7 +55,7 @@ After completing the onboarding interview (triggered by `CLAUDE.md` being read, 
 
 | File | Format | Source | User Action Required |
 |------|--------|--------|---------------------|
-| `CLAUDE.md` | Markdown | Shipped at repo root | Attached as a browsable source when the folder is opened as a Project; the wizard begins once the model reads it |
+| `CLAUDE.md` | Markdown | Shipped at repo root | Attached as a browsable source when the folder is opened as a Project; the wizard begins once the model reads it (not guaranteed on the first message — ask Cowork to read it if it doesn't) |
 | `project-instructions-starter.txt` | Plain text | Pre-built per preset | Optional paste route: paste into Project Settings > Custom Instructions BEFORE any conversation |
 | `cowork-profile.md` | Markdown | Generated from wizard answers | Review (read-only) |
 | `writing-profile.md` | Markdown | Generated from writing-profile questions (v1.2) | Review, refine as your voice evolves |

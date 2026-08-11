@@ -121,8 +121,9 @@ The owner's *"a little of Hermes capabilities"* reference is to NousResearch's H
 > **v2.19.9 annotation (2026-08-11, ADR-082/083 §D1 — annotate-only, never strip):** the sentence
 > below describing files as "auto-loaded... every session" carries a premise ADR-082 corrects (the
 > read is best-effort, not guaranteed) — but it sits inside the sentence that constitutes this
-> program's standing security invariant, so it is corrected in place with the invariant's force
-> unchanged, not stripped. **The invariant itself is unchanged; see ADR-044 for the
+> program's standing security invariant, so it is **annotated here, not stripped or edited**: the
+> flagged sentence below is byte-preserved, and this note is the correction, sitting beside it
+> rather than replacing any of its words. **The invariant itself is unchanged; see ADR-044 for the
 > premise-independent ground** the mandatory Phase-2 gate rests on regardless of this correction.
 
 Headline first: **this is the biggest security surface the kit would ever have, and the two loops carry very different blast radii.**

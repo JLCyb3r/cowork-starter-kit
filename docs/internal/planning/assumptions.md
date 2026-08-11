@@ -646,6 +646,8 @@ _Added: 2026-07-06T00:00:00Z — 16-agent swarm campaign (docs/research/v2.7-use
 **Decision (hedged per feasibility review):** treat auto-discovery as a primary delivery channel but keep BOTH channels documented — `.claude/skills/` copies for connected-folder users, `skills-as-prompts.md` as explicit fallback for surfaces without discovery. Do not remove the fallback; the assumption flip-flopped once already and the kit cannot feature-detect the platform.
 **Validation path:** re-verify each release cycle in a clean Cowork session ("What skills do you have active?" with a fresh workspace).
 
+**SUPERSEDED for the `CLAUDE.md`-auto-load claim — see the entry below, 2026-08-11.**
+
 ### A2 — REOPENED AGAIN AND PARTIALLY REVERSED (v2.19.9 Truth Repair, 2026-08-11)
 
 **Confidence:** [CONFIRMED — official docs, two independently verified findings]

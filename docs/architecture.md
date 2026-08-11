@@ -13859,7 +13859,27 @@ an invisible one; the next feature that needs shared-line growth will hit it del
   `permissions:` blocks in `quality.yml` were re-verified already `contents: read`, so a top-level
   default would break no job. Revisit if a future cycle finds itself re-adding the same per-job
   block to a fifth or sixth job — the repetition is the signal a workflow-level default has become
-  cheaper than continuing to name it per job.
+  cheaper than continuing to name it per job; (f) **2.D item 2 (@qa):** `starter-sync-check`'s
+  `AREA` normalization at `quality.yml` was originally a whole-line-tail substitution that
+  discarded the per-preset skill roster before the compare, so a duplicated, dropped, or
+  misnamed skill inside one preset's own roster could go undetected. `AREA` is now anchored to
+  the preset name only, and a standalone check asserts **no skill name repeats** within a single
+  preset's roster (proven firing against a duplicated-skill fixture). **Honest limit, not
+  silence:** this does not assert the roster's exact content against `selection-presets.md`'s
+  `core_skills`/`optional_skills` — attempted and found infeasible this cycle: `weekly-review`
+  (added to `project-management` and `personal-assistant`'s `optional_skills` at v2.10.0, ADR-042)
+  is absent from both starters' prose rosters today, a pre-existing gap ADR-042 itself flagged for
+  the CMP byte-mirror job ("optional tier NOT byte-mirrored") that evidently extends to this prose
+  summary too. A strict-parity check would immediately fail CI against the current, approved,
+  word-budget-frozen tree (`ADR-084` D5) — enforcing it would force an unplanned starter-body edit
+  outside this cycle's one-word freeze. No canonical slug-to-display-name source exists to build a
+  reliable mechanical cross-check even if the parity gap were closed first (SKILL.md frontmatter's
+  `name:` is the slug, not a display form, and several display forms are irregular —
+  `doc-summary` → "Document Summary", `note-taking` → "Note-Taking", `follow-up-tracker` →
+  "Follow-Up Tracker" — none reducible to a plain hyphen-to-space transform). **Revisit trigger:**
+  a future cycle that (i) closes the `weekly-review` roster gap and (ii) either builds or locates a
+  canonical slug-to-display-name source is the point at which full roster-parity enforcement
+  becomes buildable rather than a check that fails on arrival.
 - **Risk knowingly accepted:** `AC-TR-TIER-1`'s freeze assertion is run as a documented Phase-5/6
   command rather than a standing CI job, so it is **inspection-class after this cycle** — nothing
   prevents a future cycle from editing those eighteen lines silently. Accepted because the condition

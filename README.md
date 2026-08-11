@@ -88,7 +88,7 @@ Its answer to the third — **self-integrity**: every self-modifying path (propo
 
 ## How it works
 
-Open this folder as a Cowork Project. Cowork attaches it as a browsable source, and the setup wizard begins once it reads `CLAUDE.md` — one open-ended goal question, a bundle confirm, one quick turn for name/role/deadlines, and an optional voice-calibration turn. No terminal required. No paste required. **Zero runtime fetches, fully reviewable supply chain** — everything the wizard installs already ships inside this repo; nothing is downloaded during setup (see "Why trust it" above).
+Open this folder as a Cowork Project. Cowork attaches it as a browsable source, and the setup wizard begins once it reads `CLAUDE.md` — ask Cowork to read it if setup doesn't begin on its own. Once it starts: one open-ended goal question, a bundle confirm, one quick turn for name/role/deadlines, and an optional voice-calibration turn. No terminal required. No paste required. **Zero runtime fetches, fully reviewable supply chain** — everything the wizard installs already ships inside this repo; nothing is downloaded during setup (see "Why trust it" above).
 
 ```
 You                                Cowork
