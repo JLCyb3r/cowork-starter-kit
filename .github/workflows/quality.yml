@@ -287,7 +287,16 @@ jobs:
             # trigger (f) for the honest limit this does NOT cover). No skill name may repeat
             # within one preset's own core+optional roster. Proven firing: duplicating a skill
             # inside a roster is caught and named; this check is independent of the cmp above.
-            ROSTER_LINE=$(grep 'This area is' "$f")
+            # `|| true`: same idiom as the slot-presence/data-locality checks above — grep exits
+            # 1 on no match (a broken/renamed "This area is" anchor), which is a real, expected
+            # failure mode here, not an error; an unguarded assignment would abort the whole
+            # loop under this job's default `set -e`, silently skipping every remaining preset.
+            ROSTER_LINE=$(grep 'This area is' "$f" || true)
+            if [ -z "$ROSTER_LINE" ]; then
+              echo "ROSTER-ANCHOR FAIL: $f — no 'This area is' line found; cannot check its roster for duplicates"
+              FAIL=1
+              continue
+            fi
             CORE_TEXT=$(echo "$ROSTER_LINE" | sed -E 's/^.*core skills ([^;]+);.*$/\1/')
             OPT_TEXT=$(echo "$ROSTER_LINE" | sed -E 's/^.*optional ([^.]+)\..*$/\1/')
             DUP=$(printf '%s\n%s\n' "$CORE_TEXT" "$OPT_TEXT" | tr ',' '\n' | sed 's/^ *//; s/ *$//' | grep -v '^$' | sort | uniq -d || true)

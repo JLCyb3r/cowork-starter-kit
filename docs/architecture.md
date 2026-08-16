@@ -13863,8 +13863,11 @@ an invisible one; the next feature that needs shared-line growth will hit it del
   `AREA` normalization at `quality.yml` was originally a whole-line-tail substitution that
   discarded the per-preset skill roster before the compare, so a duplicated, dropped, or
   misnamed skill inside one preset's own roster could go undetected. `AREA` is now anchored to
-  the preset name only, and a standalone check asserts **no skill name repeats** within a single
-  preset's roster (proven firing against a duplicated-skill fixture). **Honest limit, not
+  the preset name only, and a standalone check asserts **no skill name repeats (exact-match,
+  comma-separated, case-sensitive)** within a single preset's roster (proven firing against a
+  duplicated-skill fixture). A case-variant or non-comma-separated duplicate is not currently
+  reachable — all seven live rosters are comma-separated and consistently cased — but the claim
+  is stated to the check's actual normalization basis, not wider. **Honest limit, not
   silence:** this does not assert the roster's exact content against `selection-presets.md`'s
   `core_skills`/`optional_skills` — attempted and found infeasible this cycle: `weekly-review`
   (added to `project-management` and `personal-assistant`'s `optional_skills` at v2.10.0, ADR-042)
