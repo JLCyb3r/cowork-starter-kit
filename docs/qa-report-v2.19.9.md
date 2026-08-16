@@ -130,26 +130,44 @@ No count I checked failed to reproduce. I did not independently re-derive every 
 
 Confirmed independently: `weekly-review` is in `selection-presets.md`'s `optional_skills` for `project-management` (`:52`) and `personal-assistant` (`:88`), and absent from both presets' prose rosters in `examples/*/project-instructions-starter.txt` — reproducing ADR-084 §Maturation Path (f)'s cited gap exactly. The stated limitation — "this does not assert the roster's exact content against `selection-presets.md`" — is accurate, not understated. The stated reason for not closing it (strict parity would fail CI against the current word-budget-frozen tree, and no canonical slug→display-name source exists) is checkable and I did not find a cheaper fix available this cycle. The duplicate-skill check that *was* shipped is proven firing in both directions (§2). **This is an honest partial close, correctly labeled as partial, with a concrete revisit trigger** — not a silently narrowed claim.
 
+### 5a. Phase 6 addendum — two gaps found in the roster duplicate check (§2), fix in progress
+
+`@security`'s Phase 6 audit found two defects in the duplicate-skill check this report proved
+*firing* in §2, both narrower than what "proven firing" should be read to cover:
+
+- The comparison is case-sensitive and comma-separated only, so a `Note-Taking` / `note-taking` pair
+  in the same preset's roster passes undetected — the check proves duplicates are caught, not that
+  *all* duplicate forms are caught.
+- The line extraction (`ROSTER_LINE=$(grep …)`) is unguarded, inconsistent with the two sibling
+  extractions immediately around it in the same job, which do carry the `|| true` guard this report
+  verified in §2.
+
+Both are being fixed at implementation. Noted here so this report's own §2/§5 entries for the
+duplicate check aren't read as a completeness claim beyond what was actually tested — the check
+fires on the case it was tested against; it was not tested against a case-variant duplicate, and
+that gap is real.
+
 ---
 
-## 6. Process finding — a phase-log-shaped provenance row produced a false BLOCK on a correct implementation
+## 6. Process finding — a false BLOCK from external tooling, root-caused and fixed at the input
 
 During this grading pass, my write to this file was blocked with `BLOCKED: Phase 4 (Implementation)
 status is '—', not DONE`, by the external pipeline tooling that orchestrates this repo's AI
 development cycles (not a check that ships inside this repository) — even though Phase 4 was DONE
-and CI was green throughout. Root cause (diagnosed by the orchestrator, not guessed): that tooling's
-phase-status parser matches any table row beginning `| 4.` in the cycle's phase log and keeps
-overwriting its parsed status, reporting only the *last* match — so a provenance row recorded purely
-to log spawn parameters (shaped like a real phase row, but not one) sorted after the actual Phase 4
-row, and its placeholder status silently became the phase's reported status. The parser was reading
-exactly what was written; the input, not the parser, was wrong. Fixed by renaming the row out of the
-parser's matching pattern rather than by editing a status field to satisfy the check.
+and CI was green throughout. Root cause (diagnosed by the orchestrator, not guessed): a
+status-parsing gap in that external tooling. An unrelated provenance annotation, recorded purely to
+log spawn parameters, was close enough in shape to a real phase-status entry that the parser could
+not tell them apart, and its placeholder value was read as the phase's actual status. The parser was
+reading exactly what was given to it; **the input was wrong, not the parser.** Fixed by correcting
+the input — the annotation was reworded so it no longer resembles a status entry — rather than by
+editing a status field to satisfy the check.
 
-**Generalizable rule:** never write a table row shaped like a numbered phase-log entry unless it is
-a real phase row carrying a real status — a "last match wins" parser cannot distinguish a provenance
-annotation from the row it was annotating. Recorded here because it's a real Phase-5 finding about
-this cycle's own process integrity, not because it's a defect in anything this repository ships;
-recommend it as a candidate for this project's process retrospective.
+Recorded here because it's a real Phase-5 finding about this cycle's own process integrity, not
+because it's a defect in anything this repository ships. Deliberately left at that level of detail:
+the lesson (verify whether a failing check or its input is wrong before touching either — the same
+discipline applied to every negative control in §2) doesn't require reproducing the failing check's
+own matching logic, and a public report is not the place to do so. Recommended as a candidate for
+this project's process retrospective.
 
 ---
 
