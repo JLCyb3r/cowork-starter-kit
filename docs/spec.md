@@ -7701,3 +7701,175 @@ is that broken controls get named and fixed, not carried.
 .github/workflows/quality.yml` shows both the `permissions:` key and its `contents: read` value —
 the actual block — and the file's `permissions:` count is `4` (re-run above, S8).
 
+---
+
+# Product Spec — Cowork Starter Kit v2.19.9 "Truth Repair: the entry point that never fired"
+
+> **Cycle:** v2.19.9 (PATCH) · **Version bump:** 2.19.8 → 2.19.9
+> **Status:** Phase 1 — Design (finalized by @architect from the post-0.D REVISED Phase 0 draft, on `release/v2.19.9-truth-repair`)
+> **Date:** 2026-08-11T00:55:00Z · **Base:** `f06f0cff9304b83ba96d5c91f55ce3ebbb88588c`
+> **Classification:** SECURITY-SENSITIVE — Tier B (PR required; Guard Change Summary NOT required) · **COMPLIANCE-SENSITIVE = NO**
+> **Design document:** `docs/design-v2.19.9.md` · **ADRs minted:** ADR-082, ADR-083, ADR-084
+> **Provenance:** the Phase 0 draft was held in `scratchpad.md` rather than written to `docs/spec.md`, deliberately, so it would not strand on `main` before the worktree was cut. Finalized here.
+
+## Problem
+
+The kit asserts, across a 12-file / 59-line surface, that Cowork auto-loads a connected folder's root
+`CLAUDE.md` as system context and fires the setup wizard on message one. **The claim is false.** Cowork
+attaches a connected folder as a browsable source; it does not inject `CLAUDE.md` as system context.
+
+Evidence, ranked: a real observed production failure (the owner opened the kit folder as a Cowork
+Project, typed a greeting, and got a reply with zero tool calls); two independently VERIFIED
+official-docs findings (local Cowork loads account-synced skills — project-folder `.claude/skills/`
+auto-discovery is a cloud-session behavior; `.claude/settings.json` hooks do not fire in Cowork); and
+the decisive history — **the claim was already disproven once, in production, and the fix was shipped
+and then quietly reverted.** v1.0's `WIZARD.md`-primary path failed the same way; v1.1 fixed it by
+promoting `project-instructions-starter.txt` because it injects before intent classification; v1.2
+asserted `CLAUDE.md` was auto-loaded — asserted, never tested — and inverted the architecture. **The
+kit has shipped against a known-failed design for 18 versions.**
+
+Two consequences compound it: two closed security dispositions were justified partly on the false
+premise; and the channel that does demonstrably fire at message one — the seven
+`examples/<preset>/project-instructions-starter.txt` files — sits in a README "Alternative paths"
+blockquote with **zero CI guard against cross-preset drift**, and that drift is live right now.
+
+## Target Users
+
+- **Primary:** a non-technical, first-time Cowork user opening the kit folder as a Cowork Project.
+- **Secondary:** the kit's maintainer/owner — needs the two mis-premised security dispositions closed honestly.
+- **Explicitly NOT this cycle:** the register-quality persona → v2.19.10.
+
+## Core Features (MVP)
+
+- **A — Correct the false auto-load/auto-discover claim** across the corrected 12-file surface, on a
+  semantic predicate, amending — never `sed`-replacing — the ADR records whose accepted architecture
+  rests on it.
+- **B-MINUS — Restore the seven starters to equal structural weight** (owner-narrowed 2026-08-10).
+  Lift the starter path out of the `README.md` "Alternative paths" blockquote. Neither channel
+  described as primary. **No behavioral claim is made this cycle.**
+- **C — Ship the starter sync guard before the promotion lands.** Extend the preset-cardinality gates
+  to seven and add a template-slot-normalized `cmp`-style sync assertion preserving PA's legitimate
+  `## Data locality` block.
+- **D — Disposition two consequences explicitly.** A three-way disposition for
+  `skill-studio/SKILL.md`'s three hit sites, and a reopening of the two security dispositions with a
+  **closable** new register row.
+
+## Technical Constraints
+
+- **Stack:** prose/markdown + CI kit. Only executable surface touched: `.github/workflows/quality.yml`.
+- **ADR discipline:** record **bodies** are append-only. **Index-table rows MAY carry a status
+  annotation** — this repo's own convention, **eight** annotated rows at this cycle's base `f06f0cf`
+  (index-scoped count, pinned to the base SHA; see `ADR-082` Decision D1 for the derivation and for
+  why a whole-file scan over-counts). Highest existing ADR at Phase 1 start: **ADR-081**.
+- **400-word `CLAUDE.md` cap** (ADR-011): `CLAUDE.md` is not in the edit list; byte-unchanged at 348/400.
+- **400-word starter cap:** `personal-assistant` is at **396/400** — 4 words of headroom.
+- **CMP byte-mirror fan-out — VERIFIED NOT APPLICABLE.** Zero mirrored copies of `skill-studio`/`setup-wizard` under `examples/*/.claude/skills/`.
+- **Export status:** `docs/architecture.md` ships. `CONTRIBUTING.md` and `CHANGELOG.md` are
+  export-ignored but fully visible on GitHub and in every clone. **Export-ignore is a distribution
+  property and must never filter a correctness sweep** (ADR-082 §D2).
+- **ADR-081 §D1 binds this cycle's own writing:** no bare `file:line` citation into a growing file;
+  every citation is a re-runnable `grep -n '<anchor>' <named-file>`.
+
+## Acceptance Criteria
+
+Carried verbatim in substance from the post-0.D REVISED draft — **AC-TR-A1** through **AC-TR-A4**,
+**AC-TR-B2**, **AC-TR-C1** through **AC-TR-C4**, **AC-TR-D1** through **AC-TR-D3**, plus the three
+binding tier conditions **AC-TR-TIER-1/-2/-3** and the compliance condition. `AC-TR-B1` is DROPPED by
+owner decision. `AC-TR-C3` and `AC-TR-C4` were RESOLVED at Phase 0 by @architect. Every AC states its
+semantic predicate, a soundness pass, a completeness pass, and a **firing negative control**; Scope C
+additionally names a **PASS control** (`Verifier-that-cannot-PASS`, BINDING since v2.19.5).
+
+The Phase-1 corrections to these ACs are recorded below under **Architectural Modifications** and are
+binding on Phase 4 wherever they differ from the Phase 0 wording.
+
+## Out of Scope
+
+- The register / plain-language fix → **v2.19.10**.
+- `AC-TR-B1`'s render-layer/behavioral claim — **DROPPED** (owner decision, 2026-08-10). No live
+  Cowork paste transcript exists; asserting the starter path is "more reliable" without one would
+  repeat this cycle's own founding mistake. The transcript and "the one cheap test still unrun" are
+  batched and carried to v2.19.10.
+- Any product-shape change; Option C account-level skill distribution; v2.20 community intake.
+- Starter word budgets beyond Scope C's own drift-fix — see `AC-TR-C4`'s byte-freeze.
+- A structural fix for `skill-studio`'s single-target limitation — named as a future KDQ in
+  **ADR-083 §Maturation Path**, not built.
+
+## Success Metrics
+
+1. Zero surfaces in the corrected set assert unconditional `CLAUDE.md` auto-load or project-folder
+   skill auto-discovery, with the three true-usage sentences byte-unchanged.
+2. `starter-sync-check` fails against today's tree and goes green after the one-word fix (both legs run).
+3. Deleting any one starter fails **both** cardinality jobs.
+4. The frozen 18 lines of `skill-studio/SKILL.md` are byte-identical base-vs-head, proven by a firing
+   negative control **and** a PASS control.
+5. Zero modified or deleted lines inside any `^#{2,3} ADR-` block in `docs/architecture.md`.
+
+---
+
+## Architectural Modifications
+
+*Written by @architect at Phase 1 per the spec-divergence contract. Read by @pm on `/spec --revise`.
+Each entry is a Phase-0 AC statement that Phase 1 found to be wrong against the live tree, with the
+constraint that forced the change. Full derivation in `docs/design-v2.19.9.md` §E.*
+
+- AC: `AC-TR-D1`'s negative control scoped as `awk 'NR < 190'`, described as "above `## Safety rules`"
+  → **Re-scoped to `awk '/^## Safety this loop enforces on every generation$/{exit} {print}'`** —
+  Reason: **`## Safety rules` does not exist** in `.claude/skills/skill-studio/SKILL.md`
+  (`grep -c '^## Safety rules'` → 0). `NR < 190` is a magic constant standing in for a heading name
+  that was never checked, and it silently mis-scopes if the `:137` edit changes the file's line count.
+  The heading-anchored form is self-scoping and fails closed. Both forms return 1 pre-fix.
+
+- AC: `AC-TR-A2`'s firing negative control states the 24 frozen hit-lines span **10** ADR bodies
+  *(003, 004, 007, 010, 038, 044, 046, 051, 053, 064)* → **Corrected to 11 bodies; ADR-008 was
+  omitted** (two hits, under `### Context` and `### Rationale`) — Reason: the enumeration is a
+  checkable claim and it was wrong. The count of 24 is unaffected.
+
+- AC: the disposition table classifies `docs/architecture.md`'s 12 outside-ADR hits as **normative
+  correction** → **Re-classified to 7 annotate-only + 5 leave; ZERO normative corrections** —
+  Reason: hand-reading all twelve (the spec flagged them as classified by section-boundary analysis,
+  not sentence-by-sentence) shows four are inside a fenced *"@dev pastes verbatim, dated"* CHANGELOG
+  block or are out of the semantic predicate entirely, and seven are frozen before/after records in
+  dated design memos — one of which literally reads *"keep verbatim"*. **The entire correction of
+  `docs/architecture.md` is therefore carried by ADR-082/083/084 plus index-row annotations; not one
+  line of its existing prose is rewritten.**
+
+- AC: `AC-TR-C1` names the preset-cardinality literals as `quality.yml:170` and `:198-208`
+  → **Extended to `:170`, `:178`, `:179`, `:185`, `:205`, `:206`** — Reason: incrementing only the
+  named sites leaves a hard-coded `6` in two live error-message strings. The fix derives the count
+  from `ENFORCED_EXAMPLES` via `wc -w`, so the digit is never written again.
+
+- AC: the annotation-convention precedent is cited as `docs/architecture.md:64` (ADR-044's row)
+  → **`:64` is ADR-043's row; ADR-044's is `:65`** — Reason: off-by-one.
+  **🔴 CORRECTED at 2.D (orchestrator-verified): this entry's own follow-on claim — "stronger than
+  claimed: twelve annotated rows in nine distinct forms" — was itself wrong**, and for the same
+  hazard the neighboring `:5333` entry below names: a whole-file `uniq -c` double-counts the frozen
+  duplicate ADR Index inside the historical design memo. The honest, index-scoped count is **eight**
+  annotated rows at this cycle's base `f06f0cf` (see `ADR-082` Decision D1 for the derivation) —
+  still a real, standing precedent, just a smaller one than claimed. The `:64`/`:65` off-by-one
+  stands as originally found.
+
+- AC: "annotate ADR-010's index row" → **Scoped to `:24` only; `:5333` is frozen** — Reason:
+  `grep -cE '^\| ADR-010 \|'` returns **2**. The second is inside a `​```markdown` replacement block in
+  a historical design memo. An unqualified instruction had even odds of editing a frozen record.
+
+- AC: the correctness sweep's file surface, stated as 12 files / 59 lines
+  → **The sweep instrument has a third, still-open failure mode: it ran over `git archive` output, so
+  `export-ignore` filtered it.** `git grep -cliE … HEAD --` returns **28 files**; **16 files and 72
+  hit-lines were invisible**, of which `CONTRIBUTING.md` recovered exactly one by owner decision —
+  Reason: the owner's own generalizable rule (*export-ignore is a distribution property and must never
+  filter a correctness sweep*) was applied to one file instead of to the instrument. **Two of the
+  sixteen are standing normative surfaces, not dated records**:
+  `docs/internal/process/OUTPUT-STRUCTURE.md` (present-tense, carries `primary` twice — `AC-TR-B2`'s
+  exact predicate) and `docs/internal/planning/assumptions.md`, whose header instructs *"Review this
+  register before Phase 1 (architecture)"* while recording *"A2 — REOPENED and REVERSED: Cowork DOES
+  auto-discover .claude/skills/…"*. **Owner decision requested at the Phase 3 gate** — see
+  `docs/design-v2.19.9.md` §E.1 for the two options and the recommendation. The permanent fix (the
+  instrument rule) is binding regardless, as **ADR-082 §D2**.
+
+- AC: the compliance condition scopes verbatim-vendor-text risk to `docs/architecture.md`
+  → **`docs/design-v2.19.9.md` also ships** (verified: `git archive HEAD | tar -t` lists
+  `docs/design-v2.19.8.md`) — Reason: `docs/` is default-internal only under `docs/internal/`. The
+  condition **holds** — zero verbatim vendor quotations are authored anywhere this cycle, and
+  paraphrase-plus-citation is used throughout — but the surface is recorded so a future cycle does
+  not discover it the hard way. **`/legal` is not owed.**
+

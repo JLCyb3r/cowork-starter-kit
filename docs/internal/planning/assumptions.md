@@ -646,6 +646,31 @@ _Added: 2026-07-06T00:00:00Z — 16-agent swarm campaign (docs/research/v2.7-use
 **Decision (hedged per feasibility review):** treat auto-discovery as a primary delivery channel but keep BOTH channels documented — `.claude/skills/` copies for connected-folder users, `skills-as-prompts.md` as explicit fallback for surfaces without discovery. Do not remove the fallback; the assumption flip-flopped once already and the kit cannot feature-detect the platform.
 **Validation path:** re-verify each release cycle in a clean Cowork session ("What skills do you have active?" with a fresh workspace).
 
+**SUPERSEDED for the `CLAUDE.md`-auto-load claim — see the entry below, 2026-08-11.**
+
+### A2 — REOPENED AGAIN AND PARTIALLY REVERSED (v2.19.9 Truth Repair, 2026-08-11)
+
+**Confidence:** [CONFIRMED — official docs, two independently verified findings]
+**Prior state:** the mid-2026 entry above treats project-folder `.claude/skills/` auto-discovery and
+the connected-folder root `CLAUDE.md` auto-load as one bundled "primary delivery channel" decision.
+**Evidence:** local Cowork loads only account-synced skills; project-folder `.claude/skills/`
+auto-discovery is a cloud-sessions-only behavior (two feature requests closed *not planned*).
+Separately, and independently: Cowork attaches a connected folder as a browsable source, it does not
+inject the root `CLAUDE.md` as system context (a real, observed production failure — see
+`docs/architecture.md` ADR-082). The mid-2026 entry's "corroborated live" observation is most
+plausibly a cloud-session artifact, not evidence about a local connected-folder session; the two
+mechanisms were never actually the same claim and should not have been decided together.
+**Decision:** keep BOTH delivery channels documented, unchanged from the mid-2026 entry — that part
+holds. **Withdraw** "treat auto-discovery as a primary delivery channel" and any reading of this
+register that would tell a future Phase 1 that `CLAUDE.md` is auto-loaded or that project-folder
+`.claude/skills/` auto-discovery is dependable in a local Cowork session. Neither channel is crowned
+primary (`AC-TR-B2`).
+**Validation path:** unchanged — re-verify each release cycle in a clean Cowork session. If a future
+verification contradicts this entry, reopen again with the session transcript, not a general web
+finding, per this cycle's own instrument-failure lesson (ADR-082 §D2/D3: a completeness sweep must
+run over tracked files, and a behavioral claim about the platform needs a recorded direct
+observation, not a citation to another prose document).
+
 ### A14/A15/A5 — refreshed from platform research
 
 - **A14 CONFIRMED:** `/skill-creator` ships pre-installed in Cowork/Desktop (Claude Code needs `/plugin install skill-creator@anthropic-agent-skills`). Kit guidance now mentions it once, not per-skill.

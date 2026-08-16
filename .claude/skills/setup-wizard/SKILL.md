@@ -44,6 +44,6 @@ Follow WIZARD.md in order: F4 bundle customization â†’ profile-stub checkpoint â
 - Personal Assistant: "Your workspace is ready. Tell me what's on your plate this week and I'll organize it."
 - Custom (Path C): "[Goal] workspace is ready. [One-sentence invitation using an installed skill on their actual goal.]"
 
-**Skill verification (once, not per skill):** confirm each installed file exists at `.claude/skills/<slug>/SKILL.md` and say so in one line. Cowork auto-discovers these files; `skills-as-prompts.md` is the fallback for surfaces that don't.
+**Skill verification (once, not per skill):** confirm each installed file exists at `.claude/skills/<slug>/SKILL.md` and say so in one line. These are your own workspace's files, installed directly by this wizard; `skills-as-prompts.md` is the fallback for surfaces where a skill couldn't be installed this way.
 
 Always ask for explicit confirmation before deleting, moving, or overwriting any file or folder.

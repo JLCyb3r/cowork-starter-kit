@@ -19,6 +19,43 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.9] - 2026-08-11
+
+**"Truth Repair: the entry point that never fired."** The kit asserted, across 14 files, that Cowork
+auto-loads a connected folder's root `CLAUDE.md` as system context and fires the setup wizard on
+message one. That claim was false — Cowork attaches a connected folder as a browsable source; it
+does not inject `CLAUDE.md` as system context — and it failed in production once already, in
+exactly this way, before this cycle ever ran.
+
+- **The false claim is corrected** across `README.md`, `SETUP-CHECKLIST.md`, `WIZARD.md`,
+  `TRUST.md`, `CONTRIBUTING.md`, `.claude/skills/skill-studio/SKILL.md`,
+  `.claude/skills/setup-wizard/SKILL.md`, `docs/internal/process/OUTPUT-STRUCTURE.md`, and
+  `docs/internal/planning/assumptions.md` — on the semantic predicate, never a token-only pass.
+  Two accepted, ACCEPTED ADR records (`ADR-010`, `ADR-046`) are amended forward by two new records
+  (`ADR-082`, `ADR-083`) rather than edited in place; their existing bodies are byte-unchanged.
+  Dated historical records (research files, past design memos, this file's own prior entries) are
+  **annotated, never rewritten** — this entry is that annotation for `CHANGELOG.md`'s own nine
+  historical auto-load references.
+- **The seven `examples/<preset>/project-instructions-starter.txt` starters** — the channel that
+  demonstrably does fire at message one — are lifted out of a "Alternative paths" README blockquote
+  to a peer `### Route 2` alongside opening the folder directly. Neither route is described as
+  primary; no behavioral reliability claim is made for either (no live-paste transcript exists yet
+  — carried to v2.19.10).
+- **A new `starter-sync-check` CI job (`ADR-084`)** normalizes the three legitimately-varying
+  templated slots across all seven starters and byte-compares the rest, catching cross-preset drift
+  a live, CI-green regression had already introduced: `personal-assistant`'s starter read "as a
+  team" where the other six read "as a draft team" — now fixed (397/400 words). The job also closes
+  a silent 7→6 regression hole in the existing preset-cardinality gates (`starter-file-check`,
+  `starter-safety-rule-check`), and lands `personal-assistant` into `ADR-040`'s draft-first rollout,
+  ten releases after the other six presets got it.
+- **Two prior security dispositions are reopened and corrected, not silently left standing:** v1.2's
+  S4 and v2.12.0's mandatory Phase-2 hard-gate justification both cited the false auto-load premise.
+  Both corrections are appended to `docs/retro.md`, dated, beside the original entries. The
+  mandatory gate on `skill-studio/SKILL.md` is **unchanged and still MANDATORY** — it now rests on
+  grounds that never depended on the premise. A new `docs/risk-register.md` row tracks the honest
+  net: exposure at rest is unchanged, expected frequency falls, but detectability and review
+  incentive both get materially worse.
+
 ## [2.19.8] - 2026-08-09
 
 **"Polish the Carryovers."** Documentation-only ledger-truth repair (zero new user-facing feature

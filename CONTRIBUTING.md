@@ -45,7 +45,7 @@ Before merging a new preset PR, verify all 11 items:
 
 ## CLAUDE.md changes — high-impact notice
 
-`CLAUDE.md` is auto-loaded as system context for any user who opens this repo folder in Cowork. It is a universal entry point — changes to it affect all users immediately, not just users of a specific preset.
+`CLAUDE.md` is the entry document Cowork reads for any user who opens this repo folder as a Project — its read at session start is best-effort, not guaranteed, but when it is read it drives onboarding for every user, not just users of a specific preset. Treat it as high-impact regardless: the read being uncertain lowers how *often* a bad edit is seen, not how much it costs when it is.
 
 **PRs that modify `CLAUDE.md` must:**
 

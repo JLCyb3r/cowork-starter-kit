@@ -1805,6 +1805,8 @@ On process, credit and caveat that must not cancel into an unqualified "healthy"
 5. **`/refresh-public claude-cowork-config`** — minor-bump public-artifact audit, post-merge; confirm whether it ran in the interim before re-carrying a 3rd time.
 6. **Completeness fix-forward:** no standalone `docs/internal/qa/qa-report-v2.12.0.md` was produced by the guard-blocked @qa; the orchestrator filed one at retro time so the artifact-per-version convention holds.
 
+**v2.19.9 dated correction (2026-08-11, ADR-082/083 §D — appended, never rewritten):** this entry's "MANDATORY Phase-2 hard gate" justification and its "auto-loaded `CLAUDE.md`" language above rest on a premise `docs/architecture.md` ADR-082 has since falsified — Cowork attaches a connected folder as a browsable source, it does not inject `CLAUDE.md` as system context on every session; the read that QA-1's marker breakout could reach is best-effort, not guaranteed. **The mandatory-gate outcome was right; the stated reason was only partly right.** It now rests on standing, premise-independent grounds (ADR-083 D3): `hld.md:35` principle 4's own text is "regardless of blast radius"; **ADR-044** is an older, separate authority that never mentioned auto-load; and QA-1's marker-breakout catch is itself premise-independent evidence the surface needs the gate. **The gate's authority over the `skill-studio/SKILL.md` surface is over-determined, and the next reviewer should inherit that strength, not the doubt this correction might otherwise read as.** The honest net is not a downgrade: content-at-rest exposure is unchanged, expected frequency of a bad read falls, but detectability and review incentive both get materially worse — a deterministic every-session load is bindable by a firing negative control the way a nondeterministic read is not. See `docs/risk-register.md` for the tracked disposition row this correction closes into.
+
 ---
 
 ## [v2.11.0] - 2026-07-19 — Skill Studio (Increment 1 · Walking Skeleton)
@@ -4150,6 +4152,21 @@ v1.2 shipped the Dynamic Workspace Architect pivot for claude-cowork-config. The
 | A3 | 6 | INFO | configuration | CLAUDE.md 385 words (target ≤350, hard cap ≤400; CI passes) | ACCEPTED — carry to v1.3 |
 
 **Phase 6 result:** PASS WITH WARNINGS — 1 WARNING (A1, fixed), 2 INFO (A2, A3, accepted). 0 CRITICAL.
+
+**v2.19.9 dated correction (2026-08-11, ADR-082/083 §D — appended, never rewritten):** **S4**'s
+"universal auto-load" premise above is false — `docs/architecture.md` ADR-082 corrects it; Cowork
+attaches a connected folder as a browsable source and does not inject `CLAUDE.md` as system context
+on every session. **S4's original closure was already prose-only** ("high-impact documentation in
+CONTRIBUTING.md") — non-conforming to `hld.md:35` principle 5 (an executable check with a firing
+negative control) **independent of the premise question**, so re-closing it on corrected prose alone
+would repeat the same methodological gap with better facts, not fix it. **This is not a re-disposition
+that closes on the same shape.** The honest net: content-at-rest exposure at `CONTRIBUTING.md:48`
+is unchanged (the text still exists, still governs review), the *frequency* a malicious commit is
+read falls, but **detectability and review incentive both get materially worse** — a
+"universal, every-session" framing is what gave a reviewer a stated reason to look hard at every
+`CLAUDE.md` PR; correcting the premise evaporates that stated reason while the content stays exactly
+as executable-when-read as before. **The exposure did not fall. The attention did.** See
+`docs/risk-register.md` for the tracked disposition row this correction closes into.
 
 ### 6. Issues Prevented
 
