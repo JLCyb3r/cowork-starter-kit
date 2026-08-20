@@ -226,7 +226,7 @@ presence-anywhere `grep -qF` is a sound instrument for row 5 — unlike row 6 (�
 | `grep -n 'Your bundle: \[final skill list\]' WIZARD.md` | quoted — **IN** | rewrite; `bundle` is on the Jargon List |
 | `grep -n 'Add from optional tier' WIZARD.md` | quoted — **IN** | rewrite; `optional tier` is on the Jargon List |
 | `grep -n 'Add from cross-cutting' WIZARD.md` | quoted — **IN** | rewrite; `cross-cutting` and `bundle` are on the Jargon List |
-| `grep -n 'Add from full pool' WIZARD.md` | quoted — **IN** | rewrite; `pool` is on the Jargon List. **`25` must survive verbatim** |
+| `grep -n '\*\*Add from full pool:\*\*' WIZARD.md` | quoted — **IN** | rewrite; `pool` is on the Jargon List. **`25` must survive verbatim** |
 | `grep -n 'Remove:\*\* Name any skill to drop it' WIZARD.md` | quoted — **IN** | already plain; likely no change |
 | `grep -n 'Done / keep all' WIZARD.md` | quoted — **IN** | already plain; likely no change |
 | `grep -n "That's not in the current pool" WIZARD.md` | `say:` — **IN** | rewrite; `pool` is on the Jargon List |
@@ -236,6 +236,21 @@ presence-anywhere `grep -qF` is a sound instrument for row 5 — unlike row 6 (�
 | `the user has a proposed skill bundle` | meta-prose — **OUT** | byte-unchanged |
 | `For each skill in the final bundle` | meta-prose — **OUT** | byte-unchanged |
 | `**Pool boundary (C-v2.4-7, v2.6 update):**` label and the `(25 slugs)` clause | meta-prose — **OUT** | byte-unchanged |
+
+**Anchor uniqueness, verified per anchor — applying ADR-086 §Decision (4) to this design's own
+citations.** Every anchor in the table above returns `grep -c` = **1** except the bare string
+`Add from full pool`, which returns **2**. The second occurrence is a Path C cross-reference
+(`grep -n 'Then route into F4' WIZARD.md`), outside the F4 region entirely. The anchor in the table is
+therefore the bolded form `**Add from full pool:**`, verified unique at **1**. A bare-string anchor
+here would have handed @dev an ambiguous edit site.
+
+**That Path C line is NOT a missed edit — recorded so it is not "fixed" by mistake.** It reads:
+*"…**Closest pool skills (existing routing).** Say: \"Tell me the first capability you want … to start
+the draft.\" Then route into F4's \"Add from full pool\" flow."* Its **spoken** text — the part inside
+the `Say:` quotes — contains **no Jargon-List term**. The word `pool` appears twice on that line, both
+times in Claude-facing meta-prose (the bold label, and the cross-reference naming the F4 menu item).
+Under AC-PL-3's scope rule — quoted/spoken text only — the line is correctly **OUT**, and it is out on
+its own merits rather than merely by being outside the region. **Leave it byte-unchanged.**
 
 **The `25` constraint, precisely.** Six other `25` occurrences are out of scope and byte-unchanged, all
 six reproduced this session (`WIZARD.md` matching line, `WIZARD.md` Pool boundary line,
