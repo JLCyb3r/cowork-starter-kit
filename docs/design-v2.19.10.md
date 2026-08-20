@@ -18,6 +18,43 @@
 
 > *ISO 15288 — Technical Management / Decision Management.*
 
+> ### AMENDMENT — 2026-08-20, after Phase 2 returned FAIL (0 CRITICAL, 2 BLOCKER)
+>
+> **Both BLOCKERs were in this document's own Phase-1 corrections, not in the Phase-0 ACs.** One
+> amendment round; nothing was implemented, so this is not a redesign. Amended on
+> `release/v2.19.10-plain-language` @ `d306e17`.
+>
+> | ID | Sev | Where it lives now |
+> |---|---|---|
+> | **S1** — AC-PL-6's fixtures self-destruct on this cycle's own mandated AC-PL-1 rewrite | **BLOCKER** | §C.6 (fixtures replaced + validity guard), §E.7, ADR-087 §Decision (1)/(2) |
+> | **S2** — F-1's remedy freezes the announcement, not the guarantee | **BLOCKER** | §C.7 (scoped instrument), §E.8, ADR-087 §Decision (3) |
+> | **S3** — AC-PL-3 × AC-PL-7 row 6 collide on `WIZARD.md:123`; @dev was not told | HIGH | §C.3 warning box |
+> | **S4** — 14 internal reports ship in the public archive | HIGH | §E.9 — **REPORTED, retrofit NOT bundled**; free in-cycle remedy bound in §D.1 |
+> | **S5** — §C.3's anchor-uniqueness claim named 1 exception; there are 2 | MED | §C.3 (corrected table) |
+> | **S6** — AC-PL-7 row 2's "all unique in their file" is false; margin is 2 tokens, not 5 | MED | §C.7 |
+> | **S7** — §C.6's "both legs fire independently" is false at instrument level | MED | §C.6 (claim fixed, **no parser added**) |
+> | **S8** — F-6 verifies the pointer's string but not that it is DATED | MED | §C.4 (leg 2b added) |
+> | **S9** — `grep -cF` counts LINES, used as an occurrence test on paragraph-length lines | MED | §C.0 (method standardized) |
+> | **S10** — CODEOWNERS AC-E3-2 deferral was silent | LOW | §H (recorded deferral) |
+> | **S11/S12** — unquoted YAML pin; `set -u` local-run trap | INFO | §C.6 |
+>
+> **Method, binding and followed:** every amended instrument was run against the **pre-fix** tree and
+> observed **RED** before being relied on, and then against @security's **own retained fixtures** —
+> not against reconstructions, and not accepted on description. Results in §C.6, §C.7, §E.7, §E.8.
+>
+> **No AC's requirement was changed.** Every item is an instrument fix or a record correction. S4 —
+> the one item whose full remedy would change scope — is reported, not actioned.
+>
+> **Amendment self-grep (`docs/architecture.md`, ADR-087 adds one `§Maturation Path` block):**
+>
+> ```text
+> **Future-state options:**      → 54 → 55  (+1)
+> **Concrete revisit triggers:** → 54 → 55  (+1)
+> **Risk knowingly accepted:**   → 54 → 55  (+1)
+> ```
+>
+> Each header incremented by exactly 1, copied verbatim from the template slot.
+
 **Worktree discipline: ENFORCED (SECURITY-SENSITIVE Tier B).** First action was
 `git -C /Users/macbookpro/claude-cowork-config rev-parse HEAD` →
 `fd00dd24a85e24ca0ec64462e191b4de99ff6a1e`, matching `COUNCIL_EXPECTED_BASE_SHA=fd00dd2`. F6 ancestry
@@ -33,6 +70,13 @@ cycle parses The-Council's `pipeline.md` / `roadmap.md` / `registry.json` family
 cycle *does* author (the AC-PL-6 inline `awk`, §C.6) parses a file inside this repository only, and it
 was run against the **live** `curated-skills-registry.md` plus two damage fixtures built from it this
 session — results pasted in §C.6.
+
+**Amendment addition — validation now covers the tree THIS CYCLE CREATES, not only the tree it starts
+from.** Running an instrument against the live tree was necessary and not sufficient: it is exactly
+what the original §C.6 did, and it is what let S1 through. Every instrument is now additionally run
+against a **simulated post-edit tree** — the live tree with this cycle's own mandated AC-PL-1 rewrite
+applied — and, where @security supplied fixtures, against **those fixtures directly** rather than
+against reconstructions of them. Two-tree control tables in §C.6 and §C.7.
 
 **Maturation Path self-grep (run against `docs/architecture.md` at base, pre-write):**
 
@@ -170,6 +214,29 @@ scope_allow_delta:
 
 > *ISO 15288 — Architecture Definition / Design Definition.*
 
+### C.0 — Counting method, standardized (amendment, Phase-2 finding S9)
+
+**Every "unique in its file" claim in the original design rested on `grep -cF`, which counts LINES, not
+occurrences — used as an occurrence test, on files written in paragraph-length lines.** `WIZARD.md:123`
+is a single ~600-character line; the entire F4 closing message is line `:339`. **Two occurrences inside
+one paragraph report as `1`.** Every uniqueness claim in this document was therefore made with an
+instrument that could not have detected the condition that would falsify it.
+
+**Re-run at the amendment with `grep -oF … | wc -l` (occurrences), all claims HOLD** — the findings were
+sound; the method was not. That distinction is the point: a right answer from a wrong instrument is
+luck, and luck does not survive the next file.
+
+**Binding for this cycle, for @dev and @qa alike:**
+
+- Uniqueness and occurrence claims use **`grep -oF "<literal>" <file> | wc -l`**, never `grep -cF`.
+- `grep -cF` remains correct where the quantity genuinely IS lines (e.g. "how many lines match").
+- **Name the unit on every number** (`docs/patterns.md:56`, a live instance — WATCH 2/3 this cycle):
+  write *"2 occurrences"* or *"2 lines"*, never a bare *"2"*.
+
+Where this document quotes an older `grep -c` figure inside an append-only record (§E findings,
+`docs/architecture.md` ADRs), the figure is left as written — those are historical records — and the
+corrected occurrence-based measurement is stated alongside it.
+
 ### C.1 — AC-PL-1, registry descriptions (6 rows)
 
 **Edit site:** `curated-skills-registry.md`, the `description` cell (field 3) of six rows, located by
@@ -230,19 +297,50 @@ presence-anywhere `grep -qF` is a sound instrument for row 5 — unlike row 6 (�
 | `grep -n 'Remove:\*\* Name any skill to drop it' WIZARD.md` | quoted — **IN** | already plain; likely no change |
 | `grep -n 'Done / keep all' WIZARD.md` | quoted — **IN** | already plain; likely no change |
 | `grep -n "That's not in the current pool" WIZARD.md` | `say:` — **IN** | rewrite; `pool` is on the Jargon List |
-| `grep -n "Installing skills from external sources" WIZARD.md` | `respond:` — **IN**, but see §C.7 | rewrite; `pool` is on the Jargon List |
+| `grep -n 'No URL paste, no external source' WIZARD.md` (the F4 line, `:123`) | `respond:` — **IN**, but **CONSTRAINED — read the box below before touching it** | **additive rewrite of the TAIL ONLY**; `pool` is on the Jargon List |
 | `grep -n 'Installed skills will help you with' WIZARD.md` | `Display as:` — **IN** | already plain; likely no change |
 | `### F4 — Bundle customization` heading | meta-prose — **OUT** | byte-unchanged |
 | `the user has a proposed skill bundle` | meta-prose — **OUT** | byte-unchanged |
 | `For each skill in the final bundle` | meta-prose — **OUT** | byte-unchanged |
 | `**Pool boundary (C-v2.4-7, v2.6 update):**` label and the `(25 slugs)` clause | meta-prose — **OUT** | byte-unchanged |
 
+> ### ⚠ AC-PL-3 × AC-PL-7 row 6 COLLIDE ON `WIZARD.md:123`. READ THIS BEFORE EDITING THAT LINE.
+>
+> This is the one line in the cycle where a **correct-looking plain-language rewrite fails CI**. It was
+> missing from this table until the amendment (Phase-2 finding S3); a bare *"rewrite; `pool` is on the
+> Jargon List"* instruction would have led @dev straight into it.
+>
+> The `respond:` string on `:123` has two halves, and **only the second may change**:
+>
+> `"Installing skills from external sources isn't supported yet` **← FROZEN, byte-for-byte**
+> ` — the wizard installs only from the local, vetted pool."` **← may be extended, ADDITIVELY ONLY**
+>
+> **The only compliant shape is to APPEND an inline definition after `…vetted pool`.** Measured at the
+> amendment:
+>
+> | edit | AC-PL-7 row 6 | note |
+> |---|---|---|
+> | append inline definition after `…vetted pool` | **GREEN** | **the only compliant shape** |
+> | rewrite the opening into plainer English (e.g. *"You cannot add skills from the internet yet"*) | **RED** | fails on correct-looking work |
+> | delete the tail clause | **RED** | this is the S2 defect the amended instrument now catches |
+>
+> **A plain-language pass WILL reach for that opening** — Q2 may well flag `external sources` as an
+> undefined term. Do not. Under §C.7's stated precedence, **AC-PL-7 WINS: inline-define the term,
+> never compress or reword the sentence.** If the opening genuinely reads as jargon, define
+> `external sources` in the appended tail; leave the opening alone.
+
 **Anchor uniqueness, verified per anchor — applying ADR-086 §Decision (4) to this design's own
-citations.** Every anchor in the table above returns `grep -c` = **1** except the bare string
-`Add from full pool`, which returns **2**. The second occurrence is a Path C cross-reference
-(`grep -n 'Then route into F4' WIZARD.md`), outside the F4 region entirely. The anchor in the table is
-therefore the bolded form `**Add from full pool:**`, verified unique at **1**. A bare-string anchor
-here would have handed @dev an ambiguous edit site.
+citations.** **Corrected at the amendment (Phase-2 finding S5): the original claim named ONE exception;
+there are TWO.** Re-measured by occurrence (`grep -oF … | wc -l`):
+
+| anchor | occurrences | status |
+|---|---|---|
+| `Add from full pool` (bare) | **2** | **NOT unique** — 2nd is a Path C cross-reference (`grep -n 'Then route into F4' WIZARD.md`), outside the F4 region. Use the bolded form `**Add from full pool:**` → **1**. |
+| `Installing skills from external sources` | **2** | **NOT unique** — `:27` (Network & Offline Rule) and `:123` (F4 Pool boundary). This non-uniqueness is the entire subject of §C.7 two pages later, yet the anchor sat in this table claiming uniqueness. Use the scoped form: `grep -n 'No URL paste, no external source' WIZARD.md` → **1**. |
+| all 8 other anchors in the table | **1** each | unique — verified individually, not assumed |
+
+Both ambiguous anchors have been replaced in the table above with their scoped/bolded forms. A
+bare-string anchor in either row would have handed @dev an ambiguous edit site.
 
 **That Path C line is NOT a missed edit — recorded so it is not "fixed" by mistake.** It reads:
 *"…**Closest pool skills (existing routing).** Say: \"Tell me the first capability you want … to start
@@ -310,12 +408,35 @@ pass with the forward-pointer entirely absent — a check that cannot fail. Both
 # The anchor grep now returns 3 matches (the v2.5.3 row plus two v2.19.10 prose mentions),
 # so `head -1` is required — it selects the real row at the top of the file.
 ANCHOR=$(grep -n 'no jargon without inline definition' docs/spec.md | head -1 | cut -d: -f1)
+
+# Leg 2a — the pointer's STRING, scoped to the v2.5.3 row's own window.
 sed -n "${ANCHOR},$((ANCHOR+3))p" docs/spec.md \
   | grep -cF 'CONTRIBUTING.md § Runtime-string register'
+
+# Leg 2b — the pointer must be DATED (S8). AC-PL-4 requires a *dated* forward-pointer;
+# leg 2a verifies only that the string is present, so on its own it accepts an undated
+# pointer and the AC's date requirement would have had no instrument at all.
+sed -n "${ANCHOR},$((ANCHOR+3))p" docs/spec.md | grep -cE '[0-9]{4}-[0-9]{2}-[0-9]{2}'
 ```
 
-**Verified this session: pre-edit → 0** (the v2.19.10 mentions are ~7,100 lines away and cannot reach
-the window). **Post-edit must be 1.** Firing negative control confirmed.
+**Verified at the amendment against the live tree — both legs, both directions:**
+
+| leg | pre-edit (required) | measured pre-edit | post-edit (required) |
+|---|---|---|---|
+| 2a — pointer string in window | 0 | **0** ✓ | 1 |
+| 2b — `YYYY-MM-DD` in window | 0 | **0** ✓ | 1 |
+
+Both negative controls fire (the v2.19.10 prose mentions are ~7,100 lines away and cannot reach the
+window; the window carries no date today). The resolved anchor is `docs/spec.md:824`, window
+**824–827**.
+
+**Record correction (S8) — the file-wide count drifted again during Phase 1.** F-6 (§E.6) recorded the
+file-wide `grep -c 'CONTRIBUTING.md § Runtime-string register' docs/spec.md` as **1**. Re-measured at
+the amendment: **2**, at `docs/spec.md:8020` and `:8193`. Every additional Phase-1 sentence that quotes
+the instrument moves it again. This does not weaken F-6 — **it strengthens it**: the file-wide count is
+not merely wrong-by-one, it is *unstable by construction*, which is precisely why leg 2 had to be
+scoped to a window rather than re-pinned to a bigger number. The scoped legs above are unaffected by
+the drift (both still measure 0 pre-edit), which is the property that makes them sound.
 
 **Consequence for @dev:** the forward-pointer must land **within 3 lines after the v2.5.3 row**, not at
 the end of the file. That is also where it belongs for a human reader.
@@ -373,14 +494,25 @@ from a different document family, so a 0 has little discriminating power.
 **Status: DESIGNED, NOT IMPLEMENTED.** @dev lands it at Phase 4; Phase 1 does not write
 `.github/workflows/`.
 
-**Validation scope — stated to what was actually executed, not wider.** Executed against the live tree
-this session: the `awk` parser, both `sed` fixture constructions verbatim as written below, and the
-three resulting counts with their exit codes (table further down). **NOT executed as a unit:** the
-surrounding bash wrapper — `mktemp -d`, `trap`, the `for` loop, and the `if`/`else` branching. The
-agent-scope guard in this environment refused every attempt to stage a runnable script, so the wrapper
-is asserted on structural grounds only: it mirrors the fault-injection step already in production
-immediately above it in this same job. **@dev must run this step locally once before pushing** and
-confirm the three fixture lines print; do not treat the wrapper as pre-verified.
+**Validation scope — stated to what was actually executed, not wider. REVISED at the amendment.**
+
+**Executed, against BOTH the live tree and a simulated post-AC-PL-1 tree:** the `awk` counting parser,
+the field-2-anchored `awk` fixture construction verbatim as written below, the `sed` reflow, the
+`cmp -s` fixture-validity guard, and every resulting count (two-tree table further down). The same
+amended fixture was additionally run against **@security's own retained `rewritten.md` fixture** — not
+a reconstruction of it — returning **29**, where the superseded `sed` form returned 30.
+
+**NOT executed as a unit:** the surrounding bash wrapper — `mktemp -d`, `trap`, the `for` loops, and
+the `if`/`else` branching. The agent-scope guard in this environment refused every attempt to stage a
+runnable script, so the wrapper is asserted on structural grounds only: it mirrors the fault-injection
+step already in production immediately above it in this same job. **@dev must run this step locally
+once before pushing** (see the `export` note above — `set -u` will otherwise abort on the unset pin)
+and confirm the three fixture lines print; do not treat the wrapper as pre-verified.
+
+**What the original version of this paragraph got wrong, recorded because it is the lesson.** It said
+"executed against the live tree," which was true — and insufficient. Every instrument here is now
+validated against **the tree this cycle creates**, not only the tree it starts from. Validating against
+the starting tree is precisely what let S1 through.
 
 **TIER-4 compliance, stated explicitly.** The control lands **entirely inside the existing
 `registry-sha256-check` job** in `.github/workflows/quality.yml` (anchor:
@@ -402,8 +534,22 @@ job, **no `needs:` and no `outputs:` plumbing is required.**
       # fails on arrival or, worse, silently blesses a row that lost its sha256 cell.
       # Declared at job level so the fault-injection step and the assertion step below
       # cannot drift apart.
-      AC_PL_6_EXPECTED_HEX_ROWS: 30
+      # Quoted (S11): the value is consumed only as a shell string compared with `-ne`.
+      # Unquoted it parses as a YAML integer — harmless today, but quoting removes the
+      # question rather than leaving a reader to re-derive the answer.
+      AC_PL_6_EXPECTED_HEX_ROWS: "30"
 ```
+
+**Running step 1 or step 2 locally (S12).** Both steps run under `set -u` and read
+`AC_PL_6_EXPECTED_HEX_ROWS` from the job-level `env:` block, which does not exist outside Actions.
+Export it first:
+
+```bash
+export AC_PL_6_EXPECTED_HEX_ROWS=30
+```
+
+Without it, `set -u` aborts with an unbound-variable error that reads like a logic bug in the check
+rather than a missing local export. @dev must do this for the mandated pre-push local run.
 
 **Step 1 — fault injection.** Insert as the step immediately **before** the existing
 `Verify curated-skills-registry.md sha256 matches …` step, matching this job's established
@@ -425,21 +571,43 @@ fault-injection-first house pattern and `docs/hld.md:37` Principle 5:
           # Fixture 1 — clean tree. MUST equal the pin.
           cp curated-skills-registry.md "$FIX/clean.md"
 
-          # Fixture 2 — a single stray '|' inside one description shifts every later field
-          # right, so that row's field 8 is no longer its sha256. This is precisely the
-          # damage a plain-language rewrite can do by accident.
-          # NOTE: '/' is the sed delimiter throughout; '|' is a literal. Do NOT switch the
-          # delimiter to '|' here — the pattern and replacement both contain pipes.
-          sed 's/apply\/verify\/rollback machinery/apply\/verify | rollback machinery/' \
+          # Fixture 2 — pipe injection, ANCHORED ON FIELD 2, NOT ON DESCRIPTION CONTENT.
+          # A single stray '|' inside one description shifts every later field right, so
+          # that row's field 8 is no longer its sha256. This is precisely the damage a
+          # plain-language rewrite can do by accident.
+          #
+          # The anchor is field 2 (`| self-apply |`), which AC-PL-1 leaves byte-unchanged,
+          # and the injection is positional — it never quotes any of the description's
+          # words. A content-anchored `sed` here NO-OPS the moment AC-PL-1 rewrites the
+          # description it quotes, silently turning this fixture into a copy of the clean
+          # tree. See F-7 (§E.7). This is the same field-anchored shape the REAL_HASH
+          # fixture already in this job uses (quality.yml:573).
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' \
             curated-skills-registry.md > "$FIX/pipe.md"
 
-          # Fixture 3 — COMPOUND: reword the description AND reflow the row's pipe spacing.
-          # This is the case that returns a FALSE GREEN under a two-parser instrument (one
-          # content-matching, one strictly positional): both parsers break identically and
-          # cancel. A single parser has nothing to cancel against.
-          sed 's/apply\/verify\/rollback machinery/apply | verify | undo steps/' \
-            curated-skills-registry.md \
-            | sed 's/^| self-apply |/|self-apply|/' > "$FIX/compound.md"
+          # Fixture 3 — COMPOUND: the same positional pipe injection PLUS a reflow of the
+          # row's pipe spacing. This is the case that returns a FALSE GREEN under a
+          # two-parser instrument (one content-matching, one strictly positional): both
+          # parsers break identically and cancel. A single parser has nothing to cancel
+          # against.
+          #
+          # HONEST SCOPE: the reflow leg alone does NOT move this count (measured: 30 —
+          # reflowing pipe SPACING does not change pipe COUNT, so field 8 is untouched).
+          # The RED below comes entirely from the pipe-injection leg. Reflow-only damage
+          # is caught by wizard-consistency-check (quality.yml:1966), not by this step.
+          sed 's/^| self-apply |/|self-apply|/' "$FIX/pipe.md" > "$FIX/compound.md"
+
+          # FIXTURE-VALIDITY GUARD — house pattern, mirroring the REAL_HASH guard in this
+          # job's existing sha256 fault-injection step (quality.yml:573-576). A damage
+          # fixture byte-identical to its source is a no-op, and a no-op fixture reports
+          # downstream as "the check cannot fail" — blaming the check for the fixture's
+          # own evaporation. Name the real cause instead.
+          for f in pipe compound; do
+            if cmp -s curated-skills-registry.md "$FIX/$f.md"; then
+              echo "::error::AC-PL-6 FIXTURE SETUP FAILED — the '${f}' damage fixture was a no-op; its anchor no longer exists in the registry. Repair the FIXTURE's anchor. Do NOT relax the assertion below, and do NOT bump the pin."
+              exit 1
+            fi
+          done
 
           for f in clean pipe compound; do
             n="$(count_hex_rows "$FIX/$f.md")"
@@ -467,23 +635,38 @@ fault-injection-first house pattern and `docs/hld.md:37` Principle 5:
           set -euo pipefail
           ACTUAL="$(awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{print c+0}' curated-skills-registry.md)"
           if [ "$ACTUAL" -ne "$AC_PL_6_EXPECTED_HEX_ROWS" ]; then
-            echo "::error::AC-PL-6 FAILED — ${ACTUAL} rows carry a valid 64-char lowercase-hex value in field 8; expected exactly ${AC_PL_6_EXPECTED_HEX_ROWS}. A description rewrite most likely introduced a '|' character or reflowed a row's pipe layout. If this cycle intentionally added or removed a registry row, bump AC_PL_6_EXPECTED_HEX_ROWS in this job's env: block."
+            echo "::error::AC-PL-6 FAILED — ${ACTUAL} rows carry a valid 64-char lowercase-hex value in field 8; expected exactly ${AC_PL_6_EXPECTED_HEX_ROWS}. A description rewrite most likely introduced a '|' character into a cell, shifting every later field right so that row's field 8 is no longer its sha256. NOTE: this check counts FIELDS — it does not detect a pure whitespace reflow of a row's pipe layout; wizard-consistency-check covers that. If this cycle intentionally added or removed a registry row, bump AC_PL_6_EXPECTED_HEX_ROWS in this job's env: block."
             exit 1
           fi
           echo "AC-PL-6 PASSED — ${ACTUAL} rows carry a valid sha256 cell in field 8 (pin: ${AC_PL_6_EXPECTED_HEX_ROWS})."
 ```
 
-**Negative controls — all three executed at Phase 1 against the live tree:**
+**Negative controls — executed at Phase 1 against the live tree AND, at the amendment, against a
+simulated post-AC-PL-1 tree.** The second column is the one the original design omitted, and its
+absence was BLOCKER S1. "post-rewrite" = the live tree with `self-apply`'s description rewritten to
+remove Jargon-List term #7 (`apply/verify/rollback`), which AC-PL-1 **requires**.
 
-| fixture | construction | valid-hex rows | `exit !(c==30)` | verdict |
+| fixture | construction | clean tree | post-rewrite tree | verdict |
 |---|---|---|---|---|
-| clean | `curated-skills-registry.md` as-is | **30** | 0 | **GREEN** |
-| pipe | one `\|` injected into `self-apply`'s description | **29** | 1 | **RED** |
-| compound | reword + reflow (`\| self-apply \|` → `\|self-apply\|`) | **29** | 1 | **RED** |
+| clean | `curated-skills-registry.md` as-is | **30** | **30** | **GREEN** both |
+| pipe *(SUPERSEDED, content-anchored `sed`)* | `sed` quoting `apply/verify/rollback machinery` | **29 RED** | **30 — fixture evaporates** | **REJECTED** |
+| compound *(SUPERSEDED, content-anchored `sed`)* | same `sed` + reflow | **29 RED** | **30 — fixture evaporates** | **REJECTED** |
+| pipe *(ADOPTED, field-2 `awk`)* | positional `\|` into field 3, keyed on `\| self-apply \|` | **29 RED** | **29 RED** | **ADOPTED** |
+| compound *(ADOPTED)* | field-2 `awk` + reflow | **29 RED** | **29 RED** | **ADOPTED** |
+| reflow-only | `\| self-apply \|` → `\|self-apply\|`, nothing else | **30 GREEN** | — | **not detected here — by design** |
 
-Both legs of the compound fixture were confirmed to fire independently — the reflow leg alone was
-verified to change the row (`grep -c '^|self-apply|'` → 1 post-`sed`), so "compound" is not a claim
-wider than its instrument.
+**Correction (S7) — the compound fixture's two legs do NOT fire independently, and the original text
+claiming they did was a claim wider than its instrument** (`docs/patterns.md:55`, WATCH 2/3 this cycle).
+Measured: reflow-only returns **30 → GREEN**. Reflowing pipe *spacing* does not change pipe *count*, so
+field 8 is untouched and this parser cannot see it. **The compound fixture's RED comes entirely from
+the pipe-injection leg.** The earlier "verified to change the row (`grep -c '^|self-apply|'` → 1)"
+measurement was real but proved only that the `sed` fired — not that the *instrument* responded to it.
+
+**This is a gap in the claim, not in the coverage, and no second parser is being added.** Reflow-only
+damage is already caught by `wizard-consistency-check` (`quality.yml:1966`), whose per-skill
+`grep -qE "^\| ${slug} \|"` fails on exactly that mutation — verified at the amendment: RED on the
+reflow-only fixture, GREEN on the clean tree. ADR-086's single-parser decision stands; adding a second
+parser here would reintroduce the cancellation defect the ADR exists to prevent.
 
 **The forbidden alternative, measured.** A bare `NF!=9` sweep scoped to pipe-bearing lines returns **9**
 false positives on the clean tree
@@ -496,8 +679,36 @@ others; this session measured **9**, stated as measured rather than inherited.)
 
 **Rows 1–5 land as written in the spec.** Row 1's eight tokens, row 2's per-file folder token sets (all
 7 example rows reproduced exactly this session), rows 3, 4, and 5 — all use `grep -qF`
-presence-anywhere, and all their protected strings were confirmed **unique in their file**, which is
-what makes presence a sound instrument for them.
+presence-anywhere.
+
+**Correction (S6) — the blanket claim "all their protected strings were confirmed unique in their
+file" was FALSE for row 2, and is withdrawn.** Re-measured at the amendment by occurrence:
+
+| file | token | occurrences |
+|---|---|---|
+| `examples/personal-assistant/context/working-rules.md` | `Tasks/` | **3** |
+| `examples/personal-assistant/context/working-rules.md` | `People/` | **3** |
+| `examples/personal-assistant/context/working-rules.md` | `Calendar/` | **2** |
+| `examples/personal-assistant/context/working-rules.md` | `Finances/` | 1 |
+| `examples/personal-assistant/context/working-rules.md` | `Documents/` | 1 |
+| `examples/writing/context/working-rules.md` | `Voice-and-Style/` | **2** |
+
+The extra occurrences leak in from `§ Daily briefing` and `§ Follow-ups` (and the writing preset's own
+later sections) — prose mentions outside the data-locality enumeration the row protects.
+
+**Row 2 still FIRES, and it was proven, not assumed.** Compressing the protected enumeration
+(`examples/personal-assistant/context/working-rules.md:31` — *"Only access files in my Calendar/,
+Finances/, Tasks/, People/, and Documents/ folders"*) down to *"my folders"* drops `Finances/` and
+`Documents/` to **0 occurrences**, so `grep -qF` goes RED on both. Row 2 is therefore **contained, not
+broken**, and it lands as written.
+
+**But @qa must know the margin, because it is not what the row's shape implies.** Of row 2's five
+tokens for this file, **only 2 are load-bearing** (`Finances/`, `Documents/`). The other three survive
+the exact compression the row exists to catch, because their extra occurrences elsewhere in the file
+keep a presence test GREEN. **The margin is 2 tokens, not 5.** Any future edit that also touches
+`§ Daily briefing` or `§ Follow-ups` narrows it further, and an edit that removes the last
+`Finances/` and `Documents/` prose mentions while compressing line 31 would take it to zero. Recorded
+so the row's apparent 5-token redundancy is never mistaken for real redundancy.
 
 **Row 6 is different, and its instrument as written CANNOT FAIL. See F-1 (§E.1).**
 
@@ -509,20 +720,55 @@ rewrites. **A presence-anywhere `grep -qF` therefore stays GREEN even if the F4 
 outright** — proven this session against a fixture that replaced it: `grep -qF` → GREEN, on exactly the
 condition row 6 exists to catch.
 
-**Corrected instrument for row 6 — count equality, not presence** (pending orchestrator ratification per
-F-1):
+**Corrected instrument for row 6 — SUPERSEDED ONCE ALREADY. See F-8 (§E.8).** The first correction
+(a file-wide `grep -cF` count equality, pre-edit **2**) was itself too narrow, and that was BLOCKER S2
+at Phase 2. It froze only the sentence's **first clause** — the announcement that external installs
+are unsupported — and left the **restriction itself** unprotected. Measured at the amendment:
 
-```bash
-# Pre-edit and post-edit MUST be equal. Pre-edit measured this session: 2.
-grep -cF "Installing skills from external sources isn't supported yet" WIZARD.md
+```text
+sed '123s/ — the wizard installs only from the local, vetted pool\.//' WIZARD.md
+  → grep -oF "Installing skills from external sources isn't supported yet" | wc -l  → 2 → GREEN
 ```
 
-Against the same fixture this returns **1** where clean returns **2** → **RED**. Proven able to fail.
+Deleting *"— the wizard installs only from the local, vetted pool"* — the positive statement of where
+skills may come from, i.e. **the actual pool boundary this row exists to protect** — left the
+instrument GREEN. A count instrument is only as good as the string it counts.
 
-This is deliberately the **same shape as AC-PL-7(c)'s set-equality**, not a new mechanism — the row-6
-fix is "count, don't presence-test," which is the lesson (c) already encodes. It adds no second parser.
+**ADOPTED instrument for row 6 — anchor-scoped, then assert BOTH halves within that scope.** This is
+the repo's own house remedy for a whole-file grep that wrongly passes outright
+(`self-apply-deny-completeness-check`, `quality.yml:753-785`, which extracts the deny-list's own
+paragraph via `awk -v RS='' -v anchor=…` rather than grepping the file), and it is the same shape
+already chosen for F-6 two pages earlier in this document. **Applying scoping to F-6 and bare counting
+to F-1 was the inconsistency; this removes it.**
 
-`No URL paste, no external source` needs no change: `grep -cF` → **1**, unique, so presence is sound.
+```bash
+# Leg A (primary) — scope to the F4 pool-boundary line, then require BOTH halves on it.
+# Anchor verified unique at the amendment: `grep -oF 'No URL paste, no external source' WIZARD.md
+# | wc -l` → 1 occurrence.
+LINE=$(grep -n 'No URL paste, no external source' WIZARD.md | cut -d: -f1)
+CLAUSE=$(sed -n "${LINE}p" WIZARD.md)
+echo "$CLAUSE" | grep -qF "Installing skills from external sources isn't supported yet"
+echo "$CLAUSE" | grep -qF "the wizard installs only from the local, vetted pool"
+
+# Leg B (secondary, cheap) — retained. Catches out-of-scope edits to the :27 copy, which
+# leg A cannot see. Pre-edit and post-edit MUST both be 2 occurrences.
+grep -oF "Installing skills from external sources isn't supported yet" WIZARD.md | wc -l
+```
+
+**Negative controls, all four executed at the amendment against real fixtures:**
+
+| fixture | leg A half 1 | leg A half 2 | leg B (file-wide, occurrences) | verdict |
+|---|---|---|---|---|
+| clean tree | GREEN | GREEN | 2 | **GREEN — correct** |
+| tail deleted (the S2 fixture — restriction gutted) | GREEN | **RED** | 2 | **RED — the defect leg B missed** |
+| opening rewritten into plainer English | **RED** | GREEN | 1 | **RED — see the S3 warning in §C.3** |
+| inline definition appended after `…vetted pool` | GREEN | GREEN | 2 | **GREEN — the compliant shape** |
+
+Leg A alone is sufficient for row 6's own guarantee; leg B is kept because it is free and covers a
+different surface. Neither adds a parser — both are `grep -F` over the same two literals.
+
+`No URL paste, no external source` needs no change: **1 occurrence**, unique, so presence is sound —
+which is what makes it usable as leg A's anchor.
 
 **AC-PL-7(c), the exception-token deny list — executed at Phase 1, and it is load-bearing.**
 
@@ -579,7 +825,29 @@ surface. Recorded as F-4 (§E.4).
 | 7 | `docs/design-v2.19.10.md` | 1 (this file) | NEW | — |
 | 8 | `docs/architecture.md` | 1 | 2 ADR Index rows + cycle header + ADR-085 + ADR-086 | append-only |
 | 9 | `CHANGELOG.md` / `VERSION` | 4 | v2.19.10 release rows | house convention |
-| 10 | `docs/internal/qa/qa-report-v2.19.10.md` | 5 | NEW, @qa | — |
+| 10 | `docs/internal/qa/qa-report-v2.19.10.md` | 5 | NEW, @qa | **`docs/internal/` — NOT `docs/` root. See the box below.** |
+| 11 | `docs/internal/security/security-audit-v2.19.10.md` | 6 | NEW, @security | **`docs/internal/` — NOT `docs/` root. See the box below.** |
+
+> ### ⚠ BINDING — this cycle's QA and security reports land in `docs/internal/`, not `docs/` root
+>
+> **Applies to @qa (Phase 5) and @security (Phase 2 review + Phase 6 audit). Non-negotiable, and it
+> costs nothing — it is a destination path, not extra work.**
+>
+> `docs/internal/` is `export-ignore`d as a directory prefix (`.gitattributes:28`), so anything there
+> is excluded from the public release archive. `docs/` root is not.
+>
+> Measured at the amendment: `git archive HEAD | tar -tf -` ships **14** internal reports
+> (`docs/qa-report-*`, `docs/security-audit-*`, `docs/security-review-*`, v2.18.0 through v2.19.9),
+> while `docs/internal/` correctly yields **0** files in the archive. The repository is public and
+> those documents enumerate unfixed gaps, inert controls, and zero-coverage areas.
+>
+> **Do not bundle a retrofit.** The 14 existing files are pre-existing and NOT caused by this cycle;
+> moving them is a separate owner decision (reported, not actioned — see §E.9). This instruction binds
+> **only this cycle's own new reports**, which is why it is free.
+>
+> **Asymmetry, stated so it is not "corrected" by mistake:** `docs/design-v2.19.*.md` shipping in the
+> archive **is deliberate and recorded** (ADR-037 radical-transparency; `docs/design-v2.19.7.md` §I).
+> Design docs stay where they are. Only QA and security reports move.
 
 **The other 7 `working-rules.md` files are IN SCOPE FOR AUDIT and expected to receive ZERO edits.** If
 @qa's Phase-5 Q2/Q3 read surfaces a finding in one of them, that is an in-scope edit, not a scope
@@ -786,6 +1054,101 @@ forward-pointer next to the v2.5.3 row, that row byte-unchanged) is untouched. O
 command changes. If the orchestrator prefers, an equivalent remedy is to require a distinctive marker
 token in the pointer line; the scoped-window form was chosen because it needs no new convention.
 
+### E.7 — F-7 (BLOCKER, Phase-2 S1): AC-PL-6's fault-injection fixtures self-destruct on this cycle's own mandated edit
+
+**Claim.** Both damage fixtures in §C.6 were anchored on the literal `apply/verify/rollback machinery`.
+That string occurs **1 time** in `curated-skills-registry.md`, at line 31 — **inside `self-apply`'s
+`description` cell, the exact field AC-PL-1 mandates rewriting.** `apply/verify/rollback` is term #7 on
+the Jargon List, so the rewrite is not merely likely, it is **required**.
+
+**Proof, executed at the amendment.** The live tree with `self-apply`'s description rewritten to drop
+term #7, then the original `sed` fixtures re-run against it:
+
+| fixture | clean tree | post-rewrite tree |
+|---|---|---|
+| clean | 30 | 30 |
+| pipe (original `sed`) | **29 RED** | **30** |
+| compound (original `sed`) | **29 RED** | **30** |
+
+Post-rewrite both `sed`s no-op, both fixtures become byte-identical to the clean tree, and step 1's own
+logic fires `AC-PL-6 FAULT-INJECTION FAILED; exit 1`. **§D.1 sequences `quality.yml` first, so the gate
+goes GREEN on commit 1 and permanently RED on commit 2** — with an error message blaming the check when
+the fixture merely evaporated.
+
+**The 30/29/29 record in the original design reproduces exactly on the clean tree; that record was
+honest.** It was simply never re-run against the tree this cycle creates. **The step-2 assertion itself
+is sound** — it returns 30 on the rewritten tree, so a clean rewrite correctly stays GREEN. Only the
+self-test self-destructs.
+
+**Remedy — both halves applied, both verified (§C.6).**
+
+1. **Content-independent fixture.** Key on field 2 (`| self-apply |`, byte-unchanged by AC-PL-1) and
+   inject positionally, never quoting the description's words:
+   `awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1'`. **Verified 29 on BOTH trees.**
+2. **Fixture-validity guard** (`cmp -s` before the count assertion), using the repo's own house pattern
+   — the same shape the existing step already applies to `REAL_HASH` at `quality.yml:573-576`. Verified:
+   fires on the no-op fixture, silent on a valid one. Converts a silent evaporation into a message
+   naming the real cause.
+
+**Severity note.** This is the **4th** instrument this cycle that cannot fail on its target condition,
+and the first one located in a *correction* rather than in an original. @security's framing is accepted
+verbatim: *"both corrections needed the same scrutiny as the defects they fix, and neither got it."*
+
+### E.8 — F-8 (BLOCKER, Phase-2 S2): F-1's own remedy is narrower than the guarantee it enforces
+
+**F-1's diagnosis is confirmed** (`grep -oF … | wc -l` → **2 occurrences**, at `WIZARD.md:27` and
+`:123`). **F-1's remedy was wrong.** The file-wide count freezes only the sentence's **first clause**.
+
+**Proof, executed at the amendment:**
+
+```text
+sed '123s/ — the wizard installs only from the local, vetted pool\.//' WIZARD.md
+  → grep -oF "Installing skills from external sources isn't supported yet" | wc -l → 2 → GREEN
+```
+
+Deleting *"— the wizard installs only from the local, vetted pool"* — **the actual restriction, the
+positive statement of where skills may come from** — leaves the instrument GREEN. It protects the
+**announcement**, not the **guarantee**. On the F4 pool boundary, which is the **B2** basis for this
+cycle's SECURITY-SENSITIVE classification.
+
+**The repo had already solved this class, and the original design did not cite it.**
+`quality.yml:753-785` (`self-apply-deny-completeness-check`) is the house remedy for a whole-file grep
+that *"wrongly PASSES OUTRIGHT"*: anchor-scoped paragraph extraction (`awk -v RS='' -v anchor=…`) plus a
+fault-injection step proving the unscoped form passes. **That is also the shape chosen for F-6 in this
+same document.** Applying scoping to F-6 and bare counting to F-1, two pages apart, was the
+inconsistency. Accepted in full.
+
+**Remedy — applied and verified (§C.7):** scope to the F4 line via the `No URL paste, no external
+source` anchor (**1 occurrence**, verified), then assert **both halves** within that scope; retain the
+file-wide occurrence count as a cheap second leg covering the `:27` copy. Four negative controls run,
+including the S2 gut-tail fixture (now **RED**) and the additive-definition shape (correctly **GREEN**).
+
+### E.9 — F-9 (HIGH, Phase-2 S4): 14 internal QA/security reports ship in every public release archive — REPORT ONLY, retrofit NOT bundled
+
+**Claim, verified at the amendment.** `git archive HEAD | tar -tf -` lists **14** files matching
+`docs/qa-report-*` / `docs/security-{audit,review}-*`; `docs/internal/` correctly yields **0**. The
+repository is public, and those documents enumerate unfixed gaps, inert controls, and zero-coverage
+areas.
+
+**History, measured rather than asserted.** `docs/internal/qa/` holds **24** files and
+`docs/internal/security/` **26**, the newest at **v2.9.0**; every root-level report is **v2.18.0 or
+later**. The convention held for ~50 predecessor documents and then lapsed.
+
+**One complication, recorded rather than smoothed over.** `docs/design-v2.19.7.md` §I explicitly
+acknowledged root-level reports shipping as a *"conscious choice under ADR-037's radical-transparency
+convention, not an oversight."* So this is not cleanly a silent regression — it was noticed once and
+rationalized. **Whether radical transparency was intended to extend to QA and security reports (as
+opposed to design docs) is an owner question, not an architect question**, which is exactly why the
+retrofit is not bundled here.
+
+**Pre-existing and NOT caused by this cycle. Retrofitting the 14 is a separate owner decision — NOT
+actioned, NOT bundled.**
+
+**In-cycle remedy, which costs nothing and IS in scope — applied as a binding §D.1 instruction:**
+this cycle's QA and security reports are written to `docs/internal/qa/` and `docs/internal/security/`,
+not `docs/` root. That is a destination path, not extra work. The asymmetry is preserved deliberately:
+`docs/design-v2.19.*.md` continues to ship, per ADR-037.
+
 ---
 
 ## §F. `§PostOQClassificationReRun` record
@@ -854,6 +1217,26 @@ it.
 | 9 | Destructive Migration | N/A — no schema, no DROP, no data migration. Every edit is additive or in-place text. |
 | 10 | SoS Interface Discontinuity | N/A — single-project |
 | 11 | Cross-Project Tight Coupling | N/A — no dependency on another registered project's internals |
+
+---
+
+## §H. CODEOWNERS deferral — recorded, not silent (amendment, Phase-2 finding S10)
+
+> *ISO 15288 — Decision Management.*
+
+`.github/CODEOWNERS:54-56` (AC-E3-2) states that owner coverage *"grows with the files THIS cycle
+touches."* Followed literally, v2.19.10 would add its own touched files to `CODEOWNERS`.
+
+**Deliberate decision: NOT followed this cycle.** Editing `.github/CODEOWNERS` is a **TIER-3** surface,
+and touching it would snap v2.19.10 from **Tier B to Tier A** — owing a Guard Change Summary before the
+PR opens, for a PATCH cycle whose entire subject is user-facing wording. The ceremony would exceed the
+change by a wide margin, and TIER-4 clearance (§F) is otherwise clean.
+
+**Recorded rather than omitted**, following the standard v2.19.7 set in `docs/design-v2.19.7.md` §H
+(*"Recorded here so the deferral is explicit rather than an omission"*). A silent skip and a reasoned
+deferral are indistinguishable in a diff; only one of them survives review. Carry-forward: the next
+cycle that already touches `CODEOWNERS` for its own reasons should fold v2.19.10's touched files in at
+zero marginal ceremony.
 
 ---
 

@@ -8199,3 +8199,72 @@ defects** — in each case the requirement stands and only the verification comm
 Both are **pending orchestrator ratification** before they bind. The remaining four findings (F-2
 through F-5) are INFO and change no AC.
 
+### Architectural Modifications — v2.19.10 AMENDMENT (appended by @architect after Phase 2 FAIL, 2026-08-20)
+
+*Append-only record. Phase 2 returned FAIL — 0 CRITICAL, 2 BLOCKER — and **both BLOCKERs were in the
+Phase-1 corrections recorded immediately above**, not in the Phase-0 ACs. Full derivation in
+`docs/design-v2.19.10.md` §E.7 / §E.8 and `docs/architecture.md` **ADR-087**, which amends ADR-086.*
+
+**No AC's REQUIREMENT is changed by this amendment. Every entry below is an instrument fix or a record
+correction.** Where a remedy would have changed what an AC requires, it is reported instead (see the
+S4 entry at the end).
+
+- AC: **AC-PL-6**'s fault-injection fixtures, corrected at Phase 1 to two content-anchored `sed` calls
+  quoting `apply/verify/rollback machinery` → **Replaced with a field-2-anchored positional `awk`
+  injection plus a mandatory `cmp -s` fixture-validity guard** — Reason: that literal occurs **1 time**
+  in `curated-skills-registry.md`, at line 31, **inside `self-apply`'s `description` cell — the exact
+  field AC-PL-1 mandates rewriting**, and `apply/verify/rollback` is term #7 on the cycle's own Jargon
+  List. Measured: clean tree 30/29/29 (the Phase-1 record reproduces and was honest); **post-rewrite
+  tree 30/30/30** — both `sed`s no-op, both fixtures become copies of the clean tree, and the step's own
+  logic fires `FAULT-INJECTION FAILED`. Since `quality.yml` lands first, the gate would go green on
+  commit 1 and permanently red on commit 2, blaming the check for the fixture's evaporation. The
+  replacement is verified **29 on BOTH trees**. **The AC's assertion (step 2) is unchanged and was never
+  defective** — it returns 30 on the rewritten tree, so a clean rewrite correctly stays GREEN.
+
+- AC: **AC-PL-7 row 6**, corrected at Phase 1 from `grep -qF` presence to a **file-wide count equality**
+  (pre-edit 2) → **Replaced with an anchor-scoped assertion of BOTH clauses on the F4 line, retaining
+  the file-wide count as a cheap second leg** — Reason: the count freezes only the sentence's first
+  clause. Measured: deleting *"— the wizard installs only from the local, vetted pool"* — **the actual
+  restriction, the positive statement of where skills may come from** — leaves the count at **2 →
+  GREEN**. It protected the announcement, not the guarantee, on the F4 pool boundary that supplies the
+  **B2** basis for this cycle's SECURITY-SENSITIVE classification. The scoped form is the house pattern
+  already in this repo at `quality.yml:753-785`, and the shape Phase 1 itself chose for F-6 two pages
+  earlier. Four negative controls run; the gut-tail fixture is now **RED**.
+
+- AC: **AC-PL-4**'s leg 2, corrected at Phase 1 to a scoped 4-line window checking the pointer STRING
+  → **A second scoped leg added, checking the pointer is DATED** (`grep -cE '[0-9]{4}-[0-9]{2}-[0-9]{2}'`
+  over the same window, verified **0 occurrences** pre-edit) — Reason: **AC-PL-4 requires a *dated*
+  forward-pointer**, and the string-only leg accepts an undated one, leaving the date requirement with
+  no instrument at all. Record correction on the same finding: F-6 recorded the file-wide count as
+  **1**; it is now **2** (`docs/spec.md:8020`, `:8193`) — it drifted upward again during Phase 1, which
+  strengthens F-6's argument that the file-wide count is unstable by construction.
+
+- **Record corrections that change no instrument** (full detail in `docs/design-v2.19.10.md`): §C.3's
+  claim that every AC-PL-3 anchor is unique except `Add from full pool` was **false** —
+  `Installing skills from external sources` returns **2 occurrences**, and its non-uniqueness is the
+  subject of §C.7 two pages later; both ambiguous anchors are now stated in scoped form. §C.6's claim
+  that the compound fixture's *"both legs fire independently"* was **false at instrument level** —
+  reflow-only returns **30 GREEN**, so the RED comes entirely from the pipe-injection leg; **the claim
+  is fixed and no parser is added**, because reflow damage is already covered by
+  `wizard-consistency-check` (`quality.yml:1966`). AC-PL-7 row 2's *"all unique in their file"* was
+  **false** (`Tasks/`=3, `People/`=3, `Calendar/`=2, `Voice-and-Style/`=2 occurrences); **the row still
+  fires**, but its margin is **2 tokens, not 5** — recorded for @qa. All uniqueness claims were re-run
+  with `grep -oF … | wc -l` (occurrences) rather than `grep -cF` (lines): **every claim held**, but the
+  method is now standardized in §C.0 because a right answer from a wrong instrument is luck.
+
+- **REPORTED, NOT ACTIONED (S4, HIGH).** `git archive HEAD | tar -tf -` ships **14** internal reports
+  (`docs/qa-report-*`, `docs/security-{audit,review}-*`) in every public release archive;
+  `docs/internal/` correctly yields **0**. **Pre-existing, not caused by this cycle** — the convention
+  held for ~50 predecessor documents through v2.9.0 and lapsed by v2.18.0, though
+  `docs/design-v2.19.7.md` §I once rationalized it as a *conscious* radical-transparency choice, so it
+  is not cleanly a silent regression. **Whether radical transparency was meant to cover QA and security
+  reports as well as design docs is an owner question, not an architect one; the retrofit of the 14 is
+  NOT bundled here.** The free in-cycle remedy IS applied, as a binding §D.1 instruction: **this
+  cycle's QA and security reports are written to `docs/internal/`, not `docs/` root.** Design docs
+  continue to ship, per ADR-037.
+
+- **RECORDED DEFERRAL (S10, LOW).** `.github/CODEOWNERS:54-56` (AC-E3-2) says coverage grows with the
+  files a cycle touches. **Not followed this cycle, deliberately:** `CODEOWNERS` is TIER-3, and editing
+  it would snap v2.19.10 from Tier B to **Tier A**, owing a Guard Change Summary for a PATCH about
+  wording. Recorded rather than silently skipped, per the standard set in `docs/design-v2.19.7.md` §H.
+

@@ -106,7 +106,8 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-083 | ADR-046's target holds; its basis does not — a prose doc line may never be the sole authority for a behavioral claim about the platform (v2.19.9 Scope A/D) — the workspace `CLAUDE.md` remains the proactive-surfacing target as best-effort/inspection-class; the discriminator sentence resting on circular authority (`WIZARD.md:3`, itself an unverified assertion site this cycle corrects) is retired | ACCEPTED |
 | ADR-084 | Starter sync is asserted, not assumed — inline `starter-sync-check` with minimal normalization, a slot-presence control, and a positive data-locality allow-list (v2.19.9 Scope C) — also lands `personal-assistant` into ADR-040's draft-first rollout, absent since `33fd22c` (v2.9.0) for word-budget reasons and unshipped for 10 releases | ACCEPTED |
 | ADR-085 | The runtime-string register lives in `CONTRIBUTING.md` — chosen on adjacency to the checklist a contributor editing a `description` already reads, NOT on the "does not ship" argument (Phase 1 verified `CONTRIBUTING.md` is itself `export-ignore`d, `.gitattributes:16`); the rule it carries is a **floor on guarantees, not a style preference** — a rewrite may simplify wording but may never weaken a stated guarantee, and where plain language and a safety clause conflict the clause wins (inline-define the term, never compress the sentence); weakening-by-**addition** is called out explicitly because presence-based checks structurally cannot see it (v2.19.10 AC-PL-4 / AC-PL-7) | ACCEPTED |
-| ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED |
+| ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED — **AMENDED by ADR-087; read both** |
+| ADR-087 | **AMENDS ADR-086 §Decision (4).** Two rules minted after Phase 2 found ADR-086's own two remedies were the 4th and 5th instruments this cycle that cannot fail: **(1) fixture-anchor independence** — a fault-injection fixture may never be anchored on content the same cycle mandates changing (AC-PL-6's `sed` quoted `apply/verify/rollback machinery`, the exact description cell AC-PL-1 must rewrite; post-rewrite both fixtures no-op and the gate turns permanently red), remedied by a field-2-anchored positional `awk` verified 29 on BOTH trees plus a mandatory `cmp -s` fixture-validity guard; **(2) scope-matched instruments** — uniqueness determines whether presence-testing is *usable*, scope determines whether an instrument is *sufficient*; a file-wide count froze row 6's announcement while leaving the restriction clause deletable at GREEN, remedied by anchor-scoped extraction asserting BOTH halves (the house pattern at `quality.yml:753-785` the original design failed to cite). Also: occurrences are counted with `grep -oF \| wc -l` not `grep -cF`; an instrument's claim is stated to what it actually fires on (the compound fixture's legs do NOT fire independently — reflow-only is GREEN at 30 and is covered by `wizard-consistency-check` instead) (v2.19.10 Phase-2 amendment, S1/S2) | ACCEPTED |
 
 ---
 
@@ -14003,5 +14004,93 @@ Exactly 30 rows must carry a valid 64-char lowercase-hex value in field 8. A sin
 - `docs/spec.md` § *Product Spec — Cowork Starter Kit v2.19.10*, AC-PL-6 and AC-PL-7
 - `docs/hld.md:37` Principle 5 — a check proven able to fail, not prose that asserts safety
 - ADR-069 / `registry-sha256-check` — the job this control extends, and the source of its fault-injection-first house pattern
+
+---
+
+## ADR-087: A fixture may not be anchored on content its own cycle mandates changing, and a scoped guarantee needs a scoped instrument — AMENDS ADR-086 §Decision (4) (v2.19.10 Phase-2 amendment, S1 / S2)
+
+- **Status:** Accepted at the Phase-1 amendment, 2026-08-20. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.10 "Plain Language: say it the way she'd say it" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B. Unchanged by this amendment: the control still lands inline in `.github/workflows/quality.yml` and **not** under `scripts/`, preserving TIER-4 clearance.
+- **Reusability:** `candidate-constituent`. Both rules are general failure modes of verification design and are stated in transferable form in §Decision.
+- **Supersedes:** nothing. **Amends:** **ADR-086 §Decision (4)** (the uniqueness rule — narrowed and corrected below) and ADR-086 §Decision (1)/(3)'s validation records (the fixture constructions they describe are withdrawn and replaced). ADR-086's single-parser decision, its pin design, and its fault-injection-first ordering are **unchanged and reaffirmed**.
+
+> **Why an amendment record and not a rewrite.** `docs/architecture.md` is append-only. ADR-086's text stands as written, including the fixture constructions now known to be defective — the defect and its correction are both part of the record, and a reader who finds ADR-086 first must be able to reach this amendment. That is what the **Amends** field is for.
+
+### Context
+
+**(1) Both defects were in CORRECTIONS, not in originals.** ADR-086 was itself minted to fix two instruments that could not fail. Phase 2 found that **its own two remedies** — the AC-PL-6 fixtures and the AC-PL-7 row-6 count — were the **4th and 5th** instruments in this cycle that cannot fail on their target condition. @security's framing is adopted verbatim: *"both corrections needed the same scrutiny as the defects they fix, and neither got it."* A correction is not privileged; it is an instrument like any other, and it needs its own negative control.
+
+**(2) S1 — the fixture self-destructs on the cycle's own mandated edit.** ADR-086 §Decision (1)/(3)'s fixtures were built with a `sed` quoting `apply/verify/rollback machinery`. That literal occurs **1 time** in `curated-skills-registry.md`, at line 31, **inside `self-apply`'s `description` cell — the exact field AC-PL-1 mandates rewriting**, and `apply/verify/rollback` is term #7 on the cycle's own Jargon List. Measured at the amendment: on the clean tree the fixtures return 30/29/29 exactly as ADR-086 records (that record was honest); on a tree with the mandated rewrite applied they return **30/30/30** — both `sed`s no-op, both fixtures become byte-identical to the clean tree, and the step's own logic fires `FAULT-INJECTION FAILED`. Because the design sequences `quality.yml` first, **the gate would go green on commit 1 and permanently red on commit 2**, with an error message blaming the check for the fixture's evaporation. The step-2 assertion was and remains sound; only the self-test was defective.
+
+**(3) S2 — the row-6 remedy was narrower than the guarantee it enforces.** ADR-086 §Decision (4) replaced a presence test with a **file-wide count equality** (pre-edit 2 occurrences). Measured at the amendment: deleting *"— the wizard installs only from the local, vetted pool"* from `WIZARD.md:123` — **the actual restriction, the positive statement of where skills may come from** — leaves the count at **2 → GREEN**. The remedy froze the sentence's **announcement** and left its **guarantee** unprotected, on the F4 pool boundary that supplies the **B2** basis for this cycle's SECURITY-SENSITIVE classification.
+
+**(4) The repository had already solved (3), and ADR-086 did not cite it.** `quality.yml:753-785` (`self-apply-deny-completeness-check`) is the house remedy for a whole-file grep that *"wrongly PASSES OUTRIGHT"*: anchor-scoped paragraph extraction via `awk -v RS='' -v anchor=…`, plus a fault-injection step proving the unscoped form passes. It is also the shape the same design chose for its F-6 remedy. **Scoping was applied to F-6 and bare counting to F-1, two pages apart in one document.** The inconsistency, not the ignorance, is the finding.
+
+**(5) The measurement method was wrong even where the answers were right.** Every "unique in its file" claim rested on `grep -cF`, which counts **lines**, used as an **occurrence** test, against files written in paragraph-length lines (`WIZARD.md:123` is one ~600-character line). Two occurrences in one paragraph report as 1. Re-run with `grep -oF … | wc -l`, every claim held — the findings were sound, the instrument was not.
+
+### Decision
+
+**(1) FIXTURE-ANCHOR INDEPENDENCE — the generalizable rule, and the one worth carrying off this repository.** *A fault-injection fixture may never be anchored on content that the same cycle mandates changing.* Anchor on the most stable structure that isolates the target: a field position, a key column, a table cell that is out of scope by construction. Concretely here, the fixture keys on **field 2** (`| self-apply |`, byte-unchanged by AC-PL-1) and injects **positionally** into field 3, never quoting the description's words:
+
+```text
+awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' curated-skills-registry.md
+```
+
+Verified at the amendment: **29 on the clean tree AND 29 on the post-rewrite tree.** The existing `REAL_HASH` fixture in the same job (`quality.yml:573`) already used this field-anchored shape; ADR-086's fixtures did not follow it.
+
+**(2) A FIXTURE-VALIDITY GUARD IS MANDATORY, not optional, wherever a fixture is constructed by mutation.** A damage fixture byte-identical to its source is a no-op, and a no-op fixture reports downstream as *"the check cannot fail"* — an error that blames the check for the fixture's own evaporation and sends the next reader to debug the wrong artifact. Using the repo's own house pattern (`quality.yml:573-576`):
+
+```text
+if cmp -s <source> <fixture>; then
+  echo "::error::FIXTURE SETUP FAILED — the damage fixture was a no-op; its anchor no longer exists."
+  exit 1
+fi
+```
+
+**Rules (1) and (2) are complementary, not alternatives, and both are applied.** (1) prevents the evaporation; (2) makes any future evaporation self-describing. Neither alone is sufficient: (1) can be defeated by a schema change nobody anticipated, and (2) only reports after the fact.
+
+**(3) SCOPE-MATCHED INSTRUMENTS — this AMENDS ADR-086 §Decision (4).** ADR-086 read: *"a presence test is sound only where the protected string is unique in its file; where it is not, compare pre/post counts."* **That is necessary but NOT sufficient, and counting is not the general remedy.** The corrected rule:
+
+> **An instrument must cover the whole of the guarantee it protects, not merely a unique substring of it. Where a guarantee is scoped to a region, scope the instrument to that region first, then assert every load-bearing clause within it. Uniqueness determines whether presence-testing is *usable*; scope determines whether the instrument is *sufficient*.**
+
+Counting a non-unique string is one valid tactic for one narrow case (detecting deletion of one of N copies). It is not the general answer, and treating it as such is what produced S2. Applied to AC-PL-7 row 6:
+
+```text
+LINE=$(grep -n 'No URL paste, no external source' WIZARD.md | cut -d: -f1)   # 1 occurrence, verified
+CLAUSE=$(sed -n "${LINE}p" WIZARD.md)
+echo "$CLAUSE" | grep -qF "Installing skills from external sources isn't supported yet"
+echo "$CLAUSE" | grep -qF "the wizard installs only from the local, vetted pool"
+```
+
+The file-wide occurrence count is **retained as a cheap second leg** — it catches out-of-scope edits to the `:27` copy, which the scoped leg cannot see. Four negative controls executed at the amendment: clean GREEN; tail-deleted **RED** (the defect the count missed); opening-rewritten **RED**; inline-definition-appended GREEN (the only compliant shape).
+
+**(4) OCCURRENCES ARE COUNTED WITH `grep -oF … | wc -l`, AND EVERY NUMBER CARRIES ITS UNIT.** `grep -cF` counts lines and is correct only where the quantity genuinely is lines. Write *"2 occurrences"* or *"2 lines"*, never a bare *"2"*.
+
+**(5) AN INSTRUMENT'S CLAIM IS STATED TO WHAT IT ACTUALLY FIRES ON.** ADR-086 recorded that both legs of the compound fixture *"fire independently."* False at instrument level: reflowing pipe **spacing** does not change pipe **count**, so field 8 is untouched and reflow-only returns **30 GREEN**. The compound fixture's RED comes **entirely** from the pipe-injection leg. **The correct response was to fix the claim, not to add a parser** — reflow-only damage is already covered by `wizard-consistency-check` (`quality.yml:1966`), verified RED on the reflow-only fixture and GREEN on the clean tree at the amendment. The gap was in the claim, not the coverage. Adding a second parser would have reintroduced exactly the cancellation defect ADR-086 exists to prevent.
+
+### Consequences
+
+- ADR-086's single-parser decision, job-level pin, and fault-injection-first ordering are **unchanged**. What changes is how the fixtures feeding that design are **constructed** and how row 6's guarantee is **scoped**.
+- The AC-PL-6 step gains one `cmp -s` loop (≈8 lines) and swaps two `sed` calls for one `awk` plus one `sed`. No new job, no new file, no `scripts/` entry — **TIER-4 clearance is preserved and re-verified**.
+- AC-PL-7 row 6 gains a scoped two-clause assertion. Still `grep -F` over literals; **no parser added**, so ADR-086's cancellation argument is not reopened.
+- **`WIZARD.md:123` is now a constrained edit site**: its opening clause is frozen byte-for-byte and only its tail may change, additively. This is recorded in `docs/design-v2.19.10.md` §C.3 as a warning box, because a plain-language pass will otherwise reach for that opening and produce correct-looking work that fails CI.
+- **No AC's requirement is changed by this amendment.** Every item is an instrument fix or a record correction. Where a remedy would have changed what an AC requires, it was reported rather than applied (§E.9 / S4).
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) mint fixture-anchor independence as a **checklist item** in `CONTRIBUTING.md`'s CI section, so the next author of a fault-injection step is asked "is your anchor in scope for this cycle's edits?" before review rather than after — the cheapest option, and the one that addresses the fact that both defects were authored by the same agent that had just fixed the same class; (b) make the `cmp -s` fixture-validity guard a **shared shell helper** sourced by every fault-injection step in `quality.yml`, retiring the copy-paste (there are now three near-identical instances: `REAL_HASH`, AC-PL-6 pipe, AC-PL-6 compound); (c) generalize §Decision (3) into a helper taking `(file, anchor, [clauses…])` that scopes and asserts in one call, retiring the per-row judgment that produced both S2 and F-1; (d) add a **meta-check** that greps `quality.yml` for fixture-construction commands whose literal arguments also appear in files the cycle's own design lists as edited — mechanically detecting the S1 class rather than relying on review; (e) leave all four hand-applied and accept that the next cycle re-derives them.
+- **Concrete revisit triggers:** (i) **the next cycle that adds a fault-injection step** — that is the moment option (a) or (b) pays for itself, and the moment the S1 class can recur; (ii) **a third scoped-guarantee assertion** anywhere in the repo — two (F-6's window, row 6's line) is a coincidence, three is the repetition signal for option (c); (iii) any cycle that edits `curated-skills-registry.md`'s **column layout**, which invalidates the field-2 anchor and forces a fixture redesign; (iv) **a 6th instrument-that-cannot-fail finding in any single cycle** — five in one cycle was already enough to justify this ADR; six would mean review is not catching the class and option (d)'s mechanical detection is owed; (v) the first time `WIZARD.md:123`'s frozen opening is proposed for rewrite on legitimate plain-language grounds, which would require re-scoping row 6 rather than refusing the edit.
+- **Risk knowingly accepted:** five, named rather than bundled. (i) **The field-2 anchor is stable but not immortal.** It survives AC-PL-1 by construction, and the `cmp -s` guard makes any future break self-describing — but a cycle that renames the `self-apply` slug breaks it, and nothing warns at authoring time. Accepted; trigger (iii) and option (d) exist for it. (ii) **`WIZARD.md:123`'s frozen opening is a real constraint on plain-language work, and it may be the wrong trade.** The opening contains `external sources`, which a Q2 read may legitimately flag as undefined. This design forces the definition into the appended tail rather than allowing the opening to be reworded. That is the safe choice, not obviously the best-written one; if the resulting sentence reads badly, the correct fix is to re-scope row 6, **never** to relax it. Recorded so a future reader knows the constraint was chosen with its cost visible. (iii) **Row 6's scoped leg cannot see the `:27` copy at all.** The retained file-wide count is the only instrument there, and it has exactly the weakness S2 identified — it would not catch the `:27` copy's restriction clause being gutted. Accepted because `:27` is out of scope this cycle and unedited; **if a future cycle edits the Network & Offline Rule, that copy needs its own scoped assertion** and the count leg must not be trusted for it. (iv) **AC-PL-7 row 2's margin is 2 tokens, not the 5 its shape implies** (`Tasks/`, `People/`, `Calendar/` all recur elsewhere in `personal-assistant`'s file and survive the compression the row exists to catch; only `Finances/` and `Documents/` are load-bearing). The row fires and is contained, but its apparent redundancy is not real redundancy. Recorded for @qa rather than fixed, because fixing it means re-scoping row 2 to the enumeration line — a change to what the AC requires, which is out of an amendment's authority. (v) **Four of the five instrument defects this cycle were found by re-running a check against a tree that reflected the cycle's own pending edits — a step no rule currently mandates.** This ADR mints the rule for fixtures specifically (§Decision (1)); it does **not** mandate the general practice of simulating your own cycle's edits before trusting any instrument. That generalization is deliberately left unmade for a PATCH, and it is the largest unclosed gap here.
+
+### References
+
+- `docs/design-v2.19.10.md` §C.0 (counting method), §C.3 (the `:123` collision box), §C.6 (amended fixtures + two-tree control table), §C.7 (row-6 scoped instrument), §E.7 / §E.8 / §E.9 (the findings)
+- **ADR-086** — the ADR this record amends; read both, in order
+- `quality.yml:573-576` — `REAL_HASH` fixture-validity guard, the house pattern for §Decision (2)
+- `quality.yml:753-785` — `self-apply-deny-completeness-check`, the house pattern for §Decision (3)
+- `quality.yml:1966` — `wizard-consistency-check`, which covers the reflow case §Decision (5) declines to claim
+- `docs/design-v2.19.7.md` §H — the recorded-deferral standard applied to this cycle's CODEOWNERS deferral
+- `docs/patterns.md:55` — claims stated wider than their instrument (WATCH 2/3 this cycle); `docs/patterns.md:56` — units named on every number
 
 End of v2.19.10 ADR block.
