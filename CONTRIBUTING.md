@@ -87,6 +87,14 @@ now extended to runtime strings.
 - `examples/*/context/working-rules.md` and `templates/preset-template/context/working-rules.md` — every
   non-Safety sentence
 
+**Scope note:** the list above names where this rule *applies*, not a claim that every matching string
+has already been checked. v2.19.10 rewrote a specific, enumerated subset of `WIZARD.md`'s spoken/quoted
+strings (the setup-complete closing message and the F4 bundle-customization menu — see `docs/spec.md`'s
+v2.19.10 ACs for the exact anchors). Other spoken/quoted strings elsewhere in `WIZARD.md` — for example
+the Path A draft-team offer and the zero-coverage-goal message, both of which still say "the pool" —
+are in scope of this rule going forward but were not touched this cycle; treat an unrewritten string as
+not-yet-verified, not as evidence the rule doesn't apply to it.
+
 **The floor:** a rewrite may simplify wording; it may **never weaken a stated guarantee**. Watch
 especially for weakening-by-addition — adding an exception clause (`unless…`, `except…`, `at your
 discretion…`, `without asking…`) while leaving every enumerated item and every negative guarantee

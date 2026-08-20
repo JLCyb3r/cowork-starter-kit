@@ -687,6 +687,26 @@ jobs:
       - name: AC-PL-6 — registry row-structure integrity (pinned valid-hex row count)
         run: |
           set -euo pipefail
+          # A4 self-integrity check (v2.19.10 Phase-6 finding). This job's row-structure
+          # parser is written out TWICE — once inside the fault-injection step's
+          # count_hex_rows() function above, once inline right below — because GitHub
+          # Actions steps do not share shell state, so the pin was hoisted to job-level
+          # env: but the parser itself could not be. If only this step's copy drifts, the
+          # fault-injection step's self-test still passes (it only ever exercises its OWN
+          # copy) and this step's own broken copy runs unprotected — two green steps, one
+          # unprotected row, and nothing above can see it. Assert both copies are
+          # byte-identical by grepping THIS FILE for their shared core expression and
+          # requiring it to appear exactly twice, before trusting either. Split into two
+          # fragments so this very check's own source line never contains the full
+          # contiguous pattern (which would make the grep below match itself — a first
+          # draft of this check did exactly that, caught by running it, not by inspection).
+          PARSER_FRAG1='s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]'
+          PARSER_FRAG2='{64}$/) c++} END{print c+0}'
+          PARSER_COPIES="$(grep -cF "${PARSER_FRAG1}${PARSER_FRAG2}" .github/workflows/quality.yml)"
+          if [ "$PARSER_COPIES" -ne 2 ]; then
+            echo "::error::AC-PL-6 SELF-INTEGRITY FAILED — expected the row-structure parser's core expression to appear exactly 2 times in .github/workflows/quality.yml (the fault-injection step's count_hex_rows() function plus this step's own inline copy), found ${PARSER_COPIES}. The two copies have drifted apart, which means the fault-injection step above no longer proves anything about the parser this step actually runs. Make both copies byte-identical before trusting either — do not relax this check to 'at least 2'."
+            exit 1
+          fi
           ACTUAL="$(awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{print c+0}' curated-skills-registry.md)"
           if [ "$ACTUAL" -ne "$AC_PL_6_EXPECTED_HEX_ROWS" ]; then
             echo "::error::AC-PL-6 FAILED — ${ACTUAL} rows carry a valid 64-char lowercase-hex value in field 8; expected exactly ${AC_PL_6_EXPECTED_HEX_ROWS}. A description rewrite most likely introduced a '|' character into a cell, shifting every later field right so that row's field 8 is no longer its sha256. NOTE: this check counts FIELDS — it does not detect a pure whitespace reflow of a row's pipe layout; wizard-consistency-check covers that. If this cycle intentionally added or removed a registry row, bump AC_PL_6_EXPECTED_HEX_ROWS in this job's env: block."
@@ -1306,8 +1326,9 @@ jobs:
           set -euo pipefail
           chmod +x scripts/canonicalize-scan.sh
           # SCOPE (Phase-4 finding, see scripts/canonicalize-scan.sh header
-          # SCOPE NOTE): scanning ONLY '## Example' matches CONTRIBUTING.md:129's
-          # own stated threat model (pasted/example content, not maintainer-
+          # SCOPE NOTE): scanning ONLY '## Example' matches CONTRIBUTING.md
+          # § Worked-example authoring rules, rule 2's own stated threat model
+          # (pasted/example content, not maintainer-
           # authored prose elsewhere in the file) and is what empirically passes
           # clean against the real pool today; a full-file scan of the
           # byte-identical 6-token pattern false-positives on ordinary English

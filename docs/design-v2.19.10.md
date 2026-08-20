@@ -820,6 +820,21 @@ echo "$CLAUSE" | grep -qF "the wizard installs only from the local, vetted pool"
 grep -oF "Installing skills from external sources isn't supported yet" WIZARD.md | wc -l
 ```
 
+> **⚠ CORRECTION appended at Phase 6 (security audit A9) — the snippet above is UNGUARDED; run
+> the guarded form, not this one, if copying it.** `LINE=$(grep -n '...' WIZARD.md | cut -d: -f1)`
+> derives `LINE` with no check that the anchor grep actually matched. If the anchor is ever absent,
+> `LINE` is empty, and `sed -n "${LINE}p" WIZARD.md` — with an empty address — is `sed -n "p"`,
+> which prints the **entire file**, not nothing. `CLAUSE` then holds the whole file, and both
+> `grep -qF` calls against it go GREEN on a defect that deleted the F4 line outright — the exact
+> failure mode this leg exists to catch. This is a corrected-instrument note, not a live defect in
+> what @dev actually ran at Phase 4: the guard (`test "$(grep -cF '...' WIZARD.md)" -eq 1` before
+> deriving `LINE`, or the whole block under `set -euo pipefail`) was applied at execution time,
+> recorded in @dev's own Phase-4 verification output, not in any committed file. The gap is that
+> this published snippet was never updated to show the guard, and this file ships in the public
+> release archive — so a reader who copy-pastes the snippet as printed gets the unguarded form.
+> Per this document's append-only
+> convention, the snippet above is left byte-unchanged; this note is the correction of record.
+
 **Negative controls, all four executed at the amendment against real fixtures:**
 
 | fixture | leg A half 1 | leg A half 2 | leg B (file-wide, occurrences) | verdict |
