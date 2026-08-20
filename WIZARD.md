@@ -129,7 +129,7 @@ Want to add or remove anything?
 - **"Done" with no changes:** Accepted — install the proposed bundle as-is.
 - **More than 3 add-skill suggestions requested:** Surface 3 at a time; offer "Want more options?" after each batch.
 
-Confirm final bundle once: "Final bundle: [skills]. Continue?" Wait for user confirmation before proceeding to F5.
+Confirm final bundle once: "Here's the final list: [skills]. Continue?" Wait for user confirmation before proceeding to F5.
 
 **Checkpoint — persist state now (non-optional).** The moment the bundle is confirmed, write `cowork-profile.md` to the user's workspace as a STUB before asking anything else:
 
