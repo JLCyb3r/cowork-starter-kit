@@ -14,6 +14,29 @@
 
 ---
 
+> ## ⚠ AMENDED at Phase 1.2 — owner-directed scope addendum (read before anything below)
+>
+> **v2.19.10 is now a TWO-functional-idea cycle by explicit owner decision** taken at the Phase 3 gate,
+> after being told it breaks `docs/hld.md:35` and being shown the v2.19.8 scope-creep precedent. Idea 1
+> = plain language (AC-PL-1 … AC-PL-8). Idea 2 = the **S4 retrofit** of 14 leaked internal reports
+> (AC-PL-9 … AC-PL-13). Recorded as a knowing set-aside, **not** a silent violation, and **not** to be
+> re-narrowed.
+>
+> **Classification has ESCALATED: Tier B → Tier A.** `scripts/verify-ledger-annotations.sh` must be
+> repaired for the move to land, and TIER-1 is *"any file under `scripts/` added or modified."*
+> **A Guard Change Summary is owed and @security must re-review.** This was **not** known at the gate.
+>
+> **Addendum records:** **§F.2** (the re-run and the escalation) and **§I** (mechanism, ruling,
+> instruments, negative controls). **§D.1** rows 12–16 and the retrofit sequencing table are the @dev
+> contract. ADR-088 + the ADR-037 amendment record are in `docs/architecture.md`.
+>
+> Sections written before the addendum — including §E.9's "retrofit NOT bundled" finding, the §D.1
+> "**Do not bundle a retrofit**" box, and §F's Tier-B verdict — are **retained unmodified and marked
+> SUPERSEDED in place**. They are correct for the inputs they were evaluated against, and overwriting a
+> superseded record rather than appending to it is the practice this cycle has already refused twice.
+
+---
+
 ## §0. Design header — mandatory records
 
 > *ISO 15288 — Technical Management / Decision Management.*
@@ -827,6 +850,11 @@ surface. Recorded as F-4 (§E.4).
 | 9 | `CHANGELOG.md` / `VERSION` | 4 | v2.19.10 release rows | house convention |
 | 10 | `docs/internal/qa/qa-report-v2.19.10.md` | 5 | NEW, @qa | **`docs/internal/` — NOT `docs/` root. See the box below.** |
 | 11 | `docs/internal/security/security-audit-v2.19.10.md` | 6 | NEW, @security | **`docs/internal/` — NOT `docs/` root. See the box below.** |
+| **12** | **`.github/workflows/quality.yml`** (2nd change) | **4** | **NEW inline step: the S4 archive-leak gate (AC-PL-11)** | **TIER-4: inline only; `git archive`, never `check-attr`; canary + vacuity guard mandatory** |
+| **13** | **the 14 files listed in AC-PL-9** | **4** | **`git mv` into `docs/internal/{qa,security}/` — 5 + 9** | **content byte-unchanged; `R100` × 14; `docs/design-v2.19.*.md` NOT included** |
+| **14** | **`scripts/verify-ledger-annotations.sh`** | **4** | **`LA-03a`/`LA-03b`/`LA-03c` `AFILE` → `docs/internal/security/…`** | **⚠ TIER-1 — this row is what escalates the cycle to Tier A. 3 lines only; 19-record count unchanged** |
+| **15** | `docs/architecture.md` (2nd change) | 1 (done) | ADR-088 + ADR-037 amendment record + 1 new Index row + ADR-037 Index status cell | append-only; ADR-037's own body NOT rewritten |
+| **16** | `docs/spec.md` (2nd change) | 1 (done) | Phase-1.2 addendum: AC-PL-9 … AC-PL-13 | append-only |
 
 > ### ⚠ BINDING — this cycle's QA and security reports land in `docs/internal/`, not `docs/` root
 >
@@ -848,6 +876,19 @@ surface. Recorded as F-4 (§E.4).
 > **Asymmetry, stated so it is not "corrected" by mistake:** `docs/design-v2.19.*.md` shipping in the
 > archive **is deliberate and recorded** (ADR-037 radical-transparency; `docs/design-v2.19.7.md` §I).
 > Design docs stay where they are. Only QA and security reports move.
+>
+> ### ⚠ SUPERSEDED IN PART at Phase 1.2 — read this before acting on the box above
+>
+> The box's *"**Do not bundle a retrofit**"* instruction is **SUPERSEDED BY OWNER DECISION at the
+> Phase 3 gate.** The retrofit of the 14 **IS** bundled into v2.19.10 — see §I and `docs/spec.md`
+> § v2.19.10 Phase-1.2 addendum (AC-PL-9 … AC-PL-13). Everything else in the box **still stands**: this
+> cycle's own new reports still land in `docs/internal/`, and the `docs/design-v2.19.*.md` asymmetry is
+> still deliberate and still must not be "corrected."
+>
+> One correction to the box's stated rationale: it cites *"ADR-037 radical-transparency."* **ADR-037
+> contains no radical-transparency convention** — `grep -c 'radical transparency' docs/architecture.md`
+> → **0**. The asymmetry is a real and deliberate choice, but it is this repository's choice, not
+> ADR-037's. See the ADR-037 amendment record in `docs/architecture.md`.
 
 **The other 7 `working-rules.md` files are IN SCOPE FOR AUDIT and expected to receive ZERO edits.** If
 @qa's Phase-5 Q2/Q3 read surfaces a finding in one of them, that is an in-scope edit, not a scope
@@ -857,6 +898,29 @@ breach — but it must be recorded as a delta against §C.5's pre-registered tab
 rewrite. The instrument must exist before the damage it detects becomes possible. Landing them together
 means the gate's first-ever run is against already-modified content, and a fixture-validity failure
 would be indistinguishable from a real regression.
+
+**Sequencing for the Phase-1.2 addendum (files 12–14) — same principle, applied to the retrofit.** The
+two functional ideas are kept in **separate commits**, so that a revert of one does not disturb the
+other, and so the owner's two-idea decision stays legible in the history rather than blended into it.
+
+| Order | Commit | Contents | Gate before proceeding |
+|---|---|---|---|
+| **R1** | *gate first* | File 12 — the S4 archive-leak step, **alone** | The step must run **RED** against the current (pre-move) tree, naming all **14**. A gate that has never been seen RED is not yet an instrument. |
+| **R2** | *repair the only thing that breaks* | File 14 — the 3 `LA-03a/b/c` `AFILE` values | `bash scripts/verify-ledger-annotations.sh` must be RED **before** this commit (3 of 19) once R3 is staged, and 0-of-19 after. |
+| **R3** | *the move* | File 13 — the 14 `git mv`s, **content untouched** | The step from R1 must now run **GREEN**; `git show --name-status --find-renames=100%` → **14 × `R100`**; archive **430 → 416 entries**. |
+
+**R1 before R3 is load-bearing for the same reason file 1 leads the main sequence:** the instrument must
+be proven able to fail on the real defect *before* the defect is removed. If the move lands first, the
+gate's first-ever run is GREEN, and a GREEN that has never been RED is exactly the failure signature
+this cycle produced five times.
+
+**R2 is ordered between them deliberately.** Repairing the ledger paths *before* the files move makes
+`verify-ledger-annotations.sh` RED (it would point at files that are not there yet); repairing them
+*after* leaves CI RED between R3 and R2. @dev SHOULD land **R2 and R3 as a single commit** if the branch
+is CI-gated per-commit; the ordering above is the logical dependency, not a mandate to leave CI red.
+
+**Do NOT sweep Class B references while doing R3.** AC-PL-12's assertion exists to catch exactly that,
+and it will fire on an over-eager `sed -i` across `docs/`.
 
 **Byte-mirror trap (CMP) — checked, and this cycle is clear.** Verified this session rather than
 inherited:
@@ -1144,6 +1208,17 @@ retrofit is not bundled here.
 **Pre-existing and NOT caused by this cycle. Retrofitting the 14 is a separate owner decision — NOT
 actioned, NOT bundled.**
 
+> **⚠ SUPERSEDED at Phase 1.2.** The owner made that decision at the Phase 3 gate: **the retrofit IS
+> bundled** (AC-PL-9 … AC-PL-13, §I). Two claims in this finding are also **corrected** rather than
+> carried forward, both by reading ADR-037 itself instead of the citation to it:
+> **(a)** the "owner question" framed above does not exist — `grep -c 'radical transparency'` scoped to
+> ADR-037's own body → **0** (and **0** across `docs/architecture.md` at `be92754`, pre-ADR-088);
+> ADR-037 contains no such convention and `design-v2.19.7.md:82` invoked
+> one it does not contain. The retrofit is **ADR-037 compliance**. **(b)** "newest internal at v2.9.0"
+> is **false** — `docs/internal/qa/qa-report-v2.19.4.md` is internal; the lapse is **intermittent**, not
+> a clean cutoff. Corrections recorded in ADR-088 §Context and §I.2/§I.3; this finding is left otherwise
+> unmodified.
+
 **In-cycle remedy, which costs nothing and IS in scope — applied as a binding §D.1 instruction:**
 this cycle's QA and security reports are written to `docs/internal/qa/` and `docs/internal/security/`,
 not `docs/` root. That is a destination path, not extra work. The asymmetry is preserved deliberately:
@@ -1158,6 +1233,14 @@ not `docs/` root. That is a destination path, not extra work. The asymmetry is p
 **Re-evaluated against the FINAL file list in §D.1, after all Open Questions were resolved.**
 
 **Verdict: CONFIRMED — SECURITY-SENSITIVE, Tier B. No flip in either direction.**
+
+> ### ⚠ SUPERSEDED at Phase 1.2 — the verdict below is the PRE-ADDENDUM record. Read §F.2.
+>
+> The Phase-1.2 owner-directed addendum adds files 12–16 to §D.1, and **file 14 is under `scripts/`.**
+> The verdict for the cycle as it now stands is **ESCALATED — Tier A**, recorded in **§F.2** immediately
+> after this table. The Tier-B analysis below is retained unmodified because it remains correct for the
+> file list it was evaluated against, and because overwriting a superseded record rather than appending
+> to it is the exact practice this cycle has refused twice.
 
 | Basis | Final-file-list evidence |
 |---|---|
@@ -1197,6 +1280,170 @@ byte-preserved, and the AC-PL-7(c) deny-list must remain at **0**. The enumerate
 tripwire for this condition. If it moves off 0, or if any of the six category tokens changes, **stop and
 escalate — `/legal` becomes owed before Phase 3**, and no amount of "the rewrite reads better" overrides
 it.
+
+---
+
+## §F.2. `§PostOQClassificationReRun` — Phase-1.2 re-run against the ADDENDUM file list
+
+> *ISO 15288 — Decision Management.*
+
+**Re-evaluated against the final file list in §D.1 as amended by the Phase-1.2 addendum (files 12–16).**
+
+### Verdict: **ESCALATED — SECURITY-SENSITIVE, Tier A.** Upward flip. Halt-and-notify applies.
+
+**The single reason, stated mechanically:**
+
+| Snapback condition | Mechanical check | Pre-addendum | Post-addendum |
+|---|---|---|---|
+| **TIER-1** — any file under `scripts/` added or modified | `git diff --name-only base..head -- scripts/` → **empty** | CLEAR (empty) | **FIRES** — `scripts/verify-ledger-annotations.sh` (file 14) |
+| **TIER-2** — `cowork.lock.json` / `.cowork-allowlist.json` | same → empty | CLEAR | **CLEAR** — neither in the list |
+| **TIER-3** — `.github/CODEOWNERS` modified, incl. adding a path | same → empty | CLEAR | **CLEAR** — explicitly declined again in the addendum |
+| **TIER-4** — AC-PL-6's control under `scripts/` instead of inline | `git diff --name-only \| grep -c '^scripts/'` → **0** | CLEAR | **CLEAR as to intent** — AC-PL-6 *and* AC-PL-11 both land inline in `quality.yml`; no control is implemented under `scripts/`. **But the raw count is no longer 0**, because file 14 is a *reference repair*, not a control. See the note below. |
+
+**TIER-4's mechanical check and TIER-4's intent now disagree, and that is worth naming rather than
+resolving quietly.** TIER-4 exists to stop AC-PL-6's *gate* from being implemented as a script. That
+intent is fully honoured: both this cycle's gates are inline `quality.yml` steps. But TIER-4's stated
+check is a blunt `grep -c '^scripts/'` → 0, which file 14 trips for an unrelated reason. **The check is
+read as written, not as intended** — the count is non-zero, TIER-1 fires independently on the same file,
+and the cycle is Tier A either way. No interpretation is used to keep the count at 0, because reading a
+check as "what it meant" rather than "what it does" is the failure this cycle has now recorded five
+times.
+
+**Why the escalation is unavoidable, not a design choice.** Moving `docs/security-audit-v2.19.6.md`
+breaks `scripts/verify-ledger-annotations.sh` at `LA-03a/b/c` — proven by differential execution, not
+inferred (pre-move exit **0**; post-move exit **1**, **3 of 19** static anchors failing by name). The
+only alternatives were:
+
+- **Leave that one file at `docs/` root** (move 13, not 14) → AC-PL-11's gate is permanently RED, or an
+  exception is carved into the gate. Rejected: that is the `design-v2.19.7.md:82` rationalization
+  pattern this addendum exists to end.
+- **Leave the script broken** → CI red on `main`. Not a candidate.
+- **Repair the script** → `scripts/` is modified → Tier A.
+
+There is no fourth option. **The retrofit and Tier A are the same decision.**
+
+### Consequences of the flip — what is now owed
+
+1. **A Guard Change Summary is owed before the PR opens** (`what changed` / `what could break` /
+   `what's protected` / `what to verify after merge`), authored by **@security**, in plain language the
+   owner can approve or reject **without reading the diff**.
+2. **@security must re-review at the higher tier.** Phase 2 cannot be treated as settled at Tier B when
+   the final file list is Tier A.
+3. **The owner's Phase-3 gate approval was given on a Tier-B understanding.** The fold-in decision was
+   made on the reasonable belief that `quality.yml` being already-open meant ceremony was unchanged —
+   which is true of AC-PL-11 and false of AC-PL-10. **This is surfaced, not absorbed.** The owner is
+   entitled to re-make the decision knowing the real cost, including the option of splitting the
+   retrofit into its own cycle where Tier A is the whole cycle's ceremony rather than an addendum's.
+
+**What did NOT change.** The four Tier-B bases (B1–B4) all still hold; nothing was downgraded. The
+COMPLIANCE-SENSITIVE = **NO** determination is **unchanged and re-checked**: the addendum moves files and
+edits three `AFILE` string values plus one CI step: it touches **no** `working-rules.md`, changes **no**
+enumerated protected-data category, and adds **no** vendored content. `/legal` is **still not owed**.
+
+---
+
+## §I. The Phase-1.2 addendum — S4 retrofit
+
+> *ISO 15288 — Design Definition (addendum) + Decision Management.*
+
+**Governing records:** `docs/spec.md` § v2.19.10 Phase-1.2 addendum (AC-PL-9 … AC-PL-13);
+`docs/architecture.md` ADR-088 + the appended ADR-037 amendment record.
+
+### I.1 — Provenance: a second functional idea, by owner decision
+
+`docs/hld.md:35` — *"One functional idea per version"* — is **knowingly set aside by the owner**, who was
+told at the Phase 3 gate that the fold-in breaks the rule, was shown the v2.19.8 scope-creep precedent,
+and reaffirmed. **Recorded as such. Not re-litigated here, and not quietly re-narrowed.** The full record
+is in `docs/spec.md`; this section covers mechanism only.
+
+### I.2 — The grounding inverts the original finding
+
+§E.9 framed the retrofit as an owner question about whether "radical transparency" extends to QA and
+security reports. **There is no such question.** Read this session from ADR-037 itself rather than from
+the citation to it:
+
+| Claim | Instrument | Result |
+|---|---|---|
+| ADR-037 contains a "radical transparency" convention | `grep -c 'radical transparency'` scoped to ADR-037's body (and across all of `docs/architecture.md` at `be92754`) | **0** — bare against HEAD returns **2**, both inside ADR-088 correcting the error; scope or pin the grep |
+| ADR-037 moved internal artifacts *into* `docs/internal/` | `git ls-files docs/internal/qa \| wc -l` / `…/security` | **24** / **26** |
+| `design-v2.19.7.md` invoked it anyway | `grep -n 'radical-transparency' docs/design-v2.19.7.md` | **line 82** |
+
+**The retrofit is ADR-037 compliance, not a new convention.** §E.9 is superseded on this point and the
+correction is recorded in ADR-088 §Context rather than by editing §E.9.
+
+### I.3 — §E.9's history claim, corrected
+
+§E.9: the convention *"held for ~50 predecessor documents and then lapsed,"* newest internal **v2.9.0**.
+**Falsified.** `docs/internal/qa/qa-report-v2.19.4.md` and `docs/internal/security/security-review-v2.19.4.md`
+are internal, as are v2.15.0/v2.16.0/v2.17.0. Placement went: root at **v2.18.0/v2.19.0** → internal at
+**v2.19.4** → root at **v2.19.5/.6/.7/.9**. **Intermittent, not a clean cutoff.** This strengthens
+AC-PL-11: prose did not hold a convention that flips across adjacent patch releases.
+
+### I.4 — The link/reference sweep, re-derived rather than restated
+
+The orchestrator's pre-scan was **markdown-only** and therefore **could not see the one reference that
+actually breaks.** Re-derived across `*.md`, `*.yml`, `*.sh`, `*.txt`, `*.json`:
+
+| Surface | Refs to the 14 | Class | Action |
+|---|---|---|---|
+| `scripts/verify-ledger-annotations.sh` | 3 (`LA-03a/b/c`) | **A — RESOLVED** | **UPDATE** (file 14) |
+| `scripts/verify-release-surface.sh` | 6 (5 comment, 1 `echo`) | B | FROZEN |
+| `scripts/publish-release.sh` | 6 (5 comment, 1 `echo`) | B | FROZEN |
+| `scripts/release-predicate.sh` | 3 (all comment) | B | FROZEN |
+| `.github/workflows/quality.yml` | 7 (6 comment, 1 step `name:`) | B | FROZEN |
+| `tests/fixtures/release-surface/` × 2 | 2 (provenance headers) | B | FROZEN — proven non-load-bearing |
+| `docs/retro.md`, `docs/spec.md`, `docs/risk-register.md`, `docs/design-v2.19.8.md`, `CHANGELOG.md`, moved reports | prose | B | FROZEN — historical |
+| `docs/architecture.md` | **0 refs to the 14 as measured at `be92754`** (its 25 report paths all point at *already-moved* files). ADR-088, committed at Phase 1.2, adds refs — so re-derive against `be92754`, not against HEAD | B | FROZEN |
+
+**The decisive precedent is in that last row.** `docs/architecture.md` carries 25 bare report paths that
+**already do not resolve** — ADR-037 moved those files and did not rewrite the prose. They have been
+dead for **11+ minor versions** with CI green. The house convention for this exact operation is already
+set, and it is *freeze*. The full ruling, its three grounds, and the differential-execution test are in
+ADR-088 §Reference-class ruling and AC-PL-12.
+
+**`link-check` will not fire** — markdown links to the moving files: **0**; exhaustive repo-wide scan for
+a markdown link to *any* report path: **1** hit, which is a regex literal inside `docs/spec.md` prose.
+lychee resolves links, not bare text paths, which is precisely why the 25 dead paths above have never
+failed a build.
+
+### I.5 — Instruments and their firing negative controls (all run at Phase 1, against real trees)
+
+Every control below was executed against either the live repository or a **real clone of `be92754`**
+with the move applied as a commit — never against a description, and never fixture-only.
+
+| # | Instrument | Control (must go RED) | Result (must go GREEN) |
+|---|---|---|---|
+| 1 | Archive-leak gate (AC-PL-11) | pre-move real tree → **14 matching entries** | post-move → **0**; total **430 → 416 entries** |
+| 2 | Gate's canary self-test | typo'd pattern vs canary → **0 matches** = gate BROKEN | correct pattern vs canary → **1 match** |
+| 3 | Gate's vacuity guard | leaking tree + typo'd pattern → **0 hits**, indistinguishable from clean | populated listing asserted ≥ **300 entries** vs measured **416** |
+| 4 | Ledger anchors (AC-PL-10) | post-move, unrepaired → **3 of 19 failed**, exit **1** | pre-move → 0 of 19, exit **0**; post-move repaired → **0 of 19** |
+| 5 | Rename integrity (AC-PL-9) | — | `--find-renames=100%` → **14 × `R100`** (content byte-unchanged) |
+| 6 | Fixture provenance is not load-bearing (AC-PL-12) | headers rewritten on a post-move tree | both steps unchanged: `0 versions checked…` and `WRONG-LATEST … 'v2.18.0', expected 'v9.9.9'` |
+| 7 | `check-attr` is unsound (ADR-088 §Decision (4)) | excluded file → `unspecified` | shipping file → `unspecified` — **same answer, opposite sides** |
+
+**Control 3 is the one that matters most.** Five instruments this cycle returned GREEN on exactly the
+condition they existed to catch, three of them inside fixes for earlier ones. A leak gate whose pattern
+is wrong returns **0 matches**, which is byte-identical to a clean tree — so this gate proves its own
+pattern against a canary **before** it trusts its own result.
+
+### I.6 — Anti-pattern scan delta for the addendum
+
+| # | Anti-pattern | Result for files 12–16 |
+|---|---|---|
+| 9 | **Destructive Migration** | **Assessed and cleared.** `git mv` with `R100` verification is a rename, not a deletion; content is byte-preserved and history is followable via `git log --follow`. No file leaves the repository. |
+| 6 | Tight Coupling | **One instance, accepted and named:** `LEAK_PATTERN` hardcodes three report-name prefixes. Stated in ADR-088 §Risk (i) and bounded by the gate's own claim — it asserts "no file with one of three prefixes ships," never "no internal document ships." |
+| 5 | Over-Engineering | **Actively resisted.** One inline step, one canary, one vacuity guard. An allowlist over all of `docs/*.md` is the stronger design and was deliberately deferred to ADR-088 §Maturation Path (b) rather than built into a PATCH addendum. |
+
+All other rows are unchanged from §G.
+
+### I.7 — Declined in this addendum, explicitly
+
+- **Rewriting the ~60 Class B references** — declined; ADR-088 §Maturation Path (c).
+- **The `docs/*.md` allowlist gate** — declined as not PATCH-sized; ADR-088 §Maturation Path (b).
+- **Adding any path to `.github/CODEOWNERS`** — declined; TIER-3, and the §H deferral stands.
+- **Moving `docs/design-v2.19.*.md`** — declined; the asymmetry is deliberate.
+- **Updating the 3 operator-facing strings** — declined to keep the Tier-A `scripts/` diff to the 3
+  lines that are functionally required; revisit trigger recorded in ADR-088 §Maturation Path (ii).
 
 ---
 
