@@ -8578,3 +8578,96 @@ phrase deliberately (HEAD count = **2**), so an unscoped grep does not test what
   cycle. The v2.19.10 §H deferral stands unchanged.
 - **Moving `docs/design-v2.19.*.md`.** Deliberate asymmetry, preserved.
 
+---
+
+# v2.19.10 — Phase-1.3 notice: the Phase-1.2 addendum is DEFERRED-TO-RETROFIT-CYCLE
+
+> **Appended at Phase 1.3, after the owner reversed the Phase-1.2 fold-in at the gate. Append-only —
+> the Phase-1.2 addendum section above is retained byte-unchanged and is NOT rewritten. This notice
+> governs it.**
+
+## v2.19.10's acceptance set is `AC-PL-1` … `AC-PL-8`, and nothing beyond it
+
+**Stated plainly for @dev and @qa, because both read this file and there must be no ambiguity about
+which ACs bind:**
+
+| | |
+|---|---|
+| **IN the acceptance set** | **`AC-PL-1`, `AC-PL-2`, `AC-PL-3`, `AC-PL-4`, `AC-PL-5`, `AC-PL-6`, `AC-PL-7`, `AC-PL-8`** — 8 ACs |
+| **OUT — `DEFERRED-TO-RETROFIT-CYCLE`** | **`AC-PL-9`, `AC-PL-10`, `AC-PL-11`, `AC-PL-12`, `AC-PL-13`** — 5 ACs |
+
+- **@dev MUST NOT implement `AC-PL-9` … `AC-PL-13`.** They are not in the Phase-4 build scope.
+- **@qa MUST NOT test `AC-PL-9` … `AC-PL-13`.** They are not in the Phase-5 acceptance set. Their
+  absence is **not** a coverage gap and **must not** be reported as one.
+- The `AC-PL-13` line reading *"**Status: DONE at Phase 1.2** … @qa verifies at Phase 5"* in the
+  addendum section above is **withdrawn by this notice.** @qa verifies nothing from that section.
+- **No requirement of `AC-PL-1` … `AC-PL-8` is changed by this notice.** This is scope separation, not
+  redesign. Every one of the 8 binds exactly as it did before the Phase-1.2 addendum was appended.
+
+## Reason for the deferral: Tier-A escalation, owner-directed split at the gate
+
+The S4 retrofit escalates the cycle **Tier B → Tier A**. **TIER-1** — *"any file under `scripts/` added
+or modified"* — fires necessarily, because moving `docs/security-audit-v2.19.6.md` breaks
+`scripts/verify-ledger-annotations.sh:134-136` (`LA-03a`/`LA-03b`/`LA-03c`), and **there is no design
+that both moves that file and leaves `scripts/` untouched.** Moving only the other 13 was considered and
+rejected: it leaves a leak open and makes the gate permanently RED.
+
+The owner approved the Phase-3 fold-in on the stated basis that ceremony was unchanged. Phase 1.2
+falsified that basis. **The owner was re-asked with the split option on the table and chose to split
+it out**, so that Tier A becomes the retrofit cycle's whole ceremony rather than a bolt-on to a PATCH
+about wording.
+
+**Consequences of the withdrawal:** no Guard Change Summary is owed for v2.19.10, and no @security
+re-review at a higher tier is owed. Both were owed only because of the withdrawn `scripts/` edit.
+`docs/hld.md:35` (*"one functional idea per version"*) is **honoured again** — the Phase-1.2 knowing
+set-aside is withdrawn together with the scope it covered.
+
+**Classification: CONFIRMED — SECURITY-SENSITIVE, Tier B.** All four snapback conditions measured clear
+this session; `git diff --name-only fd00dd2..HEAD -- scripts/` → **empty (0 files)**. The full re-run,
+with a negative control proving the TIER-1 command can return non-empty, is
+`docs/design-v2.19.10.md` **§F.3**.
+
+## Where the deferred work lives — it is NOT lost
+
+**`docs/design-v2.19.10.md` §J is a self-contained handoff block.** The retrofit cycle builds from §J
+without re-deriving anything: the 14-file enumeration, the Class A / Class B ruling and its
+differential-execution test, the 3 exact `verify-ledger-annotations.sh` lines, the CI assertion with its
+canary self-test, both negative-control results (pre-move **14** ⇒ RED, post-move **0** ⇒ GREEN), the
+`check-attr`-is-unsound evidence, the archive counts (**430 → 416 entries**, **14 × `R100`**), the
+R1-gate-first ordering rule, and the `AC-PL-13` grep-scoping caveat.
+
+`docs/architecture.md` **ADR-088** is **PROPOSED (deferred)** — its number is reserved so the retrofit
+cycle carries it forward without an ADR-number collision.
+
+## What is NOT deferred — and why a blanket revert of the Phase-1.2 commit is forbidden
+
+The Phase-1.2 commit mixed the addendum scope with **genuine corrections to v2.19.10's own pre-existing
+artifacts.** Those corrections **STAY**, because they are true whether or not the retrofit ever ships:
+
+1. **The "owner question" about radical transparency does not exist.** `docs/design-v2.19.10.md` §E.9
+   framed the retrofit as an owner question about whether ADR-037's "radical transparency" covers
+   QA/security reports. **There is no such convention in ADR-037** — `grep -c 'radical transparency'`
+   **scoped to ADR-037's own body** → **0** (and **0** across `docs/architecture.md` at `be92754`,
+   before ADR-088 was appended). `docs/design-v2.19.7.md:82` cited a convention its own ADR does not
+   contain.
+2. **"Newest internal at v2.9.0" is false.** `docs/internal/qa/qa-report-v2.19.4.md` and
+   `docs/internal/security/security-review-v2.19.4.md` are internal, as are v2.15.0/v2.16.0/v2.17.0.
+   **The lapse is intermittent, not a clean cutoff** — root at v2.18.0/v2.19.0, internal at v2.19.4,
+   root again at v2.19.5/.6/.7/.9.
+3. **The §D.1 box's corrected rationale for why `docs/design-v2.19.*.md` ships.** The asymmetry is real
+   and deliberate, but it is **this repository's choice**, not ADR-037's convention.
+
+**`git revert` of the Phase-1.2 commit would re-introduce claims (1) and (2) into v2.19.10 in their
+falsified form, and is therefore not the mechanism used for this separation.** The separation was made
+by marking the addendum deferred and withdrawing it from the build scope, leaving the corrections in
+place.
+
+## The `docs/design-v2.19.*.md` asymmetry is preserved, and must not be "corrected"
+
+Unchanged from the Phase-1.2 addendum and from the original §D.1 box: `docs/design-v2.19.*.md`
+continues to ship in the public release archive. That is deliberate. The **14** pre-existing QA/security
+reports also continue to ship — **that is the deferred defect, knowingly carried into the next cycle,
+not a v2.19.10 regression.** v2.19.10 causes none of it: this cycle's own new QA and security reports
+still land in `docs/internal/qa/` and `docs/internal/security/`, per the binding §D.1 box, which costs
+nothing because it is a destination path rather than extra work.
+
