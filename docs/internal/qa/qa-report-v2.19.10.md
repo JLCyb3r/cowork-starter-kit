@@ -2,19 +2,126 @@
 
 ## Phase: 5 (Testing)
 ## Date: 2026-08-20
-## Tree graded: `release/v2.19.10-plain-language` @ `5814e43` (pushed, local == remote, base `fd00dd2`)
-## CI: HEAD run `32364566078` — conclusion `success`, 0 failed (all jobs `success` or expected-`skipped`).
-## Commit `b67a883` run `32364229736` — conclusion `failure`; job-level breakdown shows exactly ONE
-## failed job (`Version Consistency Check`), 3 expected `skipped` (path/flag-gated), all remaining
-## ~30 jobs `success` — including `Registry sha256 Drift-Verify Check`. Fixed at `5814e43`
-## (README badge). Nothing else was broken by that intermediate commit.
+## Tree graded (2nd pass): `release/v2.19.10-plain-language` @ `2bac293` (pushed, local == remote,
+## base `fd00dd2`). 1st pass graded `5814e43` and REJECTED on `AC-PL-3`; `c4df850` recorded that
+## verdict; `2bac293` is @dev's single-line fix, graded here.
+## CI: `2bac293` run `32366807486` — conclusion `success`, 0 failed (all jobs `success` or
+## expected-`skipped`, independently re-checked job-by-job, not read off the summary line alone).
+## Prior: `5814e43` run `32364566078` success; `b67a883` run `32364229736` failure — job-level
+## breakdown showed exactly ONE failed job (`Version Consistency Check`), fixed at `5814e43`.
 
-## Status: **REJECTED**
+## Status: **APPROVED**
 
 Scope: `AC-PL-1` … `AC-PL-8` only, per `docs/spec.md`'s explicit acceptance-set table and the Phase-1.3
 withdrawal of the `AC-PL-13` "@qa verifies at Phase 5" line. `AC-PL-9` … `AC-PL-13` were not tested;
 their absence is not a coverage gap (spec's own instruction, independently confirmed — no other
 artifact in this tree still points @qa at the deferred ACs).
+
+---
+
+## 0. Re-verification pass (2nd pass, `c4df850` → `2bac293`)
+
+**The 1st pass's §1–§11 below are preserved unmodified as the historical record of what was found and
+how.** This section documents the re-verification of @dev's fix and the two dispositions the
+orchestrator asked to be made explicit. Nothing in §1–§11 is retracted; §1b-i's FAIL is superseded by
+§0a below, not deleted.
+
+### 0a. `WIZARD.md:132` re-read — FAIL clears, no new FAIL introduced
+
+`git diff c4df850..2bac293 --stat` → `WIZARD.md | 2 +-`, 1 file changed — confirms the fix is exactly
+the single line claimed, nothing else in the tree moved. Diff:
+
+```
+- Confirm final bundle once: "Final bundle: [skills]. Continue?" Wait for user confirmation...
++ Confirm final bundle once: "Here's the final list: [skills]. Continue?" Wait for user confirmation...
+```
+
+Extracted the new quoted string (`Here's the final list: [skills]. Continue?`) to a scratch file and
+ran the same 34-term jargon regex used throughout this report: **0 hits.**
+
+- **Q1:** No jargon-list stem match → does not fail.
+- **Q2:** No other technical term present (`skills` is plain English, not listed) → does not fail.
+- **Q3:** Meaning preserved — confirms the same final skill list before proceeding, same register as
+  the `:114` fix (`"Here's what I'd install…"`) it was written to match → does not fail.
+
+**FAIL clears. PASS.**
+
+**No new FAIL introduced, confirmed two ways:** (1) the diff stat above proves no other line changed;
+(2) re-ran the full F4-block jargon scan (`:114-146`) post-fix — the one remaining `bundle` hit at the
+same relative line is `sed -n '132p'` → `grep -oiE bundle | wc -l` = **1**, and it is the
+meta-prose lead-in *"Confirm final bundle once:"*, not the quote (pre-fix that line carried 2 hits —
+meta-prose + quote — independently confirmed via `git show c4df850:WIZARD.md | sed -n '132p' | grep -oiE
+bundle` → 2 lines of output). The meta-prose occurrence is out of scope by the same rule applied
+throughout §1b, unchanged, and was never part of the finding.
+
+### 0b. Explicit disposition — `WIZARD.md:129` and `:128`
+
+Both ruled **OUT of scope**, recorded here rather than left silent:
+
+**`:129` — `- **"Done" with no changes:** Accepted — install the proposed bundle as-is.`**
+The quotes wrap `"Done"` only — a case-label matching what the *user* said, not a string *Claude*
+speaks or displays (contrast with `:121`'s `**Done / keep all:** confirm to proceed.`, which sits
+inside the enclosing `"Here's what I'd install…"` quote spanning `:114-121` and was already graded
+in-scope/PASS as part of §1b string #1). The rest of the line (`Accepted — install the proposed bundle
+as-is`) is Claude-facing behavioral instruction under the `**Edge cases:**` header (`:127`), structurally
+parallel to `:128`/`:130`'s edge-case bullets, none of which are inside a quote or after `Display as:`/
+`say:`/`respond:`. **OUT, by AC-PL-3's own textual scope rule and by the `CONTRIBUTING.md §
+Runtime-string register` definition ("every spoken or quoted string").** Not a close call: even graded
+IN, `"Done"` is a single common word with 0 jargon-list hits — it would trivially PASS either way, so
+the ruling has no live consequence for this cycle's Status, only for the record.
+
+**`:128` — `- **Empty bundle:** Minimum 1 skill. If user drops all suggestions, offer the Personal
+Assistant bundle as a fallback.`**
+No quotes anywhere on this line — `**Empty bundle:**` is a bolded case-label, not a quoted string, and
+the rest is Claude-facing instruction. **OUT, same reasoning as `:129`, more clearly so** since there
+is no quoted fragment to even debate. Confirmed via re-read of `:126-130` as one block (`**Edge
+cases:**` header at `:126`, three bullets at `:127-129`) — this is the same section, same structural
+class, as `:128` and `:129` both sit under it.
+
+**Remaining `bundle`/`pool` occurrences named in the coordinator's message (`:110`, `:112`, `:125`,
+`:134`) were already covered in §1b's original scan and disposed there as meta-prose/heading — not
+re-litigated here since nothing about them changed.
+
+### 0c. @dev's reported adjacent-check numbers — independently re-derived, not accepted on report
+
+Every number below was re-run by me against the live `2bac293` tree, not read off @dev's commit
+message:
+
+| Check | @dev reported | Independently re-derived | Match |
+|---|---|---|---|
+| AC-PL-7 row 5: `never silently performs` | 1 | `grep -oF … WIZARD.md \| wc -l` → **1** | Y |
+| AC-PL-7 row 5: `reversibly` | 1 | → **1** | Y |
+| AC-PL-7 row 5: `never on its own` | 1 | → **1** | Y |
+| AC-PL-7 row 6 Leg A half 1 (`:123`, scoped) | 1 | `sed -n '123p'` then `grep -oF … \| wc -l` → **1** | Y |
+| AC-PL-7 row 6 Leg A half 2 (`:123`, scoped) | 1 | → **1** | Y |
+| AC-PL-7 row 6 Leg B (file-wide) | 2 | → **2** | Y |
+| AC-PL-7 row 6 anchor uniqueness | 1 | `grep -n 'No URL paste, no external source' WIZARD.md \| wc -l` → **1**, still at `:123` | Y |
+| AC-PL-7(c) deny-list on `:123` | 0 | scoped `grep -oiE` of the 9-pattern deny-list → **0** | Y |
+| AC-PL-7(c) deny-list on `:339` | 0 | scoped, same regex → **0** | Y |
+| Numeral `25` at `:119` | verbatim | `sed -n '119p'` → *"…25 skills available…"* — verbatim | Y |
+| TIER-1 (`scripts/`) | empty | `git diff --name-only fd00dd2..2bac293 -- scripts/` → **empty** | Y |
+| TIER-2 (`cowork.lock.json`/`.cowork-allowlist.json`) | empty | → **empty** | Y |
+| TIER-3 (`.github/CODEOWNERS`) | empty | → **empty** | Y |
+| AC-PL-6 registry row count (unaffected, sanity re-check) | — | **30** (unchanged) | — |
+
+**All 14 numbers held under independent re-derivation. No sixth cannot-fail instrument found in this
+fix pass** — every check I re-ran used my own command against the live tree, not @dev's stated output,
+and every one landed where claimed.
+
+### 0d. Orchestrator's correction, confirmed
+
+`docs/patterns.md:55` ("Claim scope wider than its verifying instrument") is at **WATCH 1/3**, `:56`
+("Ambiguous-unit numeric claim") is at **WATCH 2/3** — matches §11 below, no further action needed here.
+
+### 0e. Revised verdict
+
+7/8 ACs were already clean at the 1st pass. `AC-PL-3` now clears on independent re-read, with no new
+defect introduced and two previously-silent scope questions (`:128`, `:129`) now explicitly
+dispositioned rather than left implicit. CI green at `2bac293` (job-by-job, not summary-only).
+
+**Status flips to APPROVED.** §1's Findings Summary and Verdict (bottom of this report) are updated
+accordingly; the original §1-§11 narrative above is left intact as the record of the 1st-pass finding
+and its remedy.
 
 ---
 
@@ -74,13 +181,13 @@ meta-prose:
 | 3 | External-source refusal (*"Installing skills from external sources isn't supported yet — the wizard installs only from the local, vetted pool (already reviewed and included with this kit)."*) | `:123` | N | N | Y | **PASS.** `pool` now inline-defined in the same sentence. Doubles as AC-PL-7 row 6 — see §2. |
 | 4 | Role-generation display (*"Installed skills will help you with: […]"*) | `:125` | N | N | Y | **PASS** |
 | 5 | *"Want more options?"* | `:132` (edge case) | N | N | Y | **PASS** |
-| 6 | **`"Final bundle: [skills]. Continue?"`** | `:132` | **Y** | — | — | **FAIL — see §1b-i, BLOCKER** |
+| 6 | **`"Final bundle: [skills]. Continue?"`** | `:132` | **Y (1st pass)** | — | — | **FAIL at 1st pass, see §1b-i — FIXED, re-read PASS at §0a (now `"Here's the final list: [skills]. Continue?"`)** |
 | 7 | Fast-track offer (*"Basics saved. 1) Keep going…2) Start now…"*) | `:145` | N | N | Y | **PASS** |
 | — | Numeral `25` (*"25 skills available"*) | `:119` | N/A | N/A | Y | **PASS** — survives verbatim; the only instrument for this is this row (no CI job checks it). |
 
-**6/7 spoken strings PASS. 1/7 FAILS — see §1b-i.**
+**1st pass: 6/7 spoken strings PASS, 1/7 FAILS — see §1b-i. 2nd pass (post-fix): 7/7 PASS — see §0a.**
 
-#### 1b-i. BLOCKER — `WIZARD.md:132`, `"Final bundle: [skills]. Continue?"` fails Q1
+#### 1b-i. BLOCKER at 1st pass (FIXED — see §0a) — `WIZARD.md:132`, `"Final bundle: [skills]. Continue?"` fails Q1
 
 `bundle` is Jargon-List term #19. This exact quoted string is unchanged by this cycle's diff
 (`git diff fd00dd2..HEAD -- WIZARD.md | grep -n "Final bundle"` → 0 hits). Re-derived the full pre-edit
@@ -316,17 +423,21 @@ record rather than silently carried forward.
 
 | # | Finding | Severity | Status |
 |---|---|---|---|
-| 1 | `WIZARD.md:132` `"Final bundle: [skills]. Continue?"` fails Q1 — `bundle` unrewritten, no inline definition | **BLOCKER** | Open — remedy in §1b-i |
+| 1 | `WIZARD.md:132` `"Final bundle: [skills]. Continue?"` failed Q1 — `bundle` unrewritten, no inline definition | **BLOCKER (1st pass)** | **FIXED at `2bac293`, re-read PASS — see §0a** |
 | 2 | `context/.kit-migrations/` glossed only as "folder" in `self-apply`/`self-archive` rows | INFO | Not blocking |
 | 3 | Group A negative-control claim ("current description and its truncation MUST fail Q1") holds for full descriptions and for `anti-ai-slop`'s truncation, but not for `prompt-gate`'s truncation | INFO | Precision correction only, does not affect post-edit PASS |
-| 4 | Assignment brief's `docs/patterns.md:55` WATCH-count citation (2/3) does not match the live file (1/3) | INFO | Corrected in §11 |
+| 4 | Assignment brief's `docs/patterns.md:55` WATCH-count citation (2/3) does not match the live file (1/3) | INFO | Corrected in §11; orchestrator confirmed at §0d |
+| 5 | `WIZARD.md:129` (`"Done"` case-label) and `:128` (`Empty bundle:` label) — AC-PL-3 scope disposition | N/A | **Ruled OUT of scope — explicit disposition at §0b** |
 
 ## Verdict
 
-**REJECTED.** 7 of 8 acceptance criteria (`AC-PL-1`, `AC-PL-2`, `AC-PL-4`, `AC-PL-5`, `AC-PL-6`,
-`AC-PL-7`, `AC-PL-8`) verify clean against fresh, independently-built fixtures and diffs. `AC-PL-3`
-fails on one of its own two in-scope spoken strings (`WIZARD.md:132`). This is a small, precisely
-located, one-line fix — not a design defect and not grounds to revisit any other AC. **Remedy:** rewrite
-the quoted string at `WIZARD.md:132` to drop or inline-define `bundle`, in the same register as the
-fix already shipped at `WIZARD.md:114`. Re-run this report's §1b table (row 6 only) after the fix; no
-other section of this report requires re-verification.
+**APPROVED (2nd pass, tree `2bac293`).** All 8 in-scope acceptance criteria (`AC-PL-1` … `AC-PL-8`)
+verify clean against fresh, independently-built fixtures and diffs. The 1st pass's single BLOCKER
+(`AC-PL-3` failing on `WIZARD.md:132`) was fixed by a single-line, surgical edit (`git diff c4df850..
+2bac293 --stat` confirms exactly 1 file / 1 line changed) and independently re-read clean at §0a — no
+new FAIL introduced. The two scope questions the orchestrator flagged (`WIZARD.md:129`, `:128`) are now
+explicit recorded dispositions (both OUT of scope, §0b) rather than silent omissions. @dev's 14 reported
+adjacent-check numbers were independently re-derived, not accepted on report, and all 14 held (§0c). CI
+green at `2bac293`, job-by-job (§0/header). No sixth cannot-fail instrument found in either pass.
+
+**Recommendation: proceed to Phase 6 (`/audit`).**
