@@ -640,3 +640,383 @@ corrective action was the defect vector** — the fixture anchored on the string
 rewriting; the appositive the AC required adding narrowed the term; the jargon term the AC required
 removing (`verify-then-swap`) took the invariant's order with it. That is now five instances across
 two phases and it is the generalizable finding of v2.19.10, more than any individual row.
+
+---
+---
+
+# Appendix — Phase 6 Re-audit of the Remediation Delta
+
+## Range: `09bbced..eaadeb6` (branch HEAD, pushed)
+## Date: 2026-08-20T14:35:00Z
+## Status: **PASS — 0 CRITICAL, 1 WARNING, 5 INFO.** Phase 7 remains reachable.
+
+Scoped to the delta @dev landed after the audit above. The audit body is unchanged; this appendix is
+appended per the append-only convention. Same binding method: every check run against a tree where its
+property is violated, and observed RED, before its green was trusted.
+
+**Two @dev overrides of my advice — both correct, and one of them corrected me.** Recorded here
+because a reviewer whose own recommendation is rejected on sound grounds should say so in the record,
+not quietly.
+
+---
+
+## Delta Findings Summary
+
+| ID | Severity | Surface | Description |
+|----|----------|---------|-------------|
+| **B1** | INFO | permissions | The A2 replacement is **true but incomplete on two of three rows.** `self-apply` claims only apply-denial and `self-archive` only move-denial, yet each skill's own `SKILL.md` states it is *"never itself apply-writable **or** move-eligible"* — both channels. `self-upgrade` alone names both. Safe-side error (understates), but the asymmetry invites a contrast inference. |
+| **B2** | **WARNING** | external-api | **A7 was fixed on the surface that does not render and left on the surface that does.** The registry row now reads *"the copies included with this kit on your own computer"*; `WIZARD.md:339` — the closing message a real user reads at setup — still reads *"against the latest available versions"*. The two surfaces now contradict each other on the same skill. |
+| **B3** | INFO | configuration | The A4 remedy uses `grep -cF` (**lines**) as an occurrence test — S9 recurring inside the remedy for A4. Demonstrated: a third parser copy on a line that already carries one reads as **2** while the true occurrence count is **3**. Does **not** reopen the demonstrated attack. |
+| **B4** | INFO | configuration | A4's informative `::error::` never prints in the total-drift case: `grep -cF` exits 1 on zero matches and `set -e` kills the assignment first. Fail-closed (exit 1, verified) but undiagnosable. |
+| **B5** | INFO | logging | A9's append-only correction note credits the executed anchor guard to *"@dev's own Phase-4 verification output"*; the record shows it was **@qa at Phase 5** (`qa-report-v2.19.10.md:272-278`). |
+| **B6** | INFO | ui | `PROMOTE.md:34`'s substituted anchor is unbackticked and runs into the following words — *"the exact CONTRIBUTING.md § Worked-example authoring rules, rule 2 6-token pattern"*. Readability only. |
+
+**Carried unfixed, correctly outside the remediation scope (A1–A9, A12):** A11 (`self-apply`'s actor
+inversion and rollback mis-timing), A13 (`prompt-gate`'s *"a few"* for *"up to 3"* — re-verified
+present), A14 (`CHANGELOG.md:37` still attributes `never on its own` to `self-archive`; re-verified
+present), A15 (AC-PL-6's aggregate-count compensating pair).
+
+---
+
+## 1. The `skills/self-apply/SKILL.md` edit and its `sha256` — **LEGITIMATE and COMPLETE**
+
+This is the one change in the delta that touches a supply-chain control surface, so it was verified
+from four independent directions rather than one.
+
+### 1a. The edit is surgical — proven by bytes, not by reading the diff
+
+```
+sed 's|CONTRIBUTING.md § Worked-example authoring rules, rule 2|CONTRIBUTING.md:129|' post.md > reverted.md
+cmp pre.md reverted.md   →  identical
+```
+
+**Reversing only the anchor substitution reproduces the pre-edit file byte-for-byte.** Nothing else in
+the mandatory safety skill moved: the deny-list (`:53`), the turn-two confirmation (`:65-73`), the
+approval-verb flag (`:80`), the rollback path (`:108`) are all byte-unchanged. The sentence's security
+semantics are intact — same recipe, same *"rendered inline, flagged, and never treated as a reason to
+skip or alter the confirmation flow."*
+
+**The frontmatter is byte-identical (lines 1-12).** This matters: AC-PL-1 explicitly excludes
+*"the `skills/<slug>/SKILL.md` frontmatter `description:` fields"* from scope. @dev edited body prose
+at `:45` for A1 and did not touch the excluded surface.
+
+### 1b. The hash is correct, and exactly one hash moved
+
+```
+shasum -a 256 skills/self-apply/SKILL.md  →  0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4
+registry field 8 (self-apply)             →  0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4
+```
+
+**Enumerated every registry row changed in the delta and diffed the `sha256` cells specifically.** Five
+rows changed description text; **exactly one changed its hash.** `self-archive` (`7b12d467…`),
+`self-upgrade` (`a4abd71a…`), `pull-updates` (`cb33be6c…`) and `anti-ai-slop` (`92c56b91…`) are
+byte-identical before and after. That is the correct outcome and it is also the negative control on
+the change: a shotgun re-hash would have moved all of them, and a lazy one would have moved none.
+
+### 1c. The drift-verify chain is whole — all 30 rows, not just the one that moved
+
+Replicated the CI step's logic independently over every valid-hex row:
+
+```
+verified_ok=30   drift_or_missing=0
+```
+
+**Negative control on my own verifier**, because a clean run from an untested loop is worth nothing:
+corrupting `self-apply`'s stored hash to all-zeros in a scratch copy yields `DRIFT DETECTED:
+self-apply`, exactly 1 failure. The verifier can report drift; the 30/0 means the chain holds.
+
+`awk` re-derives **30** valid-hex rows — the AC-PL-6 pin needs no bump.
+
+### 1d. Completeness — nothing else references those bytes
+
+- **The superseded hash `082f202f…` appears nowhere in the tree** (`grep -rlF` across everything but
+  `.git` → no files). No orphaned copy in a doc, a test, or a second manifest.
+- **`cowork.lock.json`, `.cowork-allowlist.json` and `templates/cowork.install.template.json` contain
+  no `self-apply` entry at all** — the template holds a `[64-char … placeholder]`, not a real hash, and
+  there is no repo-tracked `cowork.install.json`. **There is exactly one chain: registry → pool file,
+  and it verifies.** This is also why TIER-2 can legitimately stay empty: editing a `builtin` pool
+  skill does not force a lock change.
+
+**One forward-looking note (INFO, no action).** A *workspace* that already installed v2.19.9's
+`self-apply` carries the old hash in its own `cowork.install.json`. On the next apply targeting that
+file, `SKILL.md:69` sees the mismatch and re-runs `canonicalize-scan.sh`. That is a degradation toward
+**more** scrutiny, not less, and `pull-updates` exists to reconcile it. Correct behaviour, worth
+knowing.
+
+### 1e. It does not escalate the tier — and the spec line that looks like it might
+
+`docs/spec.md`'s AC-PL-1 *"Does NOT cover"* note says editing a SKILL.md *"needs a
+`scripts/registry-hash.sh` regeneration — and under TIER-1 would snap the cycle back to Tier A."*
+Read literally that would escalate any SKILL.md edit. **It does not, and the mechanical check in the
+snapback table's own row is what settles it:** TIER-1 is *"any file under `scripts/` added or
+**modified**"*, checked by `git diff --name-only base..head -- scripts/` → **empty**.
+**Running** a script is not **modifying** it, and `scripts/registry-hash.sh` is confirmed present and
+byte-unchanged across the whole range. No escalation.
+
+**Verdict: the `SKILL.md` edit and its `sha256` update are legitimate, minimal, correct, and
+complete.**
+
+---
+
+## 2. Are the replacement sentences actually true?
+
+This is the class that produced A2/A3/A6/A7/A12, and @dev has now performed the same operation on the
+same surface, so each claim was checked against the skill's real behaviour rather than against the
+finding it was answering.
+
+### A2 — `deny-listed` rejection: **@dev was right and I was wrong**
+
+I proposed *"on the deny-list: the apply channel can never target it."* @dev refused it because
+**`deny-listed` is Jargon-List term #5 of 34** — verified: the list carries both `denylist` and
+`deny-listed`. Adopting my wording verbatim would have reintroduced, into the fix, the exact defect
+the cycle exists to remove. **That is the correct call, and it is a fourth instance of
+mandated-remedy-is-defect-vector — this time with the security reviewer's own recommendation as the
+vector.** Recorded as such.
+
+The shipped replacements scope each claim to a named channel:
+
+| row | shipped claim | ground truth | verdict |
+|---|---|---|---|
+| `self-apply` | *"can never be edited through the kit's own change-approval process — it sits on a fixed, protected list that process always skips"* | `SKILL.md:53` deny-list, *"evaluated FIRST and always wins"*, names this file explicitly | **TRUE.** Semantically equivalent to the pre-edit *"deny-listed — never itself an apply target"* — which is the right target. The over-broad *"by any other skill"* is gone. |
+| `self-archive` | *"never deletes anything — it only moves a file into your archive folder, so nothing is lost and you can always move it back yourself"* | `:15` *"never to delete anything, only to move"*; `:64` *"True delete is OUT of scope"* | **TRUE, and A6 correctly fixed.** The claim moved from *the skill* undoing it to *the user* being able to — which is what `:73`'s *"irreversible-by-forward-motion"* actually leaves true. |
+| `self-upgrade` | *"checks the new version against the version you already trust before it takes over — never the other way around"* | `:41` *"Verifies the incoming new machinery UNDER the pre-upgrade (known-good) gate BEFORE it goes live — verify-then-swap, never swap-then-verify"* | **TRUE, and A3 correctly fixed.** Order is right; the explicit negative clause survives; the atomicity substitution (*"never leave things half-finished"*) is gone. |
+| `pull-updates` | *"against the copies included with this kit on your own computer, comparing the current bytes on both sides"* | *"fresh-bytes-on-both-sides against the on-disk pool"* | **TRUE.** Locality restored, the two-sided fresh read restored. But see **B2** — the rendering surface was not updated. |
+| `anti-ai-slop` | *"Breaks up text… Mixes up sentence lengths instead of the same-size rhythm AI tends to produce, cuts stock phrases…"* | removes *AI-tell vocabulary, uniform sentence rhythm, empty hedging* | **TRUE, and A12 correctly fixed** — the inversion is gone and the third dropped target (*stock phrases* ≈ AI-tell vocabulary) is restored. |
+
+**Leg (c) re-run on the rewritten rows: 0 → 0.** No exception token entered on a rewrite whose shape is
+addition — the S14 discipline applied to a surface it was not originally written for.
+
+### B1 — the one thing that is true but incomplete
+
+Both `self-archive` (`SKILL.md:15`) and `self-upgrade` (`:14`) state they are *"never itself
+**apply-writable or move-eligible**"* — **both** channels — and `self-apply`'s deny-list at `:53`
+explicitly names all three files. `self-apply` is likewise move-denied by `self-archive`'s
+positive allow-list (`:46(a)`, NOT under `.claude/`).
+
+Shipped: `self-apply` names only editing; `self-archive` names only moving; `self-upgrade` names both.
+**Two of three understate their own protection** — the safe-side error, and no sentence is false. The
+residual risk is *contrast inference*: a reader who sees editing named for `self-apply` and only moving
+named for `self-archive` may conclude `self-archive` **can** be edited. Four words each closes it
+(*"…changed or moved…"*, as `self-upgrade` already does). INFO; recorded for the retro rather than
+raised as a gate item.
+
+### B2 — A7's fix landed on the wrong surface (the one WARNING)
+
+| surface | renders to a user? | shipped text |
+|---|---|---|
+| `curated-skills-registry.md:41` | **No** — Group B has zero render paths (design §A) | *"against the copies included with this kit on your own computer"* ✅ |
+| `WIZARD.md:339` closing message | **Yes** — spoken at the end of every setup | *"checks your installed skills against **the latest available versions** when you ask"* ❌ |
+
+The remediation corrected the copy nobody reads and left the copy everybody reads. The two now
+contradict each other on the same skill, and the surviving one is the one that carries the
+implied-remote reading nineteen lines from *"No URL paste, no external source, no registry
+`source_url` direct fetch."*
+
+**Not CRITICAL, not a gate item:** no behaviour changes, `never on its own` is intact (verified,
+count 1), and it is a wording defect in prose. But it is the only finding in the delta where the fix
+was applied and still leaves the original defect live where it matters.
+**Remedy:** in `WIZARD.md:339`, *"the latest available versions"* → *"the copies included with this
+kit"*. One phrase. Re-run leg (c) on the closing message afterwards (currently 0 → 0) and the AC-PL-2
+item diff (currently zero drops, zero additions).
+
+---
+
+## 3. Does the A4 remedy hold, including against its own self-match mode?
+
+**Pressed in all three directions, by running it — not by reading it.**
+
+| fixture | count | check result |
+|---|---|---|
+| the real shipped tree | **2** | **PASS** |
+| assertion copy replaced with **the exact whole-line drift this audit demonstrated** (`$0 ~ /[0-9a-f]{64}/`) | **1** | **FAIL — the attack is blocked** |
+| the naive **unsplit** form @dev's first draft used | **3** | **self-match reproduced** |
+
+**@dev's account is accurate, and the split-fragment technique is what defeats the self-match.** I
+rebuilt the unsplit variant and it counts 3 — the failure mode is real, and it was caught by execution
+rather than inspection, which is the standard this cycle has been held to throughout.
+
+**Why the asserted fragment is the right span.** It covers `s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]`
++ `{64}$/) c++} END{print c+0}` and excludes only the `awk -F'|' '{` prefix and the file operand.
+Every drift living **outside** the fragment (field separator, operand, a pattern prefix) changes the
+resulting count away from 30 and trips the hard pin — fail-loud. Every drift that could yield exactly
+30 on a damaged tree must alter `$8`, the `^` anchor, or the character class — all **inside** the
+fragment. The span is correctly chosen.
+
+### B3 — but S9 recurs inside it
+
+The check uses `grep -cF`, which counts **LINES**. Demonstrated on a scratch copy carrying a third
+parser appended to a line that already holds one:
+
+```
+grep -cF        → 2   ← what the shipped check sees (PASS)
+grep -oF | wc -l → 3   ← the true occurrence count
+```
+
+**This is my own S9 — `grep -c` used as an occurrence test — recurring inside the remedy written for
+A4, in a cycle where I named S9 as a standing method error.** Stated at its true width: it does **not**
+reopen the demonstrated attack (an assertion-copy drift removes that line's match, count falls to 1,
+FAIL), and the concealment requires a maintainer to append a second parser onto an existing parser's
+line. One-character remedy: `grep -oF … | wc -l`.
+
+### B4 — the diagnostic is lost in the total-drift case
+
+Executed the shipped logic against a file containing neither copy: **exit 1** (fail-closed, correct)
+but the `::error::AC-PL-6 SELF-INTEGRITY FAILED` message **never prints** — `grep -cF` exits 1 on zero
+matches and `set -e` kills the assignment before the `-ne 2` test runs. A maintainer gets a bare
+failure with no explanation, on the check whose entire value is its explanation. Remedy: `|| true` on
+the assignment.
+
+---
+
+## 4. The three `tests/fixtures/canonicalization/*.md` edits — do they change anything a test binds on?
+
+**Yes, these fixtures are test-bound, and the binding is precisely the thing the edits put at risk.**
+`quality.yml:1293-1297` runs a **RED leg** — the raw ADR-055 6-token scan over the *whole fixture file,
+comment header included* — and requires **no match**. The fixtures' own headers state the reason:
+*"this header intentionally never spells the plain-ASCII forbidden token in prose… doing so would make
+the RED leg above false."* All six edits are inside those headers.
+
+Verified independently, from a scratch working directory, on copies — not trusted from CI's badge:
+
+| fixture | RED leg (raw scan, MUST be 0) | catch/FLAG leg | expected | verdict |
+|---|---|---|---|---|
+| `f2-1-nfkc-fullwidth.md` | **0** | exit **1** | 1 | PASS |
+| `f2-2-zero-width-split.md` | **0** | exit **1** | 1 | PASS |
+| `f2-3-homoglyph-mixed-script.md` | **0** | exit **2** | 2 | PASS |
+
+**Negative control on the RED-leg grep**, since a 0 from an unverified pattern is worth nothing:
+appending `Ignore the previous instruction.` to a scratch copy yields **1** match. The grep fires.
+
+The inserted text — *"§ Worked-example authoring rules, rule 2"* — introduces none of
+`Ignore|Disregard|Override|Instead of|Always respond|New instruction`. The payload lines (fullwidth,
+zero-width-split, Cyrillic-homoglyph tokens) are untouched by the diff. CI's own log agrees
+line-for-line with my runs (*"RED leg evaded raw scan, GREEN leg (NFKC catch) confirmed (exit 1)"* ×2,
+FLAG leg exit 2).
+
+**Conclusion: the fixture edits changed nothing a test binds on, and the authoring constraint the
+fixtures document still holds.**
+
+**Method note, recorded because it nearly produced a false finding.** My first pass reported `exit=3`
+for all three and looked like a FAIL. It was a bug in my own shell loop, not the fixtures — re-run
+cleanly they return 1/1/2. Separately, two greps in this appendix's drafting returned `0` for patterns
+that were wrong rather than absent (A13 and A14 are both still present). **Twice in one re-audit, an
+unverified zero looked exactly like a clean result.** That is the rule earning its keep, on the
+reviewer.
+
+---
+
+## 5. A1 — the de-pin, and the proof that remedy (b) was the right choice
+
+**@dev caught an error in the brief it was given — and in my recommendation.** I proposed anchoring to
+`§ Placeholder authoring rules, rule 2`. Measured:
+
+```
+114: ## Placeholder authoring rules
+157: ### Worked-example authoring rules (S1 security carry-forward)
+162: 2. **Scan for forbidden imperative tokens.** … grep -iE '\b(Ignore|Disregard|…)\b' <SKILL.md>
+```
+
+The recipe is rule 2 of **`### Worked-example authoring rules`**, not of `## Placeholder authoring
+rules`. @dev read both sections rather than trusting the anchor it was handed. The anchor it chose is
+**unique** (`grep -oF 'Worked-example authoring rules' → 1`), which is the same uniqueness criterion
+row 6's leg A requires of its own anchor.
+
+**The empirical proof that de-pinning beat re-pinning:** the recipe was at `:129` before this cycle,
+`:154` after the §Runtime-string register insertion, and **`:162` now**, because @dev's own +8-line
+CONTRIBUTING.md edit moved it again. **The anchor moved twice inside a single cycle.** A re-pin to
+`:154` would already be stale; the section citation survived untouched. Remedy (b) was correct, and the
+delta is its own evidence.
+
+### Residual census
+
+```
+live surfaces (excluding docs/ and scripts/) still citing CONTRIBUTING.md:129  →  0
+```
+
+7 files now carry the section anchor: `skills/self-apply/SKILL.md`, `PROMOTE.md`, `quality.yml`,
+`CHANGELOG.md`, and the three canonicalization fixtures. The remaining `:129` occurrences are
+`scripts/canonicalize-scan.sh` (**5 — deliberately untouched, TIER-1, reported not fixed: correct, and
+touching them would have snapped the cycle to Tier A**) and append-only records under `docs/`,
+including 6 in this very audit, which are the record of the defect and belong there.
+
+**The other two displaced anchors from A1 (`:77` SkillRisk → `:102`, `:309` release-tagging → `:334`)
+are cited only from append-only `docs/` records and remain open.** Carried to the retro alongside
+`scripts/`'s five.
+
+### A5, A8, A9
+
+- **A5 fixed.** `grep -oF 'Add from full pool' WIZARD.md` → **0**; the new label appears **2×**
+  (`:100` routing reference and `:119` menu item), consistent.
+- **A8 fixed, and well.** The `§ Runtime-string register` scope note names the specific unrewritten
+  strings (Path A draft-team offer, zero-coverage message, *"both of which still say 'the pool'"*) and
+  states the correct default: *"treat an unrewritten string as not-yet-verified, not as evidence the
+  rule doesn't apply to it."*
+- **A9 fixed** by an append-only correction note that states the mechanism, gives the guard form, and
+  is honest that the file ships publicly. **B5:** it credits the executed guard to @dev at Phase 4;
+  the record shows @qa at Phase 5.
+
+---
+
+## 6. Classification, deferred set, CI, archive — re-derived on the FULL range `fd00dd2..eaadeb6`
+
+| condition | result |
+|---|---|
+| TIER-1 `-- scripts/` | **empty** |
+| TIER-2 `-- cowork.lock.json .cowork-allowlist.json` | **empty** |
+| TIER-3 `-- .github/CODEOWNERS` | **empty** |
+| TIER-4 `\| grep -c '^scripts/'` | **0** |
+
+Non-vacuity was established in the audit body (16 tracked files under `scripts/`; all three named
+files tracked; the TIER-1 command returns `scripts/verify-ledger-annotations.sh` over a range where
+`scripts/` genuinely changed). `scripts/registry-hash.sh` confirmed present and byte-unchanged.
+
+**Tier B HOLDS on the final range. No Guard Change Summary is owed.**
+
+**Deferred set still cleanly out:** 0 renames under `docs/`, `.gitattributes` unmodified, **14** leaked
+reports still at `docs/` root — unchanged from Phase 2 and from the audit body.
+
+**Regression check on the delta** (`WIZARD.md` and `curated-skills-registry.md` both moved again):
+AC-PL-7 row 5 all three tokens at 1; row 6 leg A both halves on `:123` **under the S13 fail-closed
+guard**, leg B = 2; leg (c) on the closing message 0 → 0; AC-PL-2 item diff zero drops, zero additions;
+AC-PL-6 count 30.
+
+**CI on `eaadeb6`** (run `32372280457`): **31 success · 0 failure · 3 skipped** — the same three
+`pull_request`-gated jobs. Both AC-PL-6 steps ran (`conclusion: success`), and CI's own numbers
+reproduce mine exactly: `clean: 30 / pipe: 29 / compound: 29`, `AC-PL-6 PASSED — 30 rows … (pin: 30)`.
+The assertion step's new self-integrity gate passed ahead of it, meaning `PARSER_COPIES` was 2 in CI as
+it is locally. **A16 stands: still no PR, so those three jobs have never run against this head.**
+
+**Archive check on `eaadeb6`:**
+
+```
+git archive HEAD | tar -tf - | grep -c 'security-.*v2\.19\.10'  →  0     ← required
+git archive HEAD | tar -tf - | grep -c 'security-.*v2\.19'      →  7     ← negative control, grep works
+git archive HEAD | tar -tf - | grep -c '^docs/internal/'        →  0
+```
+
+Neither report ships.
+
+---
+
+## Delta Summary
+
+**PASS — 0 CRITICAL.** The remediation is sound and, in four places, better than what it was asked to
+do: it rejected a jargon-bearing phrase I recommended, corrected a section anchor both the brief and I
+had wrong, caught its own check self-matching by running it, and produced the strongest available
+evidence for de-pinning by watching the anchor move a second time within the same cycle.
+
+The `self-apply` + `sha256` change is **legitimate, minimal, and complete**: surgical by `cmp`,
+frontmatter untouched, exactly one hash moved, all 30 rows re-verified with a firing negative control,
+the superseded hash absent from the tree, and no second manifest holding those bytes. The security
+fixtures are unharmed on the leg that could have been harmed. The replacement sentences are **true** —
+two of them incompletely so, in the safe direction (**B1**).
+
+**One WARNING: B2.** A7's fix landed on the registry row, which has zero render paths, and skipped
+`WIZARD.md:339`, which is spoken to every user at the end of setup. The defect I filed is still live
+on the only surface where it was ever visible, and the two copies now disagree. One phrase.
+
+**B3 is the finding I would want read at the retro alongside B2**, because of what it is rather than
+what it costs: `grep -c` used as an occurrence test, inside the remedy for A4, in the cycle whose own
+S9 named that error. Together with @dev's self-matching first draft and my own rejected wording, the
+delta contributes three more instances to *mandated-remedy-is-defect-vector* — and two more to the
+companion rule, since twice during this re-audit an unverified zero looked exactly like a clean result.
