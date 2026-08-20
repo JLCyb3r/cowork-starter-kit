@@ -19,6 +19,38 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.10] - 2026-08-20
+
+**"Plain Language: say it the way she'd say it."** Five runtime surfaces spoke to a non-technical
+user in the maintainer's engineering register. The kit's own no-jargon rule already existed but was
+scoped to SEO/positioning copy only.
+
+- **Six `curated-skills-registry.md` descriptions rewritten** in plain English: `self-apply`,
+  `self-archive`, `self-upgrade`, `pull-updates` (jargon-dense infrastructure rows, rewritten on
+  severity grounds even though no render path currently surfaces them to a user), and `prompt-gate`,
+  `anti-ai-slop` (matched-and-truncated rows — the role-generation ≤12-word fallback now reads as a
+  standalone sentence). A new inline gate in `.github/workflows/quality.yml`'s
+  `registry-sha256-check` job pins the registry's row-structure integrity at exactly 30 valid-hex
+  rows, landed in its own commit before any description was touched.
+- **The wizard's setup-complete closing message rewritten** — every technical term inline-defined,
+  including inside parentheticals, with every listed file and skill still named and all three of
+  `self-archive`'s safety phrases (`never silently performs`, `reversibly`, `never on its own`)
+  preserved verbatim.
+- **The F4 bundle-customization menu's spoken strings rewritten** — `pool`, `bundle`, `optional tier`,
+  and `cross-cutting` replaced with plain language. The pool-boundary refusal string keeps its
+  external-sources warning byte-for-byte and only adds an inline definition of "pool."
+- **`examples/personal-assistant/context/working-rules.md`'s Data locality clause** now defines
+  `APIs` inline instead of leaving it undefined — the sole finding from an audit run across all 8
+  `working-rules.md` files. All six protected data categories and both negative guarantees survive
+  unchanged.
+- **A new `## Runtime-string register` section in `CONTRIBUTING.md`** names the in-scope runtime
+  surfaces and the plain-English rule, with a dated forward-pointer from the existing SEO/positioning
+  no-jargon row in `docs/spec.md`.
+- **A second functional idea proposed mid-cycle — relocating 14 pre-existing internal QA/security
+  reports out of the public release archive — was withdrawn at the gate** once it was found to force a
+  Tier B → Tier A escalation for what is otherwise a wording-only PATCH. It is deferred to its own
+  future cycle; nothing about it shipped here.
+
 ## [2.19.9] - 2026-08-11
 
 **"Truth Repair: the entry point that never fired."** The kit asserted, across 14 files, that Cowork
