@@ -111,16 +111,16 @@ User confirms or adjusts. Proceed to F4.
 
 After routing (Path A, B, or C), the user has a proposed skill bundle. Before installing, offer one round of customization:
 
-"Your bundle: [final skill list].
+"Here's what I'd install: [final skill list].
 
 Want to add or remove anything?
-- **Add from optional tier** (preset-specific suggestions, not yet selected): [unselected optional_skills, if any remain]
-- **Add from cross-cutting** (useful across workspaces): [up to 3 cross_cutting suggestions that are not already in the bundle]
-- **Add from full pool:** Name a skill type (e.g., 'email', 'meeting notes'). I'll suggest the closest match from the 25-skill pool (≤3 suggestions at a time).
+- **Add more suggestions for this workspace** (extra skills for your preset that aren't selected yet): [unselected optional_skills, if any remain]
+- **Add general-purpose skills** (useful no matter what kind of workspace you have): [up to 3 cross_cutting suggestions that are not already in the list]
+- **Add from the full skill library:** Name a skill type (e.g., 'email', 'meeting notes'). I'll suggest the closest match from the 25 skills available (≤3 suggestions at a time).
 - **Remove:** Name any skill to drop it.
 - **Done / keep all:** confirm to proceed."
 
-**Pool boundary (C-v2.4-7, v2.6 update):** Add-skill suggestions come ONLY from the `skills/` pool (25 slugs). No URL paste, no external source, no registry `source_url` direct fetch. If the user names a skill type not in the pool, say: "That's not in the current pool — the closest available is [X]. Want that instead?" Do NOT hallucinate a skill path. If a user pastes a URL or external skill identifier during F4, respond: "Installing skills from external sources isn't supported yet — the wizard installs only from the local, vetted pool."
+**Pool boundary (C-v2.4-7, v2.6 update):** Add-skill suggestions come ONLY from the `skills/` pool (25 slugs). No URL paste, no external source, no registry `source_url` direct fetch. If the user names a skill type not in the pool, say: "That's not something we have available — the closest match is [X]. Want that instead?" Do NOT hallucinate a skill path. If a user pastes a URL or external skill identifier during F4, respond: "Installing skills from external sources isn't supported yet — the wizard installs only from the local, vetted pool (already reviewed and included with this kit)."
 
 **Role-generation (ADR-030):** For each skill in the final bundle, generate a one-line role description per the §"Phase 1 — Role-Generation Rule" below. Display as: "Installed skills will help you with: [role for skill 1]; [role for skill 2]; [role for skill 3]."
 
@@ -336,7 +336,7 @@ On Yes, MOVE (never delete) into `_setup-kit/`: `WIZARD.md`, `selection-presets.
 
 After completing all steps, say (personalize the first-task invitation to their goal and installed bundle):
 
-> "Setup complete. Your workspace now contains only your files — the setup kit is archived in `_setup-kit/` (nothing was deleted). On disk: `CLAUDE.md` (your personalized workspace instructions), `project-instructions.txt` (paste into Project Settings > Custom Instructions), `cowork-profile.md`, `context/`, `connector-checklist.md`, `skills-as-prompts.md` (fallback copy of your skills), your installed skills: [list], `self-apply` (a mandatory safety skill that governs your memory-of-use ledger's apply/verify/rollback rules), `self-archive` (a mandatory safety skill that proposes — never silently performs — moving a stale or superseded file into a local archive, reversibly), `self-upgrade` (a mandatory safety skill holding the contract for walking your workspace's engine forward across kit versions — dormant for now, nothing to walk forward to yet), and `pull-updates` (checks your installed skills against the pool when you ask, and never on its own).
+> "Setup complete. Your workspace now contains only your files — the setup kit is archived in `_setup-kit/` (nothing was deleted). On disk: `CLAUDE.md` (your personalized workspace instructions), `project-instructions.txt` (paste into Project Settings > Custom Instructions), `cowork-profile.md`, `context/`, `connector-checklist.md`, `skills-as-prompts.md` (a backup copy of your skills), your installed skills: [list], `self-apply` (a required safety skill that tracks and confirms every change to your other skills before it happens), `self-archive` (a required safety skill that proposes — never silently performs — moving a stale or replaced file into a local archive, and does so reversibly, meaning any move it makes can always be undone), `self-upgrade` (a required safety skill that will move your setup forward to a newer version of this kit once one exists — dormant for now, since there's nothing newer to move to yet), and `pull-updates` (checks your installed skills against the latest available versions when you ask, and never on its own).
 >
 > I've set [preset output-format default, e.g. 'concise bullets'] as your default style — say 'more detail' or 'keep it brief' anytime.
 >
