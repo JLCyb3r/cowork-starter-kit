@@ -823,6 +823,8 @@ All surfaces subject to v43 framework standards. Scope A applies the framework �
 | GitHub Topics (S3) | GitHub repo settings | SKIPPED in-cycle. Proposed topics for manual application: `claude-ai`, `claude-project`, `ai-workspace`, `productivity`, `prompt-engineering`, `workflow`, `no-code`, `starter-kit`, `anthropic` |
 | SEO/positioning copy | README, SETUP-CHECKLIST | Apply `how-to` vocabulary register: plain English, no jargon without inline definition, "you" framing, active voice. |
 
+Runtime strings (registry descriptions, wizard messages, working-rules.md) follow this same register too — see CONTRIBUTING.md § Runtime-string register (added 2026-08-20).
+
 #### IA drift baseline (pre-v2.5.3)
 
 Current README H2 order vs. prescribed `how-to` order:
