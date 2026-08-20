@@ -827,9 +827,10 @@ grep -oF "Installing skills from external sources isn't supported yet" WIZARD.md
 > which prints the **entire file**, not nothing. `CLAUSE` then holds the whole file, and both
 > `grep -qF` calls against it go GREEN on a defect that deleted the F4 line outright — the exact
 > failure mode this leg exists to catch. This is a corrected-instrument note, not a live defect in
-> what @dev actually ran at Phase 4: the guard (`test "$(grep -cF '...' WIZARD.md)" -eq 1` before
-> deriving `LINE`, or the whole block under `set -euo pipefail`) was applied at execution time,
-> recorded in @dev's own Phase-4 verification output, not in any committed file. The gap is that
+> what was actually verified: @qa built and proved an anchor-existence guard at Phase 5 (simulated
+> a typo'd anchor, confirmed the failure mode this note describes, then confirmed the real anchor
+> at `LINE=123` passes cleanly — `docs/internal/qa/qa-report-v2.19.10.md:272-278`), applied at
+> verification time, not in this published snippet. The gap is that
 > this published snippet was never updated to show the guard, and this file ships in the public
 > release archive — so a reader who copy-pastes the snippet as printed gets the unguarded form.
 > Per this document's append-only

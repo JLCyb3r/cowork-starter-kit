@@ -702,7 +702,13 @@ jobs:
           # draft of this check did exactly that, caught by running it, not by inspection).
           PARSER_FRAG1='s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]'
           PARSER_FRAG2='{64}$/) c++} END{print c+0}'
-          PARSER_COPIES="$(grep -cF "${PARSER_FRAG1}${PARSER_FRAG2}" .github/workflows/quality.yml)"
+          # B4 fix (v2.19.10 Phase-6 re-audit): `grep -cF` exits 1 on ZERO matches (even
+          # though it still prints "0"). Under `set -e`, an un-guarded assignment aborts
+          # the script right there on total drift, before the diagnostic below can ever
+          # run — fail-closed (the job still fails) but undiagnosable (no error message,
+          # just a bare non-zero exit). `|| true` keeps the printed count and lets the
+          # explicit check below produce the named error instead of a silent abort.
+          PARSER_COPIES="$(grep -cF "${PARSER_FRAG1}${PARSER_FRAG2}" .github/workflows/quality.yml || true)"
           if [ "$PARSER_COPIES" -ne 2 ]; then
             echo "::error::AC-PL-6 SELF-INTEGRITY FAILED — expected the row-structure parser's core expression to appear exactly 2 times in .github/workflows/quality.yml (the fault-injection step's count_hex_rows() function plus this step's own inline copy), found ${PARSER_COPIES}. The two copies have drifted apart, which means the fault-injection step above no longer proves anything about the parser this step actually runs. Make both copies byte-identical before trusting either — do not relax this check to 'at least 2'."
             exit 1
