@@ -441,3 +441,119 @@ adjacent-check numbers were independently re-derived, not accepted on report, an
 green at `2bac293`, job-by-job (§0/header). No sixth cannot-fail instrument found in either pass.
 
 **Recommendation: proceed to Phase 6 (`/audit`).**
+
+---
+---
+
+# Phase 7 — Final Approval (composition read over the full range)
+
+## Date: 2026-08-20
+## Range verified: `fd00dd2..81e96d0` (whole cycle, all 18 commits: @architect's, @dev's, @qa's, @security's)
+## Status: **APPROVED FOR MERGE (pending a PR being opened — see §7.6)**
+
+Phase 5 above verified `AC-PL-1`…`AC-PL-8` at `2bac293`. Phase 6 (this file's Phase-6 sibling,
+`docs/internal/security/security-audit-v2.19.10.md`) verified two more slices: `09bbced` and the delta
+`09bbced..eaadeb6`. Three more commits landed after that (`3fd8a15` re-audit, `eaadeb6` remediation,
+`81e96d0` final remediation) — **nobody had verified the composition as a unit.** This section does
+that: every command below was re-run fresh against `81e96d0`, from a scratch directory, never against
+the prior passes' record.
+
+### 7.1 All 8 in-scope ACs, re-verified simultaneously at HEAD (`81e96d0`)
+
+| AC | Instrument re-run at HEAD | Result |
+|---|---|---|
+| AC-PL-1 | Jargon scan (34-term list) on all 6 rows' `description` cells, extracted fresh via `awk -F'\|'` | `self-apply`/`self-archive`: 1 hit each, `context/.kit-migrations/` — same PASS-with-note as Phase 5's §1c, unaffected by the B1 wording change. `self-upgrade`/`pull-updates`/`prompt-gate`/`anti-ai-slop`: 0 hits. **HOLDS.** |
+| AC-PL-2 | `sed -n '339p' WIZARD.md \| grep -oE '`[^`]+`'` → 11 backtick items; `grep -cF 'installed skills: [list]'` → 1 | 11 + 1 = 12, matching the `§D.2` pin exactly, post-B2 edit. **HOLDS.** |
+| AC-PL-3 | `sed -n '132p'` (still *"Here's the final list…"*), row-6 anchor/leg checks below | Unaffected by rounds 2/3 — confirmed byte-identical since `2bac293`. **HOLDS.** |
+| AC-PL-4 | `grep -c "Runtime-string register" CONTRIBUTING.md` → 1; scoped 4-line window in `spec.md:826` → 1, dated | **HOLDS.** (File-wide count in `spec.md` is 3, expected drift, already documented — did not restate it as the AC result.) |
+| AC-PL-5 | `working-rules.md` Data locality clause, deny-list + both negative guarantees + all 6 categories | Unaffected since Phase 4 (`git diff --stat 5814e43..81e96d0 -- examples/` empty). **HOLDS.** |
+| AC-PL-6 | `awk` valid-hex count → 30; `PARSER_COPIES` fragment count → 2; `\|\| true` present (B4) | **HOLDS.** |
+| AC-PL-7 | Row 5: `never silently performs`/`reversibly`/`never on its own` each = 1 on `:339` post-B2; deny-list on `:339` = 0. Row 6: anchor unique at `:123`, leg A both halves present, leg B = 2, deny-list = 0. Row 1: 6/6 categories, 2/2 guarantees, deny-list 0. | **HOLDS — including row 5, the row the final round's own edit (B2) touched.** |
+| AC-PL-8 | `ls examples/*/context/working-rules.md \| wc -l` = 7 (glob); 8-file explicit form used throughout | **HOLDS**, unchanged. |
+
+**No regression found.** The three post-`09bbced` rounds (re-audit, two remediation commits) touched
+`WIZARD.md`, `curated-skills-registry.md`, `CONTRIBUTING.md`, `PROMOTE.md`, `quality.yml`,
+`skills/self-apply/SKILL.md`, and 3 canonicalization fixtures — every touched surface was re-verified
+above and none moved an AC from GREEN to RED.
+
+### 7.2 Third read — the rewritten safety-bearing descriptions, checked against the skills themselves
+
+Not against @security's finding text, and not against @dev's commit message — against the actual
+`SKILL.md` behavior. `git diff --name-only fd00dd2..81e96d0 -- skills/` shows exactly one file touched
+(`skills/self-apply/SKILL.md`, the A1 anchor fix, body prose only — frontmatter and all cited security
+mechanics byte-identical); `self-archive`, `self-upgrade`, `pull-updates` `SKILL.md` are untouched all
+cycle, so reading them now is reading true ground truth, not a moving target.
+
+- **B1 (`self-apply`/`self-archive` — "can never be changed or moved by this or any other skill").**
+  Read `skills/self-archive/SKILL.md:16`: *"never itself apply-writable or move-eligible."* Read its
+  namespace floor (§"The move-eligibility gate"): *"every `.claude/skills/**` file"* is move-denied —
+  this covers `self-apply` on the move channel. Read `skills/self-apply/SKILL.md`'s own deny-list
+  (§"The write-channel allow-list"): explicitly names `self-apply`, `self-archive`, `self-upgrade` as
+  apply-denied — this covers `self-archive` on the apply channel. **Both registry claims are TRUE,
+  verified against the mechanism, not the finding.**
+- **B2 (`pull-updates` / `WIZARD.md:339` — "against the copies included with this kit on your own
+  computer when you ask, and never on its own").** Read `skills/pull-updates/SKILL.md` §"No in-session
+  network, ever": *"it never fetches anything over the network during a live session"*; §Triggers:
+  *"**Never** a periodic or unsolicited inline suggestion — this flow only runs when explicitly asked
+  (OQ4)."* The shipped sentence is accurate on both axes it asserts (locality, non-autonomy). **TRUE.**
+- **Independently re-hashed:** `shasum -a 256 skills/self-apply/SKILL.md` →
+  `0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4`, byte-identical to the registry
+  cell at `curated-skills-registry.md:31`. Not re-read off @dev's or @security's report — computed fresh.
+- **B5's citation checked against its target:** `docs/design-v2.19.10.md`'s corrected attribution cites
+  `qa-report-v2.19.10.md:272-278`; those lines are this file's own §2 row-6 anchor-existence guard
+  narrative (typo'd-anchor simulation, fail-closed guard, `LINE=123` clean pass). The citation is
+  accurate.
+
+**No fourth defect found in this round's own fix.** The pattern this cycle repeatedly demonstrated —
+the corrective action becoming the next defect — did not recur at `81e96d0`.
+
+### 7.3 Deferred ACs — still deferred
+
+- `git diff --stat -M fd00dd2..81e96d0 -- docs/` → 6 files changed, **0 renames**.
+- `ls docs/ | grep -c 'qa-report\|security-review\|security-audit'` → **14**, unchanged from Phase 2.
+- `grep -rln DEFERRED-TO-RETROFIT-CYCLE docs/` → 4 files (`architecture.md`, `design-v2.19.10.md`,
+  `security-audit-v2.19.10.md`, `spec.md`) — marker present and greppable.
+- `grep -c 'archive-leak\|AC-PL-9…13' .github/workflows/quality.yml` → **0** — no archive-leak gate was
+  built. **Clean separation confirmed at HEAD, not just at the commit the prior passes read.**
+
+### 7.4 Artifact placement — re-derived, with a correction to my own first pass
+
+`git -C <repo> archive HEAD` into a scratch tarball, `tar -tf -`:
+
+- `grep -c '^docs/internal/'` → **0**.
+- **My first attempt at the report-path check used `grep -c 'v2\.19\.10'` and returned 1** —
+  `docs/design-v2.19.10.md`, a design doc that legitimately ships at `docs/` root by this repo's own
+  convention (every `design-vX.md` does). That is not a report leak; scoping the grep to the actual
+  report-filename shapes (`qa-report`/`security-review`/`security-audit`) returns **0**, correctly.
+  Recorded here rather than silently corrected, because shipping a claim one field wider than its own
+  instrument is exactly the defect class this whole cycle is about, and it is worth catching in my own
+  read, not just everyone else's.
+- **Negative control on the corrected instrument:** the same report-path pattern without the version
+  pin (`qa-report.*v2\.19\|security-review.*v2\.19\|security-audit.*v2\.19`) → **11** — the grep can
+  return non-zero, confirming the **0** above means genuinely absent.
+- This report and both `docs/internal/security/` reports are the only artifacts this cycle wrote; all
+  three are confirmed absent from the archive.
+
+### 7.5 CI — job by job at the actual merge candidate, `81e96d0`
+
+Run `32374571984`: **31 success, 0 failure, 3 skipped** (the same three `pull_request`-gated jobs).
+Read job-by-job via `gh run view --json jobs`, not off the summary conclusion.
+
+### 7.6 What remains before an actual merge
+
+**No PR exists yet for `release/v2.19.10-plain-language`** (`gh pr list --head ... --state all` → empty).
+Per CLAUDE.md's pre-merge gate, `gh pr checks <PR>` must run fully green before a merge confirmation is
+presented, and three CI jobs (`lock-content-sha-cross-check`, `/sync-agency Dry-Run`,
+`Vendored Removal Ledger`) are `pull_request`-gated and have never executed against this exact tree.
+**This is an orchestrator/process step, not a defect in the work** — consistent with @security's A16.
+The QA verdict below approves the shipped bytes at `81e96d0`; opening the PR and re-confirming those
+three jobs land green is the remaining mechanical step before the merge itself.
+
+### Verdict
+
+**APPROVED FOR MERGE.** All 8 in-scope ACs hold simultaneously at `81e96d0`, re-verified fresh rather
+than composed from three prior partial reads. The rewritten safety-bearing descriptions (B1, B2) are
+independently confirmed TRUE against the skills' own mechanics, not against any agent's account of
+them. Deferred ACs remain cleanly unimplemented. Both internal reports and this one are confirmed
+absent from the public archive, with a corrected (not merely trusted) negative control. CI is green,
+job-by-job, at the actual candidate commit. The only remaining step is opening the PR itself.
