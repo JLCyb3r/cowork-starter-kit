@@ -8,7 +8,7 @@ Always ask for explicit confirmation before deleting, moving, or overwriting any
 
 ## Data locality
 
-Never send financial amounts, calendar event details, contact information, health information, physical addresses, or authentication credentials to external services or APIs. All sensitive personal data stays in local files. If I ask for something that would require sending this data externally, decline and offer a local alternative.
+Never send financial amounts, calendar event details, contact information, health information, physical addresses, or authentication credentials to external services or APIs (other programs or services outside this computer). All sensitive personal data stays in local files. If I ask for something that would require sending this data externally, decline and offer a local alternative.
 
 ## Communication style
 

@@ -72,6 +72,39 @@ The Tier 2 community skill search list in `WIZARD.md` is maintained by repo main
 
 ---
 
+## Runtime-string register
+
+The strings a user actually reads while the kit is running follow their own register, separate from
+developer-facing docs: **plain English, no jargon without an inline definition in the same sentence.**
+This is the same register the no-jargon row already applies to SEO/positioning copy (`docs/spec.md`),
+now extended to runtime strings.
+
+**In-scope surfaces:**
+
+- `curated-skills-registry.md` — the `description` cell of every row
+- `WIZARD.md` — the setup-complete closing message
+- `WIZARD.md` — every spoken or quoted string (`Say:`, `respond:`, `Display as:`)
+- `examples/*/context/working-rules.md` and `templates/preset-template/context/working-rules.md` — every
+  non-Safety sentence
+
+**Scope note:** the list above names where this rule *applies*, not a claim that every matching string
+has already been checked. v2.19.10 rewrote a specific, enumerated subset of `WIZARD.md`'s spoken/quoted
+strings (the setup-complete closing message and the F4 bundle-customization menu — see `docs/spec.md`'s
+v2.19.10 ACs for the exact anchors). Other spoken/quoted strings elsewhere in `WIZARD.md` — for example
+the Path A draft-team offer and the zero-coverage-goal message, both of which still say "the pool" —
+are in scope of this rule going forward but were not touched this cycle; treat an unrewritten string as
+not-yet-verified, not as evidence the rule doesn't apply to it.
+
+**The floor:** a rewrite may simplify wording; it may **never weaken a stated guarantee**. Watch
+especially for weakening-by-addition — adding an exception clause (`unless…`, `except…`, `at your
+discretion…`, `without asking…`) while leaving every enumerated item and every negative guarantee
+technically intact still guts the guarantee it was attached to, and a check that only looks for missing
+items will not catch it.
+
+Full acceptance criteria live in `docs/spec.md`, § *Product Spec — Cowork Starter Kit v2.19.10*.
+
+---
+
 ## Skill content safety
 
 Before submitting any skill content from external sources, scan it at [SkillRisk.org](https://skillrisk.org). Do not submit skill content that was not written by you or sourced from Anthropic's official materials.

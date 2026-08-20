@@ -556,6 +556,20 @@ jobs:
   registry-sha256-check:
     name: Registry sha256 Drift-Verify Check (v2.18.0 F5, ADR-069, MF-S-1)
     runs-on: ubuntu-latest
+    env:
+      # AC-PL-6 (v2.19.10) — pinned count of registry rows carrying a valid 64-char
+      # lowercase-hex sha256 in field 8.
+      #
+      # THIS PIN MOVES WITH THE ROW COUNT. v2.19.10 adds and removes no rows, which is the
+      # only reason a hard pin is legitimate here. A future cycle that adds or removes a
+      # registry row MUST bump this value in the same commit — otherwise the check either
+      # fails on arrival or, worse, silently blesses a row that lost its sha256 cell.
+      # Declared at job level so the fault-injection step and the assertion step below
+      # cannot drift apart.
+      # Quoted (S11): the value is consumed only as a shell string compared with `-ne`.
+      # Unquoted it parses as a YAML integer — harmless today, but quoting removes the
+      # question rather than leaving a reader to re-derive the answer.
+      AC_PL_6_EXPECTED_HEX_ROWS: "30"
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Fault-injection self-test — a poisoned sha256 MUST be detected (check-that-cannot-fail)
@@ -599,6 +613,112 @@ jobs:
             exit 1
           fi
           echo "Fault-injection test PASSED — poisoned sha256 correctly detected as a mismatch."
+
+      - name: AC-PL-6 fault injection — the pinned row-structure count MUST be able to fail
+        run: |
+          set -euo pipefail
+          # v2.19.10 AC-PL-6. Prove the pinned-count logic CAN fail before trusting it on
+          # real data — same model as this job's existing sha256 fault-injection step.
+          count_hex_rows() {
+            awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{print c+0}' "$1"
+          }
+
+          FIX="$(mktemp -d)"
+          trap 'rm -rf "$FIX"' EXIT
+
+          # Fixture 1 — clean tree. MUST equal the pin.
+          cp curated-skills-registry.md "$FIX/clean.md"
+
+          # Fixture 2 — pipe injection, ANCHORED ON FIELD 2, NOT ON DESCRIPTION CONTENT.
+          # A single stray '|' inside one description shifts every later field right, so
+          # that row's field 8 is no longer its sha256. This is precisely the damage a
+          # plain-language rewrite can do by accident.
+          #
+          # The anchor is field 2 (`| self-apply |`), which AC-PL-1 leaves byte-unchanged,
+          # and the injection is positional — it never quotes any of the description's
+          # words. A content-anchored `sed` here NO-OPS the moment AC-PL-1 rewrites the
+          # description it quotes, silently turning this fixture into a copy of the clean
+          # tree. See F-7 (§E.7). This is the same field-anchored shape the REAL_HASH
+          # fixture already in this job uses (quality.yml:573).
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' \
+            curated-skills-registry.md > "$FIX/pipe.md"
+
+          # Fixture 3 — COMPOUND: the same positional pipe injection PLUS a reflow of the
+          # row's pipe spacing. This is the case that returns a FALSE GREEN under a
+          # two-parser instrument (one content-matching, one strictly positional): both
+          # parsers break identically and cancel. A single parser has nothing to cancel
+          # against.
+          #
+          # HONEST SCOPE: the reflow leg alone does NOT move this count (measured: 30 —
+          # reflowing pipe SPACING does not change pipe COUNT, so field 8 is untouched).
+          # The RED below comes entirely from the pipe-injection leg. Reflow-only damage
+          # is caught by wizard-consistency-check (quality.yml:1966), not by this step.
+          sed 's/^| self-apply |/|self-apply|/' "$FIX/pipe.md" > "$FIX/compound.md"
+
+          # FIXTURE-VALIDITY GUARD — house pattern, mirroring the REAL_HASH guard in this
+          # job's existing sha256 fault-injection step (quality.yml:573-576). A damage
+          # fixture byte-identical to its source is a no-op, and a no-op fixture reports
+          # downstream as "the check cannot fail" — blaming the check for the fixture's
+          # own evaporation. Name the real cause instead.
+          for f in pipe compound; do
+            if cmp -s curated-skills-registry.md "$FIX/$f.md"; then
+              echo "::error::AC-PL-6 FIXTURE SETUP FAILED — the '${f}' damage fixture was a no-op; its anchor no longer exists in the registry. Repair the FIXTURE's anchor. Do NOT relax the assertion below, and do NOT bump the pin."
+              exit 1
+            fi
+          done
+
+          for f in clean pipe compound; do
+            n="$(count_hex_rows "$FIX/$f.md")"
+            if [ "$f" = "clean" ]; then
+              if [ "$n" -ne "$AC_PL_6_EXPECTED_HEX_ROWS" ]; then
+                echo "::error::AC-PL-6 FIXTURE-VALIDITY FAILED — clean fixture counted ${n}, expected ${AC_PL_6_EXPECTED_HEX_ROWS}. Either the registry row count changed (bump AC_PL_6_EXPECTED_HEX_ROWS) or the parser no longer matches the table shape."
+                exit 1
+              fi
+            else
+              if [ "$n" -eq "$AC_PL_6_EXPECTED_HEX_ROWS" ]; then
+                echo "::error::AC-PL-6 FAULT-INJECTION FAILED — the '${f}' fixture still counted ${AC_PL_6_EXPECTED_HEX_ROWS}. The check cannot fail on the condition it exists to catch; do not trust it."
+                exit 1
+              fi
+            fi
+            echo "AC-PL-6 fixture '${f}': ${n} valid-hex rows."
+          done
+          echo "AC-PL-6 fault-injection PASSED — clean=${AC_PL_6_EXPECTED_HEX_ROWS}, both damage fixtures detected."
+
+      - name: AC-PL-6 — registry row-structure integrity (pinned valid-hex row count)
+        run: |
+          set -euo pipefail
+          # A4 self-integrity check (v2.19.10 Phase-6 finding). This job's row-structure
+          # parser is written out TWICE — once inside the fault-injection step's
+          # count_hex_rows() function above, once inline right below — because GitHub
+          # Actions steps do not share shell state, so the pin was hoisted to job-level
+          # env: but the parser itself could not be. If only this step's copy drifts, the
+          # fault-injection step's self-test still passes (it only ever exercises its OWN
+          # copy) and this step's own broken copy runs unprotected — two green steps, one
+          # unprotected row, and nothing above can see it. Assert both copies are
+          # byte-identical by grepping THIS FILE for their shared core expression and
+          # requiring it to appear exactly twice, before trusting either. Split into two
+          # fragments so this very check's own source line never contains the full
+          # contiguous pattern (which would make the grep below match itself — a first
+          # draft of this check did exactly that, caught by running it, not by inspection).
+          PARSER_FRAG1='s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]'
+          PARSER_FRAG2='{64}$/) c++} END{print c+0}'
+          # B4 fix (v2.19.10 Phase-6 re-audit): `grep -cF` exits 1 on ZERO matches (even
+          # though it still prints "0"). Under `set -e`, an un-guarded assignment aborts
+          # the script right there on total drift, before the diagnostic below can ever
+          # run — fail-closed (the job still fails) but undiagnosable (no error message,
+          # just a bare non-zero exit). `|| true` keeps the printed count and lets the
+          # explicit check below produce the named error instead of a silent abort.
+          PARSER_COPIES="$(grep -cF "${PARSER_FRAG1}${PARSER_FRAG2}" .github/workflows/quality.yml || true)"
+          if [ "$PARSER_COPIES" -ne 2 ]; then
+            echo "::error::AC-PL-6 SELF-INTEGRITY FAILED — expected the row-structure parser's core expression to appear exactly 2 times in .github/workflows/quality.yml (the fault-injection step's count_hex_rows() function plus this step's own inline copy), found ${PARSER_COPIES}. The two copies have drifted apart, which means the fault-injection step above no longer proves anything about the parser this step actually runs. Make both copies byte-identical before trusting either — do not relax this check to 'at least 2'."
+            exit 1
+          fi
+          ACTUAL="$(awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{print c+0}' curated-skills-registry.md)"
+          if [ "$ACTUAL" -ne "$AC_PL_6_EXPECTED_HEX_ROWS" ]; then
+            echo "::error::AC-PL-6 FAILED — ${ACTUAL} rows carry a valid 64-char lowercase-hex value in field 8; expected exactly ${AC_PL_6_EXPECTED_HEX_ROWS}. A description rewrite most likely introduced a '|' character into a cell, shifting every later field right so that row's field 8 is no longer its sha256. NOTE: this check counts FIELDS — it does not detect a pure whitespace reflow of a row's pipe layout; wizard-consistency-check covers that. If this cycle intentionally added or removed a registry row, bump AC_PL_6_EXPECTED_HEX_ROWS in this job's env: block."
+            exit 1
+          fi
+          echo "AC-PL-6 PASSED — ${ACTUAL} rows carry a valid sha256 cell in field 8 (pin: ${AC_PL_6_EXPECTED_HEX_ROWS})."
 
       - name: Verify curated-skills-registry.md sha256 matches skills/<slug>/SKILL.md (fail-closed on drift)
         run: |
@@ -1212,8 +1332,9 @@ jobs:
           set -euo pipefail
           chmod +x scripts/canonicalize-scan.sh
           # SCOPE (Phase-4 finding, see scripts/canonicalize-scan.sh header
-          # SCOPE NOTE): scanning ONLY '## Example' matches CONTRIBUTING.md:129's
-          # own stated threat model (pasted/example content, not maintainer-
+          # SCOPE NOTE): scanning ONLY '## Example' matches CONTRIBUTING.md
+          # § Worked-example authoring rules, rule 2's own stated threat model
+          # (pasted/example content, not maintainer-
           # authored prose elsewhere in the file) and is what empirically passes
           # clean against the real pool today; a full-file scan of the
           # byte-identical 6-token pattern false-positives on ordinary English

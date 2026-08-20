@@ -19,6 +19,38 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.10] - 2026-08-20
+
+**"Plain Language: say it the way she'd say it."** Five runtime surfaces spoke to a non-technical
+user in the maintainer's engineering register. The kit's own no-jargon rule already existed but was
+scoped to SEO/positioning copy only.
+
+- **Six `curated-skills-registry.md` descriptions rewritten** in plain English: `self-apply`,
+  `self-archive`, `self-upgrade`, `pull-updates` (jargon-dense infrastructure rows, rewritten on
+  severity grounds even though no render path currently surfaces them to a user), and `prompt-gate`,
+  `anti-ai-slop` (matched-and-truncated rows — the role-generation ≤12-word fallback now reads as a
+  standalone sentence). A new inline gate in `.github/workflows/quality.yml`'s
+  `registry-sha256-check` job pins the registry's row-structure integrity at exactly 30 valid-hex
+  rows, landed in its own commit before any description was touched.
+- **The wizard's setup-complete closing message rewritten** — every technical term inline-defined,
+  including inside parentheticals, with every listed file and skill still named and all three of
+  `self-archive`'s safety phrases (`never silently performs`, `reversibly`, `never on its own`)
+  preserved verbatim.
+- **The F4 bundle-customization menu's spoken strings rewritten** — `pool`, `bundle`, `optional tier`,
+  and `cross-cutting` replaced with plain language. The pool-boundary refusal string keeps its
+  external-sources warning byte-for-byte and only adds an inline definition of "pool."
+- **`examples/personal-assistant/context/working-rules.md`'s Data locality clause** now defines
+  `APIs` inline instead of leaving it undefined — the sole finding from an audit run across all 8
+  `working-rules.md` files. All six protected data categories and both negative guarantees survive
+  unchanged.
+- **A new `## Runtime-string register` section in `CONTRIBUTING.md`** names the in-scope runtime
+  surfaces and the plain-English rule, with a dated forward-pointer from the existing SEO/positioning
+  no-jargon row in `docs/spec.md`.
+- **A second functional idea proposed mid-cycle — relocating 14 pre-existing internal QA/security
+  reports out of the public release archive — was withdrawn at the gate** once it was found to force a
+  Tier B → Tier A escalation for what is otherwise a wording-only PATCH. It is deferred to its own
+  future cycle; nothing about it shipped here.
+
 ## [2.19.9] - 2026-08-11
 
 **"Truth Repair: the entry point that never fired."** The kit asserted, across 14 files, that Cowork
@@ -300,7 +332,7 @@ operator procedure once this PR merges.
 - **`context/memory-of-use.md` (ADR-053) — the workspace memory-of-use ledger.** A single, lazily-created file (never scaffolded empty into a new workspace) holding a 6-column markdown table (`Entry | Status | Occurrences | Note | First noticed | Last updated`), a verbatim data-not-instruction header contract, and a bounded `## Archive` section for entries in a terminal state. This release ships the canonical convention/example only; a real workspace's own copy is created the first time a note-worthy friction actually occurs.
 - **Per-calendar-day threshold counting (ADR-054).** A friction signature's `Occurrences` counter increments at most once per calendar day, measured by the ledger's own `Last updated` field — deterministically checkable, and proven able to genuinely fail its own negative control (same-day repeats stay put; a distinct day increments). Three distinct days promotes an entry through `NOTICED (1/3)` → `WATCH (2/3)` → `READY-TO-PROPOSE (3/3)`, a one-time terminal trigger, never a repeating counter.
 - **`skills/weekly-review/SKILL.md` — new "Surface" step.** The existing Collect → Process → Review → Plan pass gains a 5th step: it checks the ledger for anything this week's pass surfaced, writes or updates an entry, and — if that update reaches `3/3` — runs the proposal immediately, in the same pass, rather than waiting for next week. The 4 existing steps are unchanged.
-- **The PROPOSE surface (two-layer data-not-instruction control, ADR-055).** Reaching `3/3` — from the weekly pass or noticed mid-session — surfaces a plain-language proposal in the repo's existing four-part shape (What changed / What could break / What's protected / What to verify). Before any ledger text is quoted into that proposal, it is re-scanned with the same forbidden-token recipe this repo already uses (`CONTRIBUTING.md:129`); any match is flagged inline, never obeyed. The one hard boundary: this increment never writes to any `CLAUDE.md` or `SKILL.md`, under any response — the only file it can write is the ledger itself, and marking an entry confirmed always requires an explicit yes.
+- **The PROPOSE surface (two-layer data-not-instruction control, ADR-055).** Reaching `3/3` — from the weekly pass or noticed mid-session — surfaces a plain-language proposal in the repo's existing four-part shape (What changed / What could break / What's protected / What to verify). Before any ledger text is quoted into that proposal, it is re-scanned with the same forbidden-token recipe this repo already uses (`CONTRIBUTING.md § Worked-example authoring rules, rule 2`); any match is flagged inline, never obeyed. The one hard boundary: this increment never writes to any `CLAUDE.md` or `SKILL.md`, under any response — the only file it can write is the ledger itself, and marking an entry confirmed always requires an explicit yes.
 - **`templates/workspace-claude-md-template.md`** gains a small, fixed-size (non-scaling) `## Noticing friction` pointer instructing the session to note a repeated correction to the ledger, creating it if absent, without interrupting to announce it.
 - **`TRUST.md`** names a fourth threat class — a self-modifying local instruction surface — and states what this kit does about it: no write channel to any instruction file, explicit confirmation required, and a mandatory, permanent security review for every Loop 1 increment regardless of blast radius.
 

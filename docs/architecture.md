@@ -55,7 +55,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-016 (amendment v2.6) | CMP byte-mirror + line-scan parser switch from `skill_bundle:` to `core_skills:` (paired with ADR-034) | ACCEPTED |
 | ADR-035 | Version-Consistency CI Gate (v2.7.2) — `version-consistency-check` job asserts `VERSION` == README badge == first `## [...]` CHANGELOG header; fails-closed on `[Unreleased]`-stranded content and on any missing/malformed signal; CI enforcement companion to ADR-033 release-artifact convention | ACCEPTED |
 | ADR-036 | CHANGELOG Dated-Split Convention (v2.7.2) — `[Unreleased]` accumulator is split into dated `## [x.y.z] - YYYY-MM-DD` sections at release time using the authoritative UTC commit date; line-level content preservation; formalizes the release step of ADR-033 | ACCEPTED |
-| ADR-037 | docs/ Information-Architecture Split + Default-Internal `.gitattributes` Convention (v2.8.0) — `docs/internal/{qa,security,compliance,process,planning}/` holds internal artifacts; the per-file DROP allowlist collapses to a single `docs/internal/ export-ignore` directory rule so a *new* `docs/*.md` file defaults to public-unless-placed-internal (closes D-9 latent-leak class); `spec.md`/`retro.md`/`patterns.md` retained at `docs/` root under Council-tooling exemption; `architecture.md`/`research/`/`project-audit-v2.6.1.md` become public | ACCEPTED |
+| ADR-037 | docs/ Information-Architecture Split + Default-Internal `.gitattributes` Convention (v2.8.0) — `docs/internal/{qa,security,compliance,process,planning}/` holds internal artifacts; the per-file DROP allowlist collapses to a single `docs/internal/ export-ignore` directory rule so a *new* `docs/*.md` file defaults to public-unless-placed-internal (closes D-9 latent-leak class); `spec.md`/`retro.md`/`patterns.md` retained at `docs/` root under Council-tooling exemption; `architecture.md`/`research/`/`project-audit-v2.6.1.md` become public | ACCEPTED — **AMENDED by the ADR-037 amendment record appended at v2.19.10 Phase 1.2 (§Consequences claim falsified by 14 leaked reports; §Maturation Path option (c) checks the wrong direction; `design-v2.19.7.md:82` cited a convention ADR-037 does not contain). That amendment record is IN FORCE — read both.** Note: **ADR-088, which supplies the remedy, is PROPOSED (deferred) as of Phase 1.3** — the corrections stand, the retrofit that closes them has not yet shipped |
 | ADR-038 | Starter-File Self-Contained Regeneration + CI Drift-Marker Guard (v2.8.0) — the 7 `examples/*/project-instructions-starter.txt` are fully self-contained regenerations of the current v2.7 3-turn interview (NOT thin pointers into `WIZARD.md`), because the paste-only persona has no filesystem access to resolve a pointer; a new additive `quality.yml` step fails the build on any retired-interview marker across all 7 starters (case-insensitive, negative-control-proven) | ACCEPTED |
 | ADR-039 | Canonical Q1 Single-Source Enforcement (v2.8.0) — `WIZARD.md`:44 is the authoritative Q1 opener; `.claude/skills/setup-wizard/SKILL.md` quotes it verbatim and drops its duplicate embedded preset menu (deferring the "not sure" branch to WIZARD.md's Uncertainty Fallback); `CLAUDE.md` retains a compact, meaning-preserving paraphrase (single-source discipline, not budget-forced — 326/400 word headroom confirmed) | ACCEPTED |
 | ADR-040 | Draft-First Routing Presentation (v2.9.0 Dynamic Reclaim) — supersedes the *presentation* aspects of the undocumented v2.7.0 `e2f622d` change: Path A/B/C are presented as equally-first-class *drafts* the user shapes (draft framing + a one-parenthetical `matched: [fixed-vocab token]` reasoning fragment + a three-way close: run / adjust / set aside and go custom), replacing the binary "That sounds like [Preset] — is that right?" verdict; the retired cost-asymmetry tie-break sentence ("a wrong suggestion costs one 'no', while a false Path C costs the whole scaffold") is removed while the tie-break's *routing purpose* is preserved byte-behaviourally; the `≥2` threshold, 16-token `match_signals`, stemming, and the C-v2.4-6/C-v2.4-7 security notes are byte-unchanged | ACCEPTED |
@@ -105,6 +105,10 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-082 | The `CLAUDE.md` auto-load premise is false, and the sweep that finds it must not be filtered by `export-ignore` (v2.19.9 Scope A) — supersedes ADR-010's premise; Cowork attaches a connected folder as a browsable source rather than injecting root `CLAUDE.md` as system context, so no kit surface may assert unconditional auto-load or project-folder skill auto-discovery; the correctness sweep runs over `git grep` on tracked files, never over `git archive` output | ACCEPTED |
 | ADR-083 | ADR-046's target holds; its basis does not — a prose doc line may never be the sole authority for a behavioral claim about the platform (v2.19.9 Scope A/D) — the workspace `CLAUDE.md` remains the proactive-surfacing target as best-effort/inspection-class; the discriminator sentence resting on circular authority (`WIZARD.md:3`, itself an unverified assertion site this cycle corrects) is retired | ACCEPTED |
 | ADR-084 | Starter sync is asserted, not assumed — inline `starter-sync-check` with minimal normalization, a slot-presence control, and a positive data-locality allow-list (v2.19.9 Scope C) — also lands `personal-assistant` into ADR-040's draft-first rollout, absent since `33fd22c` (v2.9.0) for word-budget reasons and unshipped for 10 releases | ACCEPTED |
+| ADR-085 | The runtime-string register lives in `CONTRIBUTING.md` — chosen on adjacency to the checklist a contributor editing a `description` already reads, NOT on the "does not ship" argument (Phase 1 verified `CONTRIBUTING.md` is itself `export-ignore`d, `.gitattributes:16`); the rule it carries is a **floor on guarantees, not a style preference** — a rewrite may simplify wording but may never weaken a stated guarantee, and where plain language and a safety clause conflict the clause wins (inline-define the term, never compress the sentence); weakening-by-**addition** is called out explicitly because presence-based checks structurally cannot see it (v2.19.10 AC-PL-4 / AC-PL-7) | ACCEPTED |
+| ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED — **AMENDED by ADR-087; read both** |
+| ADR-087 | **AMENDS ADR-086 §Decision (4).** Two rules minted after Phase 2 found ADR-086's own two remedies were the 4th and 5th instruments this cycle that cannot fail: **(1) fixture-anchor independence** — a fault-injection fixture may never be anchored on content the same cycle mandates changing (AC-PL-6's `sed` quoted `apply/verify/rollback machinery`, the exact description cell AC-PL-1 must rewrite; post-rewrite both fixtures no-op and the gate turns permanently red), remedied by a field-2-anchored positional `awk` verified 29 on BOTH trees plus a mandatory `cmp -s` fixture-validity guard; **(2) scope-matched instruments** — uniqueness determines whether presence-testing is *usable*, scope determines whether an instrument is *sufficient*; a file-wide count froze row 6's announcement while leaving the restriction clause deletable at GREEN, remedied by anchor-scoped extraction asserting BOTH halves (the house pattern at `quality.yml:753-785` the original design failed to cite). Also: occurrences are counted with `grep -oF \| wc -l` not `grep -cF`; an instrument's claim is stated to what it actually fires on (the compound fixture's legs do NOT fire independently — reflow-only is GREEN at 30 and is covered by `wizard-consistency-check` instead) (v2.19.10 Phase-2 amendment, S1/S2) | ACCEPTED |
+| ADR-088 | **AMENDS ADR-037** (owner-directed Phase-1.2 addendum, S4). **14** internal QA/security reports ship in every public release archive; they are retrofitted into `docs/internal/{qa,security}/` via `git mv` (ADR-037's own mechanism, 14 × `R100`), closing an **intermittent** placement lapse (v2.19.4 *is* internal, falsifying §E.9's clean-cutoff account). Three decisions: **(1)** the archive-leak gate is written in the direction the leak travels — **zero `git archive` entries match `^docs/(qa-report\|security-audit\|security-review)-`** — because ADR-037's option (c) (`docs/internal/**` absent from the archive) is *vacuously satisfied by a file never placed internal*; **(2)** `git check-attr` is rejected as unsound — it returns `unspecified` for an excluded and a shipping file alike; only `git archive` proves what ships; **(3)** references are ruled by **differential execution**, not inspection — Class A (a machine resolves it as a path; population **exactly 3**, `verify-ledger-annotations.sh` LA-03a/b/c) is repaired, Class B (historical records, comments, diagnostics, CI step names, fixture headers) is **frozen**, per ADR-037's own precedent of leaving 25 dead paths in `architecture.md` green for 11+ versions. Gate carries a **canary self-test** because a typo'd pattern returns 0 = indistinguishable from GREEN. **Escalates the cycle Tier B → Tier A** (TIER-1: Class A repair necessarily modifies `scripts/`); Guard Change Summary owed. **DEFERRED-TO-RETROFIT-CYCLE at v2.19.10 Phase 1.3** — the owner split the retrofit out at the gate so Tier A is the successor cycle's whole ceremony; nothing here is implemented by v2.19.10. Build-ready handoff: `docs/design-v2.19.10.md` §J | **PROPOSED (deferred at v2.19.10 Phase 1.3 — was ACCEPTED at Phase 1.2; number reserved for the S4 retrofit cycle, cf. ADR-028)** |
 
 ---
 
@@ -13894,3 +13898,347 @@ an invisible one; the next feature that needs shared-line growth will hit it del
   identically across all seven files passes — it detects divergence, never wrongness.
 
 End of v2.19.9 ADR block.
+
+---
+
+# v2.19.10 — "Plain Language: say it the way she'd say it" (Phase 1)
+
+> Phase 1 design document: `docs/design-v2.19.10.md`. Citations below are **content-anchored** per
+> ADR-081 §D1 — each is a re-runnable `grep -n '<anchor>' <named-file>`. Line numbers, where given,
+> are navigational only and pinned to `fd00dd24a85e24ca0ec64462e191b4de99ff6a1e`.
+
+## ADR-085: The runtime-string register lives in `CONTRIBUTING.md`, and the rule it carries is a floor on guarantees, not a style preference (v2.19.10 AC-PL-4 / AC-PL-7)
+
+- **Status:** Accepted at Phase 1, 2026-08-20. Subject to the user gate (Phase 3); the rejected alternatives are stated so the gate can overturn the decision on the record.
+- **Cycle:** v2.19.10 "Plain Language: say it the way she'd say it" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B (PR required, Guard Change Summary NOT required) · COMPLIANCE-SENSITIVE = NO, conditionally. Re-run against the final file list at Phase 1: **CONFIRMED**, no flip in either direction (`docs/design-v2.19.10.md` §F).
+- **Reusability:** `project-specific`. The register's *content* — which surfaces count as runtime strings — is bound to this repository's wizard, registry, and preset layout. The *rule* it encodes (a simplification may never weaken a stated guarantee, and the check for that must be a count comparison rather than a presence test) is general, and is minted here in its generalizable form so a sibling project can lift it without lifting the surface list.
+- **Supersedes:** nothing. **Amends:** nothing.
+
+### Context
+
+**(1) The kit already had a no-jargon rule, and it had no reach.** `grep -n 'no jargon without inline definition' docs/spec.md` returns the v2.5.3 row, scoped to *"SEO/positioning copy — README, SETUP-CHECKLIST."* Meanwhile the strings a user actually reads at runtime — six registry descriptions, the wizard's closing message, the F4 bundle menu, and the `working-rules.md` family — were never in scope for it. The rule existed and the surfaces it should have governed grew up outside it.
+
+**(2) The scope boundary turned out to be mechanically derivable, which is stronger than the argument that produced it.** Phase 0 arrived at six in-scope registry rows through two independent grounds after three review rounds. Phase 1 measured jargon-hit density per description against the cycle's 34-term Jargon List and found the six in-scope rows are **exactly** the six rows with a non-zero count (8, 6, 6, 5, 3, 2); **all 24 remaining rows score 0**. The partition is clean. This is recorded as corroboration of the scope boundary, explicitly **not** as the pass criterion — it is Q1's mechanical leg alone, and Q1 permits a listed term carrying an inline definition, so a post-edit 0 does not mean PASS and a post-edit 1 does not mean FAIL.
+
+**(3) The placement argument that survived is not the placement argument that was written.** The Phase-0 rationale for choosing `CONTRIBUTING.md` over `docs/spec.md` rested partly on *"`docs/spec.md` is `export-ignore`d and does not ship."* Phase 1 verified that `CONTRIBUTING.md` is **also** `export-ignore`d (`.gitattributes:16` alongside `docs/spec.md` at `:31`), and that `.gitattributes:2` states the mechanism affects *"only `git archive` … not `git clone` or working tree."* Shipping is therefore not the discriminator. The decision stands on a different, independently sufficient ground — see §Decision (1).
+
+**(4) A guarantee can be gutted without a single protected token going missing.** Phase 0 R2 shipped an AC-PL-7 whose (a) enumeration and (b) negative-guarantee legs both returned GREEN against a Data locality rewrite that appended *"unless a web service is needed"*, *"except where you judge it useful"*, *"or go ahead if it is quicker"*, and *"without checking with me first"* — **8/8 protected tokens intact, guarantee inverted** (re-measured at Phase 1: the exception-token deny list goes 0 → **5** on that fixture and is the only leg that fires). Weakening-by-addition is the failure mode a presence-based safety check structurally cannot see.
+
+### Decision
+
+**(1) The runtime-string register lives in `CONTRIBUTING.md`, on the adjacency argument, not the shipping argument.** Insert `## Runtime-string register` immediately after `## Registry entries — \`curated-skills-registry.md\`` (`grep -n '^## Registry entries' CONTRIBUTING.md`). The file already carries `## Registry entries`, `## Skill content safety`, and `## Placeholder authoring rules` — zero structural novelty — and it is the checklist a contributor editing a `description` is already reading. Contributors work from a clone, where `export-ignore` is irrelevant. `docs/spec.md` gets a dated one-line forward-pointer with its v2.5.3 row byte-unchanged.
+
+**Rejected alternatives.** (a) An ADR as the rule's home — rejected: an append-only history is exactly the discoverability failure being fixed; nobody editing a table cell reads the ADR log first. (b) `docs/spec.md` alone — rejected: it is the Council-facing spec surface, not the contributor-facing one, and the rule needs to sit where the edit happens. (c) A CI check enforcing register vocabulary — rejected as out of proportion for a PATCH and unbuildable without a maintained wordlist that would itself rot; the Jargon List is deliberately per-cycle, not standing.
+
+**(2) The register's binding clause is a floor, not a style guide: a rewrite may simplify wording; it may never weaken a stated guarantee.** Where plain-language simplification and a safety guarantee conflict, the guarantee wins — **inline-define the term, never compress the sentence.** The register must carry the weakening-by-addition warning explicitly, because the intuition of a person simplifying prose is to remove words, and the failure mode here is *adding* them.
+
+**(3) A safety-preservation check is a count comparison, not a presence test.** This is the generalizable half of the ADR. Presence (`grep -qF`) is only sound when the protected string is unique in its file — verified per string, never assumed. Where it is not unique, the check must compare pre- and post-edit **counts**. Phase 1 found the live instance: see ADR-086 §Context (2).
+
+### Consequences
+
+- A contributor editing a registry `description` now has the rule in front of them rather than three documents away.
+- The register is prose with no mechanical enforcement. This is stated rather than hidden: **no CI job reads it**, and `grep -rn "working-rules" .github/workflows/` returns **0** — no CI job covers any of the eight `working-rules.md` files either. @qa's Phase-5 read is the only instrument for this entire surface class.
+- The AC-PL-7(c) exception-token deny list becomes the tripwire for the cycle's COMPLIANCE condition: if its count on the Data locality clause moves off 0, or any of the six category tokens changes, `/legal` becomes owed before Phase 3.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) promote the exception-token deny list from a per-cycle AC into a standing CI check over the four `working-rules.md` safety clauses, once a stable protected-clause inventory exists that does not need hand-maintenance per preset; (b) generalize the register from a hand-listed surface enumeration into a marker convention — an HTML comment or frontmatter key marking a string as user-facing — so the surface list is derived from the files rather than restated in `CONTRIBUTING.md` and able to drift from them; (c) build the standing runtime-string lint that option (b) makes possible, replacing the per-cycle Jargon List with a maintained vocabulary; (d) fold the register into `docs/spec.md`'s v2.5.3 row as a single unified copy standard once the runtime and positioning registers are demonstrably the same register, which this cycle does not assume; (e) leave the register as documented-only prose and accept that its enforcement is a human read forever.
+- **Concrete revisit triggers:** (i) any cycle that adds a preset — the eight-file `working-rules.md` floor becomes nine and every AC-PL-7 row-2 token set needs a new entry, which is the point at which hand-maintenance stops paying; (ii) the first time a runtime-string regression ships undetected, which converts option (a) or (c) from nice-to-have into owed; (iii) any cycle that adds a *second* mandatory-infrastructure registry row, since Group B's severity ground and the AC-PL-6 pin both assume the current partition; (iv) a contributor PR that edits a `description` without touching the register — the first live test of whether adjacency actually works, and the signal that decides between option (b) and option (e).
+- **Risk knowingly accepted:** three, named rather than bundled. (i) **The register is prose enforcing prose.** Nothing mechanically prevents a future contributor from ignoring it, and the honest ceiling is that a human read at Phase 5 is the only gate. Accepted for a PATCH; option (c) is the route out, and trigger (ii) is when it becomes owed rather than optional. (ii) **The scope boundary rests on a Jargon List that is per-cycle and hand-extracted.** A term nobody thought to extract is invisible to Q1, and the density partition in §Context (2) is only as good as that list — it is corroboration of a boundary reached by argument, not an independent derivation of it, and it is recorded as such. Accepted because a standing list would rot faster than a per-cycle one, but this is precisely the trade option (c) would revisit. (iii) **`CONTRIBUTING.md` does not ship in the release archive**, so a downstream consumer reading only a release tarball never sees the register. Accepted deliberately: the register's audience is contributors, who clone. Stated here because the Phase-0 rationale asserted the opposite property about this file, and a future cycle reading that sentence rather than this one would draw a false inference.
+
+### References
+
+- `docs/design-v2.19.10.md` §C.4 (placement and edit sites), §C.7 (AC-PL-7 mechanism), §E.2 (the falsified shipping rationale)
+- `docs/spec.md` § *Product Spec — Cowork Starter Kit v2.19.10*, AC-PL-4 and AC-PL-7
+- ADR-081 §D1 — content-anchored citation convention, applied throughout
+- `docs/hld.md:37` Principle 5 — every safety clause ships as an executable check with a firing negative control
+
+## ADR-086: One parser, one pin — registry row-structure integrity is asserted by a single inline count, and a safety check whose string is not unique must count rather than presence-test (v2.19.10 AC-PL-6 / AC-PL-7 row 6)
+
+- **Status:** Accepted at Phase 1, 2026-08-20. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.10 "Plain Language: say it the way she'd say it" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B. The control lands inline in `.github/workflows/quality.yml` and **not** under `scripts/`, which is the cycle's TIER-4 snapback condition; landing it under `scripts/` would snap the cycle to Tier A and owe a Guard Change Summary before the PR opens.
+- **Reusability:** `candidate-constituent`. The specific parser is bound to this repository's 9-field registry table, but the two rules it embodies — *a compound edit defeats two independently fragile parsers by breaking both identically*, and *a presence test on a non-unique string is a check that cannot fail* — are general failure modes of markdown-table and prose-guarantee verification, and are stated in transferable form in §Decision.
+- **Supersedes:** nothing. **Amends:** nothing.
+
+### Context
+
+**(1) Two parsers can cancel; one cannot.** The instrument first proposed for AC-PL-6 compared a content-matching cardinality count against a strictly positional `CHECKED` count, living in two separate top-level jobs with separate runners and checkouts — so as designed it required `needs:` + `outputs:` plumbing that was never specified. Worse, it was **false-GREEN on its primary threat**: a compound edit that rewords a description *and* reflows the row's pipe spacing breaks both parsers identically, both drop to 29, and equality still holds. The instrument agreed with itself about the wrong number.
+
+**(2) The same defect was live in AC-PL-7 row 6, and it survived all three Phase-0 review rounds.** Row 6 protects the F4 pool boundary's external-source refusal string, using presence-anywhere `grep -qF`. Phase 1 measured that string's occurrence count in `WIZARD.md`: **2** — once in the Network & Offline Rule (`grep -n 'I can.t reach external sites from this session' WIZARD.md`) and once in the F4 Pool boundary (`grep -n 'No URL paste, no external source' WIZARD.md`). The F4 copy is the one this cycle rewrites. Against a fixture that replaced it outright, `grep -qF` returned **GREEN**. The check could not fail on the condition it existed to catch — on the very clause supplying the **B2** basis for this cycle's SECURITY-SENSITIVE classification.
+
+**(3) The obvious cheaper instrument fails its own negative control.** A bare `NF!=9` sweep scoped to pipe-bearing lines returns **9** false positives on the clean tree (`awk -F'|' '/\|/ && NF!=9 {c++} END{print c}' curated-skills-registry.md` → 9), caused by the 2-column schema legend near `grep -n '^| Field | Description |' curated-skills-registry.md`. It is red before anything is edited, so it can never signal anything. (Phase 0 recorded 8 from one measurement and 9 from two others; Phase 1 measured **9**, stated as measured rather than inherited.)
+
+### Decision
+
+**(1) A single parser, a single pinned count, inline in the job that already checks out the registry.**
+
+```text
+awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{exit !(c==30)}'
+```
+
+Exactly 30 rows must carry a valid 64-char lowercase-hex value in field 8. A single parser has **no second parser to cancel against**, so the compound edit that defeated the two-parser instrument is caught. Verified at Phase 1 against the live tree: clean → **30 GREEN**; one `|` injected into `self-apply`'s description → **29 RED**; compound reword-plus-reflow → **29 RED** (both legs of the compound fixture confirmed to fire independently).
+
+**(2) The pin is declared once, at job level, and it moves with the row count.** `AC_PL_6_EXPECTED_HEX_ROWS: 30` lives in the `registry-sha256-check` job's `env:` block, so the fault-injection step and the assertion step read one value and cannot drift apart, and no cross-job `needs:`/`outputs:` plumbing exists. **A hard pin is legitimate here only because v2.19.10 adds and removes no registry rows.** This is stated in the `env:` comment, in the failure message, and here — a future cycle that adds or removes a row **must** bump it in the same commit. The pin is a deliberate coupling, chosen over a derived count because a derived count cannot distinguish "a row was legitimately added" from "a row lost its sha256 cell," which is the entire threat.
+
+**(3) Fault injection runs first, as a step, not as a comment.** Per `docs/hld.md:37` Principle 5 and the fault-injection step already in production immediately above it in this same job, the check proves it can fail against both damage fixtures before it is trusted against real data. A clean-fixture count that does not equal the pin fails as a **fixture-validity** error with its own distinct message, so "the registry changed" is never silently reported as "the parser is broken."
+
+**(4) Generalized, for the next surface that needs it:** *a presence test is sound only where the protected string is unique in its file — verify uniqueness, never assume it. Where the string is not unique, compare pre- and post-edit counts.* Applied to AC-PL-7 row 6, whose corrected instrument is `grep -cF` count equality (pre-edit **2**; the deletion fixture returns **1** → RED). This is deliberately the same shape as AC-PL-7(c)'s set-equality rather than a new mechanism. Rows 1–5's protected strings were each verified unique this session (`grep -cF` → 1), so presence remains sound for them.
+
+### Consequences
+
+- Every description rewrite in this cycle and every future one is gated on the registry's row structure surviving intact, at the cost of one pinned integer that must be maintained.
+- The gate must land **before** any description rewrite, in its own commit. Landing them together means the gate's first-ever run is against already-modified content, and a fixture-validity failure would be indistinguishable from a real regression.
+- TIER-4 is satisfied by construction: one `env:` block and two steps, all inside `registry-sha256-check`. No file under `scripts/` is added or modified, which also keeps TIER-1 clear.
+- The row-6 correction is a Phase-1 finding against an approved AC and is recorded as **pending orchestrator ratification** (`docs/design-v2.19.10.md` §E.1) rather than silently applied — @architect does not amend the requirement it is designing against.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) derive the pin from a separately-maintained declaration — a `registry-row-count` field in a manifest — so the two move together by construction rather than by discipline, once a natural home for such a field exists; (b) replace the pin with a *ratchet* (the count may never decrease without an explicit declared removal), which is the shape `verify-lock-removals.sh` already uses for vendored files and would tolerate row additions while still catching silent losses; (c) generalize the uniqueness rule from §Decision (4) into a small shared helper that takes a file and a protected string, asserts uniqueness, and selects presence-vs-count automatically — retiring the per-row judgment; (d) extend the single-parser count from field 8 to a full 9-field structural assertion, once the schema-legend false-positive problem in §Context (3) is solved by scoping the sweep to the data-row region rather than to pipe-bearing lines; (e) leave the pin hand-maintained and accept the coupling permanently.
+- **Concrete revisit triggers:** (i) **the next cycle that adds or removes a registry row** — this is the designed-for moment, and if the bump is forgotten CI fails loudly rather than silently, which is the behaviour option (b) would soften; (ii) the second time the pin is bumped, since one bump is maintenance and two is a pattern that justifies option (a) or (b); (iii) any cycle that needs a third protected string whose uniqueness must be checked by hand — that is the repetition signal for option (c); (iv) a change to the registry's column count or schema, which invalidates the field-8 assumption outright and forces option (d) or a rewrite.
+- **Risk knowingly accepted:** four, named rather than bundled. (i) **The pin is a hand-maintained coupling between a CI file and a data file.** A cycle that adds a row and forgets the bump gets a red CI on arrival — noisy but safe. The genuinely bad case is the reverse: someone silences a legitimately-failing check by bumping the pin to match reality instead of investigating why the count moved. Nothing in this design prevents that, and the failure message is the only mitigation. Accepted, and it is what trigger (ii) and options (a)/(b) exist for. (ii) **The check asserts structure, never prose quality.** A description rewritten into fluent nonsense passes it perfectly. AC-PL-6 was never the instrument for AC-PL-1's content — the 3-question read is — and the two must not be conflated in a future reading. (iii) **The bash wrapper around the parser was not executed as a unit at Phase 1.** The `awk`, both `sed` fixture constructions, and all three resulting counts were run against the live tree; the `mktemp`/`trap`/`for`/`if` scaffold was not, because the agent-scope guard refused every attempt to stage a runnable script. It is asserted on structural grounds — it mirrors the fault-injection step already in production in the same job — and @dev is instructed to run the step locally once before pushing. Recorded rather than glossed, because "validated" would have been a claim wider than its instrument. (iv) **§Decision (4)'s uniqueness rule is stated generally but was applied by hand to six strings.** No mechanism enforces that a future protected string gets the same check; the next author has to remember. Accepted for a PATCH, and it is exactly what option (c) retires.
+
+### References
+
+- `docs/design-v2.19.10.md` §C.6 (the literal inline step and its validation scope), §C.7 (row-6 correction), §E.1 (the finding), §F (TIER-4 clearance)
+- `docs/spec.md` § *Product Spec — Cowork Starter Kit v2.19.10*, AC-PL-6 and AC-PL-7
+- `docs/hld.md:37` Principle 5 — a check proven able to fail, not prose that asserts safety
+- ADR-069 / `registry-sha256-check` — the job this control extends, and the source of its fault-injection-first house pattern
+
+---
+
+## ADR-087: A fixture may not be anchored on content its own cycle mandates changing, and a scoped guarantee needs a scoped instrument — AMENDS ADR-086 §Decision (4) (v2.19.10 Phase-2 amendment, S1 / S2)
+
+- **Status:** Accepted at the Phase-1 amendment, 2026-08-20. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.10 "Plain Language: say it the way she'd say it" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B. Unchanged by this amendment: the control still lands inline in `.github/workflows/quality.yml` and **not** under `scripts/`, preserving TIER-4 clearance.
+- **Reusability:** `candidate-constituent`. Both rules are general failure modes of verification design and are stated in transferable form in §Decision.
+- **Supersedes:** nothing. **Amends:** **ADR-086 §Decision (4)** (the uniqueness rule — narrowed and corrected below) and ADR-086 §Decision (1)/(3)'s validation records (the fixture constructions they describe are withdrawn and replaced). ADR-086's single-parser decision, its pin design, and its fault-injection-first ordering are **unchanged and reaffirmed**.
+
+> **Why an amendment record and not a rewrite.** `docs/architecture.md` is append-only. ADR-086's text stands as written, including the fixture constructions now known to be defective — the defect and its correction are both part of the record, and a reader who finds ADR-086 first must be able to reach this amendment. That is what the **Amends** field is for.
+
+### Context
+
+**(1) Both defects were in CORRECTIONS, not in originals.** ADR-086 was itself minted to fix two instruments that could not fail. Phase 2 found that **its own two remedies** — the AC-PL-6 fixtures and the AC-PL-7 row-6 count — were the **4th and 5th** instruments in this cycle that cannot fail on their target condition. @security's framing is adopted verbatim: *"both corrections needed the same scrutiny as the defects they fix, and neither got it."* A correction is not privileged; it is an instrument like any other, and it needs its own negative control.
+
+**(2) S1 — the fixture self-destructs on the cycle's own mandated edit.** ADR-086 §Decision (1)/(3)'s fixtures were built with a `sed` quoting `apply/verify/rollback machinery`. That literal occurs **1 time** in `curated-skills-registry.md`, at line 31, **inside `self-apply`'s `description` cell — the exact field AC-PL-1 mandates rewriting**, and `apply/verify/rollback` is term #7 on the cycle's own Jargon List. Measured at the amendment: on the clean tree the fixtures return 30/29/29 exactly as ADR-086 records (that record was honest); on a tree with the mandated rewrite applied they return **30/30/30** — both `sed`s no-op, both fixtures become byte-identical to the clean tree, and the step's own logic fires `FAULT-INJECTION FAILED`. Because the design sequences `quality.yml` first, **the gate would go green on commit 1 and permanently red on commit 2**, with an error message blaming the check for the fixture's evaporation. The step-2 assertion was and remains sound; only the self-test was defective.
+
+**(3) S2 — the row-6 remedy was narrower than the guarantee it enforces.** ADR-086 §Decision (4) replaced a presence test with a **file-wide count equality** (pre-edit 2 occurrences). Measured at the amendment: deleting *"— the wizard installs only from the local, vetted pool"* from `WIZARD.md:123` — **the actual restriction, the positive statement of where skills may come from** — leaves the count at **2 → GREEN**. The remedy froze the sentence's **announcement** and left its **guarantee** unprotected, on the F4 pool boundary that supplies the **B2** basis for this cycle's SECURITY-SENSITIVE classification.
+
+**(4) The repository had already solved (3), and ADR-086 did not cite it.** `quality.yml:753-785` (`self-apply-deny-completeness-check`) is the house remedy for a whole-file grep that *"wrongly PASSES OUTRIGHT"*: anchor-scoped paragraph extraction via `awk -v RS='' -v anchor=…`, plus a fault-injection step proving the unscoped form passes. It is also the shape the same design chose for its F-6 remedy. **Scoping was applied to F-6 and bare counting to F-1, two pages apart in one document.** The inconsistency, not the ignorance, is the finding.
+
+**(5) The measurement method was wrong even where the answers were right.** Every "unique in its file" claim rested on `grep -cF`, which counts **lines**, used as an **occurrence** test, against files written in paragraph-length lines (`WIZARD.md:123` is one ~600-character line). Two occurrences in one paragraph report as 1. Re-run with `grep -oF … | wc -l`, every claim held — the findings were sound, the instrument was not.
+
+### Decision
+
+**(1) FIXTURE-ANCHOR INDEPENDENCE — the generalizable rule, and the one worth carrying off this repository.** *A fault-injection fixture may never be anchored on content that the same cycle mandates changing.* Anchor on the most stable structure that isolates the target: a field position, a key column, a table cell that is out of scope by construction. Concretely here, the fixture keys on **field 2** (`| self-apply |`, byte-unchanged by AC-PL-1) and injects **positionally** into field 3, never quoting the description's words:
+
+```text
+awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' curated-skills-registry.md
+```
+
+Verified at the amendment: **29 on the clean tree AND 29 on the post-rewrite tree.** The existing `REAL_HASH` fixture in the same job (`quality.yml:573`) already used this field-anchored shape; ADR-086's fixtures did not follow it.
+
+**(2) A FIXTURE-VALIDITY GUARD IS MANDATORY, not optional, wherever a fixture is constructed by mutation.** A damage fixture byte-identical to its source is a no-op, and a no-op fixture reports downstream as *"the check cannot fail"* — an error that blames the check for the fixture's own evaporation and sends the next reader to debug the wrong artifact. Using the repo's own house pattern (`quality.yml:573-576`):
+
+```text
+if cmp -s <source> <fixture>; then
+  echo "::error::FIXTURE SETUP FAILED — the damage fixture was a no-op; its anchor no longer exists."
+  exit 1
+fi
+```
+
+**Rules (1) and (2) are complementary, not alternatives, and both are applied.** (1) prevents the evaporation; (2) makes any future evaporation self-describing. Neither alone is sufficient: (1) can be defeated by a schema change nobody anticipated, and (2) only reports after the fact.
+
+**(3) SCOPE-MATCHED INSTRUMENTS — this AMENDS ADR-086 §Decision (4).** ADR-086 read: *"a presence test is sound only where the protected string is unique in its file; where it is not, compare pre/post counts."* **That is necessary but NOT sufficient, and counting is not the general remedy.** The corrected rule:
+
+> **An instrument must cover the whole of the guarantee it protects, not merely a unique substring of it. Where a guarantee is scoped to a region, scope the instrument to that region first, then assert every load-bearing clause within it. Uniqueness determines whether presence-testing is *usable*; scope determines whether the instrument is *sufficient*.**
+
+Counting a non-unique string is one valid tactic for one narrow case (detecting deletion of one of N copies). It is not the general answer, and treating it as such is what produced S2. Applied to AC-PL-7 row 6:
+
+```text
+LINE=$(grep -n 'No URL paste, no external source' WIZARD.md | cut -d: -f1)   # 1 occurrence, verified
+CLAUSE=$(sed -n "${LINE}p" WIZARD.md)
+echo "$CLAUSE" | grep -qF "Installing skills from external sources isn't supported yet"
+echo "$CLAUSE" | grep -qF "the wizard installs only from the local, vetted pool"
+```
+
+The file-wide occurrence count is **retained as a cheap second leg** — it catches out-of-scope edits to the `:27` copy, which the scoped leg cannot see. Four negative controls executed at the amendment: clean GREEN; tail-deleted **RED** (the defect the count missed); opening-rewritten **RED**; inline-definition-appended GREEN (the only compliant shape).
+
+**(4) OCCURRENCES ARE COUNTED WITH `grep -oF … | wc -l`, AND EVERY NUMBER CARRIES ITS UNIT.** `grep -cF` counts lines and is correct only where the quantity genuinely is lines. Write *"2 occurrences"* or *"2 lines"*, never a bare *"2"*.
+
+**(5) AN INSTRUMENT'S CLAIM IS STATED TO WHAT IT ACTUALLY FIRES ON.** ADR-086 recorded that both legs of the compound fixture *"fire independently."* False at instrument level: reflowing pipe **spacing** does not change pipe **count**, so field 8 is untouched and reflow-only returns **30 GREEN**. The compound fixture's RED comes **entirely** from the pipe-injection leg. **The correct response was to fix the claim, not to add a parser** — reflow-only damage is already covered by `wizard-consistency-check` (`quality.yml:1966`), verified RED on the reflow-only fixture and GREEN on the clean tree at the amendment. The gap was in the claim, not the coverage. Adding a second parser would have reintroduced exactly the cancellation defect ADR-086 exists to prevent.
+
+### Consequences
+
+- ADR-086's single-parser decision, job-level pin, and fault-injection-first ordering are **unchanged**. What changes is how the fixtures feeding that design are **constructed** and how row 6's guarantee is **scoped**.
+- The AC-PL-6 step gains one `cmp -s` loop (≈8 lines) and swaps two `sed` calls for one `awk` plus one `sed`. No new job, no new file, no `scripts/` entry — **TIER-4 clearance is preserved and re-verified**.
+- AC-PL-7 row 6 gains a scoped two-clause assertion. Still `grep -F` over literals; **no parser added**, so ADR-086's cancellation argument is not reopened.
+- **`WIZARD.md:123` is now a constrained edit site**: its opening clause is frozen byte-for-byte and only its tail may change, additively. This is recorded in `docs/design-v2.19.10.md` §C.3 as a warning box, because a plain-language pass will otherwise reach for that opening and produce correct-looking work that fails CI.
+- **No AC's requirement is changed by this amendment.** Every item is an instrument fix or a record correction. Where a remedy would have changed what an AC requires, it was reported rather than applied (§E.9 / S4).
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) mint fixture-anchor independence as a **checklist item** in `CONTRIBUTING.md`'s CI section, so the next author of a fault-injection step is asked "is your anchor in scope for this cycle's edits?" before review rather than after — the cheapest option, and the one that addresses the fact that both defects were authored by the same agent that had just fixed the same class; (b) make the `cmp -s` fixture-validity guard a **shared shell helper** sourced by every fault-injection step in `quality.yml`, retiring the copy-paste (there are now three near-identical instances: `REAL_HASH`, AC-PL-6 pipe, AC-PL-6 compound); (c) generalize §Decision (3) into a helper taking `(file, anchor, [clauses…])` that scopes and asserts in one call, retiring the per-row judgment that produced both S2 and F-1; (d) add a **meta-check** that greps `quality.yml` for fixture-construction commands whose literal arguments also appear in files the cycle's own design lists as edited — mechanically detecting the S1 class rather than relying on review; (e) leave all four hand-applied and accept that the next cycle re-derives them.
+- **Concrete revisit triggers:** (i) **the next cycle that adds a fault-injection step** — that is the moment option (a) or (b) pays for itself, and the moment the S1 class can recur; (ii) **a third scoped-guarantee assertion** anywhere in the repo — two (F-6's window, row 6's line) is a coincidence, three is the repetition signal for option (c); (iii) any cycle that edits `curated-skills-registry.md`'s **column layout**, which invalidates the field-2 anchor and forces a fixture redesign; (iv) **a 6th instrument-that-cannot-fail finding in any single cycle** — five in one cycle was already enough to justify this ADR; six would mean review is not catching the class and option (d)'s mechanical detection is owed; (v) the first time `WIZARD.md:123`'s frozen opening is proposed for rewrite on legitimate plain-language grounds, which would require re-scoping row 6 rather than refusing the edit.
+- **Risk knowingly accepted:** five, named rather than bundled. (i) **The field-2 anchor is stable but not immortal.** It survives AC-PL-1 by construction, and the `cmp -s` guard makes any future break self-describing — but a cycle that renames the `self-apply` slug breaks it, and nothing warns at authoring time. Accepted; trigger (iii) and option (d) exist for it. (ii) **`WIZARD.md:123`'s frozen opening is a real constraint on plain-language work, and it may be the wrong trade.** The opening contains `external sources`, which a Q2 read may legitimately flag as undefined. This design forces the definition into the appended tail rather than allowing the opening to be reworded. That is the safe choice, not obviously the best-written one; if the resulting sentence reads badly, the correct fix is to re-scope row 6, **never** to relax it. Recorded so a future reader knows the constraint was chosen with its cost visible. (iii) **Row 6's scoped leg cannot see the `:27` copy at all.** The retained file-wide count is the only instrument there, and it has exactly the weakness S2 identified — it would not catch the `:27` copy's restriction clause being gutted. Accepted because `:27` is out of scope this cycle and unedited; **if a future cycle edits the Network & Offline Rule, that copy needs its own scoped assertion** and the count leg must not be trusted for it. (iv) **AC-PL-7 row 2's margin is 2 tokens, not the 5 its shape implies** (`Tasks/`, `People/`, `Calendar/` all recur elsewhere in `personal-assistant`'s file and survive the compression the row exists to catch; only `Finances/` and `Documents/` are load-bearing). The row fires and is contained, but its apparent redundancy is not real redundancy. Recorded for @qa rather than fixed, because fixing it means re-scoping row 2 to the enumeration line — a change to what the AC requires, which is out of an amendment's authority. (v) **Four of the five instrument defects this cycle were found by re-running a check against a tree that reflected the cycle's own pending edits — a step no rule currently mandates.** This ADR mints the rule for fixtures specifically (§Decision (1)); it does **not** mandate the general practice of simulating your own cycle's edits before trusting any instrument. That generalization is deliberately left unmade for a PATCH, and it is the largest unclosed gap here.
+
+### References
+
+- `docs/design-v2.19.10.md` §C.0 (counting method), §C.3 (the `:123` collision box), §C.6 (amended fixtures + two-tree control table), §C.7 (row-6 scoped instrument), §E.7 / §E.8 / §E.9 (the findings)
+- **ADR-086** — the ADR this record amends; read both, in order
+- `quality.yml:573-576` — `REAL_HASH` fixture-validity guard, the house pattern for §Decision (2)
+- `quality.yml:753-785` — `self-apply-deny-completeness-check`, the house pattern for §Decision (3)
+- `quality.yml:1966` — `wizard-consistency-check`, which covers the reflow case §Decision (5) declines to claim
+- `docs/design-v2.19.7.md` §H — the recorded-deferral standard applied to this cycle's CODEOWNERS deferral
+- `docs/patterns.md:55` — claims stated wider than their instrument (WATCH 2/3 this cycle); `docs/patterns.md:56` — units named on every number
+
+End of v2.19.10 ADR block.
+
+---
+
+## ADR-088: Internal QA/security reports are retrofitted into `docs/internal/`, the archive-leak gate is written in the direction the leak actually travels, and path references are frozen unless a machine resolves them (v2.19.10 Phase-1.2 owner-directed addendum, S4)
+
+**Status:** **PROPOSED (deferred at v2.19.10 Phase 1.3 — number reserved for the S4 retrofit cycle).** Minted ACCEPTED at Phase 1.2; **downgraded to PROPOSED at Phase 1.3** when the owner split the retrofit into its own cycle. **Cycle:** v2.19.10, Phase-1.2 addendum → deferred. **Amends:** ADR-037 (see the separate amendment record below; read both — **that amendment record is NOT deferred and remains in force**). **Companion:** ADR-033.
+
+> **⚠ PROPOSED — NOT IN FORCE. Read this before treating anything below as a decision.**
+>
+> **Why PROPOSED rather than ACCEPTED.** §Decision (1) below says the 14 reports *are* retrofitted into
+> `docs/internal/`. **They are not, and will not be by v2.19.10.** Recording this ADR as ACCEPTED on
+> `main` would place a decision in the index as in-force while the repository still ships all 14 — a
+> falsified §Consequences claim of exactly the kind this ADR was written to correct in ADR-037. The
+> status must not repeat the error the ADR diagnoses.
+>
+> **Why the record is retained rather than removed.** Retaining it **reserves the number 088**, so the
+> S4 retrofit cycle carries this ADR forward and flips it to ACCEPTED on implementation with **no
+> ADR-number collision** — and no re-derivation of the evidence below. **House precedent: ADR-028**,
+> minted `PROPOSED in v2.3.0` and flipped to `ACCEPTED` in v2.5; its index cell still reads
+> `ACCEPTED (v2.5 — was PROPOSED in v2.3.0)`.
+>
+> **What the successor cycle inherits:** the build-ready handoff is `docs/design-v2.19.10.md` **§J**
+> (self-contained); the proof the cycle is **Tier A** is **§F.2**; the operative Tier-B classification
+> for v2.19.10 as it ships is **§F.3**.
+>
+> **The §Context corrections below are NOT deferred.** The falsification of the "radical transparency"
+> citation and of the "newest internal at v2.9.0" account stand on their own instruments — a falsified
+> claim is falsified whether or not the retrofit ever ships.
+
+### Context
+
+`git archive HEAD | tar -tf -` at `be92754` lists **14** entries matching `^docs/(qa-report|security-audit|security-review)-`; `docs/internal/` yields **0** entries. The repository is public and those 14 documents enumerate unfixed gaps, inert controls, and zero-coverage areas.
+
+**The grounding is ADR-037 compliance, not a new convention.** `docs/design-v2.19.7.md:82` justified root-level reports as a *"conscious choice under ADR-037's radical-transparency convention."* Verified this session by reading ADR-037 itself rather than the citation to it: **the phrase "radical transparency" occurs 0 times inside ADR-037's own body**, and occurred **0 times in the whole of `docs/architecture.md` as measured at `be92754`** (the only two occurrences anywhere in the repo at that commit were in this cycle's own `docs/spec.md` and `docs/design-v2.19.10.md`, both discussing the error). **Re-derive against `be92754`, or scope the grep to ADR-037's body** — this ADR and the amendment record below both quote the phrase in order to correct it, so a bare `grep -c` against HEAD now returns 2 and does not reproduce the finding. ADR-037's §Decision `git mv`'d internal artifacts into `docs/internal/{qa,security}/` — today `git ls-files docs/internal/qa` → **24 files**, `docs/internal/security` → **26 files**. `design-v2.19.7.md:82` invoked a convention its cited ADR does not contain, to justify a placement that ADR had already decided against.
+
+**One §E.9 claim is corrected here rather than inherited.** §E.9 states the internal convention held *"for ~50 predecessor documents and then lapsed,"* newest internal at **v2.9.0**. That is **falsified**: `docs/internal/qa/qa-report-v2.19.4.md` and `docs/internal/security/security-review-v2.19.4.md` are both internal, as are v2.15.0/v2.16.0/v2.17.0. The lapse is **intermittent, not a clean cutoff** — v2.18.0 and v2.19.0 went to root, v2.19.4 went internal correctly, then v2.19.5/.6/.7/.9 went to root again. A convention that flips back and forth across adjacent patch releases is precisely the case a standing gate exists for, and it strengthens rather than weakens the argument for §Decision (3).
+
+### Decision
+
+**(1) Retrofit the 14 via `git mv`** — ADR-037's own mechanism — into the two directories that already exist: 5 into `docs/internal/qa/`, 9 into `docs/internal/security/`. Content is byte-unchanged (verified on a real clone: `git show --name-status --find-renames=100%` → **14 `R100` entries**).
+
+**(2) Repair only the references a machine resolves; freeze the rest.** See §Reference-class ruling below.
+
+**(3) Mint the archive-leak gate in the direction the leak travels.** ADR-037 §Maturation Path option (c) proposed *"a CI assertion that every `docs/internal/**` file is absent from the release archive."* **That checks the wrong direction and would not have caught this.** The 14 leaked by never being placed internal at all; an assertion scoped to `docs/internal/**` is vacuously satisfied by a file that never went there. The sound assertion is the inverse and is scoped to the *shipping* surface: **zero `git archive` entries match `^docs/(qa-report|security-audit|security-review)-`**. It lands inline in `.github/workflows/quality.yml` (TIER-4: never a file under `scripts/`).
+
+**(4) `git archive` is the instrument; `git check-attr` is not.** Verified this session: `git check-attr export-ignore docs/internal/qa/qa-report-v2.19.4.md` → **`unspecified`**, and `git check-attr export-ignore docs/qa-report-v2.18.0.md` → **`unspecified`**. The two files are on opposite sides of the boundary and the instrument returns the **same value for both** — it does not resolve directory-prefix inheritance, so it cannot discriminate an excluded file from a shipping one. Only `git archive` proves what ships.
+
+**(5) The gate carries an in-step canary, because its GREEN is otherwise meaningless.** A wrong pattern matches nothing, which is byte-identical to a clean tree. Demonstrated on a real tree: against the leaking tree, the correct pattern returns **14** and a pattern with underscores instead of hyphens returns **0** — indistinguishable from a genuine pass. The step therefore asserts, *before* consulting the archive, that `LEAK_PATTERN` matches a canary path (`docs/qa-report-v9.9.9.md` → **1** match; the typo'd pattern → **0**), plus a vacuity guard requiring a populated listing (real archive = **430 entries** pre-move, **416** post-move).
+
+**(6) `docs/design-v2.19.*.md` shipping stays deliberate and is NOT swept into the move.** That asymmetry is genuine and unchanged.
+
+### Reference-class ruling — two classes, one mechanical test
+
+The mechanical test is **differential execution**, not inspection: run the check against a real pre-move tree and a real post-move tree. **If the exit code or the output changes, the reference is Class A. If it does not, it is Class B.** Judgment about what a line "looks like" is not used, because this repository has been bitten three times by scoped inspection (v2.6.1 → v2.8.0: the architect's scoped check missed refs, the security grep found 2 more, CI found 2 broken links).
+
+**Class A — RESOLVED (MUST update).** The string is interpolated into a filesystem path by a running check. **Population: exactly 3 lines**, all in `scripts/verify-ledger-annotations.sh` (`LA-03a`/`LA-03b`/`LA-03c`, whose `AFILE` field becomes `TARGET="${REPO_ROOT}/${AFILE}"` and is tested with `[ ! -r "$TARGET" ]`). Proven, not read: on the pre-move tree the script exits **0** with `LA-03a/b/c PASS`; on the post-move tree it exits **1** with **3 of 19 static anchors** failing, each naming `docs/security-audit-v2.19.6.md`; after repointing the three `AFILE` values, **0 of 19** static anchors fail.
+
+**Class B — NARRATIVE (FROZEN).** Everything else: append-only historical records (`docs/architecture.md`, `docs/retro.md`, `docs/spec.md`, `docs/risk-register.md`, `docs/design-v2.19.8.md`, `CHANGELOG.md`, and the moved reports' own cross-citations), code comments, runtime diagnostic strings, CI step names, and test-fixture provenance headers. Differential execution shows **no change** for every member.
+
+**Why frozen, on three independent grounds.**
+
+1. **The repository's own ADR-037 precedent.** ADR-037 moved ~39 files and **did not rewrite the prose references to them**. `docs/architecture.md` carries **25** bare report paths today; `docs/qa-report-v2.5.2.md` and `docs/qa-report-v2.6.0.md` resolve to nothing at `docs/` root and have not for **11+ minor versions**, with CI green throughout. The house convention for this exact operation is already set, and it is "freeze."
+2. **A v2.18.0 retro entry naming `docs/qa-report-v2.18.0.md` was true when written.** Rewriting it is the same violation this cycle refused twice — ADR amendments appended rather than rewritten, and the v2.5.3 row held byte-unchanged.
+3. **`link-check` cannot fire.** Re-derived: markdown links to the moving files → **0**. An exhaustive scan for a markdown link to *any* report path repo-wide returns **1** hit, which is a regex literal quoted inside `docs/spec.md` prose, not a link. lychee resolves links, not bare text paths — which is why the 25 already-dead paths in `architecture.md` have never failed a build.
+
+**Two sub-populations ruled explicitly, because both were candidates for Class A and neither is.**
+
+- **The 3 operator-facing strings** — `scripts/verify-release-surface.sh:359` and `scripts/publish-release.sh:87` (`echo … >&2`) and `.github/workflows/quality.yml:2250` (a step `name:`). These are on non-comment lines but are never resolved as paths. **Class B, frozen.** Updating the two `scripts/` ones would modify `scripts/` files for a cosmetic string, widening a Tier-A guard review for zero functional gain (see §Consequences). A rule that updated the `quality.yml` one only because that file is already open would make the outcome depend on an unrelated fact; uniform freeze is the cleaner rule.
+- **The 2 `tests/fixtures/release-surface/` provenance headers.** Ruled by execution, not assumption: both fixture-driven CI steps were re-run on a post-move tree with the headers rewritten to the new paths. `changelog-no-headers.md` still produces the documented `0 versions checked at or above floor 2.18.0` diagnostic; `evidence-wrong-latest/CHANGELOG.md` still produces `WRONG-LATEST — /releases/latest resolves to 'v2.18.0', expected 'v9.9.9'`. The assertions bind on exit codes and output strings, never on line 1. **Not load-bearing for expected output — therefore Class B, frozen**, for consistency with the same maintainer-facing rationale.
+
+**The accepted cost, stated plainly:** the repository will hold ~60 prose paths that no longer resolve. `git log --follow` recovers every one. That cost is already being paid for ADR-037's ~39 files and has cost nothing measurable in 11 versions.
+
+### Alternatives considered
+
+- **(a) Rewrite every reference repo-wide.** Rejected: destroys the truth-value of append-only historical records, contradicts ADR-037's own precedent, and maximizes the diff on a Tier-A cycle for zero functional gain.
+- **(b) Move only the 13 that break nothing, leaving `docs/security-audit-v2.19.6.md` at root to avoid the `scripts/` edit.** Rejected: it keeps a leak open and the gate in §Decision (3) would be permanently RED — or would need an exception carved into it, which is exactly the `design-v2.19.7.md:82` rationalization pattern this addendum exists to end.
+- **(c) ADR-037's option (c) as written** (`docs/internal/**` absent from the archive). Rejected as the wrong direction — see §Decision (3).
+- **(d) `git check-attr` as the gate's instrument.** Rejected on evidence — see §Decision (4).
+- **(e) Leave the 14 and re-record the transparency rationale honestly.** Rejected: the owner directed the retrofit at the Phase 3 gate, and the rationale was never ADR-037's to begin with.
+
+### Consequences
+
+- **The cycle escalates from Tier B to Tier A. This is the addendum's most consequential effect and it was not anticipated when the work was folded in.** TIER-1 is *"any file under `scripts/` added or modified"*, mechanical check `git diff --name-only base..head -- scripts/` → **empty**. Class A repair necessarily modifies `scripts/verify-ledger-annotations.sh`, so that check is necessarily non-empty. There is no path that both moves `docs/security-audit-v2.19.6.md` and leaves `scripts/` untouched. **A Guard Change Summary is now owed before the PR opens, and @security must re-review.** Recorded rather than designed around; see `docs/design-v2.19.10.md` §F.
+- The leak class closes in the direction it actually travels, with a gate whose GREEN is meaningful because the canary makes a broken pattern self-reporting.
+- `docs/internal/qa/` goes 24 → **29**, `docs/internal/security/` 26 → **35**. Release archive goes 430 → **416** entries.
+- The 19-record ↔ 19-row equality between `verify-ledger-annotations.sh` and `docs/design-v2.19.8.md` §C.2 is preserved: three `AFILE` values change, the record count does not. The §C.2 table's path column becomes a frozen historical snapshot — which it already is on another axis, since its recorded match counts (`LA-03b`: 3) already differ from live values (5) and no one treats that as a defect.
+- **No existing AC's requirement is changed.** Every item here is additive.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) generalize the gate from three hardcoded report prefixes to a **declared manifest** of internal-artifact name patterns, read by both `.gitattributes` and the CI step, so a new internal artifact family (`compliance-review-*`, `ux-review-*`) is covered on the day it is invented rather than after it leaks; (b) invert the whole surface to an **allowlist** — assert that every `docs/*.md` archive entry appears in an explicitly published list, closing the class for *all* future file families rather than the three named here (this is the `positive-allow-list-over-deny-first` shape, and it is the only option that would have caught this without foreknowledge of the names); (c) a **one-time repo-wide path-rewrite pass** over the ~60 frozen Class-B references, run as its own cycle with its own review, converting historical paths to `docs/internal/...` with a recorded note that the rewrite is editorial — deliberately not done piecemeal here; (d) extend the canary pattern to **every** fixture-free assertion in `quality.yml`, retiring the per-step judgment about whether a GREEN is meaningful; (e) leave all of it and re-derive next time.
+- **Concrete revisit triggers:** (i) **a fourth internal artifact family appears** (a `compliance-review-*` or `ux-review-*` at `docs/` root) — option (a) or (b) is owed at that moment, because the hardcoded three-prefix pattern will be silently under-scoped; (ii) **any cycle that already modifies `scripts/verify-release-surface.sh` or `scripts/publish-release.sh` for its own reasons** — fold the two frozen operator-facing strings in at zero marginal ceremony, exactly as `docs/design-v2.19.7.md` §H's deferral standard prescribes; (iii) **a maintainer reports following a dead path** from a diagnostic or a fixture header — that converts the accepted cost of §Reference-class ruling into a measured cost and triggers option (c); (iv) **the gate ever goes RED on a file that should legitimately ship** — the three-prefix pattern is then over-scoped and needs the manifest of option (a); (v) `.gitattributes`' `docs/internal/` directory rule is ever changed, which would silently decouple the gate from the mechanism it verifies.
+- **Risk knowingly accepted:** four, named rather than bundled. (i) **The gate is scoped to three name prefixes, and states no wider claim than that.** It does not assert "no internal document ships"; it asserts "no file whose name begins with one of three prefixes ships." A leaked internal artifact under any other name passes GREEN. Accepted for a PATCH addendum; option (b) is the real closure and trigger (i) is when it becomes owed. (ii) **~60 Class-B references are knowingly left pointing at paths that no longer resolve.** Mitigated by `git log --follow` and by the fact that ADR-037's own ~39-file precedent has carried this cost for 11+ versions without incident — but it is rot, it accumulates, and option (c) is the only thing that clears it. (iii) **The Class-A population was determined by differential execution against the checks that exist today.** A future check that reads one of these paths and is added *without* being run against a post-move tree would break, and nothing warns at authoring time. The gate added here does not cover that case — it watches the archive, not path resolution. (iv) **Tier-A escalation was discovered at design time, not at scope-fold time.** The owner folded this work in believing it did not escalate ceremony, on the (correct) reasoning that `quality.yml` was already open; the `scripts/` blast radius of the reference sweep was not visible at the gate. The decision to proceed is the owner's to re-make with that fact in hand, and this ADR does not presume it.
+
+### References
+
+- `docs/design-v2.19.10.md` §I (the addendum), §D.1 (file list + sequencing), §F (the re-run and the escalation)
+- **ADR-037** — the ADR this record amends and enforces; read both, in order
+- `docs/spec.md` § v2.19.10 Phase-1.2 addendum — AC-PL-9 … AC-PL-13 and their instruments
+- `.gitattributes:28` — the `docs/internal/ export-ignore` directory rule the gate verifies the effect of
+- `scripts/verify-ledger-annotations.sh:134-136` — the entire Class-A population
+- `docs/hld.md:35` — the one-functional-idea rule, knowingly set aside by owner decision (recorded in `docs/spec.md`, not re-litigated here)
+
+---
+
+## Amendment record — ADR-037 (appended v2.19.10 Phase-1.2; ADR-037's own text is NOT rewritten)
+
+Recorded per the house convention established by ADR-087 amending ADR-086: the amended record is left intact and the correction is appended. Three items.
+
+**1. ADR-037 §Consequences contains a falsified claim.** It states: *"A future contributor cannot ship a new internal artifact to users by adding it under `docs/` — internal is the default."* **Fourteen files did exactly that**, across v2.18.0 → v2.19.9. The claim conflated *the `.gitattributes` mechanism* (which works — `docs/internal/` is genuinely excluded, 0 entries in the archive) with *the placement convention* (which is unenforced prose, and lapsed intermittently). Nothing in the repository made placement mandatory; "internal is the default" described an intention, not a control. ADR-088 §Decision (3) supplies the missing control.
+
+**2. ADR-037 §Maturation Path option (c) checks the wrong direction.** As written — *"a CI assertion that every `docs/internal/**` file is absent from the release archive"* — it is vacuously satisfied by a file that was never placed under `docs/internal/`, which is the only way the leak has ever occurred. The correct assertion is the inverse, scoped to the shipping surface. Superseded by ADR-088 §Decision (3).
+
+**3. `docs/design-v2.19.7.md:82` cited a convention ADR-037 does not contain.** It justified root-level reports as a *"conscious choice under ADR-037's radical-transparency convention."* Scoped instrument: `grep -c 'radical transparency'` **within ADR-037's own body** → **0** (and → **0** across all of `docs/architecture.md` at `be92754`, before this record was appended). ADR-037 contains no such convention, and its §Decision moved internal artifacts in the opposite direction. Recorded because the failure mode is worth naming: a citation was trusted in place of the record it cited, and the rationalization then licensed 14 files through four subsequent releases. The correction was found by reading ADR-037 itself.
+
+**ADR-037's status remains ACCEPTED.** Its mechanism is sound and unchanged; this amendment corrects one consequence claim, one maturation option, and one downstream misreading.
+
+End of v2.19.10 Phase-1.2 addendum ADR block.
+
+---
+
+## Deferral record — ADR-088 (appended v2.19.10 Phase 1.3; ADR-088's own text is NOT rewritten)
+
+Recorded per the same append-only house convention ADR-088 itself used to amend ADR-037, and ADR-087 used to amend ADR-086: the record is left intact and the change of status is appended.
+
+**ADR-088 is downgraded from ACCEPTED to `PROPOSED (deferred)`, and its scope is withdrawn from v2.19.10's build scope.**
+
+**1. What happened.** ADR-088 was minted ACCEPTED at v2.19.10 Phase 1.2, after the owner folded the S4 retrofit into the cycle at the Phase 3 gate. Phase 1.2 then established that the retrofit **escalates the cycle Tier B → Tier A** — TIER-1 (*"any file under `scripts/` added or modified"*) fires necessarily, because moving `docs/security-audit-v2.19.6.md` breaks `scripts/verify-ledger-annotations.sh:134-136` and there is **no design that both moves that file and leaves `scripts/` untouched.** The owner's gate approval had been given on the belief that ceremony was unchanged; that belief was falsified. **The owner was re-asked with the split option on the table and chose to split the retrofit into its own cycle**, so that Tier A is that cycle's whole ceremony rather than a bolt-on to a PATCH about wording.
+
+**2. Why PROPOSED and not deletion.** Two reasons, and the first is a correctness constraint rather than a convenience.
+
+- **ACCEPTED would be a falsified claim.** ADR-088 §Decision (1) states the 14 reports *are* retrofitted. After the split they are not, and will not be by v2.19.10 — all 14 still ship in the public archive. Leaving the index at ACCEPTED would assert an in-force decision that the repository contradicts. That is structurally the same error ADR-088 was written to correct in ADR-037 §Consequences (*"a future contributor cannot ship a new internal artifact to users by adding it under `docs/`"* — falsified by 14 files that did exactly that). **An ADR that diagnoses a falsified status claim must not ship carrying one.**
+- **PROPOSED reserves the number.** The S4 retrofit cycle carries ADR-088 forward and flips it to ACCEPTED on implementation, with **no ADR-number collision** and no re-derivation of its evidence. **House precedent: ADR-028**, minted `PROPOSED in v2.3.0` and flipped to `ACCEPTED` in v2.5; its index cell still reads `ACCEPTED (v2.5 — was PROPOSED in v2.3.0)`. Deletion would free 088 for an unrelated cycle and force the retrofit to re-mint under a new number, severing the record from the analysis that produced it.
+
+**3. What is deferred, and what is not.**
+
+- **DEFERRED:** ADR-088 §Decision (1)–(6), the reference-class ruling's *application*, the archive-leak gate, and `docs/spec.md`'s `AC-PL-9` … `AC-PL-13`. None is implemented by v2.19.10. v2.19.10's acceptance set is **`AC-PL-1` … `AC-PL-8`** and nothing beyond it.
+- **NOT DEFERRED — in force:** the **ADR-037 amendment record** immediately above. Its three corrections are factual findings, not remedies, and they stand whether or not the retrofit ever ships: ADR-037 §Consequences' claim is falsified; §Maturation Path option (c) checks the wrong direction; `docs/design-v2.19.7.md:82` cited a convention ADR-037 does not contain (`grep -c 'radical transparency'` **scoped to ADR-037's own body** → **0**).
+- **NOT DEFERRED — in force:** ADR-088's own **§Context** corrections, for the same reason.
+
+**4. The known-open defect, stated plainly rather than left implicit.** All **14** internal QA/security reports continue to ship in the public release archive, and no gate prevents a fifteenth. **This is knowingly carried into the successor cycle. It is not caused by v2.19.10 and it is not closed by v2.19.10.** What v2.19.10 does contribute is unchanged: its own new QA and security reports land in `docs/internal/{qa,security}/` rather than `docs/` root, so the cycle adds nothing to the leak.
+
+**5. Where the successor cycle builds from.** `docs/design-v2.19.10.md` **§J** — a self-contained handoff carrying the 14-file enumeration, the Class A / Class B ruling and its differential-execution test, the 3 exact `verify-ledger-annotations.sh` lines, the CI assertion with its canary self-test, both negative-control results (pre-move **14** ⇒ RED, post-move **0** ⇒ GREEN), the `check-attr`-is-unsound evidence, the archive counts (**430 → 416 entries**, **14 × `R100`**), the R1-gate-first ordering rule, and the `AC-PL-13` grep-scoping caveat. **§F.2** is the proof that the successor cycle is Tier A. **§F.3** is v2.19.10's operative classification — **CONFIRMED Tier B**, all four snapback conditions measured clear, `git diff --name-only fd00dd2..HEAD -- scripts/` → **empty (0 files)**.
+
+**6. Grep-scoping caveat that travels with this record.** A bare `grep -c 'radical transparency' docs/architecture.md` **no longer reproduces the finding**: ADR-088 §Context and the ADR-037 amendment record both quote the phrase in order to correct it, so the bare count against HEAD is **2**, not **0**. Any verifier of that finding MUST scope the grep to ADR-037's own body, or pin it to `be92754`. An unscoped count tests nothing.
+
+End of v2.19.10 Phase-1.3 deferral record.
