@@ -105,6 +105,8 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-082 | The `CLAUDE.md` auto-load premise is false, and the sweep that finds it must not be filtered by `export-ignore` (v2.19.9 Scope A) — supersedes ADR-010's premise; Cowork attaches a connected folder as a browsable source rather than injecting root `CLAUDE.md` as system context, so no kit surface may assert unconditional auto-load or project-folder skill auto-discovery; the correctness sweep runs over `git grep` on tracked files, never over `git archive` output | ACCEPTED |
 | ADR-083 | ADR-046's target holds; its basis does not — a prose doc line may never be the sole authority for a behavioral claim about the platform (v2.19.9 Scope A/D) — the workspace `CLAUDE.md` remains the proactive-surfacing target as best-effort/inspection-class; the discriminator sentence resting on circular authority (`WIZARD.md:3`, itself an unverified assertion site this cycle corrects) is retired | ACCEPTED |
 | ADR-084 | Starter sync is asserted, not assumed — inline `starter-sync-check` with minimal normalization, a slot-presence control, and a positive data-locality allow-list (v2.19.9 Scope C) — also lands `personal-assistant` into ADR-040's draft-first rollout, absent since `33fd22c` (v2.9.0) for word-budget reasons and unshipped for 10 releases | ACCEPTED |
+| ADR-085 | The runtime-string register lives in `CONTRIBUTING.md` — chosen on adjacency to the checklist a contributor editing a `description` already reads, NOT on the "does not ship" argument (Phase 1 verified `CONTRIBUTING.md` is itself `export-ignore`d, `.gitattributes:16`); the rule it carries is a **floor on guarantees, not a style preference** — a rewrite may simplify wording but may never weaken a stated guarantee, and where plain language and a safety clause conflict the clause wins (inline-define the term, never compress the sentence); weakening-by-**addition** is called out explicitly because presence-based checks structurally cannot see it (v2.19.10 AC-PL-4 / AC-PL-7) | ACCEPTED |
+| ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED |
 
 ---
 
@@ -13894,3 +13896,112 @@ an invisible one; the next feature that needs shared-line growth will hit it del
   identically across all seven files passes — it detects divergence, never wrongness.
 
 End of v2.19.9 ADR block.
+
+---
+
+# v2.19.10 — "Plain Language: say it the way she'd say it" (Phase 1)
+
+> Phase 1 design document: `docs/design-v2.19.10.md`. Citations below are **content-anchored** per
+> ADR-081 §D1 — each is a re-runnable `grep -n '<anchor>' <named-file>`. Line numbers, where given,
+> are navigational only and pinned to `fd00dd24a85e24ca0ec64462e191b4de99ff6a1e`.
+
+## ADR-085: The runtime-string register lives in `CONTRIBUTING.md`, and the rule it carries is a floor on guarantees, not a style preference (v2.19.10 AC-PL-4 / AC-PL-7)
+
+- **Status:** Accepted at Phase 1, 2026-08-20. Subject to the user gate (Phase 3); the rejected alternatives are stated so the gate can overturn the decision on the record.
+- **Cycle:** v2.19.10 "Plain Language: say it the way she'd say it" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B (PR required, Guard Change Summary NOT required) · COMPLIANCE-SENSITIVE = NO, conditionally. Re-run against the final file list at Phase 1: **CONFIRMED**, no flip in either direction (`docs/design-v2.19.10.md` §F).
+- **Reusability:** `project-specific`. The register's *content* — which surfaces count as runtime strings — is bound to this repository's wizard, registry, and preset layout. The *rule* it encodes (a simplification may never weaken a stated guarantee, and the check for that must be a count comparison rather than a presence test) is general, and is minted here in its generalizable form so a sibling project can lift it without lifting the surface list.
+- **Supersedes:** nothing. **Amends:** nothing.
+
+### Context
+
+**(1) The kit already had a no-jargon rule, and it had no reach.** `grep -n 'no jargon without inline definition' docs/spec.md` returns the v2.5.3 row, scoped to *"SEO/positioning copy — README, SETUP-CHECKLIST."* Meanwhile the strings a user actually reads at runtime — six registry descriptions, the wizard's closing message, the F4 bundle menu, and the `working-rules.md` family — were never in scope for it. The rule existed and the surfaces it should have governed grew up outside it.
+
+**(2) The scope boundary turned out to be mechanically derivable, which is stronger than the argument that produced it.** Phase 0 arrived at six in-scope registry rows through two independent grounds after three review rounds. Phase 1 measured jargon-hit density per description against the cycle's 34-term Jargon List and found the six in-scope rows are **exactly** the six rows with a non-zero count (8, 6, 6, 5, 3, 2); **all 24 remaining rows score 0**. The partition is clean. This is recorded as corroboration of the scope boundary, explicitly **not** as the pass criterion — it is Q1's mechanical leg alone, and Q1 permits a listed term carrying an inline definition, so a post-edit 0 does not mean PASS and a post-edit 1 does not mean FAIL.
+
+**(3) The placement argument that survived is not the placement argument that was written.** The Phase-0 rationale for choosing `CONTRIBUTING.md` over `docs/spec.md` rested partly on *"`docs/spec.md` is `export-ignore`d and does not ship."* Phase 1 verified that `CONTRIBUTING.md` is **also** `export-ignore`d (`.gitattributes:16` alongside `docs/spec.md` at `:31`), and that `.gitattributes:2` states the mechanism affects *"only `git archive` … not `git clone` or working tree."* Shipping is therefore not the discriminator. The decision stands on a different, independently sufficient ground — see §Decision (1).
+
+**(4) A guarantee can be gutted without a single protected token going missing.** Phase 0 R2 shipped an AC-PL-7 whose (a) enumeration and (b) negative-guarantee legs both returned GREEN against a Data locality rewrite that appended *"unless a web service is needed"*, *"except where you judge it useful"*, *"or go ahead if it is quicker"*, and *"without checking with me first"* — **8/8 protected tokens intact, guarantee inverted** (re-measured at Phase 1: the exception-token deny list goes 0 → **5** on that fixture and is the only leg that fires). Weakening-by-addition is the failure mode a presence-based safety check structurally cannot see.
+
+### Decision
+
+**(1) The runtime-string register lives in `CONTRIBUTING.md`, on the adjacency argument, not the shipping argument.** Insert `## Runtime-string register` immediately after `## Registry entries — \`curated-skills-registry.md\`` (`grep -n '^## Registry entries' CONTRIBUTING.md`). The file already carries `## Registry entries`, `## Skill content safety`, and `## Placeholder authoring rules` — zero structural novelty — and it is the checklist a contributor editing a `description` is already reading. Contributors work from a clone, where `export-ignore` is irrelevant. `docs/spec.md` gets a dated one-line forward-pointer with its v2.5.3 row byte-unchanged.
+
+**Rejected alternatives.** (a) An ADR as the rule's home — rejected: an append-only history is exactly the discoverability failure being fixed; nobody editing a table cell reads the ADR log first. (b) `docs/spec.md` alone — rejected: it is the Council-facing spec surface, not the contributor-facing one, and the rule needs to sit where the edit happens. (c) A CI check enforcing register vocabulary — rejected as out of proportion for a PATCH and unbuildable without a maintained wordlist that would itself rot; the Jargon List is deliberately per-cycle, not standing.
+
+**(2) The register's binding clause is a floor, not a style guide: a rewrite may simplify wording; it may never weaken a stated guarantee.** Where plain-language simplification and a safety guarantee conflict, the guarantee wins — **inline-define the term, never compress the sentence.** The register must carry the weakening-by-addition warning explicitly, because the intuition of a person simplifying prose is to remove words, and the failure mode here is *adding* them.
+
+**(3) A safety-preservation check is a count comparison, not a presence test.** This is the generalizable half of the ADR. Presence (`grep -qF`) is only sound when the protected string is unique in its file — verified per string, never assumed. Where it is not unique, the check must compare pre- and post-edit **counts**. Phase 1 found the live instance: see ADR-086 §Context (2).
+
+### Consequences
+
+- A contributor editing a registry `description` now has the rule in front of them rather than three documents away.
+- The register is prose with no mechanical enforcement. This is stated rather than hidden: **no CI job reads it**, and `grep -rn "working-rules" .github/workflows/` returns **0** — no CI job covers any of the eight `working-rules.md` files either. @qa's Phase-5 read is the only instrument for this entire surface class.
+- The AC-PL-7(c) exception-token deny list becomes the tripwire for the cycle's COMPLIANCE condition: if its count on the Data locality clause moves off 0, or any of the six category tokens changes, `/legal` becomes owed before Phase 3.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) promote the exception-token deny list from a per-cycle AC into a standing CI check over the four `working-rules.md` safety clauses, once a stable protected-clause inventory exists that does not need hand-maintenance per preset; (b) generalize the register from a hand-listed surface enumeration into a marker convention — an HTML comment or frontmatter key marking a string as user-facing — so the surface list is derived from the files rather than restated in `CONTRIBUTING.md` and able to drift from them; (c) build the standing runtime-string lint that option (b) makes possible, replacing the per-cycle Jargon List with a maintained vocabulary; (d) fold the register into `docs/spec.md`'s v2.5.3 row as a single unified copy standard once the runtime and positioning registers are demonstrably the same register, which this cycle does not assume; (e) leave the register as documented-only prose and accept that its enforcement is a human read forever.
+- **Concrete revisit triggers:** (i) any cycle that adds a preset — the eight-file `working-rules.md` floor becomes nine and every AC-PL-7 row-2 token set needs a new entry, which is the point at which hand-maintenance stops paying; (ii) the first time a runtime-string regression ships undetected, which converts option (a) or (c) from nice-to-have into owed; (iii) any cycle that adds a *second* mandatory-infrastructure registry row, since Group B's severity ground and the AC-PL-6 pin both assume the current partition; (iv) a contributor PR that edits a `description` without touching the register — the first live test of whether adjacency actually works, and the signal that decides between option (b) and option (e).
+- **Risk knowingly accepted:** three, named rather than bundled. (i) **The register is prose enforcing prose.** Nothing mechanically prevents a future contributor from ignoring it, and the honest ceiling is that a human read at Phase 5 is the only gate. Accepted for a PATCH; option (c) is the route out, and trigger (ii) is when it becomes owed rather than optional. (ii) **The scope boundary rests on a Jargon List that is per-cycle and hand-extracted.** A term nobody thought to extract is invisible to Q1, and the density partition in §Context (2) is only as good as that list — it is corroboration of a boundary reached by argument, not an independent derivation of it, and it is recorded as such. Accepted because a standing list would rot faster than a per-cycle one, but this is precisely the trade option (c) would revisit. (iii) **`CONTRIBUTING.md` does not ship in the release archive**, so a downstream consumer reading only a release tarball never sees the register. Accepted deliberately: the register's audience is contributors, who clone. Stated here because the Phase-0 rationale asserted the opposite property about this file, and a future cycle reading that sentence rather than this one would draw a false inference.
+
+### References
+
+- `docs/design-v2.19.10.md` §C.4 (placement and edit sites), §C.7 (AC-PL-7 mechanism), §E.2 (the falsified shipping rationale)
+- `docs/spec.md` § *Product Spec — Cowork Starter Kit v2.19.10*, AC-PL-4 and AC-PL-7
+- ADR-081 §D1 — content-anchored citation convention, applied throughout
+- `docs/hld.md:37` Principle 5 — every safety clause ships as an executable check with a firing negative control
+
+## ADR-086: One parser, one pin — registry row-structure integrity is asserted by a single inline count, and a safety check whose string is not unique must count rather than presence-test (v2.19.10 AC-PL-6 / AC-PL-7 row 6)
+
+- **Status:** Accepted at Phase 1, 2026-08-20. Subject to the user gate (Phase 3).
+- **Cycle:** v2.19.10 "Plain Language: say it the way she'd say it" (PATCH)
+- **Classification:** SECURITY-SENSITIVE — Tier B. The control lands inline in `.github/workflows/quality.yml` and **not** under `scripts/`, which is the cycle's TIER-4 snapback condition; landing it under `scripts/` would snap the cycle to Tier A and owe a Guard Change Summary before the PR opens.
+- **Reusability:** `candidate-constituent`. The specific parser is bound to this repository's 9-field registry table, but the two rules it embodies — *a compound edit defeats two independently fragile parsers by breaking both identically*, and *a presence test on a non-unique string is a check that cannot fail* — are general failure modes of markdown-table and prose-guarantee verification, and are stated in transferable form in §Decision.
+- **Supersedes:** nothing. **Amends:** nothing.
+
+### Context
+
+**(1) Two parsers can cancel; one cannot.** The instrument first proposed for AC-PL-6 compared a content-matching cardinality count against a strictly positional `CHECKED` count, living in two separate top-level jobs with separate runners and checkouts — so as designed it required `needs:` + `outputs:` plumbing that was never specified. Worse, it was **false-GREEN on its primary threat**: a compound edit that rewords a description *and* reflows the row's pipe spacing breaks both parsers identically, both drop to 29, and equality still holds. The instrument agreed with itself about the wrong number.
+
+**(2) The same defect was live in AC-PL-7 row 6, and it survived all three Phase-0 review rounds.** Row 6 protects the F4 pool boundary's external-source refusal string, using presence-anywhere `grep -qF`. Phase 1 measured that string's occurrence count in `WIZARD.md`: **2** — once in the Network & Offline Rule (`grep -n 'I can.t reach external sites from this session' WIZARD.md`) and once in the F4 Pool boundary (`grep -n 'No URL paste, no external source' WIZARD.md`). The F4 copy is the one this cycle rewrites. Against a fixture that replaced it outright, `grep -qF` returned **GREEN**. The check could not fail on the condition it existed to catch — on the very clause supplying the **B2** basis for this cycle's SECURITY-SENSITIVE classification.
+
+**(3) The obvious cheaper instrument fails its own negative control.** A bare `NF!=9` sweep scoped to pipe-bearing lines returns **9** false positives on the clean tree (`awk -F'|' '/\|/ && NF!=9 {c++} END{print c}' curated-skills-registry.md` → 9), caused by the 2-column schema legend near `grep -n '^| Field | Description |' curated-skills-registry.md`. It is red before anything is edited, so it can never signal anything. (Phase 0 recorded 8 from one measurement and 9 from two others; Phase 1 measured **9**, stated as measured rather than inherited.)
+
+### Decision
+
+**(1) A single parser, a single pinned count, inline in the job that already checks out the registry.**
+
+```text
+awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{exit !(c==30)}'
+```
+
+Exactly 30 rows must carry a valid 64-char lowercase-hex value in field 8. A single parser has **no second parser to cancel against**, so the compound edit that defeated the two-parser instrument is caught. Verified at Phase 1 against the live tree: clean → **30 GREEN**; one `|` injected into `self-apply`'s description → **29 RED**; compound reword-plus-reflow → **29 RED** (both legs of the compound fixture confirmed to fire independently).
+
+**(2) The pin is declared once, at job level, and it moves with the row count.** `AC_PL_6_EXPECTED_HEX_ROWS: 30` lives in the `registry-sha256-check` job's `env:` block, so the fault-injection step and the assertion step read one value and cannot drift apart, and no cross-job `needs:`/`outputs:` plumbing exists. **A hard pin is legitimate here only because v2.19.10 adds and removes no registry rows.** This is stated in the `env:` comment, in the failure message, and here — a future cycle that adds or removes a row **must** bump it in the same commit. The pin is a deliberate coupling, chosen over a derived count because a derived count cannot distinguish "a row was legitimately added" from "a row lost its sha256 cell," which is the entire threat.
+
+**(3) Fault injection runs first, as a step, not as a comment.** Per `docs/hld.md:37` Principle 5 and the fault-injection step already in production immediately above it in this same job, the check proves it can fail against both damage fixtures before it is trusted against real data. A clean-fixture count that does not equal the pin fails as a **fixture-validity** error with its own distinct message, so "the registry changed" is never silently reported as "the parser is broken."
+
+**(4) Generalized, for the next surface that needs it:** *a presence test is sound only where the protected string is unique in its file — verify uniqueness, never assume it. Where the string is not unique, compare pre- and post-edit counts.* Applied to AC-PL-7 row 6, whose corrected instrument is `grep -cF` count equality (pre-edit **2**; the deletion fixture returns **1** → RED). This is deliberately the same shape as AC-PL-7(c)'s set-equality rather than a new mechanism. Rows 1–5's protected strings were each verified unique this session (`grep -cF` → 1), so presence remains sound for them.
+
+### Consequences
+
+- Every description rewrite in this cycle and every future one is gated on the registry's row structure surviving intact, at the cost of one pinned integer that must be maintained.
+- The gate must land **before** any description rewrite, in its own commit. Landing them together means the gate's first-ever run is against already-modified content, and a fixture-validity failure would be indistinguishable from a real regression.
+- TIER-4 is satisfied by construction: one `env:` block and two steps, all inside `registry-sha256-check`. No file under `scripts/` is added or modified, which also keeps TIER-1 clear.
+- The row-6 correction is a Phase-1 finding against an approved AC and is recorded as **pending orchestrator ratification** (`docs/design-v2.19.10.md` §E.1) rather than silently applied — @architect does not amend the requirement it is designing against.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) derive the pin from a separately-maintained declaration — a `registry-row-count` field in a manifest — so the two move together by construction rather than by discipline, once a natural home for such a field exists; (b) replace the pin with a *ratchet* (the count may never decrease without an explicit declared removal), which is the shape `verify-lock-removals.sh` already uses for vendored files and would tolerate row additions while still catching silent losses; (c) generalize the uniqueness rule from §Decision (4) into a small shared helper that takes a file and a protected string, asserts uniqueness, and selects presence-vs-count automatically — retiring the per-row judgment; (d) extend the single-parser count from field 8 to a full 9-field structural assertion, once the schema-legend false-positive problem in §Context (3) is solved by scoping the sweep to the data-row region rather than to pipe-bearing lines; (e) leave the pin hand-maintained and accept the coupling permanently.
+- **Concrete revisit triggers:** (i) **the next cycle that adds or removes a registry row** — this is the designed-for moment, and if the bump is forgotten CI fails loudly rather than silently, which is the behaviour option (b) would soften; (ii) the second time the pin is bumped, since one bump is maintenance and two is a pattern that justifies option (a) or (b); (iii) any cycle that needs a third protected string whose uniqueness must be checked by hand — that is the repetition signal for option (c); (iv) a change to the registry's column count or schema, which invalidates the field-8 assumption outright and forces option (d) or a rewrite.
+- **Risk knowingly accepted:** four, named rather than bundled. (i) **The pin is a hand-maintained coupling between a CI file and a data file.** A cycle that adds a row and forgets the bump gets a red CI on arrival — noisy but safe. The genuinely bad case is the reverse: someone silences a legitimately-failing check by bumping the pin to match reality instead of investigating why the count moved. Nothing in this design prevents that, and the failure message is the only mitigation. Accepted, and it is what trigger (ii) and options (a)/(b) exist for. (ii) **The check asserts structure, never prose quality.** A description rewritten into fluent nonsense passes it perfectly. AC-PL-6 was never the instrument for AC-PL-1's content — the 3-question read is — and the two must not be conflated in a future reading. (iii) **The bash wrapper around the parser was not executed as a unit at Phase 1.** The `awk`, both `sed` fixture constructions, and all three resulting counts were run against the live tree; the `mktemp`/`trap`/`for`/`if` scaffold was not, because the agent-scope guard refused every attempt to stage a runnable script. It is asserted on structural grounds — it mirrors the fault-injection step already in production in the same job — and @dev is instructed to run the step locally once before pushing. Recorded rather than glossed, because "validated" would have been a claim wider than its instrument. (iv) **§Decision (4)'s uniqueness rule is stated generally but was applied by hand to six strings.** No mechanism enforces that a future protected string gets the same check; the next author has to remember. Accepted for a PATCH, and it is exactly what option (c) retires.
+
+### References
+
+- `docs/design-v2.19.10.md` §C.6 (the literal inline step and its validation scope), §C.7 (row-6 correction), §E.1 (the finding), §F (TIER-4 clearance)
+- `docs/spec.md` § *Product Spec — Cowork Starter Kit v2.19.10*, AC-PL-6 and AC-PL-7
+- `docs/hld.md:37` Principle 5 — a check proven able to fail, not prose that asserts safety
+- ADR-069 / `registry-sha256-check` — the job this control extends, and the source of its fault-injection-first house pattern
+
+End of v2.19.10 ADR block.

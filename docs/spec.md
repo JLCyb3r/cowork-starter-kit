@@ -7873,3 +7873,329 @@ constraint that forced the change. Full derivation in `docs/design-v2.19.9.md` �
   paraphrase-plus-citation is used throughout — but the surface is recorded so a future cycle does
   not discover it the hard way. **`/legal` is not owed.**
 
+---
+
+# Product Spec — Cowork Starter Kit v2.19.10 "Plain Language: say it the way she'd say it"
+
+> **Finalized at Phase 1** (2026-08-20) by @architect from the post-0.D R3 FINAL draft, including the
+> three orchestrator corrections landed at 0.D close (C-1/C-2/C-3), which **override** the draft body
+> where they conflict. Held in the Council scratchpad through Phase 0 so it would not strand on `main`
+> for a SECURITY-SENSITIVE cycle; appended here per this file's append-only convention.
+> **Phase 1 design document:** `docs/design-v2.19.10.md`.
+>
+> Citations below are **content-anchored** per ADR-081 §D1 — each is a re-runnable
+> `grep -n '<anchor>' <named-file>`. Line numbers, where given, are navigational only and pinned to
+> `fd00dd24a85e24ca0ec64462e191b4de99ff6a1e`.
+
+## Version — v2.19.10, PATCH
+
+No project-local `docs/naming-conventions.md`; plain SemVer against `VERSION` / `CHANGELOG.md`. No new
+skill, preset, wizard step, or schema. Uncontested across all three 0.D rounds.
+
+## Classification — SECURITY-SENSITIVE, Tier B
+
+`SECURITY-SENSITIVE — Tier B` · `COMPLIANCE-SENSITIVE = NO` (conditionally) · Guard Change Summary
+**NOT** owed. Four surfaces qualify under the disjunction (`.github/workflows/` **OR** instruction and
+control surfaces whose safety clauses execute as prose):
+
+- **B1** — `curated-skills-registry.md` is a runtime supply-chain control; its `sha256` cell is the
+  **sole** runtime gate on the poisoned-backfill defense, and the rows rewritten here are gated rows.
+- **B2** — the F4 pool boundary is a safety clause with no mechanical reader — the identical basis on
+  which v2.19.9 tiered `skill-studio/SKILL.md`.
+- **B3** — the closing message states three negative safety guarantees.
+- **B4** — the Data locality PII clause in `examples/personal-assistant/context/working-rules.md`.
+
+Tier A is **NOT** triggered. Worktree/branch + PR apply regardless. Four standing snapback conditions:
+
+| # | Tier-A snapback condition | Mechanical check |
+|---|---|---|
+| **TIER-1** | any file under `scripts/` added or modified | `git diff --name-only base..head -- scripts/` → **empty** |
+| **TIER-2** | `cowork.lock.json` / `.cowork-allowlist.json` modified | same → **empty** |
+| **TIER-3** | `.github/CODEOWNERS` modified, incl. *adding* a path this cycle touches | same → **empty** |
+| **TIER-4** | AC-PL-6's control implemented under `scripts/` instead of inline in `quality.yml` | `git diff --name-only base..head \| grep -c '^scripts/'` → **0** |
+
+**Binding condition on COMPLIANCE = NO:** if any edit changes the **enumerated set** of protected data
+categories in § Data locality, `/legal` is owed **before Phase 3**. AC-PL-7's exception-token deny-list
+is the primary defense against triggering this by stealth — a weakening-by-addition edit leaves the
+category list intact while gutting the guarantee around it, which this condition alone would miss.
+
+**External Content Detection:** 1 hit — an illustrative URL inside `curated-skills-registry.md`'s own
+contribution instructions. No vendoring, no ADOPT.
+
+## Problem
+
+Five runtime surfaces speak to a non-technical user in the maintainer's engineering register. The kit's
+own no-jargon rule exists (`grep -n 'no jargon without inline definition' docs/spec.md`) but is scoped
+to SEO/positioning copy.
+
+**One functional idea:** the runtime words the user actually reads sound like the user, not like the
+maintainer. Structurally: **3 edit surfaces + 1 rule + 1 audit.**
+
+| # | Surface | Live finding |
+|---|---|---|
+| 1 | Registry descriptions | 30 rows. 6 rows on **two different grounds** — Group A truncation-reach; Group B severity. |
+| 2 | Wizard closing message | `grep -n 'Setup complete. Your workspace now contains' WIZARD.md` |
+| 3 | F4 bundle menu | `grep -n '### F4 — Bundle customization' WIZARD.md`; spoken lines only |
+| 4 | No-jargon rule re-scope | the v2.5.3 row in this file + `CONTRIBUTING.md` as the discoverable home |
+| 5 | Literal-string floor | **8** `working-rules.md` files. **Audit, expected 1 finding.** |
+
+## The render-layer instrument (the "3-question read")
+
+- **Q1 (mechanical):** does the string contain a **case-insensitive STEM match** against a Jargon-List
+  term, with no inline definition in the same sentence? → **YES fails.**
+- **Q2:** is every remaining non-listed technical term inline-defined in the same sentence? → **NO fails.**
+- **Q3 (explicitly labelled human judgment):** is meaning preserved vs. pre-edit? → **NO fails.**
+- **FAIL = YES on Q1, OR NO on Q2, OR NO on Q3.**
+- **Executor:** @qa, Phase 5. **Artifact:** `docs/internal/qa/qa-report-v2.19.10.md §1`, one row per
+  in-scope string.
+
+**Cycle Jargon List — canonical, de-duplicated per C-2 (34 terms):**
+
+`ledger` · `memory-of-use` · `schema` · `counting convention` · `denylist` · `deny-listed` ·
+`apply/verify/rollback` · `move-eligibility gate` · `destination gating` · `reversible-move-log` ·
+`forward-walk` · `walk-forward contract` · `two-write-class` · `self-integrity invariant` ·
+`verify-then-swap` · `fresh-bytes-on-both-sides` · `install manifest` · `pool` · `bundle` · `bypass` ·
+`auto-skips` · `APIs` · `Persistency Layer` · `backfills` · `confirmed-apply` · `reserved-prefix` ·
+`opt-in` · `AI-tell` · `cross-cutting` · `optional tier` · `engine` · `kit versions` · `reversibly` ·
+`context/.kit-migrations/**`
+
+`deny-listed` and the standalone `walk-forward contract` are retained alongside `denylist` and
+`forward-walk` because Q1 is case-insensitive **stem** matching, under which each catches live text the
+other misses. No term is dropped.
+
+## Acceptance criteria
+
+**AC-PL-1 — registry descriptions.** WHEN any of the 6 in-scope descriptions is modified, the post-edit
+text SHALL return FAIL=NO under the 3-question read, recorded in `docs/internal/qa/qa-report-v2.19.10.md §1`.
+
+- **Group A — `prompt-gate`, `anti-ai-slop`.** Ground = the Role-Generation ≤12-word verbatim-fallback
+  truncation (ADR-030), a real code path for bundle-eligible rows. Criterion independently confirmed at
+  Phase 1: exactly these two rows carry all 7 preset tags. *Negative control:* the read against the
+  CURRENT description and its truncation MUST fail Q1.
+- **Group B — `self-apply`, `self-archive`, `self-upgrade`, `pull-updates`.** Ground = **they are the
+  most jargon-dense rows in a file the README tells users to browse.** This ground makes **no reach
+  claim**: every consumer of the `description` field excludes Group B (matching excludes them;
+  role-generation runs only over the final bundle; `pull-updates` reads `sha256` only), so **zero render
+  paths exist for a Group B description**. The only reader path is a human opening the file, which is
+  identical for all 30 rows. *Structural safety instrument for this group:* **AC-PL-6**.
+- *Does NOT cover:* the other 24 rows; the `sha256` / `source_url` / `vetting_date` / `tier` /
+  `goal_tags` cells; the `skills/<slug>/SKILL.md` frontmatter `description:` fields (editing one
+  triggers `registry-sha256-check` drift and needs a `scripts/registry-hash.sh` regeneration — and
+  under TIER-1 would snap the cycle back to Tier A).
+- *Known-not-fixed:* `grep -n 'including the two mandatory safety skills below' WIZARD.md` — stale
+  (there are four). Out of scope to fix, in scope to know.
+
+**AC-PL-2 — wizard closing message.** WHEN setup completes, the closing message SHALL describe every
+listed file and skill with any technical term inline-defined **including inside parentheticals**, and
+SHALL name every file and skill it currently names.
+
+- *Instrument:* the pre-edit file/skill enumeration is **pinned as a literal list at Phase 1**
+  (`docs/design-v2.19.10.md §D.2`); the no-dropped-items clause is a pre/post item-list **diff** against
+  that pin, not a subjective read.
+- *Negative control:* the current string MUST fail Q2 on at least the
+  `self-apply` / `self-archive` / `self-upgrade` clauses.
+
+**AC-PL-3 — F4 bundle menu, spoken lines only.** WHEN the wizard offers bundle customization or refuses
+an out-of-pool / external-source request, each spoken string SHALL pass the 3-question read — **`pool`
+and `bundle` are both on the Jargon List** — AND the numeral `25` SHALL survive verbatim in the
+`Add from full pool` line.
+
+- *Scope:* text inside quotes or following `Display as:` / `say:` **only**. Per C-1 the in-scope
+  user-facing `bundle` occurrences are **2**, in the quoted F4 block; the occurrences in Claude-facing
+  meta-prose are OUT.
+- *Negative control:* the current *"That's not in the current pool — the closest available is [X]"*
+  MUST fail Q1 on `pool`.
+
+**AC-PL-4 — no-jargon rule, discoverable home.** Recorded in **two** places: (1) a new
+`## Runtime-string register` section in `CONTRIBUTING.md`; (2) a dated one-line **forward-pointer** near
+the `no jargon without inline definition` row in `docs/spec.md`, with that v2.5.3 row **byte-unchanged**.
+
+- *Why `CONTRIBUTING.md`:* it already carries `## Registry entries`, `## Skill content safety`, and
+  `## Placeholder authoring rules` — zero structural novelty, adjacent to the checklist someone editing
+  a `description` is already reading. An ADR is the wrong instrument (append-only history reproduces the
+  discoverability failure). **The "does not ship" argument recorded in the 0.D draft is retired at
+  Phase 1 — see `docs/design-v2.19.10.md` §E.2: `CONTRIBUTING.md` is itself `export-ignore`d, so
+  shipping is not the discriminator. The adjacency argument is, and it is independently sufficient.**
+- *Instrument:* `grep -c "Runtime-string register" CONTRIBUTING.md` = 1;
+  `grep -c "CONTRIBUTING.md § Runtime-string register" docs/spec.md` = 1; the v2.5.3 row byte-unchanged
+  in `git diff`.
+- *Negative control:* both greps return **0** pre-edit (verified at Phase 1).
+- **`CONTRIBUTING.md` joins the file list — MUST appear in the `§PostOQClassificationReRun` record.**
+
+**AC-PL-5 — `working-rules.md` × 8: an AUDIT.** Every non-Safety sentence SHALL pass the 3-question
+read; the Safety sentence SHALL survive post-edit as a match of its **pre-edit literal** in all 8 files.
+
+- *Instrument:* (a) `grep -qF` of the pre-edit literal against each post-edit file — **NOT `cmp`**,
+  which would pass 8 identically-reworded files. **No line-pinned extraction:** the sentence is at line
+  7 in the seven examples and line **9** in the template. (b) the 3-question read of every other sentence.
+- *Negative control (synthetic):* copy one file to a scratch path, replace one non-Safety sentence with
+  a Jargon-List-bearing sentence, require Q1=YES.
+- **Expected outcome: exactly 1 known finding — `APIs`, undefined in the Data locality clause — fails
+  Q2. All other sentences across all 8 files expected clean.** Where this meets AC-PL-7: **AC-PL-7 wins
+  — inline-define `APIs`, do not compress the sentence.**
+
+**AC-PL-6 — registry row-structure integrity.** WHEN any description is rewritten, a **single-parser
+pinned-count** check SHALL confirm exactly **30** rows carry a valid 64-char lowercase-hex value in
+field 8, implemented **entirely inside the `registry-sha256-check` job** in `.github/workflows/quality.yml`
+(never under `scripts/` — TIER-4).
+
+```text
+awk -F'|' '{s=$8; gsub(/ /,"",s); if (s ~ /^[0-9a-f]{64}$/) c++} END{exit !(c==30)}'
+```
+
+- *Why a single parser:* two independently fragile parsers living in two separate top-level jobs would
+  need `needs:` + `outputs:` plumbing, and a compound edit that rewords a row **and** reflows its pipe
+  spacing breaks both identically and **cancels**. The single-parser pin has no second parser to cancel
+  against.
+- *Why pinning to 30 is legitimate:* v2.19.10 adds and removes no rows. **Stated explicitly so a future
+  cycle that DOES add or remove a row knows the pin must move with it**, rather than being silently
+  satisfied or silently broken.
+- *Negative controls — three, all executed at Phase 1:*
+
+  | fixture | valid-hex rows | verdict |
+  |---|---|---|
+  | clean | 30 | **GREEN** |
+  | one pipe injected into `self-apply`'s description | 29 | **RED** |
+  | compound (reword + reflow spacing) | 29 | **RED** |
+
+- **Do NOT substitute a bare `NF!=9` sweep** — scoped to pipe-bearing lines it false-positives on the
+  clean tree at **9** (measured at Phase 1), because of the 2-column schema legend. It fails its own
+  negative control.
+
+**AC-PL-7 — safety-semantics preservation.** A rewrite may simplify wording; it may **never weaken a
+stated guarantee.** Post-edit text SHALL contain (a) every enumerated item, (b) every pre-edit negative
+guarantee, AND **(c)** an exception-token match set **EQUAL** to the pre-edit match set.
+
+| # | Clause | Protected content |
+|---|---|---|
+| 1 | `examples/personal-assistant/…` § Data locality | all 6 categories (financial amounts, calendar event details, contact information, health information, physical addresses, authentication credentials) + `Never send` + `decline and offer a local alternative` |
+| 2 | every `working-rules.md` § File access (all 8) | the full folder enumeration; no compression to "my folders" — token set below |
+| 3 | `examples/personal-assistant/…` § Spend awareness | the `Do not infer … unless I ask explicitly` refusal |
+| 4 | `examples/study/…` § Academic integrity | the `must be mine` refusal |
+| 5 | `WIZARD.md` Closing | `never silently performs`, `reversibly`, `never on its own` |
+| 6 | `WIZARD.md` F4 Pool boundary | `No URL paste, no external source` + the external-source refusal string |
+
+**Row 2 — the 8-file folder-enumeration token set. All 7 example rows verified exact at Phase 1:**
+
+| File | `grep -qF` tokens (each MUST survive) |
+|---|---|
+| `examples/business-admin/…` | `Inbox/` `Reports/` `Emails/` `Meetings/` `Templates/` |
+| `examples/creative/…` | `Projects/` `Inspiration/` `Drafts/` `Assets/` `Archive/` |
+| `examples/personal-assistant/…` | `Calendar/` `Finances/` `Tasks/` `People/` `Documents/` |
+| `examples/project-management/…` | `Active-Projects/` `Archive/` `Templates/` `Meeting-Notes/` `Inbox/` |
+| `examples/research/…` | `Literature/` `Notes/` `Drafts/` `Data/` `References/` |
+| `examples/study/…` | `Papers/` `Notes/` `Flashcards/` `Assignments/` `Resources/` |
+| `examples/writing/…` | `Drafts/` `Published/` `Ideas/` `Research/` `Voice-and-Style/` |
+| `templates/preset-template/…` | **STRUCTURAL EXCEPTION — see below** |
+
+**Template exception.** The template's File access section names **no folders** — it is the unpopulated
+scaffold future preset authors fill in. Row 2's "no compression to 'my folders'" guarantee, read
+literally, cannot apply to a file whose canonical text already reads that way. **Protected content for
+the template row is instead its own two negative-guarantee sentences verbatim** — `grep -qF` on *"the
+folders I have explicitly given you access to"* and *"Do not read files outside my project folder
+without asking"*.
+
+- **Exception-token deny list (c):**
+
+```text
+grep -oiE 'unless|except|if (you|it|needed)|when (necessary|needed)|as long as|provided that|at your discretion|without (asking|checking)|or go ahead'
+```
+
+  Post-edit match count per protected clause SHALL **equal** its pre-edit count. Verified at Phase 1:
+  clean Data locality clause → **0**.
+- *Negative controls:* delete `health information` from row 1 → RED (enumeration). Delete
+  `never on its own` from row 5 → RED (negative guarantee). **Weaken row 1 by ADDITION** — enumeration
+  and guarantee checks **stay GREEN (8/8 tokens present, verified at Phase 1)**, deny-list goes **0→5
+  (measured at Phase 1)** → **RED under (c)**. This is the case (a) and (b) alone cannot see.
+- **Precedence (binding):** WHERE AC-PL-7 and the 3-question read conflict — e.g. `APIs` fails Q2 —
+  **AC-PL-7 WINS. Inline-define the term; never compress the sentence.** With (c) added, AC-PL-7 is the
+  floor and Q3 the ceiling.
+
+**AC-PL-8 — template parity.** WHERE an audit or assertion under AC-PL-5 or AC-PL-7 is executed, it
+SHALL be executed over all **8** `working-rules.md` files, including
+`templates/preset-template/context/working-rules.md`.
+
+- *Negative control:* reword the Safety sentence in the template only — the 8-file comparison MUST flag
+  it; a 7-file-only comparison MUST NOT. **Run both, to prove the 7-file version is the one that cannot
+  fail.**
+- *Note:* `grep -rn "preset-template" .github/workflows/ scripts/` → **0** (reproduced at Phase 1). **No
+  CI job covers this file — this AC is its only instrument.** Phase 1 found the gap is in fact wider:
+  `grep -rn "working-rules" .github/workflows/` → **0**. No CI job covers **any** of the 8 files.
+
+## Technical constraints
+
+- No edit may change table/pipe structure in `curated-skills-registry.md` or drop the row count below
+  the floor of **18** enforced by `registry-cardinality-check`. Live count stays 30 — also the stability
+  condition AC-PL-6's pin depends on.
+- **Matching-behaviour preservation — Group A ONLY.** `description` is a ranking signal (keyword overlap
+  against `name` + `description` + `goal_tags`), but that signal operates only for ranking-eligible
+  skills — Group A. **Group B rows never rank, so the constraint is functionally inert for them, not
+  silently satisfied.** For Group A: a rewritten description MUST retain ≥1 non-stopword token shared
+  with (a) its skill's `name` and (b) its pre-edit description.
+  - *Instrument (narrowed):* run the overlap ranking for Group A against a **pinned set of sample goals**
+    pre- and post-edit; require the top-3 set unchanged. One retained token bounds the *fallback*, not
+    **rank order** — the narrower instrument is what makes the claim match its evidence.
+  - *Negative control:* a scratch rewrite stripping all shared tokens must flip the fallback-firing
+    condition.
+- **Numeral preservation.** The `Add from full pool` line carries the historical **AC-COMP-2** literal,
+  bound byte-unchanged by a prior cycle. The rewrite MUST preserve `25` verbatim. Six other occurrences
+  are out of scope and byte-unchanged (all six reproduced at Phase 1).
+  - **Historical-verify-command caution:** the `AC-CI-*` / `AC-COMP-2` verify commands recorded in
+    `docs/architecture.md` are append-only records of a **closed** cycle and **MUST NOT be re-run
+    against this tree** (`§F EXEMPT`). v2.19.9 lost time to exactly this collision.
+- **Attribution Rule anchor.** The string `verbatim-attribution-rule-check` freezes is matched by
+  presence-anywhere-in-file, not a line freeze. Zero overlap with this cycle's regions.
+- **Safety-sentence prefix caveat — informational, binds no AC.** Three CI jobs assert it, all matching
+  only the opening clause — none would catch a reworded tail, and none targets `working-rules.md`. This
+  cycle edits none of the three asserted files.
+- `docs/spec.md`, `docs/architecture.md`, ADRs: append/annotate only. `CONTRIBUTING.md`: additive
+  section only.
+
+## Success metrics
+
+- **Primary:** 0 unresolved FAIL results at ship across the closing message, the F4 spoken strings, and
+  the 6 descriptions (Group A also truncated) — with AC-PL-5's `APIs` finding resolved by inline
+  definition counting as resolved.
+- **Secondary:** 0 CI regressions; 0 edits outside the 4-editing + 1-audit surfaces; AC-PL-6's inline
+  gate GREEN through every description edit **including against the compound-edit fixture**; all
+  AC-PL-7 (a)/(b)/(c) assertions pass, all 8 File-access token sets intact.
+
+## Assumptions
+
+- **[CONFIRMED]** Group A's ≤12-word verbatim fallback is a real code path.
+- **[CONFIRMED]** Group B rows are excluded from Role-Generation matching entirely — the severity ground
+  does not depend on this changing.
+- **[CONFIRMED]** No CI job or script reads any scope surface's free text, except AC-PL-6's new inline
+  gate (structure, not prose).
+- **[CONFIRMED]** The `working-rules.md` floor is 8 files.
+- **[CONFIRMED at Phase 1]** AC-PL-5's audit finds exactly **1** pre-existing violation (`APIs`), not 0.
+- **[UNTESTED]** Whether `working-rules.md`'s source-layer read represents its live-session render —
+  covered by the audit posture rather than argued away.
+
+## Carry-forward dispositions
+
+CF#1 + CF#2 → **run ALONGSIDE, do not gate.** CF#3 → **OUT** (self-containedness ≠ register). CF#4 →
+**confirmed OUT** (`ADR-084 §Maturation Path (f)`). The `skills/self-apply/SKILL.md` frontmatter
+`description:` → successor carry-forward alongside CF#3.
+
+## Phase-1 amendments to this spec
+
+Per the standing rule that @architect may not amend a requirement unilaterally, the six findings raised
+at Phase 1 are recorded in `docs/design-v2.19.10.md` §E and were routed to the orchestrator rather than
+edited into the ACs above. **Two are BLOCKER-class and both are instrument defects, not requirement
+defects** — in each case the requirement stands and only the verification command changes:
+
+- **F-1 — AC-PL-7 row 6's presence-anywhere `grep -qF` cannot fail.** The external-source refusal
+  string occurs **twice** in `WIZARD.md`, so deleting the F4 copy this cycle rewrites leaves the check
+  GREEN. Proven against a fixture. Corrected instrument (pre/post count equality, pre-edit = 2) in
+  `docs/design-v2.19.10.md` §C.7.
+- **F-6 — AC-PL-4's leg-2 instrument is satisfied by the act of writing this spec section.**
+  `grep -c "CONTRIBUTING.md § Runtime-string register" docs/spec.md` returns **1** as soon as this AC
+  is appended here, before any implementation; after the real forward-pointer lands it is **2**, so
+  `= 1` fails on a correct implementation and `>= 1` passes on an absent one. Corrected instrument (the
+  same grep scoped to a 4-line window anchored on the v2.5.3 row, verified pre-edit **0**) in
+  `docs/design-v2.19.10.md` §C.4.
+
+Both are **pending orchestrator ratification** before they bind. The remaining four findings (F-2
+through F-5) are INFO and change no AC.
+
