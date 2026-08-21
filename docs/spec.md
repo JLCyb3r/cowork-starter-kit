@@ -8673,3 +8673,339 @@ not a v2.19.10 regression.** v2.19.10 causes none of it: this cycle's own new QA
 still land in `docs/internal/qa/` and `docs/internal/security/`, per the binding §D.1 box, which costs
 nothing because it is a destination path rather than extra work.
 
+---
+
+# Product Spec — Cowork Starter Kit v2.19.11 "Pay the Tier-A debt" — FINAL
+
+**Finalized onto `release/v2.19.11-tier-a-debt` at Phase 1 by @architect, 2026-08-21T19:17:16Z.**
+Held in `.claude/projects/claude-cowork-config/scratchpad.md` through Phase 0 and Phase 0.D
+(R1 + R2) per the worktree-aware Phase-0 finalization rule, so it would not strand on `main`.
+This section is the spec of record; the scratchpad block is its drafting history.
+
+## Version + Classification
+
+**`v2.19.11`** (PATCH — fixes and retrofits only, no new functional surface).
+**Classification: SECURITY-SENSITIVE — Tier A** (branch + PR + @security Guard Change Summary
+REQUIRED). Owner decision in advance, not a Phase-0 open question: `scripts/verify-release-surface.sh`
+and `scripts/canonicalize-scan.sh` are both in scope; either alone is sufficient.
+**COMPLIANCE-SENSITIVE: NO.** External Content Detection: no URLs, no derivation language, no named
+external framework or author in this cycle's scope.
+
+**Base SHA (BASE), literal, for every base-pinned control in this spec:**
+`b7b844716aa3146f212907ee381a49256aa1fd13`.
+
+## Owner scope decision — the v2.19.11 / v2.19.12 split (2026-08-21T12:20:00Z)
+
+The owner split this cycle at the Item-3 seam **before `/design`**, rather than at the Phase-3 gate,
+to avoid spending an opus design pass on scope that would then be cut.
+
+| Stays in **v2.19.11** | Moves to **v2.19.12** |
+|---|---|
+| **AC-1** `evidence_tags()` fails loudly · **AC-2** de-pin the 5 citations · **AC-3** anchor-resolution guard · **AC-8** A11 · **AC-8b/AC-9b** standing per-row structural gate · **AC-9** A13 · **AC-10** A14 · **AC-11** retro erratum | **AC-4** S4 R1 gate-first + per-family canary · **AC-5** S4 R2 Class-A repair · **AC-6** S4 R3 the 14-file move · **AC-7a** verbatim-frozen surfaces · **AC-7b** append-only surfaces |
+| **8 ACs.** New ADRs owed: **2** — ADR-089 (AC-1 failure semantics + the `inherit_errexit` dependency) and ADR-090 (AC-2 + AC-3's citation-anchoring convention). | **5 ACs.** Carries **ADR-088's amendment + PROPOSED→ACCEPTED flip** and **ADR-037's index-cell correction**. |
+
+**Rationale (owner):** the 14-file `git mv` is the one item with an irreversible blast radius, and a
+single @security Guard Change Summary cannot honestly cover a 14-file move **and** three new CI
+instruments **and** two gated supply-chain rows for a non-dev approver. v2.19.10 already demonstrated
+that this repo produces its worst defects when one cycle carries several independently-risky
+remedies.
+
+**AC-4/5/6/7a/7b are NOT deleted.** They survived 0.D R1 + R2 review and are retained verbatim in
+`.claude/projects/claude-cowork-config/scratchpad.md`, fenced by
+`⏸ DEFERRED TO v2.19.12` … `⏹ END`, so v2.19.12 inherits the reviewed text rather than re-deriving
+it. **Binding condition carried with them:** every `docs/design-v2.19.10.md` §J figure measured at
+`be92754` MUST be re-measured at v2.19.12's branch base before use — two are already known-stale
+(`430`; `architecture.md`'s "0 refs", now **6**).
+
+**Consequences that bind v2.19.11 itself:**
+
+- **ADR-088 stays PROPOSED.** It is not flipped and not amended by this cycle.
+- **`docs/architecture.md`'s ADR-037 index cell is not touched.**
+- **No file is moved.** AC-7a/AC-7b guarded against sweeping the 14 report filenames — a risk that
+  exists *only during the move*. With the move deferred, v2.19.11 has **no frozen-filename surface**
+  and correctly carries no such assertion. One must not be invented for it.
+
+## COMPLIANCE tripwire
+
+COMPLIANCE-SENSITIVE flips to **YES** and `/legal` becomes owed before Phase 3 if **either**:
+(a) any diff line touches `examples/personal-assistant/context/working-rules.md` (the
+six-PII-category enumeration), or (b) the AC-10 edit's blast radius reaches `CHANGELOG.md:42-44`,
+whose text asserts *"All six protected data categories and both negative guarantees survive
+unchanged"*. @dev MUST verify `git diff --numstat -- examples/personal-assistant/context/working-rules.md`
+emits **no row**, and that the `CHANGELOG.md` hunk range excludes `:42-44`.
+
+**Measured at Phase 1 and CLEAR:** the AC-10 hunk is `@@ -33,9 +33,9 @@` → lines **33-41**.
+`:42-44` is outside it. `working-rules.md` is not in the file list at all.
+
+## Acceptance Criteria
+
+### AC-1 — `evidence_tags()` fails loudly
+
+WHEN `git ls-remote --tags origin` exits non-zero inside `evidence_tags()`, THE script SHALL emit an
+`::error::` line carrying git's own stderr and exit **2** (fail-closed; house-correct — `exit 2` is
+used for contract/tool errors at 12 sites, `exit 1` for findings at `:376`), rather than aborting
+under `set -e` with no diagnostic. File: `scripts/verify-release-surface.sh` `evidence_tags()`
+(`:120-130`).
+
+**Required form — adjudicated, and demonstrated end-to-end:**
+
+- **NO caller-side bracket at `:218`.** `exit 2` inside the function terminates the `$( )` subshell
+  and `set -e` propagates it *as* exit 2. Adding a `set +e`/`rc=$?` bracket without mandatory rc=2
+  propagation yields **exit 0 and a universal `MISSING-TAG`** — it manufactures the very defect
+  Phase 0's Item-1 amendment falsified.
+- **`local ls_remote_stderr out rc` on its own line; assign on separate lines.**
+  `local X="$(cmd)"` is FORBIDDEN — the demonstrated result is script exit **0** with an empty tag
+  set.
+- **Never `2>/dev/null`.** Capture git's stderr in a **`mktemp` file**, mirroring
+  `evidence_body()`'s S-A3 pattern at `:135-169` and S-A6's "mktemp, never a fixed path".
+- **Never `2>&1` into the captured variable** (Phase-1 correction, see ADR-089 §Decision (3)):
+  `git ls-remote` can exit **0** while writing to stderr, and `:286` matches the captured evidence
+  with `grep -qF "refs/tags/v${tok}"` against the whole line — a merged stream turns a broken-ref
+  diagnostic into a **tag-exists GREEN**. Demonstrated fail-open.
+- **Load-bearing dependency:** `rc=$?` is reachable inside `$( )` ONLY because bash's
+  `inherit_errexit` is **off** (`grep -rn 'inherit_errexit\|shopt' scripts/ .github/` → **0** hits).
+  Recorded in ADR-089 and as a comment at the `rc=` site. Enabling it silently re-opens the defect.
+
+**Negative controls — three legs, all required, both directions:**
+
+1. Scratch repo whose only remote is unresolvable. **Pre-fix** MUST show no `::error::` and an
+   opaque exit **128**. **Post-fix** MUST show an `::error::` quoting git's stderr and exit **2**.
+2. **Credential-leak assertion, NOT a redaction transform.** The emitted `::error::` block MUST NOT
+   match `://[^/[:space:]]*@`. Proven able to fail with a fixture whose stderr is the literal
+   `fatal: unable to access 'https://u:p@example.invalid/x.git/'`. **Do NOT add a `sed` redactor.**
+3. **Evidence-dir regression assert:** `EVIDENCE_DIR` mode output MUST be byte-unchanged.
+
+### AC-2 — de-pin the 5 citations
+
+WHERE `CONTRIBUTING.md:129` appears in `scripts/canonicalize-scan.sh` (`:10`, `:24`, `:40`, `:123`,
+`:187`), THE citation SHALL be replaced with the **backtick-delimited** form
+`` `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)` `` — **the
+backticks are load-bearing, not cosmetic; see AC-3.** `docs/patterns.md` and the 11 other Class-B
+files are **OUT** (they cite `:129` as a narrative record of a past incident, not as a live
+pointer).
+
+**Negative controls:** (a) `grep -cF 'CONTRIBUTING.md:129' scripts/canonicalize-scan.sh` MUST go
+**5 → 0**; (b) precondition before AND after:
+`grep -cF '### Worked-example authoring rules (S1 security carry-forward)' CONTRIBUTING.md` == **1**;
+(c) post-edit `grep -v '^\s*#' scripts/canonicalize-scan.sh | grep -cE 'pip install|npm install|curl |wget '`
+MUST be **0** (`quality.yml`'s SF-S-1 machine-reads the *file*, stripping comments first).
+
+### AC-3 — anchor-resolution guard, derived from the citing script
+
+THE CI SHALL derive the cited section title **from `scripts/canonicalize-scan.sh` itself — never
+hardcoded in the workflow** — and assert: exactly one distinct anchor is cited, it is cited exactly
+5 times, and it resolves to exactly one heading in `CONTRIBUTING.md`. Inline in
+`.github/workflows/quality.yml`; **never a file under `scripts/`** (TIER-4).
+
+**Phase-1 correction, folded in:** every pipeline feeding an assertion — **including the `ANCHOR`
+assignment itself** — carries `|| true`. Without it, `grep -oE` exits 1 on zero matches and the step
+aborts under `set -euo pipefail` with exit 1 and **no diagnostic at all**, against any tree lacking
+the backticked form. Runnable text: `docs/design-v2.19.11.md` §E.2.
+
+**Negative controls — six legs, each run:** (0) GREEN on the post-AC-2 tree; (i) rename the heading
+→ `N_HEADS=0` → RED; (ii) duplicate it → `N_HEADS=2` → RED; (iii) typo one of the 5 citations →
+`N_DISTINCT=2` → RED; (iv) delete one citation → `N_CITES=4` → RED; (v) run against the **pre**-AC-2
+tree → `N_DISTINCT=0` → RED **with a named diagnostic**.
+
+**Binding sequencing consequence:** AC-3 is RED against the pre-de-pin tree, so **AC-2 and AC-3 MUST
+land in the same commit.**
+
+### AC-8 — A11, the highest-risk edit
+
+THE `self-apply` description at `curated-skills-registry.md:31` SHALL be rewritten to correct the
+actor inversion (**the skill proposes, the user confirms**) and the rollback mis-timing (**reversal
+is available after the change takes effect, not before**), **subject to: zero literal `|`
+characters**, preserving the row's leading `| self-apply |` shape and field-8 position.
+
+**Token-preservation constraint:** the rewrite MUST preserve the tokens `` `self-` `` and
+`context/.kit-migrations/`. **If either is dropped, STOP and escalate.** The row enumerates a
+*write-channel* deny-list and omits 2 of its 5 real members (`context/.apply-backups/`,
+`cowork.install.json` — real list at `skills/self-apply/SKILL.md:52`); **completing the enumeration
+to all five is permitted and preferred, reducing it is not.**
+
+**Negative control (MUST be run against the EDITED tree):**
+`awk -F'|' '$0 ~ /^\| self-apply \|/ {gsub(/ /,"",$8); print $8}' curated-skills-registry.md` MUST
+return `0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4`. Proven able to fail: the
+pipe-containing variant returns `mandatory-infrastructure`.
+
+**Semantic-half judge (the structural control does not cover it):** Executor **@qa, Phase 5**;
+artifact `docs/internal/qa/qa-report-v2.19.11.md §N`, one row per rewritten string, recording pre-
+and post- text and an explicit YES/NO on (a) does the new text place the user's confirmation
+**before** the change takes effect, (b) does it place reversal **after**.
+
+### AC-9 — A13
+
+THE `prompt-gate` description at `curated-skills-registry.md:83` SHALL restate the numeric bound
+("up to 3") that `skills/prompt-gate/SKILL.md:3` and `:73` both carry, replacing "a few". Same
+zero-`|` constraint and same field-8 control (this row's own sha256
+`16b8ef1036d5d7320a7a166b5ea907d365a703b28f5858592bdccc810f1db2c3`).
+
+**Pre-counts recorded, so the control is anchored rather than assumed:**
+`grep -c 'a few' curated-skills-registry.md` → **1 → 0**; `grep -c 'up to 3'` → **0 → 1**.
+
+### AC-8b / AC-9b — standing per-row structural gate
+
+`.github/workflows/quality.yml` SHALL carry, as an **inline step inside the existing
+`registry-sha256-check` job** (never under `scripts/` — TIER-4), an assertion that for each slug in
+the explicit list `self-apply prompt-gate`, `curated-skills-registry.md` contains **exactly one**
+row whose field 2 (whitespace-stripped) equals that slug, **and** whose field count is exactly
+**9**, **and** whose field 8 (whitespace-stripped) matches `^[0-9a-f]{64}$`. The step **SHALL NOT
+pin any hash VALUE** — shape only. Each invocation MUST be wrapped so it cannot abort silently under
+`set -euo pipefail`.
+
+**Why the zero-`|` constraint alone is the wrong control:** it is a prohibition on human typing,
+discharged by a one-shot Phase-4 check; nothing standing survives the merge. And `quality.yml:587`'s
+existing self-test, on a shifted row, writes its deadbeef into the *shifted* field 8, sets
+`FOUND_MISMATCH=1`, and prints **"Fault-injection test PASSED"** — an unearned green inside the
+instrument built to prevent unearned greens.
+
+**Phase-1 shape decision (ADR-090 §Decision (6)):** the fault-injection self-test and the real
+assertion live in **ONE step**, sharing **ONE** `check_row()` definition, with the **assertion
+first**. The two-step split used by AC-PL-6 is what forced its parser to be written twice — defect
+A4 — and is why `quality.yml` carries a hand-maintained `PARSER_COPIES -ne 2` pin. One copy owes no
+pin, and the self-test exercises the same code path the assertion runs. Runnable text:
+`docs/design-v2.19.11.md` §G.3.
+
+**Negative controls — six legs, all against the EDITED tree:** GREEN on the clean tree; GREEN on
+this cycle's actual pipe-free rewrite; **GREEN on a benign whitespace reflow** (a false positive
+here is a defect); **RED** on a field-2-anchored pipe injection into `self-apply`; **RED** on the
+same injection into `prompt-gate`; **RED** on the `self-apply` row deleted entirely. Plus:
+**RED when `check_row` itself is deliberately broken** while the registry is good.
+
+**Self-integrity constraint (mandatory, else this AC red-lines CI on arrival):** after this step
+lands, the AC-PL-6 SELF-INTEGRITY parser count MUST still return exactly **2**. Measured at Phase 1
+against a simulated post-edit `quality.yml`: **2**. `AC_PL_6_EXPECTED_HEX_ROWS` stays **30** — no
+bump is owed and none must be made.
+
+**Known and intended consequence:** a future cycle that legitimately adds a registry column will
+red-line this step. That is correct — a column change *is* a structural change to a gated row — not
+a bug to be patched by widening `NF`.
+
+### AC-10 — A14, misattribution, with an executable control
+
+THE `CHANGELOG.md` bullet at `:35-38` SHALL stop attributing `never on its own` to `self-archive`
+and attribute it to `pull-updates`, matching `WIZARD.md:339`, **and SHALL correct the numeral
+`all three` at `:36` in the same edit** — after the fix `self-archive` carries two safety phrases,
+not three. `WIZARD.md` is NOT touched.
+
+**The obvious instrument is dead on arrival:** `grep -c 'never on its own' CHANGELOG.md` → **1**
+before, and the correct fix *moves* the phrase within the same bullet, so it is **1 → 1**.
+
+**Phase-1 correction to this AC's own control (see `docs/design-v2.19.11.md` §J.2).** The Phase-0
+control's first leg read `grep -c 'never on its own'  # 1 -> 0` **within the extracted bullet**.
+That leg contradicts this AC's prose: `grep -c` counts matching lines within the bullet, so a
+`1 -> 0` result can only be produced by **deleting** the phrase — while the AC requires it be
+*re-attributed*, i.e. kept. A deleting fix passed every leg of the Phase-0 control. **The corrected
+control asserts the phrase is PRESERVED (`>=1`) and is ABSENT FROM `self-archive`'s parenthetical**
+— the assertion is about attribution, which is where the defect lives. Runnable text:
+`docs/design-v2.19.11.md` §H.3.
+
+**The vacuity guard is mandatory:** an `awk` range that stops matching returns empty and every
+`grep -c` below it returns 0 — indistinguishable from a clean pass. Both range endpoints were
+re-measured at `b7b8447`: each matches exactly once.
+
+**Negative controls — GREEN plus four RED directions, each run:** RED on the pre-edit tree; RED on
+"numeral fixed but phrase left inside `self-archive`'s parenthetical"; RED on "phrase deleted
+outright"; RED on a broken `awk` range. Plus `grep -cF 'never on its own' WIZARD.md` → **1 → 1**.
+
+**This AC ships no CI step.** It corrects a historical entry; there is no ongoing invariant to
+guard, and a third inline `quality.yml` step for a one-shot prose fix would be over-engineering.
+@dev runs the control before commit; @qa re-runs it at Phase 5.
+
+### AC-11 — Item 5, retro erratum, base-pinned
+
+THE `docs/retro.md` v2.19.10 §Carry-forwards `fetch-tags` entry SHALL be **superseded by an appended
+correction record** stating the change is **inert** (no CI path consults checkout fetch settings),
+not merely unconfirmed. The originals at `:124` and `:150` SHALL NOT be rewritten.
+
+**The Phase-0 draft's control was vacuously satisfiable.** `git diff <path>` compares working tree
+against index; once @dev commits it emits **zero rows**, and "second field == 0" is vacuously true
+of an empty set.
+
+With `BASE` = **`b7b844716aa3146f212907ee381a49256aa1fd13`** (the SHA `main` pointed to when this
+branch was created — recorded literally here and independently re-derived by @qa at Phase 5; **not**
+`git merge-base origin/main HEAD`, which fails at `actions/checkout`'s default fetch-depth where
+`origin/main` may not exist, reintroducing AC-1's own silent-abort class):
+
+`git diff --numstat "$BASE"..HEAD -- docs/retro.md` MUST emit **exactly one row**, second field
+(deletions) `0`, first field (additions) `> 0`.
+
+**An empty result is a FAIL, not a pass.** The bare form `git diff docs/retro.md` is **forbidden as
+evidence**. **Proven able to fail** against real history: `git diff --numstat b3eb849~1 b3eb849 --
+docs/retro.md` → `21  16  docs/retro.md`.
+
+**Range scoping:** scope the range to the **implementation** commits — this cycle's own Phase-8
+retro will later append to `docs/retro.md` (historically a separate PR, but state the endpoint
+rather than relying on the topology holding).
+
+## Deferrals — carried, named, not dropped
+
+1. **A15 — DEFERRED, on the corrected premise.** The earlier text called the drift-verify parser
+   "the poisoned-backfill defense's *only* runtime gate." It is not: AC-PL-6 (`quality.yml:572/717`)
+   is a second standing gate and it **does** fire on the single-row pipe injection AC-8/AC-9 could
+   cause (clean **30**, injected **29**, pin **30** → RED). A15's blind spot requires a
+   **compensating pair**, which is not constructible from this cycle's edit surface: this cycle
+   edits two already-hex rows, so damage is always `-1`, never `+1`. **A15 is deferred because it is
+   not reachable from this cycle's edit surface — not because no control exists.** Supporting
+   grounds: control independence (AC-PL-6 is the instrument that catches AC-8/AC-9's risk; you
+   cannot rebuild your negative control in the commit that needs it), and coupling to the hard
+   `PARSER_COPIES` pin. **Residual accepted:** A15's blind spot survives into the next row-adding
+   cycle. AC-8b/AC-9b covers only the two rows this cycle touches and deliberately does not
+   generalise.
+2. **Item 1's narrower masquerade case — UNPROVEN, named not dropped.** `git ls-remote` exiting
+   **0** with empty/wrong output would still yield a misleading `MISSING-TAG`. No live reproduction
+   was constructed. Its remedy is a **quorum** assertion, not a diagnostic; bundling it would convert
+   a pure failure-path change into one with happy-path blast radius. **AC-1 closes the
+   non-zero-exit class only.** Recorded in ADR-089 §Consequences and §Maturation Path option (a).
+3. **S5 — malformed-registry-row refusal clause: RECOMMENDED, NOT REQUIRED.**
+   `skills/pull-updates/SKILL.md:30` specifies refusal for a malformed *manifest* but there is **no
+   equivalent clause for a malformed registry row**. The runtime gate is prose interpreted by an
+   LLM; on a shifted row it may refuse, may count from the right and accidentally find the hash at
+   field 9, or may skip verification. **Undefined is not fail-closed.** Pre-existing, not introduced
+   here. Declined on its own remedy-breakage grounds: `pull-updates` is itself a hash-gated row, so
+   editing its `SKILL.md` forces a **third** gated-row sha256 bump in a cycle whose highest-risk
+   item is already "we are editing gated rows." **Owner decision at Phase 3**; @security recommends
+   shipping with it named-and-unfixed and carrying it into the Phase-6 Guard Change Summary.
+4. **W6 — widening `quality.yml:588`'s fixture-validity guard from `[ -z "$REAL_HASH" ]` to
+   `case "$REAL_HASH" in ""|*[!0-9a-f]*)` — OPTIONAL fold-in, explicitly not a condition.**
+   Superseded in practice by AC-8b/AC-9b.
+5. **Everything the Phase-0 brief places out of scope** — The-Council repo work (`token-logger.sh`
+   pin-blindness; the un-minted "validate instruments against the post-implementation tree" rule,
+   both needing their own `/self-improve` cycle); OT-1 (owner-held, not a blocker); the `fetch-tags:`
+   checkout change (**FALSIFIED** — see AC-11); rewriting append-only history beyond AC-11's
+   correction record; the 12 non-script files carrying the stale `:129` pin.
+
+## Open Question for the Phase 3 gate
+
+**Classification is NOT one of them** — Tier A is fixed by owner decision, re-confirmed at Phase 1
+against the final file list, and COMPLIANCE = NO was re-measured and holds.
+
+1. **S5 — the malformed-registry-row refusal clause.** Ship v2.19.11 with it named-and-unfixed (a
+   known problem @security carries into the Phase-6 Guard Change Summary), or spend a third
+   gated-row sha256 bump now? @security recommends the former.
+
+## Phase-1 architectural modifications to this spec
+
+Recorded per the divergence-check rule, so the feedback loop closes rather than being smoothed over.
+Four ACs were found to contain a defect **in their own prescribed remedy or control**, all four by
+executing the prescribed thing in the direction that should make it RED:
+
+- **AC-1** → *Changed:* the "capture stderr with `2>&1` into the captured variable" clause is read
+  as "never `2>/dev/null`", and the `mktemp` form is mandated instead. *Reason:* the literal `2>&1`
+  form is **fail-OPEN** — `git ls-remote` can exit 0 while writing to stderr, and `:286`'s
+  `grep -qF` matches the whole line, so a broken-ref diagnostic becomes a tag-exists GREEN.
+  Demonstrated. The same AC's other clause ("mirror `evidence_body()`'s S-A3 pattern") already
+  required `mktemp`; the two clauses contradicted each other.
+- **AC-3** → *Changed:* `|| true` added to the `ANCHOR` assignment's pipeline. *Reason:* without it
+  the guard aborts with exit 1 and **zero output** against any tree lacking the backticked form —
+  including the pre-AC-2 tree, which is what CI sees if AC-3 lands first. The ADR-089 defect class,
+  inside AC-3's own guard.
+- **AC-8b/AC-9b** → *Changed:* one step and one parser copy, assertion before self-test.
+  *Reason:* the two-step house shape reproduces the A4 dual-copy hazard and owes a `PARSER_COPIES`
+  pin; and self-test-first misdiagnoses an already-damaged registry as "the check produced a false
+  positive".
+- **AC-10** → *Changed:* the control's first leg is inverted, from "`never on its own` goes 1 → 0"
+  to "`never on its own` is PRESERVED (`>=1`) and is ABSENT from `self-archive`'s parenthetical".
+  *Reason:* the original leg contradicted the AC's own prose and was satisfied by **deleting** the
+  phrase the AC requires be re-attributed.
+
