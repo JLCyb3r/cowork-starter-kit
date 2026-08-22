@@ -38,6 +38,7 @@
 | S8 | INFO | 2 | dependency | Shim/BSD flavour gap measured for the first time, and it is **opposite**: `grep -F -f` with a blank pattern line → **1** under BSD, **0** under the ugrep shim. GNU remains unmeasurable here (no `ggrep`, no Homebrew grep, no docker/podman/colima/nix — probed). |
 | S9 | INFO | 2 | configuration | Three NOT-RUN items closed by execution this session (modified movee; `diff.renameLimit` vs AC-7; the cycle's own Phase-2 report vs AC-7). All three pass. |
 | S10 | INFO | 2 | dependency | No dependency manifest in this repo (`npm audit` N/A). No secrets in the branch diff. |
+| S11 | INFO | 2 | permissions | `scope_allow_delta.add[]` grants @dev **12** security destination paths where only **9** exist — the `(audit\|review)` × 6-version cross-product permits three phantom paths. Over-broad by 3; harmless today, but it is a write-scope grant and should match the moveset exactly. |
 
 **Scope-Allow Re-Walk: N/A** — `scope_allow_delta` targets an external registered project governed by its own pre-commit hook, not a Council-side `scope_allow` block. The `add[]` list in §D.4 was read and covers the 14 destination paths and `docs/design-v2.19.12.md`; it does **not** cover this report's path — see S1's remedy note.
 
@@ -445,6 +446,13 @@ report as a directive. No new egress path is created; the change is net-negative
   double coverage confirmed); `diff.renameLimit=1` vs AC-7 (858 lines, 14 rename markers, byte-identical);
   the cycle's own Phase-2 report vs AC-7 (`(ok+) 3`, and 0 archive entries).
 - **S10 —** no dependency manifest (`npm audit` N/A); no secrets in the branch diff.
+- **S11 —** `scope_allow_delta.add[]`'s security regex is a cross-product:
+  `security-(audit|review)-v2\.(18\.0|19\.0|19\.5|19\.6|19\.7|19\.9)\.md` permits **12** paths;
+  `git ls-files` shows **9** exist. The three phantom grants are
+  `security-audit-v2.19.5.md`, `security-review-v2.19.7.md`, `security-review-v2.19.9.md`.
+  Harmless this cycle, but a write-scope grant should enumerate the moveset, not a superset of it —
+  and the moveset is already derived mechanically elsewhere in this design. Combined with S1's
+  omission of this report's own path, the delta is over-broad in one direction and short in another.
 
 ---
 
