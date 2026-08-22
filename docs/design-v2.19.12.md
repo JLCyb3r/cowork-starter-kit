@@ -270,9 +270,24 @@ scope_allow_delta:
 
 **G.2 — ADR-091 (new).** *The reference-freeze control derives its population by rename-pairing, not pathspec exclusion.* Mints the §E.3 repair, carries the §Maturation Path section, and records the interlock that the `verify-ledger-annotations.sh` carve-out depends on AC-5.
 
-**G.3 — index-cell edits (Phase 4, same commit as D.1).**
-- ADR-088 row: `PROPOSED (deferred ...)` → `ACCEPTED (v2.19.12 — was PROPOSED (deferred) in v2.19.10, cf. ADR-028)`.
-- ADR-037 row (`docs/architecture.md:58`): the trailing clause *"the retrofit that closes them has not yet shipped"* becomes **false at merge** — replace with *"the retrofit that closes them shipped in v2.19.12 (ADR-088, ACCEPTED)."*
+**G.3 — index-cell edits (DONE at Phase 1, this branch).** Both are executed; they are the **only two
+in-place line changes** in `docs/architecture.md` this cycle (`git diff --numstat` → `196	2`), and
+**neither removed line names any of the 14** (verified: `0` matches).
+- ADR-088 row: `PROPOSED (deferred …)` → `ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3 …, cf. ADR-028)`, plus an `AMENDED by …` pointer to the new amendment record.
+- ADR-037 row: the clause *"the retrofit that closes them has not yet shipped"* — **false at merge** — replaced with the shipped form naming v2.19.12.
+- ADR-091 row added after ADR-090.
+
+**Maturation-Path self-grep (Workflow step 5.5), measured BASE → working tree:**
+`**Future-state options:**` 58 → **60** · `**Concrete revisit triggers:**` 58 → **60** · `**Risk knowingly accepted:**` 58 → **60**.
+All three increased by exactly **+2**, matching the two §Maturation Path sections authored (the ADR-088 amendment record and ADR-091). Equal deltas across all three headers is the evidence that none was paraphrased.
+
+**🔴 Sequencing risk accepted, with a compensating check.** The flip is recorded at Phase 1 while the
+14 files have not yet moved, so **this branch is transiently self-contradictory until §D.1 lands**.
+That is tolerable only because the branch is unmerged and merge requires Phase 7. The compensating
+control is mandatory and is written into the amendment record itself: **Phase 5 (@qa) MUST verify the
+conjunction** — ADR-088 reads ACCEPTED **and** the archive returns 0 leak matches. If §D.1 is dropped
+or descoped and the flip survives, `main` ships the exact falsified-status error ADR-088 exists to
+correct. **If @qa cannot run that conjunction, the flip must be reverted rather than trusted.**
 
 **🔴 The flip is only honest if the move lands in the same branch.** ADR-088 §Decision (1) asserts the 14 *are* retrofitted. **Phase 5 (@qa) MUST verify the conjunction:** ADR-088 reads ACCEPTED **and** `git archive HEAD | tar -tf -` returns 0 leak matches. If the move is dropped and the flip survives, `main` carries exactly the falsified-status error ADR-088 was written to correct in ADR-037.
 
