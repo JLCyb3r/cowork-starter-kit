@@ -14546,3 +14546,121 @@ self-test-first misdiagnoses an already-damaged registry as "the check produced 
   silently breaking the citation, which is the intended improvement, but it is still a coupling that
   did not exist before.
 
+
+---
+
+## Amendment record — ADR-090 §Maturation Path and §Consequences (appended v2.19.11 Phase 2 rework; ADR-090's own text is NOT rewritten)
+
+**Date:** 2026-08-22T01:36:59Z
+**Status of ADR-090 itself:** unchanged — **ACCEPTED (v2.19.11)**
+**Trigger:** @security Phase 2 review, finding **S3**, plus independent re-verification at Phase 2
+rework which found the gap to be **larger than S3 states**
+**Companion record:** `docs/design-v2.19.11.md` §E.5
+
+Recorded per the same append-only house convention ADR-088 used to amend ADR-037, and ADR-087 used
+to amend ADR-086: the original record is left intact and the correction is appended.
+
+### 1. What ADR-090 gets wrong about its own coverage
+
+ADR-090 §Maturation Path option (b) describes the remaining gap as *"`skills/self-apply/SKILL.md`'s
+citation, which ships into user workspaces and is therefore the highest-blast-radius remaining
+**line-pin**"*, and §Risk-knowingly-accepted repeats the framing: *"Every other **line-pinned**
+citation in the repository — including the one inside `skills/self-apply/SKILL.md` …"*.
+
+**Both sentences mis-describe it, and the mis-description is the load-bearing part.** That citation
+is **not** a line-pin. It is already written in ADR-090's own `` `<file> § <heading>` `` form:
+
+```
+skills/self-apply/SKILL.md:45   `CONTRIBUTING.md § Worked-example authoring rules, rule 2`
+```
+
+It is a **non-conforming variant of the convention this ADR mints**, and under decision (1)'s own
+rule it resolves to **zero** headings — measured, not argued:
+
+```
+$ grep -cF '### Worked-example authoring rules, rule 2' CONTRIBUTING.md              -> 0
+$ grep -cF '### Worked-example authoring rules (S1 security carry-forward)' CONTRIBUTING.md -> 1
+$ grep -n '^### .*Worked-example' CONTRIBUTING.md   -> 157:### Worked-example authoring rules (S1 security carry-forward)
+```
+
+Calling it a line-pin implies it is *old-style, pre-convention, awaiting migration*. It is not. It
+is **already broken under the new convention, at the moment the ADR was minted**, and the guard the
+ADR ships does not look at it.
+
+### 2. The gap is wider than S3 found — two shipping files, not one
+
+@security S3 named `skills/self-apply/SKILL.md:45` as *"a **sixth** citation."* Re-verification at
+Phase 2 rework found the same non-conforming form in **nine** files, of which **two ship to users**:
+
+```
+$ git archive HEAD | tar -tf - | grep -E '^(PROMOTE\.md|skills/self-apply/SKILL\.md|CONTRIBUTING\.md)$'
+PROMOTE.md
+skills/self-apply/SKILL.md
+                       # CONTRIBUTING.md is absent — it is export-ignore'd
+```
+
+| Site | Class (ADR-088 §Decision (3)) | Ships? |
+|---|---|---|
+| `skills/self-apply/SKILL.md:45` | **A** — live pointer | **yes** |
+| `PROMOTE.md:34` | **A** — live pointer | **yes** |
+| `CHANGELOG.md:335` | B — historical record | no |
+| `tests/fixtures/canonicalization/f2-1`, `f2-2`, `f2-3` | B — fixture headers | no |
+| `docs/retro.md`, `docs/internal/security/security-audit-v2.19.10.md`, `docs/internal/security/security-review-v2.19.11.md` | B — historical records | no |
+
+Two consequences follow, and neither is in ADR-090:
+
+- **`PROMOTE.md:34` is a second shipping Class-A site that S3 did not name.** Repairing only the
+  site the review happened to find would have produced exactly the partial coverage this amendment
+  exists to prevent — and would have let the ADR go on claiming the gap was closed.
+- **`CONTRIBUTING.md` does not ship at all.** In an end-user workspace the cited *document* is
+  absent, so both shipping citations point at a file the user does not have. The convention's
+  resolution guarantee is therefore not merely unenforced off-repo — it is **unsatisfiable** there.
+  ADR-090 does not say this anywhere.
+
+### 3. The honest statement of ADR-090's coverage
+
+**Supersedes** the coverage claim implied by §Maturation Path (b) and §Risk-knowingly-accepted:
+
+> ADR-090 mints a **repo-wide** citation convention and ships enforcement for **exactly one
+> file-pair** — `scripts/canonicalize-scan.sh` → `CONTRIBUTING.md`. At the moment of minting, the
+> repository contains **two other files that already cite the same heading in a non-conforming
+> variant of this ADR's own form, both of which resolve to zero headings, and both of which ship
+> into every user workspace.** The guard does not read either file and will not go red for either.
+> The convention is aspirational everywhere except the one pair the guard names.
+
+§Consequences' existing line — *"The convention is currently enforced for exactly one file-pair …
+The other ~48 line-pinned citations counted at v2.19.10 are **not** covered"* — is true but
+incomplete: it counts *line-pins* and therefore does not count the two `§`-form citations that are
+broken **under this ADR's own rule**. Read the two together.
+
+### 4. Disposition — deferred, with an ID
+
+**`CF-v2.19.11-A` — normalize the two shipping Class-A `§`-form citations
+(`skills/self-apply/SKILL.md:45`, `PROMOTE.md:34`) to the conforming anchor, and widen AC-3's guard
+from a single `SCRIPT`/`DOC` pair to a derived multi-file inventory. Target: v2.19.12.**
+
+Rationale is recorded in full at `docs/design-v2.19.11.md` §E.5. In short: the repair is **not** a
+citation normalization, it is ADR-090 §Maturation Path **option (a)** — replacing the hardcoded
+pair and the `EXPECTED_CITES` pin with a derived inventory — and it additionally forces a **third**
+gated registry row in a cycle whose highest-risk item is already *"we are editing gated rows"*
+(verified: `shasum -a 256 skills/self-apply/SKILL.md` = `0c77ab20…9e9f4` = the row's field-8 cell,
+enforced by `registry-sha256-check`, `.github/workflows/quality.yml:556`). Landing that at Phase 2
+rework, after a BLOCKER, without a fresh security pass over the new gated-row edit, is the trade
+this cycle exists to stop making.
+
+**What deferral does not cost.** Both citations are broken **today** and have been since v2.19.10.
+Deferring changes nothing about them. The cycle still leaves the repository strictly better than it
+found it: five citations anchored, and the repo's first CI check that a citation resolves at all.
+What deferral would have cost — and what this record buys back — is an ADR claiming coverage it does
+not have. **This cycle exists because of a claim like that.**
+
+### 5. Revisit triggers — added to ADR-090 §Maturation Path
+
+Appended to the existing trigger list (a)-(d):
+
+- **(e)** `CF-v2.19.11-A` is scheduled, or `CONTRIBUTING.md`'s cited heading is renamed — either
+  event makes the two shipping citations' breakage user-visible rather than latent.
+- **(f)** Any *new* file begins citing `CONTRIBUTING.md` in `§` form. The guard is scoped to one
+  script and structurally cannot see it, so the convention's population grows while its enforced
+  population does not. **This is the trigger most likely to fire silently**, and it is the argument
+  for option (c) — forbidding non-conforming citation forms in newly added lines — over option (a).

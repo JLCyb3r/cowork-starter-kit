@@ -12,6 +12,33 @@ Summary owed at Phase 6). **COMPLIANCE-SENSITIVE: NO** (tripwire re-measured in 
 AC-7a, AC-7b — the entire S4 report-egress retrofit. **Not designed here. ADR-088 stays PROPOSED
 and is not amended. `docs/architecture.md`'s ADR-037 index cell is not touched. No file is moved.**
 
+
+---
+
+## Phase 2 rework record — 2026-08-22T01:36:59Z
+
+**Author:** @architect (opus), Phase 2 rework. **Trigger:** `docs/internal/security/security-review-v2.19.11.md`
+— verdict **FAIL — 1 BLOCKER (S1)**. **Scope of this rework: three items, nothing else.**
+
+| Finding | Severity | Disposition | Where |
+|---|---|---|---|
+| **S1** — AC-3's anchor guard fails OPEN when `CONTRIBUTING.md` is unreadable | BLOCKER | **FIXED** — §E.2 replaced with @security's corrected step, applied **verbatim** (`diff` against the review's block: identical) | §E.2, §E.3 |
+| **S2** — the AC-3 success line prints literals, not measurements | WARNING | **FIXED by the same correction** — the line now prints measured `distinct=${N_DISTINCT} cites=${N_CITES} headings=${N_HEADS}`. The original §E.3 leg (0) is **retracted as evidence** | §E.2, §E.3 |
+| **S3** — ADR-090's convention is repo-wide; its enforcement is one file wide | WARNING | **DEFERRED as `CF-v2.19.11-A`** (v2.19.12). The *gap* is recorded now, in an appended ADR-090 amendment record — only the *repair* moves | §E.5, `docs/architecture.md` |
+| **S4** — AC-8's replacement row over-claims the deny-list's reach | WARNING | **FIXED** — row amended; all binding constraints re-verified (field 8, `NF`=9, zero `\|`, tokens, hex-count 30) with a RED leg proving the checks can fail | §F.1, §F.1.1 |
+| **S5** — `pull-updates` malformed-row refusal | CARRIED | **Untouched** — owner decision at the Phase 3 gate, per the review's own disposition | §L |
+
+**Untouched by this rework, deliberately:** AC-4/5/6/7a/7b (v2.19.12); the Tier-A classification
+(settled); A15 (deferred); **ADR-088 — still `PROPOSED (deferred)`, not amended, index cell not
+touched**; no file moved; no report added to `docs/` root.
+
+**Append-only discipline held:** `git diff --numstat` → `docs/architecture.md` **118 / 0**,
+`docs/spec.md` **untouched**. `docs/design-v2.19.11.md` is this cycle's own new file and is edited
+in place, as permitted.
+
+**On @security's corrected code:** applied as given. It was syntax-checked (`bash -n` on the
+YAML-parsed run body: clean; `yaml.safe_load` → exactly 1 step, 31-line `run`) and **not altered**.
+No disagreement to report.
 ---
 
 ## Phase 1 design header
@@ -383,15 +410,80 @@ TIER-4 condition. Adjacency chosen deliberately: this is the job that already re
           SCRIPT="${1:-scripts/canonicalize-scan.sh}"
           DOC="${2:-CONTRIBUTING.md}"
           EXPECTED_CITES=5
+          # [S1, @security Phase 2] BOTH halves below are load-bearing and neither alone is
+          # sufficient. `grep -cF` on an unreadable file writes NOTHING to stdout (the "0" it
+          # prints on a zero-match is only printed once the file opens) and exits 2; `|| true`
+          # then captures the EMPTY STRING. `[ "" -ne 1 ]` is not false, it is an ERROR — the
+          # test returns 2, an `if` treats non-zero as FALSE, `set -e` is exempt inside an `if`
+          # condition, and the step falls through to the PASSED line and exit 0. Demonstrated
+          # against a renamed CONTRIBUTING.md and against a $DOC that is a directory.
+          #   Half 1 — the -r precheck: gives the DIAGNOSABLE error for the common case.
+          #   Half 2 — the "${X:-x}" string comparison: closes every remaining route to an
+          #            empty capture (a directory passes -r; so does a mid-run permission
+          #            change). Do NOT drop it and keep only the precheck.
+          # Do NOT "simplify" these back to `-ne`. A count from `grep -c` never has a leading
+          # zero, so string equality is exact here.
+          for f in "$SCRIPT" "$DOC"; do
+            if [ ! -r "$f" ]; then
+              echo "::error::anchor guard — '${f}' is missing or unreadable, so the citation cannot be resolved at all. This is the citation-rot case the guard exists to catch; it must never report PASSED."
+              exit 1
+            fi
+          done
           ANCHOR="$(grep -oE "\`CONTRIBUTING\\.md § [^\`]+\`" "$SCRIPT" | sed "s/^\`CONTRIBUTING\\.md § //; s/\`\$//" | sort -u || true)"
           N_DISTINCT="$(printf "%s\\n" "$ANCHOR" | grep -c . || true)"
-          if [ "$N_DISTINCT" -ne 1 ]; then echo "::error::anchor guard — expected 1 distinct cited anchor, found ${N_DISTINCT}."; exit 1; fi
+          if [ "${N_DISTINCT:-x}" != "1" ]; then echo "::error::anchor guard — expected 1 distinct cited anchor, found ${N_DISTINCT:-<non-numeric>}."; exit 1; fi
           N_CITES="$(grep -cF "\`CONTRIBUTING.md § ${ANCHOR}\`" "$SCRIPT" || true)"
-          if [ "$N_CITES" -ne "$EXPECTED_CITES" ]; then echo "::error::anchor guard — expected ${EXPECTED_CITES} citations, found ${N_CITES}."; exit 1; fi
+          if [ "${N_CITES:-x}" != "$EXPECTED_CITES" ]; then echo "::error::anchor guard — expected ${EXPECTED_CITES} citations, found ${N_CITES:-<non-numeric>}."; exit 1; fi
           N_HEADS="$(grep -cF "### ${ANCHOR}" "$DOC" || true)"
-          if [ "$N_HEADS" -ne 1 ]; then echo "::error::anchor guard — '${ANCHOR}' resolves to ${N_HEADS} headings, expected 1."; exit 1; fi
-          echo "anchor guard PASSED — anchor='${ANCHOR}' distinct=1 cites=${N_CITES} headings=1"
+          if [ "${N_HEADS:-x}" != "1" ]; then echo "::error::anchor guard — '${ANCHOR}' resolves to ${N_HEADS:-<non-numeric>} headings, expected 1."; exit 1; fi
+          echo "anchor guard PASSED — anchor='${ANCHOR}' distinct=${N_DISTINCT} cites=${N_CITES} headings=${N_HEADS}"
 ```
+
+**Applied verbatim from `docs/internal/security/security-review-v2.19.11.md` §S1 ("Exact corrected
+code"), byte-for-byte, at Phase 2 rework.** It was not re-derived, re-typed, or "simplified" here.
+The two comparisons `[ "${N_DISTINCT:-x}" != "1" ]` and `[ "${N_HEADS:-x}" != "1" ]` **must not be
+reverted to `-ne`.** Leg NEW-3 in §E.3 is the proof: a `$DOC` that is a **directory** passes the
+`-r` precheck, so the precheck alone would have been an insufficient correction — only the
+`"${X:-x}"` string comparison catches it. Both halves are load-bearing; neither alone closes S1.
+
+**Why this defect existed — the chain is the finding.** The `|| true` on the capture pipelines was
+added at Phase 1 (§E.3.1, §J.3) to stop a *silent abort*. That was a real defect, correctly fixed.
+But `|| true` also converts an **unreadable-file error** into an **empty capture**: `grep -cF` on a
+missing or unopenable file writes nothing to stdout (the `0` it prints on a zero-match is only
+printed once the file opens) and exits **2**; `|| true` swallows that; `[ "" -ne 1 ]` is then not
+*false* but an **error** — bash prints `[: : integer expected` and the test returns **2**; an `if`
+treats any non-zero condition as FALSE; `set -e` is **exempt inside an `if` condition**; and control
+falls through to the `PASSED` line and `exit 0`. Fail-**open**, on the single guard standing between
+a rotted citation and a green merge. `CONTRIBUTING.md` is `export-ignore`d, so this is not a corner
+case: any consumer running the guard against a `git archive` tree gets an unconditional green.
+
+**This is the third defect in AC-3's remedy chain, and each fix introduced the next.**
+
+1. The 0.D R2 snippet **hardcoded** the anchor — a citation with a dropped qualifier would pass
+   every check. Remedy: derive the anchor from the citing file (ADR-090 §Decision (2)).
+2. Derivation under `set -euo pipefail` **aborted the step silently** against the pre-edit tree —
+   exit 1, no `::error::` at all (§E.3.1). Remedy: `|| true` on the pipelines (§Decision (4)).
+3. `|| true` opened the **empty-capture fail-open** S1 documents. Remedy: the `-r` precheck **plus**
+   the string comparison above.
+
+Every one of the three was found by **running** the guard against a tree it had not yet been run
+against — the hardcoded form by typo-ing a citation, the silent abort by using the *pre*-edit tree,
+the fail-open by removing `$DOC` entirely. **None of the three was found by reading the code**, and
+each reading-based review declared the prior fix complete. That is the transferable lesson, and it
+is why ADR-090 §Decision (4) is written as a standing rule about assignment pipelines rather than as
+a note about one line.
+
+**The correction also closes S2 — and S2 is why S1 was invisible in this document's own §E.3
+evidence.** The superseded success line printed `distinct=1 … headings=1` as **hardcoded literals**;
+the corrected line prints the **measured** `distinct=${N_DISTINCT} cites=${N_CITES}
+headings=${N_HEADS}`. That is not cosmetic. §E.3's original leg (0) transcript read
+`anchor guard PASSED — … distinct=1 cites=5 headings=1`, which is **byte-identical to the output of
+the fail-open path**. A materialised post-edit tree built with `git archive` — the natural way to
+build one — contains no `CONTRIBUTING.md` at all, so that leg (0) GREEN **cannot be distinguished
+after the fact from the S1 fail-open.** The original leg (0) is therefore **retracted as evidence,
+not merely superseded**: a success message that cannot tell success from a specific failure is
+evidence of neither. Under the corrected line the same run would have printed `headings=` with an
+empty value, and the defect would have been visible the first time it ever ran.
 
 **The anchor is never hardcoded in the workflow.** It is derived from the citing script, which is
 the only form that can catch a citation the author typo'd — the hardcoded form let AC-2 (0 stale
@@ -400,31 +492,43 @@ pins) and the heading-uniqueness check both stay GREEN while one citation resolv
 **`${1:-…}` / `${2:-…}` under `set -u`:** safe by construction, and the zero-argument form (what
 GitHub Actions actually runs) was executed, not assumed — see E.3 leg (0).
 
-### E.3 Negative controls — six legs, every one RUN, and one of them found a defect
+### E.3 Negative controls — nine legs, every one RUN against the CORRECTED step
 
-The guard was extracted **from the parsed YAML** (`yaml.safe_load` → `steps[5]['run']` → file →
+The guard was extracted **from the parsed YAML** (`yaml.safe_load` → `steps[N]['run']` → file →
 `bash`), so what was tested is the shipped text, not a transcription of it.
 
+**Provenance of this transcript.** The six original legs plus the three new ones were re-run against
+**fresh fixtures**, independently of both @architect's Phase-1 run and @security's Phase-2 run, and
+the results below are that independent re-run. They are cited, not re-derived here. The three `NEW-`
+legs are the S1 regression legs; each returned **EXIT=0 (fail-open)** against the superseded §E.2
+step and returns **EXIT=1** against the corrected one.
+
 ```
-(0) GREEN, zero-arg, against the materialised post-AC-2 tree:
-    anchor guard PASSED — anchor='Worked-example authoring rules (S1 security carry-forward)' distinct=1 cites=5 headings=1
-    EXIT=0
-
-(i)  heading renamed in CONTRIBUTING.md ->
-     ::error::anchor guard — '…(S1 security carry-forward)' resolves to 0 headings, expected 1.   EXIT=1
-
-(ii) heading duplicated ->
-     ::error::anchor guard — '…(S1 security carry-forward)' resolves to 2 headings, expected 1.   EXIT=1
-
-(iii) one of the 5 citations typo'd (drops '(S1 security carry-forward)') ->
-     ::error::anchor guard — expected 1 distinct cited anchor, found 2.                            EXIT=1
-
-(iv) one of the 5 citations deleted outright ->
-     ::error::anchor guard — expected 5 citations, found 4.                                        EXIT=1
-
-(v)  run against the PRE-edit tree (AC-2 not yet applied) ->
-     ::error::anchor guard — expected 1 distinct cited anchor, found 0.                            EXIT=1
+(0)  clean, zero-arg, post-AC-2 tree, CONTRIBUTING.md present:
+     anchor guard PASSED — distinct=1 cites=5 headings=1                         EXIT=0
+(i)   heading renamed        -> resolves to 0 headings, expected 1                EXIT=1
+(ii)  heading duplicated     -> resolves to 2 headings, expected 1                EXIT=1
+(iii) one citation typo'd    -> expected 1 distinct anchor, found 2               EXIT=1
+(iv)  one citation deleted   -> expected 5 citations, found 4                     EXIT=1
+(v)   PRE-AC-2 tree          -> expected 1 distinct anchor, found 0               EXIT=1
+NEW-1 DOC missing            -> '<doc>' is missing or unreadable                  EXIT=1  (was 0)
+NEW-2 DOC chmod 000          -> '<doc>' is missing or unreadable                  EXIT=1  (was 0)
+NEW-3 DOC is a directory     -> resolves to <non-numeric> headings, expected 1    EXIT=1  (was 0)
 ```
+
+**Leg (0)'s `distinct=1 … headings=1` is now a measurement, not a literal** — that is the whole of
+the S2 fix, and it is what makes leg (0) admissible evidence at all. See the retraction note in
+§E.2: the *superseded* step's leg (0) transcript was byte-identical to the fail-open output and
+proved nothing in either direction.
+
+**NEW-3 is the leg that decides the shape of the fix.** A directory satisfies `-r`, so it reaches
+the comparisons with an empty capture. If the correction had been the `-r` precheck alone, NEW-3
+would still be `EXIT=0`. The `"${X:-x}"` string comparison is therefore not defensive
+belt-and-braces — it is the half that closes the route the precheck cannot see. Do not simplify it
+away on the grounds that "the precheck already handles it."
+
+**ShellCheck: exit 0 on the corrected step.** `bash -n` on the YAML-parsed run body: clean; the
+block round-trips through `yaml.safe_load` as exactly one step with a 31-line `run` body.
 
 ### E.3.1 The defect leg (v) found — inside the R2-corrected snippet
 
@@ -458,6 +562,81 @@ diagnostic. Both directions re-run; all six legs pass.
 
 ---
 
+### E.5 S3 — the convention is repo-wide, the guard is one file wide. DECISION: defer, with an ID.
+
+@security S3 (WARNING, non-blocking) found a citation of the same `CONTRIBUTING.md` heading at
+`skills/self-apply/SKILL.md:45`, in a variant form that resolves to **zero** headings, in a file that
+ships into every user workspace — while AC-3's guard reads `scripts/canonicalize-scan.sh` only.
+
+**Re-verified at Phase 2 rework, and the finding is larger than S3 states.** The non-conforming form
+appears in **nine** files, and **two** of them ship:
+
+```
+$ grep -rlF 'CONTRIBUTING.md § Worked-example authoring rules, rule 2' .
+skills/self-apply/SKILL.md    PROMOTE.md    CHANGELOG.md
+tests/fixtures/canonicalization/f2-1-nfkc-fullwidth.md   (+ f2-2, f2-3)
+docs/retro.md   docs/internal/security/security-audit-v2.19.10.md
+docs/internal/security/security-review-v2.19.11.md
+
+$ git archive HEAD | tar -tf - | grep -E '^(PROMOTE\.md|skills/self-apply/SKILL\.md|CONTRIBUTING\.md)$'
+PROMOTE.md
+skills/self-apply/SKILL.md            # CONTRIBUTING.md absent — export-ignore'd
+
+$ grep -cF '### Worked-example authoring rules, rule 2' CONTRIBUTING.md               -> 0
+$ grep -cF '### Worked-example authoring rules (S1 security carry-forward)' CONTRIBUTING.md -> 1
+```
+
+`PROMOTE.md:34` is a **second shipping Class-A site S3 did not name.** Under ADR-088 §Decision (3)'s
+differential-execution rule the other seven sites are **Class B** — fixture headers and historical
+records — and are **frozen**.
+
+#### Decision: **(b) — defer to v2.19.12 as `CF-v2.19.11-A`.**
+
+`CF-v2.19.11-A` — *normalize the two shipping Class-A `§`-form citations
+(`skills/self-apply/SKILL.md:45`, `PROMOTE.md:34`) to the conforming anchor, and widen AC-3's guard
+from a single `SCRIPT`/`DOC` pair to a derived multi-file inventory.*
+
+**Reason, in the order the reasons actually bind:**
+
+1. **Option (a) as scoped would have shipped the same partial coverage it exists to fix.** S3's
+   remedy names one file. Repairing only that one leaves `PROMOTE.md:34` broken and shipping, and
+   the ADR would still be claiming more than the guard does — the exact defect being corrected.
+2. **The real repair is a design change, not a widening.** AC-3's guard is one `SCRIPT`/`DOC` pair
+   with a pinned `EXPECTED_CITES=5`. Covering three citing files with two different anchor strings
+   requires replacing the pair and the pin with a **derived inventory** — that is ADR-090
+   §Maturation Path **option (a)**, an explicitly deferred future-state, not a patch. Prescribing it
+   at Phase 2 rework would mean shipping a new guard shape with no negative controls run against it,
+   in the same document where §E.2 just recorded three consecutive defects all caused by exactly
+   that.
+3. **VERIFIED cost — a third gated row.** The brief's claim was checked rather than relied on:
+   ```
+   $ shasum -a 256 skills/self-apply/SKILL.md
+     0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4
+   $ awk -F'|' '$0 ~ /^\| self-apply \|/ {gsub(/ /,"",$8); print $8}' curated-skills-registry.md
+     0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4
+   $ grep -n 'registry-sha256-check' .github/workflows/quality.yml   -> 556 (job), 755-762 (assert)
+   ```
+   The registry cell **is** the file's hash and CI enforces the match, so editing
+   `skills/self-apply/SKILL.md` **forces a `curated-skills-registry.md` field-8 bump** — a third
+   gated row in a cycle whose highest-risk item is already *"we are editing gated rows"*, landing
+   after a BLOCKER, with no fresh @security pass over the new gated-row edit. **Claim confirmed.**
+4. **Deferral costs nothing that is not already lost.** Both citations are broken **today** and have
+   been since v2.19.10. Deferring changes neither. The cycle still ships five anchored citations and
+   the repo's first CI check that a citation resolves — strictly better than the status quo in every
+   direction.
+
+**What deferral does NOT license.** ADR-090 may not go on describing this as a remaining *line-pin*
+awaiting migration. It is a **non-conforming variant of ADR-090's own form, already resolving to
+zero, in two shipping files, at the moment of minting.** That correction is **not** deferred: it is
+appended to `docs/architecture.md` as *"Amendment record — ADR-090 §Maturation Path and
+§Consequences"* in this same rework, per the append-only house convention. The gap is recorded in
+the ADR now; only the repair moves to v2.19.12.
+
+**Handoff to @qa (Phase 5):** verify the amendment record exists and that ADR-090's coverage claim
+is not asserted anywhere beyond one file-pair. **Handoff to v2.19.12:** `CF-v2.19.11-A`, above.
+
+---
+
 ## §F. AC-8 / AC-9 — the two registry description rewrites
 
 > *ISO 15288 — Technical Process: Design Definition.*
@@ -474,7 +653,7 @@ change takes effect, not before). It also enumerates only 3 of the 5 real deny-l
 only field 3 is rewritten):
 
 ```
-| self-apply | One of three required safety skills. It records every change you approve, in order, using a consistent format so entries stay easy to track. It proposes each change and shows you exactly what would happen; nothing is written until you say yes, and after a change has been made you can still undo it from the copy saved beforehand. The change log itself, `context/memory-of-use.md`, can never be changed or moved by this or any other skill — it's on a fixed, protected list that both processes always skip, and so are the saved-copies folder `context/.apply-backups/`, the upgrade-history folder `context/.kit-migrations/`, the install record `cowork.install.json`, and every file whose name starts with `self-`, including this skill's own file. | builtin | 2026-07-22 | 1 | mandatory-infrastructure | 0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4 |
+| self-apply | One of three required safety skills. It records every change you approve, in order, using a consistent format so entries stay easy to track. It proposes each change and shows you exactly what would happen; nothing is written until you say yes, and after a change has been made you can still undo it from the copy saved beforehand. The change log itself, `context/memory-of-use.md`, sits on a fixed, protected list that this approve-and-apply flow always skips, and so do the saved-copies folder `context/.apply-backups/`, the upgrade-history folder `context/.kit-migrations/`, the install record `cowork.install.json`, and every file whose name starts with `self-`, including this skill's own file. Nothing you approve here can rewrite any of them. That list guards this flow, not the whole kit: when a required safety skill is missing from your workspace, the updater still installs it, as its own clearly labelled step, from bytes checked against the published checksum for that skill. | builtin | 2026-07-22 | 1 | mandatory-infrastructure | 0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4 |
 ```
 
 Checks against the AC's binding constraints:
@@ -495,7 +674,86 @@ Checks against the AC's binding constraints:
   would happen; nothing is written until you say yes"* (skill proposes → user confirms → **then**
   it takes effect) and *"after a change has been made you can still undo it from the copy saved
   beforehand"* (reversal **after**).
+- **Accuracy of the deny-list claim (@security S4, amended at Phase 2 rework).** The row no longer
+  says the protected set *"can never be changed or moved by this or any other skill"*. See §F.1.1.
 
+
+#### F.1.1 S4 — the deny-list's reach, corrected (Phase 2 rework)
+
+**The finding.** @security S4: the pre-rework replacement text asserted that the deny-listed set —
+including *"every file whose name starts with `self-`"* — *"can never be changed or moved **by this
+or any other skill**."* That is **false as written**, and it is false in the dangerous direction: it
+promises protection a real channel does not honour.
+
+**Verified at source, not inherited from the review.**
+
+- `skills/self-apply/SKILL.md:50` — the deny-list, and it governs *"the write-channel allow-list"*
+  of the apply flow.
+- `skills/self-apply/SKILL.md:59` (MF-1c, LOAD-BEARING) — *"This `self-*` deny governs the runtime
+  memory-of-use APPLY channel described on this page ONLY. It does **not** govern … the trusted
+  installer/pull-backfill ceremony `pull-updates` uses to install a missing `self-*` safety skill
+  into a gateless workspace (AC-PULL-7, ADR-073) … a different channel entirely, never reached by
+  this deny-list's evaluation in the first place."*
+- `skills/pull-updates/SKILL.md:90` — that channel, concretely: *"this workspace is missing
+  `self-upgrade` … `pull-updates` backfills it as its own labeled step: bytes copied from
+  `skills/self-upgrade/SKILL.md`, byte-verified against the registry's `sha256` for that slug,
+  installed."*
+
+So a `self-`-prefixed file **is** written by a skill, through a channel the deny-list deliberately
+does not cover — because you cannot gate installing the gate on the gate you are installing.
+
+**This is inherited, not introduced.** The *current* registry row already claims *"This file can
+never be changed or moved by this or any other skill."* The pre-rework rewrite carried the claim
+forward and **sharpened** it (`including this skill's own file`), which is why it is corrected here
+rather than deferred: AC-8's whole purpose is that this row describes the skill accurately, and a
+rewrite that re-asserts a falsehood more precisely fails its own AC.
+
+**The correction, stated as a boundary rather than a promise.** The amended text scopes the
+guarantee to the flow the deny-list actually governs (*"a fixed, protected list that this
+approve-and-apply flow always skips … Nothing you approve here can rewrite any of them"*), and then
+names the exception in plain language instead of hiding it (*"That list guards this flow, not the
+whole kit: when a required safety skill is missing from your workspace, the updater still installs
+it, as its own clearly labelled step, from bytes checked against the published checksum for that
+skill"*). Both halves of MF-1c survive the translation: the deny-list is absolute **within its
+channel**, and the installer is a **separate, byte-verified, labelled** channel.
+
+**ADR-085 direction check.** The amendment *narrows* a stated guarantee, which is the direction
+ADR-085 scrutinises. It is admissible because the narrowed statement is the **true** one and the
+wider statement was never honoured by the code — ADR-085 protects guarantees the system actually
+provides, not claims it does not. The user-visible protection is unchanged; only the description
+stops over-claiming. Nothing in the deny-list itself is edited by this cycle.
+
+**All five deny-list members remain named** (@security S7): the ledger, `context/.apply-backups/`,
+`context/.kit-migrations/`, `cowork.install.json`, and the `self-` prefix set. The S7 enumeration
+gain is preserved by the amendment, not traded away for the accuracy gain.
+
+**Re-verified after amendment, against a simulated post-edit registry** (row 31 replaced, nothing
+else touched):
+
+```
+field 8, self-apply  : 0c77ab20779c79288eb35f3e1059955b566b3460456034b85dc87959a955e9f4   (unchanged)
+NF, row 31           : 9
+literal '|' in field 3 : 0
+AC-PL-6 hex-row count : 30   (pin is 30 — unchanged, no pin bump owed)
+field 8, prompt-gate : 16b8ef1036d5d7320a7a166b5ea907d365a703b28f5858592bdccc810f1db2c3   NF=9  (untouched)
+
+token `self-` (backticked)      : 1
+token context/.kit-migrations/  : 1
+token context/memory-of-use.md  : 1
+token context/.apply-backups/   : 1
+token cowork.install.json       : 1
+'by this or any other skill'    : 0   <- the over-claim is gone
+```
+
+**RED leg — the checks above can fail.** One literal `|` injected into the amended field 3:
+
+```
+field8=mandatory-infrastructure     (field 7's content, shifted right)
+NF=10
+hexrows=29                          -> AC-PL-6 RED
+```
+
+A GREEN that a fault injection cannot turn RED is not evidence; this one turns RED.
 ### F.2 AC-9 — `prompt-gate`, `curated-skills-registry.md:83`
 
 Replace `a few` with `up to 3`, restoring the bound `skills/prompt-gate/SKILL.md:3` and `:73` both
@@ -1032,6 +1290,12 @@ Risk knowingly accepted: → 58
 Baseline at `b7b8447` was **56 / 56 / 56**; +1 per new ADR × 2 ADRs = **58 / 58 / 58**. Each header
 was **copied verbatim** from ADR-035's block (`docs/architecture.md:8853-8856`), not retyped.
 
+**Re-run after the Phase 2 rework: still 58 / 58 / 58.** The rework appends an *amendment record* to
+ADR-090 (§E.5, `docs/architecture.md`), not a new ADR, so it mints no fourth §Maturation Path block
+and the gate is unperturbed. The amendment's revisit triggers (e) and (f) are appended to ADR-090's
+existing list by reference rather than by duplicating the `**Concrete revisit triggers:**` header —
+duplicating it would have inflated the count to 59 and falsified this gate.
+
 ---
 
 ## §O. Handoff — what @dev must not do
@@ -1047,3 +1311,13 @@ was **copied verbatim** from ADR-035's block (`docs/architecture.md:8853-8856`),
    cells are pinned in the registry and editing either forces a hash bump this cycle does not want.
 9. **Do not rewrite `docs/retro.md:124` or `:150`.** Append only.
 10. **Do not land AC-3 without AC-2 in the same commit.**
+11. **Do not "simplify" §E.2's `[ "${X:-x}" != "1" ]` comparisons back to `-ne`,** and do not drop
+    the `-r` precheck loop. Both halves close S1 and **neither alone is sufficient** — leg NEW-3
+    (`$DOC` is a directory) passes `-r` and is caught only by the string comparison. §E.2 is
+    @security's verbatim text; land it byte-for-byte.
+12. **Do not normalize the `§`-form citations in `skills/self-apply/SKILL.md:45` or `PROMOTE.md:34`,
+    and do not widen AC-3's `SCRIPT`/`DOC` pair.** Deferred to v2.19.12 as `CF-v2.19.11-A` (§E.5).
+    Item 8 above is the mechanical reason the first of those is out of scope.
+13. **Do not restore the AC-8 row's *"can never be changed or moved by this or any other skill"*
+    phrasing.** It is false — `pull-updates`' trusted-installer backfill (ADR-073 / MF-1c) is
+    exactly such a channel. See §F.1.1; the amended row in §F.1 is the one to land.
