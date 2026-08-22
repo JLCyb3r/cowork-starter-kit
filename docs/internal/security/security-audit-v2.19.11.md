@@ -407,12 +407,12 @@ resolved first**, because it determines what `CF-v2.19.11-A`'s AC is even allowe
 *This section is written for the owner. It is the thing you decide on. You should not need to read
 a single line of code to make the call.*
 
-✅ **MERGE — 0 permissions changed, 0 files moved, 31/31 CI checks green at the exact commit being merged. Two things ship knowingly unfixed; neither can hide a problem from you.**
+✅ **MERGE — 0 permissions changed, 0 files moved, 65 pass / 0 fail / 3 conditional skips at the exact commit being merged. Two things ship knowingly unfixed; neither can hide a problem from you.**
 
 | Fact | Status |
 |---|---|
 | Permissions / scope | ✅ **0 changed** — no new access, no new secret, no new outside service. Verified in the diff and in both affected CI jobs. |
-| CI | ✅ **31/31 pass, 0 fail** at `bbb2853`, the exact commit you are merging. Both new checks ran and passed in that run. |
+| CI | ✅ **65 pass / 0 fail / 3 conditional skips** at `bbb2853`, the exact commit you are merging. Both new checks ran and passed in that run. |
 | Can it block you? | ⚠️ **Yes — and that is the point.** Two new checks can stop a future change from merging. Neither can stop *you* doing anything today, and neither touches anyone's files. |
 | Known problems shipping unfixed | ⚠️ **2 named** — the `pull-updates` gap (S5, your own decision at the gate) and 3 broken doc references (`CF-v2.19.11-A`). Both have a written record and a named next cycle. |
 | Forward-only caveats | ⚠️ **2** — the new checks only guard *future* changes; they do not repair anything already shipped, and they cover 2 of 30 registry rows, on purpose. |
@@ -486,7 +486,7 @@ comparing the three sees three different promises. Folded into the same follow-u
 missing safety skill, it checks the bytes against a fingerprint stored in the skills list. If
 someone could damage that row, the fingerprint would no longer be where the updater looks, and the
 check could silently become meaningless. **The new row check makes that damage impossible to merge
-into this repository.** I verified it refuses eight different kinds of damage — a stray `|`
+into this repository.** I verified it refuses six different kinds of damage — a stray `|`
 character in either description, a deleted row, a duplicated row, a wrong-case fingerprint, a
 missing file — and correctly *allows* a harmless whitespace tidy-up, so it will not cry wolf.
 **This is the specific control that makes deferring item 1 acceptable.** If it is ever removed or
