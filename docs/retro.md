@@ -2,6 +2,463 @@
 
 ---
 
+## [v2.19.11] - 2026-08-22 — "Pay the Tier-A debt"
+
+**Eight fixes to the release-surface evidence path, a stale-citation class, and two registry rows the
+poisoned-backfill defense depends on — none of it user-facing, all of it load-bearing for the kit's
+own safety machinery.** The number that matters is not the defect count, it is the distribution: the
+large majority of what this cycle's reviewers found was **inside a remedy**, not in the original
+code, and every one of them was found by **executing** an instrument in the direction that should
+make it fail, never by reading it. This entry documents what is independently verifiable from the
+shipped commit (`9005dc8`, squash-merged PR [#112](https://github.com/jmlozano1990/Cowork-Starter-Kit/pull/112),
+diff `b7b8447..9005dc8`) and its four internal artifacts (`docs/design-v2.19.11.md`,
+`docs/internal/security/security-review-v2.19.11.md`, `docs/internal/security/security-audit-v2.19.11.md`,
+`docs/internal/qa/qa-report-v2.19.11.md`) — and is explicit about the parts of the coordinator's own
+framing that could not be independently re-derived from this repo alone (§0 and §4 note why).
+
+### 0. Errors caught inside the cycle's own remedies, not in the original code
+
+1. **The AC-3 anchor-resolution guard took two documented defects before it shipped correct, both
+   inside its own fix.** 0.D R1's first draft used a citation-matching regex without the backtick
+   delimiter added at AC-2, which false-RED'd a correct implementation (referenced as "BLOCKER-5" in
+   the coordinator's framing; not independently re-derivable here — the round-by-round 0.D ledger
+   lives in `.claude/projects/claude-cowork-config/scratchpad.md`, outside this repo and out of
+   scope this session). 0.D R2's fix added `\|\| true` to the `N_DISTINCT`/`N_CITES`/`N_HEADS`
+   pipelines but **not to the `ANCHOR` assignment itself** — against any tree missing the backticked
+   citation form (including the pre-AC-2 tree CI would see if AC-3 landed first), `grep -oE` exits 1
+   and `set -euo pipefail` aborts the step with **exit 1 and zero diagnostic output**
+   (`docs/design-v2.19.11.md` §E.3.1, reproduced: `EXIT=1 # <- no ::error:: line at all`). That gap
+   is what @security's Phase 2 review formalized as **S1, the cycle's only BLOCKER** — a CI step that
+   "reports `PASSED` and exits 0 when `CONTRIBUTING.md` is unreadable"
+   (`docs/internal/security/security-review-v2.19.11.md:26`) — fixed in a same-day Phase-2 rework by
+   @architect, who applied @security's corrected step **verbatim** (`docs/design-v2.19.11.md:25`,
+   "diff against the review's block: identical").
+2. **AC-1's stderr-capture clause was adjudicated to a fail-open form before @architect's Phase 1
+   pass caught it.** The shipped spec's AC-1 section carries an explicit correction note: *"Never
+   `2>&1` into the captured variable (Phase-1 correction, see ADR-089 §Decision (3)): `git ls-remote`
+   can exit **0** while writing to stderr, and `:286` matches the captured evidence with `grep -qF`
+   against the whole line — a merged stream turns a broken-ref diagnostic into a **tag-exists
+   GREEN**. Demonstrated fail-open."* (`docs/spec.md:8761-8764`). The coordinator's framing
+   attributes the original `2>&1` resolution to its own earlier adjudication; that attribution is
+   plausible and consistent with the "Phase-1 correction" label but is not independently checkable
+   from this repo's committed history alone (the pre-correction spec draft is not preserved in git —
+   only the corrected, shipped version is). What **is** independently confirmed: the fail-open
+   mechanism itself, and that the fix (mandatory `mktemp`, never `2>&1`) shipped and was verified
+   against a stub `git` emitting exactly the leaking shape
+   (`docs/internal/security/security-audit-v2.19.11.md:358-363`).
+3. **The Guard Change Summary's own numbers were wrong in an earlier pass and correct in the shipped
+   one.** The committed `docs/internal/security/security-audit-v2.19.11.md` Guard Change Summary
+   states **"65 pass / 0 fail / 3 conditional skips"** (line 410, 415) and **"I verified it refuses
+   six different kinds of damage"** (line 489) — both numbers match the independently-confirmed CI
+   run (`docs/internal/qa/qa-report-v2.19.11.md:441`, `gh run view 32545547627`) and the six-leg
+   negative-control list at `security-audit-v2.19.11.md:869-873`. The coordinator's framing states an
+   earlier draft of this same document read "31/31 CI checks" and "eight kinds of damage." Neither
+   string appears anywhere in this repo's git history for this cycle — consistent with the draft
+   having been corrected before any commit, which is the outcome a healthy review process should
+   produce, but it also means this specific claim is **taken on the coordinator's word, not
+   independently verified**, and is named as such rather than silently absorbed into the record as
+   grep-confirmed.
+
+**Reading across all three:** the pattern is not "the code was wrong," it is "the thing built to
+catch the defect, and once, the document built to summarize the catching, needed its own catch."
+Every instance above was closed before merge and none reached `main` broken.
+
+### 1. Cycle Summary
+
+**Shipped: 8 ACs.** AC-1 (`evidence_tags()` fails loudly, ADR-089), AC-2 (de-pin 5 stale
+`CONTRIBUTING.md:129` citations in `scripts/canonicalize-scan.sh`), AC-3 (anchor-resolution CI guard
+derived from the citing script, ADR-090), AC-8/AC-9 (`self-apply`/`prompt-gate` registry description
+rewrites), AC-8b/AC-9b (standing per-row structural gate on the two hash-gated registry rows), AC-10
+(`CHANGELOG.md` `never on its own` misattribution fix), AC-11 (`docs/retro.md` v2.19.10 `fetch-tags`
+erratum — this is the "### Erratum — v2.19.11" section appended above, at the end of the v2.19.10
+entry, per AC-11's own append-only requirement). All 8 verified GREEN against real artifacts and/or
+real CI by `@qa` at Phase 5 (`qa-report-v2.19.11.md:491`), 0 BLOCKER/CRITICAL at Phase 6.
+
+**Deferred to v2.19.12: 5 ACs** (AC-4 S4 gate-first + per-family canary, AC-5 S4 Class-A repair, AC-6
+the 14-file report relocation, AC-7a/AC-7b frozen/append-only surfaces) — the entire S4
+report-egress retrofit, `docs/spec.md:8702-8718`.
+
+**The owner split the cycle at the Item-3 seam before `/design` ran, not at the Phase-3 gate**
+(`docs/spec.md:8697-8711`): the 14-file `git mv` is the one item with irreversible blast radius, and
+a single Guard Change Summary could not honestly cover a 14-file move, three new CI instruments, and
+two gated supply-chain rows in the same document for a non-dev approver. The stated rationale cites
+v2.19.10 directly: that cycle "demonstrated that this repo produces its worst defects when one cycle
+carries several independently-risky remedies." Consequence, confirmed in the shipped diff: ADR-088
+stays `PROPOSED` (`docs/architecture.md:14105`, re-confirmed in the audit at
+`security-audit-v2.19.11.md:380`), no file was moved (`git diff --name-status -M -C
+b7b8447..bbb2853` — no `R`/`C` entry), and v2.19.11 correctly carries no frozen-filename assertion,
+because that surface only exists once the move happens.
+
+**Release state:** v2.19.11 published and Latest, tag at the merge commit, 2 assets. `VERSION` /
+README badge / CHANGELOG head all read `2.19.11`. Shipping surface 431 files, delta +1
+(`docs/design-v2.19.11.md` — the only new file that ships to users; the three internal QA/security
+reports are correctly filed under `docs/internal/`, which stays at 0 shipped entries, and the
+pre-existing 14 root reports are unchanged).
+
+### 2. Phase Findings Summary
+
+| Phase | Agent | Findings | Severity breakdown |
+|---|---|---|---|
+| 2 (Security Review) | `@security` | S1 (BLOCKER — AC-3 fail-open) + S2-S5 WARNING + S6-S10 INFO | 1 BLOCKER/CRITICAL, 4 WARNING, 5 INFO |
+| 2 (Phase 2 rework) | `@architect` | S1/S2 fixed (verbatim application of @security's corrected step), S4 fixed, S3 deferred as `CF-v2.19.11-A`, S5 carried per owner decision | 0 open BLOCKER |
+| 5 (Testing) | `@qa` | 2 INFO (both non-blocking, neither changes any AC's verdict — a design-doc transcript error at AC-10, and a scope note on AC-1's credential-leak assertion) | 0 BLOCKER, 0 WARNING, 2 INFO |
+| 6 (Audit) | `@security` | S1/S2 CLOSED, S3 DEFERRED, S4 partially closed (residue → S11), S5 OPEN (owner-accepted), S6-S10 unchanged/INFO, S11-S15 new WARNING (post-cycle residue and next-cycle scoping hazards), S16 new INFO (AC-1's raw-stderr is a genuinely new exposure surface, low real-world risk, design explicitly forbids a redactor) | 0 CRITICAL, 0 BLOCKER, 6 WARNING, 5 INFO |
+| 7 (Approval) | `@qa` | APPROVED FOR MERGE | — |
+
+Full findings tables: `security-review-v2.19.11.md:24-37` (Phase 2), `security-audit-v2.19.11.md:19-36`
+(Phase 6).
+
+### 3. AC Difficulty Assessment
+
+- **Hard (required rework inside the cycle before implementation ever began):** AC-3 (two chained
+  defects inside its own remedy, closed by a Phase 2 BLOCKER + same-day rework); AC-1 (stderr-capture
+  mechanism corrected at Phase 1 before any code shipped); AC-8b/AC-9b (Phase 1 redesigned from a
+  two-step/two-parser-copy shape to one step/one copy, assertion-before-self-test, specifically to
+  avoid reproducing the A4 dual-copy hazard from a prior cycle, `docs/spec.md:8862-8867`).
+- **Easy (implemented without rework once designed):** AC-2 (de-pin 5 citations — mechanical,
+  verified `5 → 0` plus a precondition/postcondition pair); AC-10 (misattribution fix — the AC itself
+  needed a Phase-1 control correction, but the shipped text change was single-pass); AC-11 (append a
+  correction record — base-pinned `git diff --numstat` control, one row, zero deletions).
+- **Not-Verified:** none among the 8 shipped ACs — `@qa` records all 8 as GREEN against real
+  artifacts/CI (`qa-report-v2.19.11.md:491`). The 5 deferred ACs (AC-4/5/6/7a/7b) are explicitly
+  out-of-scope-by-owner-decision, not silently unverified ACs of this cycle.
+- **Notable:** `@qa`'s Phase 5 pass on the 8 shipped ACs needed **zero rework** — every defect this
+  cycle produced was caught and closed at Phase 0.D/1/2, before `@dev`'s implementation pass ever
+  started (`qa-report-v2.19.11.md:483-487`: "no rework cycle occurred before this Phase 5 ... the
+  operating context's single Phase-4 diff base `cdb40e4`"). The cycle's rework was front-loaded into
+  spec and design, not discovered in code.
+
+### 4. Metrics
+
+**Token cost: NOT MEASURED.** This project's `metrics.json` for external-project sub-agent sessions
+has a standing, previously-documented data gap (named in the v2.19.7, v2.19.8, v2.19.9, and v2.19.10
+retros — `token-logger.sh` pin-blindness, Council-side, out of scope for this repo). That file lives
+under `.claude/projects/claude-cowork-config/` inside The-Council's own repo, which this session was
+explicitly instructed not to touch. No cost figure is estimated from duration or commit-count
+proxies.
+
+**Rework rate: not independently recomputable at the usual granularity.** PR #112 squash-merged, so
+this local clone has no intermediate commit history to diff a Phase-4-DONE SHA against a Phase-7 SHA
+the way prior cycles' retros did (e.g. v2.19.10's `5814e43..81e96d0`). What is verifiable: `@qa`'s
+own Phase 5 statement that the Phase 4 → Phase 5 step needed no rework (above), meaning the
+"traditional" rework-rate metric (code churn after implementation) is genuinely 0% for this cycle —
+the cycle's real rework cost sat in Phase 0.D/1/2, before any implementation commit existed, which
+this project's rework-rate methodology has not historically counted the same way.
+
+**Phase durations: not available from this repo.** Per-phase timestamps live in
+`.claude/projects/claude-cowork-config/pipeline.md` inside The-Council's repo (out of bounds this
+session, per instruction). Two timestamps are independently confirmable from this repo's own history:
+Phase 2 review at `2026-08-21T19:53:57Z` (`security-review-v2.19.11.md:4`), Phase 6 audit at
+`2026-08-22T02:41:36Z` (`security-audit-v2.19.11.md:4`) — roughly 7 hours logical span across Phases
+2 through 6, consistent with a "seven review rounds" characterization but not proof of the specific
+count; the coordinator's "sixteen defects across seven review rounds" figure is accepted as given
+context for this retro (per the task's own "State — all verified, do not re-derive" framing) but is
+flagged here as **not independently re-derivable from this repo's git history alone** — the granular
+round ledger is scratchpad-resident, outside this session's reach.
+
+### 5. What Worked
+
+- **"Run every instrument in the direction that should make it fail" held as a standing discipline,
+  and caught the cycle's only BLOCKER.** S1 was found by executing AC-3's guard against a tree
+  missing its input, not by reading the design — the same discipline `docs/patterns.md`'s
+  already-BINDING "Check-That-Cannot-Fail" row names as its core lesson (see §7 below). `@qa`
+  independently re-ran 4 of AC-3's 9 legs and the AC-8b/AC-9b self-integrity break leg rather than
+  trusting the design doc's transcripts (`qa-report-v2.19.11.md:434-436`).
+- **The owner's pre-`/design` scope split (§1) avoided a design pass that would have been discarded.**
+  Splitting at the Item-3 seam meant `@architect` never spent an opus design pass on the 5 deferred
+  ACs, and the resulting Guard Change Summary covers a coherent, single-theme change set (evidence
+  path hardening + two registry gates) instead of bundling an irreversible 14-file move into the same
+  approval decision.
+- **`@security` refused to add a credential redactor after testing three transports.** AC-1's design
+  explicitly forbids a `sed` redactor for the credential-leak assertion; the audit instead proves the
+  assertion is legitimate defense-in-depth by demonstrating real git never leaks userinfo in its
+  error text — the GREEN direction holds because of a property of git, not because the code redacts
+  anything (`security-audit-v2.19.11.md:351-368`). Adding a redactor would have been the "fix that
+  isn't a fix" instinct this cycle's own theme is arguing against.
+- **`@architect` declined to prescribe a new guard shape with zero negative controls run against it.**
+  AC-8b/AC-9b's one-step/one-parser-copy redesign was verified with six negative-control legs *before*
+  shipping, including a leg that sabotages the checker itself and confirms it fails loudly rather than
+  passing silently (`docs/spec.md:8869-8873`).
+- **Phase 2 rework applied `@security`'s corrected code verbatim, not re-derived.** `@architect`'s
+  rework record states the fix was "applied as given... not altered. No disagreement to report"
+  (`docs/design-v2.19.11.md:39-41`) — the reviewer that found the defect wrote the fix, and the person
+  who owns the file accepted it byte-for-byte rather than re-implementing it a third way.
+
+### 6. What Didn't
+
+- **AC-3 needed two internal-remedy defects (§0.1) before it shipped correct** — a genuine repeat of
+  this project's own named pattern (below), inside a single AC, in a single cycle.
+- **The Guard Change Summary itself needed a correction pass** (§0.3) — the document written *for
+  the non-technical approver, specifically so they would not need to read code*, carried wrong
+  numbers in at least one earlier draft. If a document exists to let someone approve without reading
+  code, an error in that document is higher-stakes than an error in the code it summarizes, not
+  lower.
+- **S11 — the plain-language correction from a prior over-claim (S4) landed on 1 of 3 sibling rows.**
+  `self-apply`'s description is now precise; `self-archive` and `self-upgrade` still carry the exact
+  claim shape S4 judged inaccurate. Post-cycle the three sibling safety skills assert three different
+  guarantee shapes (`security-audit-v2.19.11.md:31`) — not a regression, but an inconsistency this
+  cycle created the asymmetry for.
+- **S13 — AC-2's citation repair fixed a reference that no user can ever resolve.** `CONTRIBUTING.md`
+  is `export-ignore`d from the release archive (0 entries confirmed via `git archive`), while all four
+  files that cite it ship to every user. The fix improved the maintainer's tree, not the user's
+  workspace (`security-audit-v2.19.11.md:33`).
+- **CF-v2.19.11-A's true scope was under-stated in the Phase 2 review by a factor of 3.** The
+  original finding named one broken citation; the audit found three (`skills/self-apply/SKILL.md:45`,
+  `PROMOTE.md:34`, `templates/skill-template/SKILL.md:14`), and the security auditor names this
+  directly: *"My Phase 2 note said one file. It is three"* (`security-audit-v2.19.11.md:459`).
+- **A verifiable but externally-sourced claim (§0.2, the AC-1 `2>&1` adjudication) could not be
+  independently checked this session.** Not because it's implausible — it matches the "Phase-1
+  correction" label in the shipped spec exactly — but because the pre-correction draft isn't in git.
+  Worth naming as a standing limitation of git-only forensics on a cycle whose drafting history lives
+  in a scratchpad this session could not read.
+
+### 7. Pattern candidate — checked against `docs/patterns.md`, not asserted
+
+**The coordinator's framing:** *"A check that reports healthy while proving nothing" has instances in
+v2.18.0, v2.19.10, and v2.19.11 — evaluate against the 3-cycle promotion threshold.*
+
+**What `docs/patterns.md` actually shows, checked directly (`grep -oE "^\| [^|]+ \|" docs/patterns.md`
+for the row index, then read in full):** this shape is **not a promotion candidate — it is already
+BINDING**, under the row `Check-That-Cannot-Fail (design-stage negative test on a CI gate)`
+(`docs/patterns.md:31`). Its own text: *"A CI/logic gate is not trustworthy until someone has proven
+it can actually go red on the defect it claims to catch — a check that never fails is not a check."*
+It reached BINDING at its **3rd instance in v2.13.0** and has since accumulated at least 7 further
+recorded instances (v2.14.0, v2.15.0 ×2, v2.19.0, v2.19.3, v2.19.5 — the last a single cycle with 3
+sub-instances). **v2.18.0 and v2.19.10 are not named in this row's Cycles column** — the coordinator's
+specific three-cycle citation does not match the file as it stands; I did not chase down whether a
+same-shaped defect exists uncredited somewhere in the v2.18.0 or v2.19.10 retro text, because the row
+is already past the threshold regardless of which three cycles are cited, and re-deriving an
+independent 3-cycle count for an already-BINDING pattern would not change its status.
+
+**What v2.19.11 itself contributes to this row, verified, not asserted:** at minimum two in-cycle
+instances of the identical shape, both closed before merge — S1 (AC-3's guard, §0.1 above) and the
+AC-8b/AC-9b two-step/dual-parser-copy shape rejected at Phase 1 specifically because it "reproduces
+the A4 dual-copy hazard" from a named prior cycle (`docs/spec.md:8862-8867`, itself citing
+`docs/patterns.md`'s discipline directly). Both are consistent with — not a new pattern, a further
+confirmation of — the existing BINDING row's central claim, that this repository's worst defects hide
+inside the fix for the previous one.
+
+**On the "Version Consistency Check would have passed on three consistently-stale values" near-miss**
+named in the coordinator's framing: this is real and is the sharpest instance of the row's exact
+shape — a gate whose GREEN means "internally consistent," not "true" — but I could not locate primary
+evidence of it inside this repo's committed artifacts (it does not appear in `qa-report-v2.19.11.md`,
+where `Version Consistency Check` is recorded only as one of the passing jobs in the final CI run,
+`qa-report-v2.19.11.md:478`). Consistent with it having been caught and fixed before any commit — the
+final `VERSION`/README/CHANGELOG state is genuinely `2.19.11` across all three — but, per the same
+discipline this section is applying to everything else, **named as accepted-on-the-coordinator's-word,
+not independently verified**, and recommended as the next instance to add to the BINDING row's Cycles
+text if a future session can confirm it from the scratchpad this session could not read.
+
+**Recommended action (not performed this session):** append a v2.19.11 instance note to the existing
+`Check-That-Cannot-Fail` row's Cycles column — not a new row — matching the convention every prior
+cycle's addition to that row follows. Left as a carry-forward (§8) rather than executed here, because
+a large, heavily-cross-referenced BINDING row is higher-risk to hand-edit inline than to hand off with
+exact citations for a follow-up pass to apply carefully.
+
+### 8. Carry-forwards for the next cycle
+
+- **`CF-v2.19.11-A` — three shipping broken citations**, corrected scope per
+  `security-audit-v2.19.11.md:280-401`: `skills/self-apply/SKILL.md:45`, `PROMOTE.md:34`,
+  `templates/skill-template/SKILL.md:14`. **The third targets an h2** (`CONTRIBUTING.md:114`) while
+  AC-3's guard hardcodes heading level `### ` (h3) — a naive file-list widening of the existing guard
+  false-REDs a correctly normalized citation against that file (S14). Any AC written for this
+  carry-forward needs a level-agnostic heading match, not just an added filename.
+- **S12 must be resolved before `CF-v2.19.11-A`'s ACs are written.** `docs/architecture.md`'s
+  ADR-088 §Decision (3) and ADR-090 give **opposite answers for the same three files**: ADR-088
+  freezes Class-B references as-is; ADR-090 mints a repo-wide convention requiring them repaired.
+  ADR-090 is ACCEPTED, ADR-088 is PROPOSED, and nothing in this cycle's diff reconciles them
+  (`security-audit-v2.19.11.md:32`). Whichever ADR a future spec follows without noticing the
+  conflict will get the AC wrong in a way that is expensive to unwind.
+- **`CF-v2.19.11-B`** — two doc corrections, both non-blocking, both carried rather than fixed this
+  cycle: (i) `docs/design-v2.19.11.md` §H.4's RED-d transcript is wrong about *why* the AC-10 vacuity
+  guard's END-anchor-rename leg goes RED — it claims the vacuity guard fires (0 lines); it actually
+  runs unterminated to EOF and RED comes from an incidental double-match elsewhere in
+  `CHANGELOG.md`. Renaming the START anchor, not the END anchor, reproduces the documented transcript
+  — the correction to apply if this design doc is ever re-derived from
+  (`security-audit-v2.19.11.md:343-349`, `qa-report-v2.19.11.md:463`). (ii) AC-1's credential-leak
+  assertion's GREEN direction is real-git behavior, not code-level redaction — a one-clause addition
+  to the design's Leg-2 note, so a future reader doesn't conclude the code does something it doesn't
+  (`security-audit-v2.19.11.md:366-368`).
+- **S5 / risk `v2.19.11-PULL-ROW-1`** — `skills/pull-updates/SKILL.md` has no refusal clause for a
+  malformed *registry row* (only for a malformed manifest), and the poisoned-backfill defense depends
+  on reading a `sha256` out of exactly such a row. **OPEN**, owner-accepted at the Phase 3 gate,
+  closeable only after `pull-updates` carries an explicit clause exercised by a firing negative
+  control — not closeable on the strength of this cycle's AC-8b/AC-9b CI gate alone, which protects
+  the repository, not a user's already-installed workspace copy (`docs/risk-register.md:16`).
+- **S11** — `self-archive`/`self-upgrade` still carry the over-claim `self-apply`'s description no
+  longer does; `pull-updates` backfills all three inconsistently. **S14** — the heading-depth gap
+  named above. **S15** — `$ANCHOR` reaches the runner's stdout on the exit-0 success path via a route
+  GitHub's `%0A` command-injection decoding does not run at; command execution is proven impossible,
+  but the log-noise vector is real and low-severity (`security-audit-v2.19.11.md:35`).
+- **The Check-That-Cannot-Fail pattern-row update** — see §7. Recommended, not executed this session.
+
+### 9. Next-cycle recommendation
+
+**v2.19.12 = the S4 report-egress retrofit** — scope already reviewed and fenced (`docs/spec.md`
+AC-4/5/6/7a/7b, `docs/design-v2.19.10.md` §J). This is the irreversible 14-file move the owner
+deliberately isolated into its own cycle at v2.19.10/v2.19.11's Item-3 split.
+
+**v2.19.13 = `CF-v2.19.11-A` + S5 + S11 + S14 + S15 + `CF-v2.19.11-B`, with S12 settled first.** The
+owner's stated reasoning for bundling S5 with `CF-v2.19.11-A` specifically (as relayed to this
+session, not independently re-derived from a committed doc): both require editing a hash-gated
+registry pool file — `CF-v2.19.11-A` touches `skills/self-apply/SKILL.md` (already a gated row per
+AC-8b) and S5's fix touches `skills/pull-updates/SKILL.md`, which is itself a gated row in
+`curated-skills-registry.md`. Bundling means one `sha256`-bump event and one Guard Change Summary
+instead of two separate gated-row edits in two separate Tier-A cycles — the same efficiency logic
+this cycle's own S5 deferral used to decline a third gated-row bump inside v2.19.11 itself
+(`docs/spec.md:8965-8968`). This reasoning is sound on its face and consistent with the shipped risk
+record's own framing.
+
+### 10. Retrospective Verdict
+
+**What went well:** the cycle's most expensive-looking property — that its remedies kept needing
+their own remedies — is also its strongest evidence that the review discipline is working as
+designed. Every instance in §0 was closed before `main`, by a different actor (or a later pass of the
+same actor) than the one who introduced it, using an executed instrument rather than an inspection.
+`@architect` applied `@security`'s corrected code verbatim rather than re-deriving a third version.
+`@security` declined the easy "add a redactor" fix after proving it wasn't needed. `@qa`'s Phase 5
+pass needed zero rework because the cycle's real defects were caught before implementation began, not
+after.
+
+**What to improve:** a document written specifically so a non-technical approver would not need to
+read code (the Guard Change Summary) needed the same "run it and check" discipline applied to it that
+the code itself got — and, on the coordinator's account, got it one draft later than ideal. And this
+cycle confirms, again, that the already-BINDING `Check-That-Cannot-Fail` pattern is not a solved
+problem this repository can stop watching — it produced at least two more instances this cycle,
+inside a change set whose entire purpose was hardening exactly this class of control.
+
+**Overall cycle health: strong, with one open reconciliation debt.** 8/8 shipped ACs GREEN, 0
+BLOCKER/CRITICAL at final audit, real CI green (65/0/3) at the exact merge SHA, and a coherently
+scoped Tier-A change set thanks to the owner's pre-design split. The one thing that must not slip
+into v2.19.13 unexamined is S12: two accepted ADRs disagreeing about the same three files is a
+decision gap, not a code gap, and it is upstream of every AC `CF-v2.19.11-A` will need to state.
+
+### 11. Addendum — coordinator-directed re-verification, same session
+
+Filed as an append, not a rewrite of §0/§7 above, per this project's own `docs/retro.md` erratum
+convention (see the "### Erratum — v2.19.11" section closing the v2.19.10 entry below, which corrects
+a mischaracterization the same way — append, never rewrite). Two of §0/§7's four
+"unverifiable"/"accepted on the coordinator's word" findings were, in fact, falsifiable from this
+repo and are corrected here with the exact commands run.
+
+**§0.3 (the Guard Change Summary draft-number claim) — FALSIFIED, corrected.** §0.3 above states
+"[the earlier-draft numbers] appear... consistent with the draft having been corrected before any
+commit... this specific claim is taken on the coordinator's word, not independently verified." That
+was a methodological gap, not a fact about the repo: I searched `b7b8447..9005dc8` (the squashed
+merge range) and the working tree, and did not check the pre-squash PR branch ref,
+`origin/release/v2.19.11-tier-a-debt`, which this clone had already fetched and which still holds the
+full, unsquashed commit history. The bad draft **is** committed, at `8263225`:
+
+```
+$ git show 8263225:docs/internal/security/security-audit-v2.19.11.md | grep -c '31/31'
+2
+$ git show 8263225:docs/internal/security/security-audit-v2.19.11.md | grep -c 'eight different kinds of damage'
+1
+```
+
+And `7b231af` ("dev(release): add v2.19.11 release surface + correct Guard Change Summary counts") is
+the correcting commit, by a different actor at a different pipeline step (`@dev`, release-prep, not
+`@security`'s own Phase 6 re-verify):
+
+```
+$ git show 7b231af -- docs/internal/security/security-audit-v2.19.11.md | grep -E "^[+-].*(31/31|65 pass|eight different kinds|six different kinds)"
+-✅ **MERGE — 0 permissions changed, 0 files moved, 31/31 CI checks green at the exact commit being merged. ...**
++✅ **MERGE — 0 permissions changed, 0 files moved, 65 pass / 0 fail / 3 conditional skips at the exact commit being merged. ...**
+-| CI | ✅ **31/31 pass, 0 fail** at `bbb2853`, the exact commit you are merging. ...|
++| CI | ✅ **65 pass / 0 fail / 3 conditional skips** at `bbb2853`, the exact commit you are merging. ...|
+-into this repository.** I verified it refuses eight different kinds of damage — a stray `|`
++into this repository.** I verified it refuses six different kinds of damage — a stray `|`
+```
+
+**§7 (the "Version Consistency Check" near-miss) — FALSIFIED, corrected, and the primary evidence is
+stronger than the coordinator's own framing stated it.** §7 above says this "does not appear in
+`qa-report-v2.19.11.md`... named as accepted-on-the-coordinator's-word, not independently verified."
+The same `8263225` tree — the exact commit `@qa` verified and recorded APPROVED FOR MERGE at Phase 7
+— resolves it directly:
+
+```
+$ git show 8263225:VERSION
+2.19.10
+$ git show 8263225:CHANGELOG.md | grep -m1 '^## \['
+## [2.19.10] - 2026-08-20
+$ git show 8263225:README.md | grep -oE 'version-[0-9.]+'
+version-2.19.10
+$ git show 8263225:CHANGELOG.md | grep -c '^## \[2\.19\.11\]'
+0
+```
+
+`VERSION`, the CHANGELOG head, and the README badge were all mutually consistent at the stale
+`2.19.10` value, with no `[2.19.11]` CHANGELOG section anywhere in that tree. `Version Consistency
+Check` asserts the three values equal *each other*, not that any of them is current — so it passed on
+a tree that was, in the one dimension this cycle exists to update, wrong. This is primary evidence,
+not a narrative claim, and it is the sharpest confirmed instance of the `Check-That-Cannot-Fail`
+pattern (§7 above) this cycle produced — sharper than either of the two I did confirm, because the
+gate in question is the one this project's own `docs/patterns.md:10` names as its "PERMANENT
+STRUCTURAL FIX" for exactly this failure class, and it is a genuine gap in that fix's coverage
+(equality-of-three, not correctness-of-any), not a flaw in the fix's implementation.
+
+**§7 (Challenge 2, the pattern's status) — confirmed correct, restated plainly.** The coordinator's
+original framing ("3-cycle candidate, v2.18.0/v2.19.10/v2.19.11") was wrong on both the promotion
+status and the cited cycle list — `docs/patterns.md:31`'s `Check-That-Cannot-Fail` row was already
+BINDING at its 3rd instance in v2.13.0, and neither v2.18.0 nor v2.19.10 appears in its Cycles column.
+This is the third orchestrator-authored framing error this cycle's own record names (after the two
+`§0` already documents for the pipeline itself) — recorded here, in the retro, rather than smoothed
+over, per this file's own `### 0` convention in the v2.19.10 entry below.
+
+**Two further `docs/patterns.md` rows checked against their own promotion criteria, per the
+coordinator's direction not to take the count on say-so:**
+
+- **`docs/patterns.md:58`, "The cycle's own mandated corrective action was the next defect vector" —
+  QUALIFIES, promoted WATCH 1/3 → WATCH 2/3, not further.** AC-3's chain matches this row's shape
+  exactly (a remedy, executed as prescribed, evaporates a property nobody was checking): commit
+  `cdb40e4`'s own message states, verbatim, *"This is the third defect in AC-3's remedy chain and
+  each fix introduced the next; all three were found by running the guard, none by reading it."*
+  Mechanism, independently checked against the message's own claim: the Phase-1 `\|\| true` fix added
+  to the `ANCHOR` grep (to stop a silent abort on trees lacking the backticked citation form) also
+  swallowed the unrelated case of `CONTRIBUTING.md` being unreadable, converting a real read error
+  into an empty capture — `[ "" -ne 1 ]` then errors rather than returning false, the enclosing `if`
+  treats the non-zero exit as FALSE, `set -e` is exempt inside an `if` condition, and the step fell
+  through to `PASSED`/exit 0 — `@security`'s S1 BLOCKER. One sub-instance, one cycle, per this row's
+  own "count cycles, not sub-occurrences" convention: **2nd instance, not 3rd** (v2.19.10 is the
+  1st). `docs/patterns.md` updated: status cell WATCH 1/3 → WATCH 2/3, v2.19.11 instance appended to
+  the Cycles column with the `cdb40e4` citation, date column appended.
+- **`docs/patterns.md:56`, "Ambiguous-unit numeric claim" — QUALIFIES, PROMOTED WATCH 2/3 → BINDING
+  (3rd instance).** The `31/31` figure (above) is this row's title almost verbatim: one
+  workflow-trigger context's pass-count (`push` alone or `pull_request` alone — `31+31=62`, `+3`
+  conditional skips accounts for the `65` combined total that real CI actually produced) presented as
+  the whole-run total across both trigger contexts. Checked against this row's own explicit ruling
+  criterion — established at v2.19.10's non-instance, which this row states in so many words: *"a
+  genuine 3rd instance for promotion purposes should be a claim that survived past the phase or
+  author that produced it"* — and it does: `8263225` was `@security`'s own Phase 6 commit; the
+  correction landed in `7b231af`, a **different actor** (`@dev`) at a **different pipeline step**
+  (release-prep), the identical multi-phase/multi-author shape as the two already-counted instances
+  (v2.19.7, v2.19.9), not v2.19.10's same-phase self-catch shape. `docs/patterns.md` updated: status
+  cell `WATCH 2/3` → `WATCH 2/3 → **BINDING (3rd instance, v2.19.11)**`, instance text and commands
+  appended to the Cycles column, `**PROMOTED TO BINDING.**` marker added, date column appended.
+- **`docs/patterns.md:52`, "Local-fix exhaustion signal" — CHECKED, DOES NOT QUALIFY, left at WATCH
+  2/3.** This row's own criterion and its two founding instances (v2.19.5, v2.19.6) are specifically
+  about a check that had **already shipped and run** being patched multiple times, each patch a
+  **separate, dated commit** to the live implementation, alternating polarity, reconstructible from
+  diffing those commits against each other. AC-3's chain does not fit that shape on inspection of the
+  full pre-squash history (`git log --oneline b7b8447..origin/release/v2.19.11-tier-a-debt`): the
+  guard's actual code was committed exactly **once** (`e946c05`), already in its corrected form — all
+  three defects the `cdb40e4` message names were found and fixed entirely inside
+  `docs/design-v2.19.11.md`'s prose, across Phase 0 deliberation and two design/rework commits
+  (`2e090a1`, `cdb40e4`), before the guard ever ran once in CI. That is the same underlying lesson as
+  `:58` above (which it is now credited to instead), but it is not this row's specific shape —
+  crediting it here would count a pre-implementation design-iteration chain as if it were the
+  live-check-repeatedly-patched pattern the row's two founding instances established, which is a
+  different failure mode with a different fix (this row's own recommended discipline is "redesign the
+  check's measurement STRATEGY," which does not apply to a defect that never shipped once). Left
+  unchanged.
+
+**Files changed by this addendum:** `docs/retro.md` (this section, append-only against `9005dc8`);
+`docs/patterns.md` (2 rows edited in place — `:56` status/Cycles/date, `:58` status/Cycles/date — both
+purely additive to existing cells, no historical instance text removed, consistent with this file's
+own established per-cycle update convention).
+
+---
+
 ## [v2.19.10] - 2026-08-20 — "Plain Language: say it the way she'd say it"
 
 **The product change is small — six registry descriptions, one closing message, one data-locality clause, rewritten out of maintainer jargon into words a non-technical user reads. The retro is not small, because this cycle's headline finding is not "we found defects" — it is that the cycle's *own mandated fixes* kept becoming the next defect, seven separate times, across every role in the pipeline. This entry names that pattern once, cleanly, instead of re-discovering it seven times the way the cycle itself did.**
