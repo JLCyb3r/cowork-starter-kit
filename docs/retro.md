@@ -333,6 +333,130 @@ scoped Tier-A change set thanks to the owner's pre-design split. The one thing t
 into v2.19.13 unexamined is S12: two accepted ADRs disagreeing about the same three files is a
 decision gap, not a code gap, and it is upstream of every AC `CF-v2.19.11-A` will need to state.
 
+### 11. Addendum — coordinator-directed re-verification, same session
+
+Filed as an append, not a rewrite of §0/§7 above, per this project's own `docs/retro.md` erratum
+convention (see the "### Erratum — v2.19.11" section closing the v2.19.10 entry below, which corrects
+a mischaracterization the same way — append, never rewrite). Two of §0/§7's four
+"unverifiable"/"accepted on the coordinator's word" findings were, in fact, falsifiable from this
+repo and are corrected here with the exact commands run.
+
+**§0.3 (the Guard Change Summary draft-number claim) — FALSIFIED, corrected.** §0.3 above states
+"[the earlier-draft numbers] appear... consistent with the draft having been corrected before any
+commit... this specific claim is taken on the coordinator's word, not independently verified." That
+was a methodological gap, not a fact about the repo: I searched `b7b8447..9005dc8` (the squashed
+merge range) and the working tree, and did not check the pre-squash PR branch ref,
+`origin/release/v2.19.11-tier-a-debt`, which this clone had already fetched and which still holds the
+full, unsquashed commit history. The bad draft **is** committed, at `8263225`:
+
+```
+$ git show 8263225:docs/internal/security/security-audit-v2.19.11.md | grep -c '31/31'
+2
+$ git show 8263225:docs/internal/security/security-audit-v2.19.11.md | grep -c 'eight different kinds of damage'
+1
+```
+
+And `7b231af` ("dev(release): add v2.19.11 release surface + correct Guard Change Summary counts") is
+the correcting commit, by a different actor at a different pipeline step (`@dev`, release-prep, not
+`@security`'s own Phase 6 re-verify):
+
+```
+$ git show 7b231af -- docs/internal/security/security-audit-v2.19.11.md | grep -E "^[+-].*(31/31|65 pass|eight different kinds|six different kinds)"
+-✅ **MERGE — 0 permissions changed, 0 files moved, 31/31 CI checks green at the exact commit being merged. ...**
++✅ **MERGE — 0 permissions changed, 0 files moved, 65 pass / 0 fail / 3 conditional skips at the exact commit being merged. ...**
+-| CI | ✅ **31/31 pass, 0 fail** at `bbb2853`, the exact commit you are merging. ...|
++| CI | ✅ **65 pass / 0 fail / 3 conditional skips** at `bbb2853`, the exact commit you are merging. ...|
+-into this repository.** I verified it refuses eight different kinds of damage — a stray `|`
++into this repository.** I verified it refuses six different kinds of damage — a stray `|`
+```
+
+**§7 (the "Version Consistency Check" near-miss) — FALSIFIED, corrected, and the primary evidence is
+stronger than the coordinator's own framing stated it.** §7 above says this "does not appear in
+`qa-report-v2.19.11.md`... named as accepted-on-the-coordinator's-word, not independently verified."
+The same `8263225` tree — the exact commit `@qa` verified and recorded APPROVED FOR MERGE at Phase 7
+— resolves it directly:
+
+```
+$ git show 8263225:VERSION
+2.19.10
+$ git show 8263225:CHANGELOG.md | grep -m1 '^## \['
+## [2.19.10] - 2026-08-20
+$ git show 8263225:README.md | grep -oE 'version-[0-9.]+'
+version-2.19.10
+$ git show 8263225:CHANGELOG.md | grep -c '^## \[2\.19\.11\]'
+0
+```
+
+`VERSION`, the CHANGELOG head, and the README badge were all mutually consistent at the stale
+`2.19.10` value, with no `[2.19.11]` CHANGELOG section anywhere in that tree. `Version Consistency
+Check` asserts the three values equal *each other*, not that any of them is current — so it passed on
+a tree that was, in the one dimension this cycle exists to update, wrong. This is primary evidence,
+not a narrative claim, and it is the sharpest confirmed instance of the `Check-That-Cannot-Fail`
+pattern (§7 above) this cycle produced — sharper than either of the two I did confirm, because the
+gate in question is the one this project's own `docs/patterns.md:10` names as its "PERMANENT
+STRUCTURAL FIX" for exactly this failure class, and it is a genuine gap in that fix's coverage
+(equality-of-three, not correctness-of-any), not a flaw in the fix's implementation.
+
+**§7 (Challenge 2, the pattern's status) — confirmed correct, restated plainly.** The coordinator's
+original framing ("3-cycle candidate, v2.18.0/v2.19.10/v2.19.11") was wrong on both the promotion
+status and the cited cycle list — `docs/patterns.md:31`'s `Check-That-Cannot-Fail` row was already
+BINDING at its 3rd instance in v2.13.0, and neither v2.18.0 nor v2.19.10 appears in its Cycles column.
+This is the third orchestrator-authored framing error this cycle's own record names (after the two
+`§0` already documents for the pipeline itself) — recorded here, in the retro, rather than smoothed
+over, per this file's own `### 0` convention in the v2.19.10 entry below.
+
+**Two further `docs/patterns.md` rows checked against their own promotion criteria, per the
+coordinator's direction not to take the count on say-so:**
+
+- **`docs/patterns.md:58`, "The cycle's own mandated corrective action was the next defect vector" —
+  QUALIFIES, promoted WATCH 1/3 → WATCH 2/3, not further.** AC-3's chain matches this row's shape
+  exactly (a remedy, executed as prescribed, evaporates a property nobody was checking): commit
+  `cdb40e4`'s own message states, verbatim, *"This is the third defect in AC-3's remedy chain and
+  each fix introduced the next; all three were found by running the guard, none by reading it."*
+  Mechanism, independently checked against the message's own claim: the Phase-1 `\|\| true` fix added
+  to the `ANCHOR` grep (to stop a silent abort on trees lacking the backticked citation form) also
+  swallowed the unrelated case of `CONTRIBUTING.md` being unreadable, converting a real read error
+  into an empty capture — `[ "" -ne 1 ]` then errors rather than returning false, the enclosing `if`
+  treats the non-zero exit as FALSE, `set -e` is exempt inside an `if` condition, and the step fell
+  through to `PASSED`/exit 0 — `@security`'s S1 BLOCKER. One sub-instance, one cycle, per this row's
+  own "count cycles, not sub-occurrences" convention: **2nd instance, not 3rd** (v2.19.10 is the
+  1st). `docs/patterns.md` updated: status cell WATCH 1/3 → WATCH 2/3, v2.19.11 instance appended to
+  the Cycles column with the `cdb40e4` citation, date column appended.
+- **`docs/patterns.md:56`, "Ambiguous-unit numeric claim" — QUALIFIES, PROMOTED WATCH 2/3 → BINDING
+  (3rd instance).** The `31/31` figure (above) is this row's title almost verbatim: one
+  workflow-trigger context's pass-count (`push` alone or `pull_request` alone — `31+31=62`, `+3`
+  conditional skips accounts for the `65` combined total that real CI actually produced) presented as
+  the whole-run total across both trigger contexts. Checked against this row's own explicit ruling
+  criterion — established at v2.19.10's non-instance, which this row states in so many words: *"a
+  genuine 3rd instance for promotion purposes should be a claim that survived past the phase or
+  author that produced it"* — and it does: `8263225` was `@security`'s own Phase 6 commit; the
+  correction landed in `7b231af`, a **different actor** (`@dev`) at a **different pipeline step**
+  (release-prep), the identical multi-phase/multi-author shape as the two already-counted instances
+  (v2.19.7, v2.19.9), not v2.19.10's same-phase self-catch shape. `docs/patterns.md` updated: status
+  cell `WATCH 2/3` → `WATCH 2/3 → **BINDING (3rd instance, v2.19.11)**`, instance text and commands
+  appended to the Cycles column, `**PROMOTED TO BINDING.**` marker added, date column appended.
+- **`docs/patterns.md:52`, "Local-fix exhaustion signal" — CHECKED, DOES NOT QUALIFY, left at WATCH
+  2/3.** This row's own criterion and its two founding instances (v2.19.5, v2.19.6) are specifically
+  about a check that had **already shipped and run** being patched multiple times, each patch a
+  **separate, dated commit** to the live implementation, alternating polarity, reconstructible from
+  diffing those commits against each other. AC-3's chain does not fit that shape on inspection of the
+  full pre-squash history (`git log --oneline b7b8447..origin/release/v2.19.11-tier-a-debt`): the
+  guard's actual code was committed exactly **once** (`e946c05`), already in its corrected form — all
+  three defects the `cdb40e4` message names were found and fixed entirely inside
+  `docs/design-v2.19.11.md`'s prose, across Phase 0 deliberation and two design/rework commits
+  (`2e090a1`, `cdb40e4`), before the guard ever ran once in CI. That is the same underlying lesson as
+  `:58` above (which it is now credited to instead), but it is not this row's specific shape —
+  crediting it here would count a pre-implementation design-iteration chain as if it were the
+  live-check-repeatedly-patched pattern the row's two founding instances established, which is a
+  different failure mode with a different fix (this row's own recommended discipline is "redesign the
+  check's measurement STRATEGY," which does not apply to a defect that never shipped once). Left
+  unchanged.
+
+**Files changed by this addendum:** `docs/retro.md` (this section, append-only against `9005dc8`);
+`docs/patterns.md` (2 rows edited in place — `:56` status/Cycles/date, `:58` status/Cycles/date — both
+purely additive to existing cells, no historical instance text removed, consistent with this file's
+own established per-cycle update convention).
+
 ---
 
 ## [v2.19.10] - 2026-08-20 — "Plain Language: say it the way she'd say it"
