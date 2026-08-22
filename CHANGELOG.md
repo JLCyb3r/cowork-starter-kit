@@ -33,9 +33,9 @@ scoped to SEO/positioning copy only.
   `registry-sha256-check` job pins the registry's row-structure integrity at exactly 30 valid-hex
   rows, landed in its own commit before any description was touched.
 - **The wizard's setup-complete closing message rewritten** — every technical term inline-defined,
-  including inside parentheticals, with every listed file and skill still named and all three of
-  `self-archive`'s safety phrases (`never silently performs`, `reversibly`, `never on its own`)
-  preserved verbatim.
+  including inside parentheticals, with every listed file and skill still named and both of
+  `self-archive`'s safety phrases (`never silently performs`, `reversibly`) preserved verbatim,
+  along with `pull-updates`'s own `never on its own`.
 - **The F4 bundle-customization menu's spoken strings rewritten** — `pool`, `bundle`, `optional tier`,
   and `cross-cutting` replaced with plain language. The pool-boundary refusal string keeps its
   external-sources warning byte-for-byte and only adds an inline definition of "pool."

@@ -151,6 +151,19 @@ Consistent with this ledger's own convention — promotion requires 3 CYCLES of 
 - **`docs/patterns.md` updates landed this cycle:** `:55` "Claim scope wider than its verifying instrument" incremented WATCH 1/3 → 2/3 (this cycle's own ruling, settled at Phase 0.D R2/R3, `@qa` records the increment and does not re-adjudicate it); `:56` "Ambiguous-unit numeric claim" — a genuine third live instance (the `bundle` count: `@architect` 4 → `@pm` 3 → measured 2 user-facing, `pipeline.md` "0.D Deliberation (R3)" row) recorded in the row's Cycles text but **not** incremented past WATCH 2/3, because unlike the two counted instances this one was caught and corrected inside the same phase (Phase 0) it was raised in, the cycle's own contemporaneous record explicitly states it was "not counted as a ship instance," and nothing stale shipped — see the ruling note inline in the row; new WATCH 1/3 row "The cycle's own mandated corrective action was the next defect vector"; new WATCH 1/3 row "Line-pinned prose anchors break silently on insertion"; new WATCH 1/3 row "A reproduction that matches a symptom's name is not an established cause"; `:32` "Verifier-that-cannot-PASS / unearned-RED" (already BINDING) given a demoted, non-counted latent-defect note for `release-surface.yml`'s no-tags checkout — explicitly NOT a confirmed CI occurrence, correction to this retro's own earlier over-filing.
 - **§8's 3-cycle keyword scan is 1-of-3 on `configuration`, not 3-of-3.** No `/self-improve` prompt generated this cycle.
 
+### Erratum — v2.19.11
+
+This section's characterization of `release-surface.yml`'s missing `fetch-tags:` as *"a real but
+LATENT defect, unconfirmed in CI"* (above, and in the main finding narrative) is corrected here,
+appended rather than rewritten. It is **inert, not latent**: `verify-release-surface.sh:193-196`
+forces `LOCAL_TAG_ACTIVE=0` whenever `CI` is set, and `evidence_tags()` queries the **remote**
+origin tag set, not a local clone — so no CI code path ever consults `actions/checkout`'s fetch
+settings at all. The local reproduction that grounded the original finding is **explained** by
+this, not contradicted: locally, `CI` is unset, so the local-tag conjunct is active there and
+inert in CI, which is exactly the boundary that made the reproduction match a symptom without the
+mechanism it was attributed to ever being reachable in the environment where the defect was filed.
+Filed at v2.19.11, `docs/design-v2.19.11.md` §I.
+
 ---
 
 ## [v2.19.9] - 2026-08-11 — "Truth Repair: the entry point that never fired"
