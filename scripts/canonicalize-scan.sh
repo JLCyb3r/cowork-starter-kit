@@ -7,7 +7,7 @@
 #   (2) Zero-width character stripping    (U+200B, U+200C, U+200D, U+FEFF)
 #   (3) Mixed-script FLAGGING             (never auto-corrected, never auto-passed)
 #   (4) The ADR-055 6-token forbidden-imperative scan, run on the CANONICALIZED
-#       bytes — byte-identical pattern to CONTRIBUTING.md:129. This is the
+#       bytes — byte-identical pattern to `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)`. This is the
 #       ONLY scan call in this script; there is no raw-scan entry point
 #       (AC-F2-4 — the scan-of-record never operates on un-canonicalized bytes).
 #
@@ -21,7 +21,7 @@
 #     turn-two, on installed_content_sha256 mismatch vs cowork.install.json)
 #
 # SCOPE NOTE (Phase-4 implementation-time finding, recorded in the Phase 4
-# report as a deviation): CONTRIBUTING.md:129's own rule frames the 6-token
+# report as a deviation): `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)`'s own rule frames the 6-token
 # scan around "## Example" specifically — "The `## Example` section in a
 # SKILL.md is executed as AI context. Apply these three rules to prevent
 # indirect prompt injection" — because `## Example` is the section most likely
@@ -37,7 +37,7 @@
 # `## Example`, 15+ files match somewhere in the FULL file. Per this
 # project's own existing precedent (never widen or re-scope the 6-token set
 # itself — AC-F3-1), this script supports an explicit `--section` flag so
-# every caller can apply the SAME existing CONTRIBUTING.md:129 scope
+# every caller can apply the SAME existing `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)` scope
 # (`## Example`) consistently, single-sourced, rather than each of 3 call
 # sites re-deriving its own section-extraction logic independently.
 #
@@ -120,7 +120,7 @@ if section:
     # Extract exactly the named '## <section>' heading's body, up to (not
     # including) the next '## ' heading or EOF. Single-sourced here so every
     # caller (CI job, PROMOTE.md, self-apply) applies the identical
-    # CONTRIBUTING.md:129 scope decision — see the script header's SCOPE NOTE.
+    # `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)` scope decision — see the script header's SCOPE NOTE.
     heading_re = re.compile(r"^" + re.escape(section) + r"\s*$", re.MULTILINE)
     m = heading_re.search(raw)
     if not m:
@@ -184,7 +184,7 @@ with open(flag_path, "w", encoding="utf-8") as f:
 PYEOF
 
 # (4) The ADR-055 6-token forbidden-imperative scan — run on the CANONICALIZED
-# buffer ONLY. Byte-identical pattern to CONTRIBUTING.md:129 (MF-S-5).
+# buffer ONLY. Byte-identical pattern to `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)` (MF-S-5).
 SCAN_MATCH=0
 if grep -iE '\b(Ignore|Disregard|Override|Instead of|Always respond|New instruction)\b' "$CANON_TMP" > /dev/null 2>&1; then
   SCAN_MATCH=1
