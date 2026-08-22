@@ -109,6 +109,8 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED — **AMENDED by ADR-087; read both** |
 | ADR-087 | **AMENDS ADR-086 §Decision (4).** Two rules minted after Phase 2 found ADR-086's own two remedies were the 4th and 5th instruments this cycle that cannot fail: **(1) fixture-anchor independence** — a fault-injection fixture may never be anchored on content the same cycle mandates changing (AC-PL-6's `sed` quoted `apply/verify/rollback machinery`, the exact description cell AC-PL-1 must rewrite; post-rewrite both fixtures no-op and the gate turns permanently red), remedied by a field-2-anchored positional `awk` verified 29 on BOTH trees plus a mandatory `cmp -s` fixture-validity guard; **(2) scope-matched instruments** — uniqueness determines whether presence-testing is *usable*, scope determines whether an instrument is *sufficient*; a file-wide count froze row 6's announcement while leaving the restriction clause deletable at GREEN, remedied by anchor-scoped extraction asserting BOTH halves (the house pattern at `quality.yml:753-785` the original design failed to cite). Also: occurrences are counted with `grep -oF \| wc -l` not `grep -cF`; an instrument's claim is stated to what it actually fires on (the compound fixture's legs do NOT fire independently — reflow-only is GREEN at 30 and is covered by `wizard-consistency-check` instead) (v2.19.10 Phase-2 amendment, S1/S2) | ACCEPTED |
 | ADR-088 | **AMENDS ADR-037** (owner-directed Phase-1.2 addendum, S4). **14** internal QA/security reports ship in every public release archive; they are retrofitted into `docs/internal/{qa,security}/` via `git mv` (ADR-037's own mechanism, 14 × `R100`), closing an **intermittent** placement lapse (v2.19.4 *is* internal, falsifying §E.9's clean-cutoff account). Three decisions: **(1)** the archive-leak gate is written in the direction the leak travels — **zero `git archive` entries match `^docs/(qa-report\|security-audit\|security-review)-`** — because ADR-037's option (c) (`docs/internal/**` absent from the archive) is *vacuously satisfied by a file never placed internal*; **(2)** `git check-attr` is rejected as unsound — it returns `unspecified` for an excluded and a shipping file alike; only `git archive` proves what ships; **(3)** references are ruled by **differential execution**, not inspection — Class A (a machine resolves it as a path; population **exactly 3**, `verify-ledger-annotations.sh` LA-03a/b/c) is repaired, Class B (historical records, comments, diagnostics, CI step names, fixture headers) is **frozen**, per ADR-037's own precedent of leaving 25 dead paths in `architecture.md` green for 11+ versions. Gate carries a **canary self-test** because a typo'd pattern returns 0 = indistinguishable from GREEN. **Escalates the cycle Tier B → Tier A** (TIER-1: Class A repair necessarily modifies `scripts/`); Guard Change Summary owed. **DEFERRED-TO-RETROFIT-CYCLE at v2.19.10 Phase 1.3** — the owner split the retrofit out at the gate so Tier A is the successor cycle's whole ceremony; nothing here is implemented by v2.19.10. Build-ready handoff: `docs/design-v2.19.10.md` §J | **PROPOSED (deferred at v2.19.10 Phase 1.3 — was ACCEPTED at Phase 1.2; number reserved for the S4 retrofit cycle, cf. ADR-028)** |
+| ADR-089 | Release-surface evidence seams fail **loudly and closed**, never silently (v2.19.11 AC-1) — `evidence_tags()` stops discarding `git ls-remote`'s stderr with `2>/dev/null`; it captures stderr in a `mktemp` file (S-A6), reads `rc` explicitly, prints an `::error::` carrying git's own words, and `exit 2` (contract/tool error, the house code at 12 sites) instead of letting `set -euo pipefail` abort the `:218` assignment with a bare, undiagnosable **128**. Three decisions: **(1)** **no caller-side bracket** at `:218` — the `exit 2` inside the function terminates the `$( )` subshell and top-level `set -e` propagates it *as* exit 2 (verified end-to-end); adding a `set +e`/`rc=$?` bracket without rc=2 propagation yields exit **0** and a universal `MISSING-TAG`, manufacturing the very defect Phase 0's amendment falsified. **(2)** **`rc=$?` is reachable inside `$( )` ONLY because bash's `inherit_errexit` is OFF** (`grep -rn 'inherit_errexit\|shopt' scripts/ .github/` → **0** hits) — demonstrated, not asserted: prepending `shopt -s inherit_errexit` to the fixed function restores the silent exit-128 defect exactly. **(3)** **NOT `2>&1` into the captured variable** — git can exit **0** while writing to stderr, and `:286` matches the captured evidence with `grep -qF "refs/tags/v${tok}"` against the whole line, so a merged stream turns a broken-ref diagnostic into a **tag-exists GREEN** (fail-OPEN, demonstrated). Credential-leak assertion is an inspection (`://[^/[:space:]]*@`), never a `sed` redactor. `Reusability: project-specific` | ACCEPTED (v2.19.11) |
+| ADR-090 | **Citations are anchored to headings, written in a backtick-delimited form, and the anchor is CI-enforced by derivation from the citing file** (v2.19.11 AC-2 + AC-3) — the repo-wide convention minted to close the `CONTRIBUTING.md:129` class, where a 33-line insertion silently broke 53 line-pinned citations and 31 green CI jobs saw none of it. Four decisions: **(1)** a citation is `` `<file> § <unique heading text>` ``, and **the backticks are load-bearing, not cosmetic** — they terminate the anchor so the guard's `` [^`]+ `` extraction cannot run greedily to end-of-line (the un-delimited form yielded `N_DISTINCT=5` and red-lined CI on a *correctly executed* de-pin). **(2)** the CI guard **derives** the expected anchor from the citing file and never hardcodes it in the workflow — the hardcoded form lets an author drop a qualifier from one citation while both "zero stale pins" and "heading is unique" stay GREEN and the citation resolves to nothing. **(3)** the guard is an **inline step**, never a file under `scripts/` (TIER-4), and asserts three things: exactly 1 distinct cited anchor, cited exactly `EXPECTED_CITES` times, resolving to exactly 1 heading. **(4)** every pipeline feeding an assertion carries `\|\| true`, because `grep` exits 1 on zero matches and an unguarded assignment under `set -euo pipefail` aborts the step **undiagnosably** — the ADR-089 defect class, found inside this guard's own first draft. Companion: the AC-8b/AC-9b per-row registry gate ships as **one step, one parser copy** (self-test and assertion sharing a single `check_row()`), which owes no `PARSER_COPIES`-style pin and lets the self-test exercise the same code path the assertion runs. `Reusability: candidate-constituent` | ACCEPTED (v2.19.11) |
 
 ---
 
@@ -14242,3 +14244,423 @@ Recorded per the same append-only house convention ADR-088 itself used to amend 
 **6. Grep-scoping caveat that travels with this record.** A bare `grep -c 'radical transparency' docs/architecture.md` **no longer reproduces the finding**: ADR-088 §Context and the ADR-037 amendment record both quote the phrase in order to correct it, so the bare count against HEAD is **2**, not **0**. Any verifier of that finding MUST scope the grep to ADR-037's own body, or pin it to `be92754`. An unscoped count tests nothing.
 
 End of v2.19.10 Phase-1.3 deferral record.
+
+---
+
+## ADR-089: Release-surface evidence seams fail loudly and closed, never silently (v2.19.11)
+
+**Date:** 2026-08-21
+**Status:** ACCEPTED (v2.19.11)
+**Cycle:** v2.19.11 "Pay the Tier-A debt", AC-1
+**Scope:** `scripts/verify-release-surface.sh` — `evidence_tags()`
+**Reusability:** project-specific
+**Companion record:** `docs/design-v2.19.11.md` §C and §J.1
+
+### Context
+
+`scripts/verify-release-surface.sh:30` is `set -euo pipefail`. `:218` is a top-level assignment,
+`TAGS_EVIDENCE="$(evidence_tags)"`. Until this ADR, `:129` was
+`git ls-remote --tags origin 2>/dev/null | awk '{print $2}'`.
+
+When `git ls-remote` fails — an unresolvable host, an expired credential, a proxy — `pipefail` makes
+the pipeline's status git's, the assignment inherits it, and `set -e` aborts the script **at line
+218**, before the `MISSING-TAG` loop at `:297` runs. `grep -c 'trap '` is **0** in both this script
+and `release-predicate.sh`, so nothing prints a cause, and `2>/dev/null` has already thrown away
+git's own explanation. The observable failure is **exit 128 with no output whatsoever** on a Tier-A
+release gate.
+
+Two corrections to the record are worth preserving, because the cycle's first account of this defect
+was wrong and was caught by reproduction rather than by reading:
+
+- The original carry-forward described a **misleading `MISSING-TAG`**. That is not what happens —
+  the script never reaches the `MISSING-TAG` loop. It is an **opaque silent crash**.
+- The predecessor guard does **not** cover it. `assert_gh_destination_repo`
+  (`scripts/release-predicate.sh:162`, called at `:116`) authenticates via `gh api` — a different
+  tool and a different credential path from `git ls-remote`.
+
+The `EVIDENCE_DIR` seam proves the design defect independently: `tags.txt` **absent** and `tags.txt`
+**present-but-empty** produce byte-identical output. Nothing downstream can distinguish "never
+checked" from "checked, nothing there".
+
+`evidence_body()` at `:135-169` already solved this exact problem in v2.19.7 (@security S-A3):
+capture the tool's stderr in a `mktemp` file, read `rc` explicitly, surface the real cause. This ADR
+extends that pattern to the tags seam and records the two non-obvious constraints that make it work.
+
+### Decision
+
+**(1) Fail closed with `exit 2`, from inside the function, with NO caller-side bracket.**
+
+`exit 2` inside `evidence_tags()` terminates the `$( )` subshell at `:218`; the top-level `set -e`
+then propagates it **as exit 2** — not 1, not 128. Verified end-to-end at Phase 1: `::error::`
+printed carrying git's real stderr, the post-assignment marker never printed, script exit **2**.
+
+A caller-side `set +e` / `rc=$?` / `set -e` bracket at `:218` is **rejected**, even though
+`evidence_body()`'s call site at `:315-323` uses one. The bracket is only safe *with* explicit rc=2
+propagation; a partial mirror — bracket without propagation — yields **exit 0 and a universal
+`MISSING-TAG`**, which manufactures the very defect this cycle's Phase-0 amendment falsified. The
+form with the smaller failure surface wins.
+
+`local X="$(cmd)"` is **forbidden** here: `local`'s own return status masks the command's, and the
+demonstrated result is not a masked rc but script exit **0** with an empty tag set. Declare
+`local ls_remote_stderr out rc` on its own line; assign on separate lines.
+
+**(2) `rc=$?` is reachable inside `$( )` ONLY because bash's `inherit_errexit` is OFF. This is a
+load-bearing global, and it has no other durable home but this ADR.**
+
+`shopt -u inherit_errexit` is bash's default, and this repository never changes it —
+`grep -rn 'inherit_errexit\|shopt' scripts/ .github/` returns **0 hits**. Command-substitution
+subshells therefore do not inherit `set -e`, which is why the failing assignment inside
+`evidence_tags()` does not abort before `rc=$?` runs.
+
+This was **demonstrated, not argued**. Prepending one line to the fixed function:
+
+```
+$ bash post.sh              ; echo "SCRIPT_EXIT=$?"    # as shipped
+::error::release-surface: 'git ls-remote --tags origin' failed (exit 128) —
+  … Raw git error:
+    fatal: unable to access 'https://example.invalid/nope.git/': Could not resolve host: example.invalid
+SCRIPT_EXIT=2
+
+$ bash post-inherit.sh      ; echo "SCRIPT_EXIT=$?"    # + shopt -s inherit_errexit
+SCRIPT_EXIT=128
+```
+
+Enabling the option silently restores the exact opaque-128 defect this ADR closes, with no error, no
+test failure, and no diff to the function. A one-line comment at the `rc=` site carries the same
+warning, but the comment can be deleted by a refactor and this record cannot.
+
+**Scope of the claim, stated precisely.** Enabling `inherit_errexit` breaks `evidence_tags()`
+**directly**. It does **not** break `evidence_body()` today, because that call site brackets with
+`set +e` before the command substitution, so the subshell inherits an errexit that is already off.
+It would break `evidence_body()` the moment that bracket is removed — which a future reader,
+reasoning from decision (1) above ("you don't need a caller bracket"), might plausibly do. Both
+functions are named in the in-file comment for that reason. The earlier, unqualified claim that the
+option breaks both *today* is corrected here rather than propagated.
+
+**(3) NOT `2>&1` into the captured variable — that form is fail-OPEN.**
+
+The AC that produced this ADR said both "mirror `evidence_body()`'s S-A3 pattern" and "capture
+stderr with `2>&1` into the captured variable". Those are different designs, and the literal second
+one is unsafe. `git ls-remote` can exit **0** while writing to stderr, and `:286` tests the captured
+evidence with `grep -qF "refs/tags/v${tok}"` against the **whole line**, not against a field.
+Demonstrated with a shim emitting git's own real message shape:
+
+```
+shim stderr : error: refs/tags/v9.9.9 does not point to a valid object!   (exit 0)
+mktemp form : ORIGIN_HAS_TAG=0   (correct — MISSING-TAG)
+2>&1   form : ORIGIN_HAS_TAG=1   (FALSE GREEN)
+```
+
+A broken-ref diagnostic becomes a tag-exists pass. The binding requirement is the one the AC plainly
+meant: **never `2>/dev/null`, never discard git's stderr** — satisfied in full by the `mktemp` form,
+which is also what S-A6 already requires (a `mktemp`, never a fixed path).
+
+**(4) The credential-leak check is an inspection, not a transform.** The emitted `::error::` block
+must not match `://[^/[:space:]]*@`. **Do not add a `sed` redactor**: it is a no-op on all three
+transports tested (git anonymises userinfo itself), and a greedy one mangles the very diagnostic
+this ADR exists to surface. A check cannot mangle what it only inspects.
+
+### Consequences
+
+- A network or credential failure on the release-surface gate now produces a named cause and exit
+  **2** instead of a bare 128. Operators stop guessing.
+- The happy path is byte-unchanged: 91 tag refs, `cmp`-identical old vs new against the real origin.
+  `EVIDENCE_DIR` mode output is byte-identical by sha256.
+- `exit 2` is fail-**closed**, consistent with the 12 existing `exit 2` sites for contract/tool
+  errors and distinct from `exit 1` for findings (`:376`).
+- **Residual, named and not dressed up:** the narrower masquerade case — `git ls-remote` exiting
+  **0** with empty or wrong output (a degraded proxy) — would still produce a misleading
+  `MISSING-TAG`. No clean live reproduction was constructed by anyone in this cycle. **AC-1 closes
+  the non-zero-exit class only.** Its remedy is a *quorum* assertion (the tag set must be non-empty,
+  or must contain the floor version), not a diagnostic — bundling it would convert a pure
+  failure-path change into one with happy-path blast radius.
+- The function's correctness now depends on a shell global (`inherit_errexit`) that is not visible
+  in its own body. That is a leaky abstraction, accepted knowingly: the alternative is the
+  caller-side bracket rejected in decision (1), which has a worse failure mode.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) close the masquerade class with a quorum assertion on
+  `TAGS_EVIDENCE` — non-empty, or contains the floor version — as its own cycle with its own
+  happy-path negative controls; (b) extend the same `rc`-capture treatment to `evidence_latest()`
+  (`:170-186`), which still ends in `gh api … 2>/dev/null || true` and can therefore report
+  `WRONG-LATEST` on a transient failure; (c) add a single `trap` at the top of
+  `verify-release-surface.sh` printing the failing line on any abort, which would have made this
+  defect self-diagnosing without any per-seam work; (d) a repo-wide ShellCheck directive or CI grep
+  forbidding new `2>/dev/null` on any command whose exit status is load-bearing.
+- **Concrete revisit triggers:** (a) anyone proposes `shopt -s inherit_errexit` anywhere under
+  `scripts/` — this ADR must be re-read before that lands, and every `rc=$?` idiom re-bracketed;
+  (b) a third evidence seam is added to this script, at which point the capture idiom should be
+  factored into one helper rather than hand-mirrored a third time; (c) a real CI run reports
+  `MISSING-TAG` for a tag that demonstrably exists on origin — that is the masquerade case firing,
+  and option (a) is promoted immediately; (d) `evidence_body()`'s caller-side bracket at `:315-323`
+  is ever removed, which silently makes `inherit_errexit` fatal for it too.
+- **Risk knowingly accepted:** the masquerade case (exit 0, wrong output) stays open, and is not
+  detectable by anything this ADR ships. The function's contract depends on a shell option set
+  outside it, recorded here and in one in-file comment but enforced by nothing executable. And the
+  `exit 2` is a hard stop on a gate that previously (wrongly) crashed anyway — so no new
+  availability risk is introduced, but a genuinely offline operator now gets a refusal rather than a
+  partial report, which is the intended trade and is accepted.
+
+---
+
+## ADR-090: Citations are heading-anchored, backtick-delimited, and CI-enforced by derivation from the citing file (v2.19.11)
+
+**Date:** 2026-08-21
+**Status:** ACCEPTED (v2.19.11)
+**Cycle:** v2.19.11 "Pay the Tier-A debt", AC-2 + AC-3 (companion: AC-8b/AC-9b)
+**Scope:** `scripts/canonicalize-scan.sh`, `.github/workflows/quality.yml`, and the repo-wide
+citation convention
+**Reusability:** candidate-constituent
+**Companion record:** `docs/design-v2.19.11.md` §D, §E, §G and §J.3
+
+### Context
+
+v2.19.10 established the failure empirically rather than by argument: a 33-line `CONTRIBUTING.md`
+insertion displaced three line-pinned anchors (`:77`, `:129`, `:309`) cited **53 times** repo-wide,
+including from `skills/self-apply/SKILL.md`, which ships into every user workspace. `CONTRIBUTING.md:129`
+— the forbidden-imperative-token (LLM01) recipe address — came to resolve to a markdown table
+separator. The recipe text itself was `cmp`-identical at its new line; only the address broke.
+**31 green CI jobs saw none of it**, because no CI job compares a line-pinned citation's target
+against what it claims to cite.
+
+The case for de-pinning rather than re-pinning is also empirical: the same recipe's true line number
+moved **twice inside that single cycle** — `:129` → `:154` → `:162` — so a re-pin at the first fix
+would already have been stale by the second.
+
+Five citations under `scripts/canonicalize-scan.sh` were correctly left unrepaired at v2.19.10 and
+reported, because repairing them would have forced a `scripts/` edit and snapped a Tier-B cycle to
+Tier A over a citation-only change. v2.19.11 is that Tier-A cycle.
+
+**AC-2 alone would not merit an ADR** — it is a five-site find-and-replace. It merits one *with*
+AC-3, because de-pinning alone does not close the shelf-life problem: it moves the fragility from a
+line number (nothing compares it) to a heading string (nothing compares it either). The pair mints a
+convention; the half does not.
+
+### Decision
+
+**(1) The citation form is `` `<file> § <unique heading text>` ``, and the backticks are
+load-bearing, not cosmetic.**
+
+Concretely, all five sites in `scripts/canonicalize-scan.sh` (`:10`, `:24`, `:40`, `:123`, `:187`)
+now read `` `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)` ``.
+
+The backticks terminate the anchor. Without them, the guard's `` [^`]+ `` extraction runs greedily to
+end-of-line and swallows the trailing prose after each citation — measured against a materialised
+post-edit tree, it yielded `N_DISTINCT` = **5**, not 1, and the guard would have `exit 1`'d on a
+**correctly executed** de-pin. That defect was found by running the prescribed guard, not by reading
+it, and it lived inside the reviewer's own corrective remedy.
+
+Backticks are safe at all five sites, and this was checked before prescribing them rather than
+after: `:10`, `:24`, `:40`, `:187` are shell `#` comments (never expanded), and `:123` sits inside
+`python3 - … <<'PYEOF'` — a **quoted** heredoc, so the backticks are literal. An unquoted heredoc
+would have made them command substitution and broken the script.
+
+**(2) The CI guard derives the expected anchor from the citing file. It is never hardcoded in the
+workflow.**
+
+A hardcoded anchor lets an author drop a qualifier from one of the five citations while "zero stale
+pins" and "the heading is unique" both stay GREEN and that citation resolves to nothing. Derivation
+is the only form that catches it (verified: typo one citation → `N_DISTINCT=2` → RED).
+
+**(3) The guard is an inline step, never a file under `scripts/` (TIER-4), and asserts three
+things:** exactly **1** distinct cited anchor; cited exactly `EXPECTED_CITES` (5) times; resolving
+to exactly **1** heading in the cited document. It lives at the end of the existing
+`canonicalize-scan-check` job — adjacent to the job that already reads the citing script.
+
+**(4) Every pipeline feeding an assertion carries `|| true`.**
+
+`grep` exits 1 on zero matches, and under `set -euo pipefail` an unguarded assignment aborts the
+step **undiagnosably** — no `::error::`, just a bare non-zero exit. This is the ADR-089 defect class,
+and it was found inside this guard's own first draft, by running it against the **pre**-edit tree:
+
+```
+$ bash guard.sh <pre-edit script> CONTRIBUTING.md ; echo "EXIT=$?"
+EXIT=1                                    # no diagnostic at all
+$ bash guard.sh <same, with `|| true` on the ANCHOR pipeline>
+::error::anchor guard — expected 1 distinct cited anchor, found 0.
+EXIT=1
+```
+
+@security had already fixed this exact shape once in this very workflow (`PARSER_COPIES`, B4). It
+recurred because the corrective verification was run only against a simulated *post*-edit tree.
+**A guard must be run against the tree that will exist before it lands, not only the one that will
+exist after.**
+
+**(5) Consequence for sequencing, and it is binding:** because the guard is RED against the
+pre-de-pin tree, **AC-2 and AC-3 must land in the same commit**. Landing the guard first, or alone,
+red-lines CI on arrival.
+
+**(6) Companion — one step, one parser copy.** The AC-8b/AC-9b per-row registry gate shipped in the
+same cycle deliberately puts its fault-injection self-test and its real assertion in a **single**
+step sharing a single `check_row()` definition, and runs the **assertion first**. The two-step split
+used by AC-PL-6 is what forced its parser to be written out twice — defect A4 — and is why
+`quality.yml` now carries a hand-maintained `PARSER_COPIES -ne 2` self-integrity pin. One copy owes
+no pin, and the self-test exercises the *same* code path the assertion runs, which the split
+structurally cannot: with `check_row` deliberately broken to `END{exit 0}`, the assertion reports OK
+and the self-test still turns the step RED. Assertion-first ordering was also found by running it —
+self-test-first misdiagnoses an already-damaged registry as "the check produced a false positive".
+
+### Consequences
+
+- Five citations are re-anchored; `grep -cF 'CONTRIBUTING.md:129' scripts/canonicalize-scan.sh`
+  goes **5 → 0**. Behaviour is byte-unchanged in both directions (clean input and a poisoned
+  `## Example` both produce identical output pre- and post-edit).
+- `docs/patterns.md` and the 11 other Class-B files keep their `:129` citations. They cite it as a
+  **narrative record of a past incident**, not as a live pointer; rewriting them would falsify the
+  historical record.
+- The repo gains its first CI check that a citation *resolves*. Before this, a citation was a claim
+  with a shelf life the citing document could not see expire.
+- **A future cycle that legitimately adds a sixth citation will red-line the guard.** That is
+  correct, not a bug: a sixth citation *is* a change to the citation surface. Bump
+  `EXPECTED_CITES` in the same edit.
+- Likewise, a future cycle that adds a registry column will red-line AC-8b/AC-9b. Also correct —
+  a column change *is* a structural change to a gated row. Do not widen `NF`.
+- The convention is currently enforced for exactly one file-pair (`canonicalize-scan.sh` →
+  `CONTRIBUTING.md`). The other ~48 line-pinned citations counted at v2.19.10 are **not** covered.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) generalise the guard into a repo-wide citation check that scans all
+  files for the `` `<file> § <heading>` `` form and resolves each against its target, replacing the
+  single hardcoded `SCRIPT`/`DOC` pair and the `EXPECTED_CITES` pin with a derived inventory;
+  (b) extend the same treatment to `skills/self-apply/SKILL.md`'s citation, which ships into user
+  workspaces and is therefore the highest-blast-radius remaining line-pin; (c) a CI check that
+  **forbids** the bare `path:line` citation form in newly added lines, so the convention is
+  enforced at the point of authorship rather than repaired afterwards; (d) fold the "one step, one
+  parser copy" rule from decision (6) back into `registry-sha256-check`, collapsing AC-PL-6's two
+  steps and retiring the `PARSER_COPIES` pin entirely.
+- **Concrete revisit triggers:** (a) a fourth citation-staleness incident is recorded in any retro
+  — promote option (a) or (c) immediately, because two incidents already produced two ADRs;
+  (b) `CONTRIBUTING.md`'s cited heading is renamed for a legitimate editorial reason, exercising the
+  guard in anger for the first time; (c) a sixth citation is added to `canonicalize-scan.sh`, or
+  any *other* file starts citing the same heading — the current guard is scoped to one script and
+  would not see it; (d) the AC-PL-6 `PARSER_COPIES` pin drifts or is proposed for relaxation, which
+  is the signal to take option (d).
+- **Risk knowingly accepted:** the convention is minted repo-wide but **enforced for exactly one
+  citing file**. Every other line-pinned citation in the repository — including the one inside
+  `skills/self-apply/SKILL.md` that ships to users — remains as fragile as it was, and this ADR does
+  not change that. `EXPECTED_CITES` is a hand-maintained pin and will red-line on a legitimate sixth
+  citation; that is deliberate, but it is a maintenance cost paid by whoever adds it. The heading
+  text itself is now the load-bearing string: renaming it in `CONTRIBUTING.md` breaks CI rather than
+  silently breaking the citation, which is the intended improvement, but it is still a coupling that
+  did not exist before.
+
+
+---
+
+## Amendment record — ADR-090 §Maturation Path and §Consequences (appended v2.19.11 Phase 2 rework; ADR-090's own text is NOT rewritten)
+
+**Date:** 2026-08-22T01:36:59Z
+**Status of ADR-090 itself:** unchanged — **ACCEPTED (v2.19.11)**
+**Trigger:** @security Phase 2 review, finding **S3**, plus independent re-verification at Phase 2
+rework which found the gap to be **larger than S3 states**
+**Companion record:** `docs/design-v2.19.11.md` §E.5
+
+Recorded per the same append-only house convention ADR-088 used to amend ADR-037, and ADR-087 used
+to amend ADR-086: the original record is left intact and the correction is appended.
+
+### 1. What ADR-090 gets wrong about its own coverage
+
+ADR-090 §Maturation Path option (b) describes the remaining gap as *"`skills/self-apply/SKILL.md`'s
+citation, which ships into user workspaces and is therefore the highest-blast-radius remaining
+**line-pin**"*, and §Risk-knowingly-accepted repeats the framing: *"Every other **line-pinned**
+citation in the repository — including the one inside `skills/self-apply/SKILL.md` …"*.
+
+**Both sentences mis-describe it, and the mis-description is the load-bearing part.** That citation
+is **not** a line-pin. It is already written in ADR-090's own `` `<file> § <heading>` `` form:
+
+```
+skills/self-apply/SKILL.md:45   `CONTRIBUTING.md § Worked-example authoring rules, rule 2`
+```
+
+It is a **non-conforming variant of the convention this ADR mints**, and under decision (1)'s own
+rule it resolves to **zero** headings — measured, not argued:
+
+```
+$ grep -cF '### Worked-example authoring rules, rule 2' CONTRIBUTING.md              -> 0
+$ grep -cF '### Worked-example authoring rules (S1 security carry-forward)' CONTRIBUTING.md -> 1
+$ grep -n '^### .*Worked-example' CONTRIBUTING.md   -> 157:### Worked-example authoring rules (S1 security carry-forward)
+```
+
+Calling it a line-pin implies it is *old-style, pre-convention, awaiting migration*. It is not. It
+is **already broken under the new convention, at the moment the ADR was minted**, and the guard the
+ADR ships does not look at it.
+
+### 2. The gap is wider than S3 found — two shipping files, not one
+
+@security S3 named `skills/self-apply/SKILL.md:45` as *"a **sixth** citation."* Re-verification at
+Phase 2 rework found the same non-conforming form in **nine** files, of which **two ship to users**:
+
+```
+$ git archive HEAD | tar -tf - | grep -E '^(PROMOTE\.md|skills/self-apply/SKILL\.md|CONTRIBUTING\.md)$'
+PROMOTE.md
+skills/self-apply/SKILL.md
+                       # CONTRIBUTING.md is absent — it is export-ignore'd
+```
+
+| Site | Class (ADR-088 §Decision (3)) | Ships? |
+|---|---|---|
+| `skills/self-apply/SKILL.md:45` | **A** — live pointer | **yes** |
+| `PROMOTE.md:34` | **A** — live pointer | **yes** |
+| `CHANGELOG.md:335` | B — historical record | no |
+| `tests/fixtures/canonicalization/f2-1`, `f2-2`, `f2-3` | B — fixture headers | no |
+| `docs/retro.md`, `docs/internal/security/security-audit-v2.19.10.md`, `docs/internal/security/security-review-v2.19.11.md` | B — historical records | no |
+
+Two consequences follow, and neither is in ADR-090:
+
+- **`PROMOTE.md:34` is a second shipping Class-A site that S3 did not name.** Repairing only the
+  site the review happened to find would have produced exactly the partial coverage this amendment
+  exists to prevent — and would have let the ADR go on claiming the gap was closed.
+- **`CONTRIBUTING.md` does not ship at all.** In an end-user workspace the cited *document* is
+  absent, so both shipping citations point at a file the user does not have. The convention's
+  resolution guarantee is therefore not merely unenforced off-repo — it is **unsatisfiable** there.
+  ADR-090 does not say this anywhere.
+
+### 3. The honest statement of ADR-090's coverage
+
+**Supersedes** the coverage claim implied by §Maturation Path (b) and §Risk-knowingly-accepted:
+
+> ADR-090 mints a **repo-wide** citation convention and ships enforcement for **exactly one
+> file-pair** — `scripts/canonicalize-scan.sh` → `CONTRIBUTING.md`. At the moment of minting, the
+> repository contains **two other files that already cite the same heading in a non-conforming
+> variant of this ADR's own form, both of which resolve to zero headings, and both of which ship
+> into every user workspace.** The guard does not read either file and will not go red for either.
+> The convention is aspirational everywhere except the one pair the guard names.
+
+§Consequences' existing line — *"The convention is currently enforced for exactly one file-pair …
+The other ~48 line-pinned citations counted at v2.19.10 are **not** covered"* — is true but
+incomplete: it counts *line-pins* and therefore does not count the two `§`-form citations that are
+broken **under this ADR's own rule**. Read the two together.
+
+### 4. Disposition — deferred, with an ID
+
+**`CF-v2.19.11-A` — normalize the two shipping Class-A `§`-form citations
+(`skills/self-apply/SKILL.md:45`, `PROMOTE.md:34`) to the conforming anchor, and widen AC-3's guard
+from a single `SCRIPT`/`DOC` pair to a derived multi-file inventory. Target: v2.19.12.**
+
+Rationale is recorded in full at `docs/design-v2.19.11.md` §E.5. In short: the repair is **not** a
+citation normalization, it is ADR-090 §Maturation Path **option (a)** — replacing the hardcoded
+pair and the `EXPECTED_CITES` pin with a derived inventory — and it additionally forces a **third**
+gated registry row in a cycle whose highest-risk item is already *"we are editing gated rows"*
+(verified: `shasum -a 256 skills/self-apply/SKILL.md` = `0c77ab20…9e9f4` = the row's field-8 cell,
+enforced by `registry-sha256-check`, `.github/workflows/quality.yml:556`). Landing that at Phase 2
+rework, after a BLOCKER, without a fresh security pass over the new gated-row edit, is the trade
+this cycle exists to stop making.
+
+**What deferral does not cost.** Both citations are broken **today** and have been since v2.19.10.
+Deferring changes nothing about them. The cycle still leaves the repository strictly better than it
+found it: five citations anchored, and the repo's first CI check that a citation resolves at all.
+What deferral would have cost — and what this record buys back — is an ADR claiming coverage it does
+not have. **This cycle exists because of a claim like that.**
+
+### 5. Revisit triggers — added to ADR-090 §Maturation Path
+
+Appended to the existing trigger list (a)-(d):
+
+- **(e)** `CF-v2.19.11-A` is scheduled, or `CONTRIBUTING.md`'s cited heading is renamed — either
+  event makes the two shipping citations' breakage user-visible rather than latent.
+- **(f)** Any *new* file begins citing `CONTRIBUTING.md` in `§` form. The guard is scoped to one
+  script and structurally cannot see it, so the convention's population grows while its enforced
+  population does not. **This is the trigger most likely to fire silently**, and it is the argument
+  for option (c) — forbidding non-conforming citation forms in newly added lines — over option (a).

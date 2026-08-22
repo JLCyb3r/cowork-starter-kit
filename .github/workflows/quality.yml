@@ -720,6 +720,42 @@ jobs:
           fi
           echo "AC-PL-6 PASSED — ${ACTUAL} rows carry a valid sha256 cell in field 8 (pin: ${AC_PL_6_EXPECTED_HEX_ROWS})."
 
+      - name: AC-8b/AC-9b — per-row structural integrity of the gated registry rows (v2.19.11, ADR-090 companion)
+        run: |
+          set -euo pipefail
+          REG="${1:-curated-skills-registry.md}"
+          GATED_SLUGS="self-apply prompt-gate"
+          check_row() {
+            awk -F'|' -v row="$2" 'BEGIN{seen=0;ok=0} {n=$2; gsub(/ /,"",n); if(n==row){seen++; s=$8; gsub(/ /,"",s); if(NF==9 && s ~ /^[0-9a-f]{64}$/) ok++}} END{exit (seen==1 && ok==1)?0:1}' "$1"
+          }
+          for slug in $GATED_SLUGS; do
+            if ! check_row "$REG" "$slug"; then
+              echo "::error::AC-8b/AC-9b FAILED - ${slug} does not appear as exactly one row with exactly 9 pipe-delimited fields and a 64-char lowercase-hex value in field 8. A description rewrite most likely introduced a | character, shifting every later field right so field 8 is no longer the sha256 cell. Repair the ROW; do NOT widen NF and do NOT relax the hex shape. If this cycle intentionally changed the registry column count, that is a structural change to a gated row and belongs in its own reviewed cycle."
+              exit 1
+            fi
+            echo "AC-8b/AC-9b: ${slug} OK - exactly 1 row, 9 fields, valid hex in field 8."
+          done
+          FIX="$(mktemp -d)"
+          trap 'rm -rf "$FIX"' EXIT
+          sed 's/^| self-apply |/|self-apply|/' "$REG" > "$FIX/reflow.md"
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-sa.md"
+          awk -F'|' 'BEGIN{OFS="|"} $2==" prompt-gate " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-pg.md"
+          grep -v '^| self-apply |' "$REG" > "$FIX/deleted.md"
+          for f in reflow pipe-sa pipe-pg deleted; do
+            if cmp -s "$REG" "$FIX/$f.md"; then
+              echo "::error::AC-8b FIXTURE SETUP FAILED - the ${f} fixture was a no-op; its field-2 anchor no longer exists in the registry. Repair the FIXTURE anchor. Do NOT relax the assertions below."
+              exit 1
+            fi
+          done
+          fail=0
+          if ! check_row "$FIX/reflow.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a benign whitespace reflow of the row pipes was reported as damage (false positive)."; fail=1; fi
+          if check_row "$FIX/pipe-sa.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a pipe injected into self-apply description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-pg.md" prompt-gate; then echo "::error::AC-9b SELF-TEST FAILED - a pipe injected into prompt-gate description was NOT detected."; fail=1; fi
+          if check_row "$FIX/deleted.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a deleted self-apply row was NOT detected; the check is vacuous."; fail=1; fi
+          if [ "$fail" -ne 0 ]; then exit 1; fi
+          echo "AC-8b/AC-9b self-test PASSED - reflow GREEN, both pipe injections RED, row deletion RED."
+          echo "AC-8b/AC-9b PASSED - gated slugs verified: ${GATED_SLUGS}."
+
       - name: Verify curated-skills-registry.md sha256 matches skills/<slug>/SKILL.md (fail-closed on drift)
         run: |
           set -euo pipefail
@@ -1396,6 +1432,40 @@ jobs:
             exit 1
           fi
           echo "SF-S-1 PASSED — no pip/npm install, no curl/wget in scripts/canonicalize-scan.sh."
+
+      - name: Citation anchor resolves to exactly one heading (AC-3, v2.19.11 — ADR-090)
+        run: |
+          set -euo pipefail
+          SCRIPT="${1:-scripts/canonicalize-scan.sh}"
+          DOC="${2:-CONTRIBUTING.md}"
+          EXPECTED_CITES=5
+          # [S1, @security Phase 2] BOTH halves below are load-bearing and neither alone is
+          # sufficient. `grep -cF` on an unreadable file writes NOTHING to stdout (the "0" it
+          # prints on a zero-match is only printed once the file opens) and exits 2; `|| true`
+          # then captures the EMPTY STRING. `[ "" -ne 1 ]` is not false, it is an ERROR — the
+          # test returns 2, an `if` treats non-zero as FALSE, `set -e` is exempt inside an `if`
+          # condition, and the step falls through to the PASSED line and exit 0. Demonstrated
+          # against a renamed CONTRIBUTING.md and against a $DOC that is a directory.
+          #   Half 1 — the -r precheck: gives the DIAGNOSABLE error for the common case.
+          #   Half 2 — the "${X:-x}" string comparison: closes every remaining route to an
+          #            empty capture (a directory passes -r; so does a mid-run permission
+          #            change). Do NOT drop it and keep only the precheck.
+          # Do NOT "simplify" these back to `-ne`. A count from `grep -c` never has a leading
+          # zero, so string equality is exact here.
+          for f in "$SCRIPT" "$DOC"; do
+            if [ ! -r "$f" ]; then
+              echo "::error::anchor guard — '${f}' is missing or unreadable, so the citation cannot be resolved at all. This is the citation-rot case the guard exists to catch; it must never report PASSED."
+              exit 1
+            fi
+          done
+          ANCHOR="$(grep -oE "\`CONTRIBUTING\\.md § [^\`]+\`" "$SCRIPT" | sed "s/^\`CONTRIBUTING\\.md § //; s/\`\$//" | sort -u || true)"
+          N_DISTINCT="$(printf "%s\\n" "$ANCHOR" | grep -c . || true)"
+          if [ "${N_DISTINCT:-x}" != "1" ]; then echo "::error::anchor guard — expected 1 distinct cited anchor, found ${N_DISTINCT:-<non-numeric>}."; exit 1; fi
+          N_CITES="$(grep -cF "\`CONTRIBUTING.md § ${ANCHOR}\`" "$SCRIPT" || true)"
+          if [ "${N_CITES:-x}" != "$EXPECTED_CITES" ]; then echo "::error::anchor guard — expected ${EXPECTED_CITES} citations, found ${N_CITES:-<non-numeric>}."; exit 1; fi
+          N_HEADS="$(grep -cF "### ${ANCHOR}" "$DOC" || true)"
+          if [ "${N_HEADS:-x}" != "1" ]; then echo "::error::anchor guard — '${ANCHOR}' resolves to ${N_HEADS:-<non-numeric>} headings, expected 1."; exit 1; fi
+          echo "anchor guard PASSED — anchor='${ANCHOR}' distinct=${N_DISTINCT} cites=${N_CITES} headings=${N_HEADS}"
 
   lock-file-zero-sha-check:
     name: Lock File Zero-SHA Rejection (S9)

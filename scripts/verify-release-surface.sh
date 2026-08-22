@@ -126,7 +126,41 @@ evidence_tags() {
     echo "::error::release-surface: git not available." >&2
     exit 2
   fi
-  git ls-remote --tags origin 2>/dev/null | awk '{print $2}'
+  # [AC-1, v2.19.11 - ADR-089] The old `2>/dev/null` discarded git own stderr, and under
+  # `set -euo pipefail` the failed pipeline aborted the top-level assignment at :218 with
+  # no diagnostic at all: bash exit code 128, no `::error::` line, and git own
+  # "Could not resolve host" already thrown away. Mirrors evidence_body() S-A3 pattern
+  # (:135-149): capture stderr in a mktemp file, read rc explicitly, surface the real
+  # cause, and fail CLOSED with exit 2 (contract/tool error).
+  #
+  # LOAD-BEARING (ADR-089): `rc=$?` is reachable here ONLY because bash `inherit_errexit`
+  # is OFF (the default; scripts/ and .github/ contain no `shopt` at all). This function
+  # runs inside the `$( )` at :218, which does not inherit `set -e` while that option is
+  # off; enabling it makes the assignment below abort the subshell before `rc=$?` runs,
+  # silently restoring the exact opaque-128 defect this closes. DO NOT add
+  # `shopt -s inherit_errexit` to this script without re-bracketing every `rc=$?` idiom
+  # here and in evidence_body().
+  #
+  # NOT `2>&1` into the captured variable: git can exit 0 while writing to stderr
+  # ("error: refs/tags/vX.Y.Z does not point to a valid object!"), and :286 tests the
+  # captured evidence with `grep -qF "refs/tags/v${tok}"` against the whole line - a
+  # merged stream turns a broken-ref diagnostic into a tag-exists GREEN. mktemp keeps the
+  # two streams apart (S-A6: mktemp, never a fixed path).
+  local ls_remote_stderr out rc
+  ls_remote_stderr="$(mktemp)"
+  out="$(git ls-remote --tags origin 2>"$ls_remote_stderr")"
+  rc=$?
+  if [ "$rc" -ne 0 ]; then
+    echo "::error::release-surface: 'git ls-remote --tags origin' failed (exit ${rc}) —" >&2
+    echo "  the origin tag set could not be read, so every MISSING-TAG finding below would" >&2
+    echo "  be an artifact of this failure rather than a fact about the repository." >&2
+    echo "  Failing closed. Raw git error:" >&2
+    sed 's/^/    /' "$ls_remote_stderr" >&2
+    rm -f "$ls_remote_stderr"
+    exit 2
+  fi
+  rm -f "$ls_remote_stderr"
+  printf '%s\n' "$out" | awk '{print $2}'
 }
 
 # --- Evidence seam: Release body for a version. Prints body (possibly empty) and returns

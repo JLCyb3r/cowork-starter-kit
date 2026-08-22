@@ -19,6 +19,33 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.11] - 2026-08-22
+
+**"Tier A Debt."** Eight fixes to the release-surface evidence path, a stale citation class, and
+two registry rows the poisoned-backfill defense depends on — none of it user-facing, all of it
+load-bearing for the kit's own safety machinery.
+
+- **`evidence_tags()` in `scripts/verify-release-surface.sh` now fails loudly and closed**
+  (`ADR-089`). It used to discard `git ls-remote`'s stderr and let `set -euo pipefail` abort with a
+  bare, undiagnosable exit 128. It now captures git's own stderr, reads the return code explicitly,
+  prints an `::error::` carrying that message, and exits 2 — the house contract/tool-error code
+  (AC-1).
+- **The 5 stale `CONTRIBUTING.md:129` citations in `scripts/canonicalize-scan.sh` are de-pinned**
+  to a backtick-delimited heading anchor, and a new CI step derives the expected anchor from the
+  citing script and asserts it resolves — closing the class of defect where a 33-line insertion
+  silently broke every line-pinned citation (AC-2, AC-3, `ADR-090`).
+- **The `self-apply` and `prompt-gate` registry descriptions are corrected** — an actor inversion
+  and a rollback-timing error are fixed, the deny-list enumeration is completed from 3 to 5
+  members, and an over-claim is replaced with a scoped guarantee plus a named exception (AC-8,
+  AC-9).
+- **A new standing CI gate asserts the structural integrity** (field count, `sha256` shape) of the
+  two registry rows the poisoned-backfill defense depends on, so a future edit cannot silently
+  damage the fingerprints the updater trusts (AC-8b, AC-9b).
+- **Two erratum corrections, appended rather than rewritten in place:** `CHANGELOG.md`'s
+  `2.19.10` entry misattributed `never on its own` — it belongs to `pull-updates`, not
+  `self-archive` (AC-10) — and `docs/retro.md`'s v2.19.10 `fetch-tags` carry-forward is corrected
+  from latent to **inert**: no CI path consults checkout fetch settings, so it cannot fire (AC-11).
+
 ## [2.19.10] - 2026-08-20
 
 **"Plain Language: say it the way she'd say it."** Five runtime surfaces spoke to a non-technical
@@ -33,9 +60,9 @@ scoped to SEO/positioning copy only.
   `registry-sha256-check` job pins the registry's row-structure integrity at exactly 30 valid-hex
   rows, landed in its own commit before any description was touched.
 - **The wizard's setup-complete closing message rewritten** — every technical term inline-defined,
-  including inside parentheticals, with every listed file and skill still named and all three of
-  `self-archive`'s safety phrases (`never silently performs`, `reversibly`, `never on its own`)
-  preserved verbatim.
+  including inside parentheticals, with every listed file and skill still named and both of
+  `self-archive`'s safety phrases (`never silently performs`, `reversibly`) preserved verbatim,
+  along with `pull-updates`'s own `never on its own`.
 - **The F4 bundle-customization menu's spoken strings rewritten** — `pool`, `bundle`, `optional tier`,
   and `cross-cutting` replaced with plain language. The pool-boundary refusal string keeps its
   external-sources warning byte-for-byte and only adds an inline definition of "pool."
