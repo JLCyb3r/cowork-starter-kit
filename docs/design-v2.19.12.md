@@ -179,48 +179,303 @@ Line 1 is a **permitted** CHANGELOG addition; lines 3–4 are **violations**. Th
 
 ```
 $ (with the violation committed)
-diff line count: 3925      <- BYTE-IDENTICAL to the clean run
+diff line count: UNCHANGED, byte-identical to the clean run
 REMOVED-LINE VIOLATIONS (a): 18    <- unchanged
-VERDICT: exit 1 (VIOLATION)        <- same 35, the real one absent
+VERDICT: exit 1 (VIOLATION)        <- the same 35, the real one absent
 ```
 
-**The violation never enters the stream.** Non-empty.
+**The violation never enters the stream.** Non-empty. The *invariance* is the finding; the absolute
+line count is not, and is deliberately not pinned here — see §E.5.
 
 **Both halves non-empty. This is textbook denominator drift** — the shape R3 named and R4 was convened to eliminate. It survived R4 because R4 tested the *inventory guard* and the *header filter*, and the partition — where the population lives — was never run.
 
 **Negative control (so this is not a check that cannot fail):** a removal seeded in `docs/design-v2.19.10.md`, a non-excluded frozen surface, **was** caught (`MINUS docs/design-v2.19.10.md 1`). The detection logic is sound. The **population** is wrong.
 
-### E.3 — Repaired AC-7, verified in both directions
+### E.3 — Repaired AC-7 — THE EXECUTABLE ARTIFACT (Phase-2 rework, closes S1 / S2 / S6)
 
-Two changes. Both were executed before being written down.
+> **Why this section changed.** Phase 2 found (**S1, BLOCKER**) that the repair existed only as
+> prose: `/usr/bin/grep -c awk docs/design-v2.19.12.md` returned **0**, §D assigned AC-7 no
+> implementation home, and the spec's bash block stopped exactly at the partition — the locus of
+> four defect generations. @security re-derived a working partition from those bullets and
+> reproduced the numbers, which is evidence the prose was *good*; it is not evidence that the next
+> reader's re-derivation will be. **The block below is not a description of what was executed. It is
+> what was executed, byte-for-byte**, and every figure in §E.3 and §E.4 is its stdout.
 
-1. **Derive the rename exclusion from rename detection, not from pathspecs.** Use `git diff --find-renames=100%` over the **whole repo, with no `:(exclude)`**. A byte-unchanged rename then emits `rename from` / `rename to` and **no content lines at all**, so the 14 pairs drop out mechanically — while `docs/internal/**` stays *inside* the population, closing half B. Diff size falls 3925 → **119 lines**.
-2. **Permit additions by a derived rule, not a filename list.** Additions are permitted in (i) the four append-only surfaces, (ii) any file **created by this cycle** — detected mechanically as `--- /dev/null`, so no filename is hardcoded and none can drift — and (iii) `scripts/verify-ledger-annotations.sh`. Removals are permitted **only** in `scripts/verify-ledger-annotations.sh`.
+**Executor and phase (binding).** **`@qa` runs this at Phase 5, pre-merge, locally**, over
+`BASE..<branch tip>`, and pastes the stdout — including the `permitted:` bucket — into
+`docs/internal/qa/qa-report-v2.19.12.md`. **@dev SHOULD run it before the Phase-4 commit**; a
+violation found at Phase 5 costs a rework round. It is deliberately **not** a CI step this cycle:
+`git archive "$BASE"` needs BASE's object and exactly one of 34 `actions/checkout` jobs sets
+`fetch-depth: 0` (§I item 2). Exit codes: **0** clean, **1** violation, **3** control broken.
 
-**Executed — correct cycle:**
+**Three changes from the AC as written. All three were executed before being written down.**
+
+**1. Derive the rename exclusion from rename DETECTION, never from pathspecs (defect D1).**
+`git diff --find-renames=100%` over the whole repository, **no `:(exclude)`**. A byte-unchanged
+rename emits `rename from` / `rename to` and **no content lines at all**, so the 14 pairs drop out
+mechanically — while `docs/internal/**` stays *inside* the population, closing half B. Excluding a
+rename's destination does not hide the pair; it **prevents the pairing**, guaranteeing the deletion
+half is visible while the addition half is hidden.
+
+**2. Preserve attribution, and take it from the correct side (defect D4; Phase-2 finding S6).**
+The AC's pipeline filtered the headers out and then ruled on "which file the line is in" — not a
+computable predicate. Track headers statefully, and **attribute `^-` lines from the preceding
+`--- SRCX/` header and `^+` lines from `+++ DSTX/`.** The design's earlier method paragraph named
+only `+++`; on a modified movee git renders the pair as a whole-file delete plus a whole-file add,
+so the deletion half carries `+++ /dev/null` and every deletion-side violation is reported against
+`/dev/null`. Detection and exit code stay correct; the **diagnosis** is lost — and in this lineage
+an illegible alarm has repeatedly become the next generation's defect. Measured, same tree, same
+diff, only the attribution rule differing:
+
 ```
-(a) REMOVED violations: 0
-(b) ADDED violations: 0
-permitted: removals 3, additions 18
+attribution from '+++' only (superseded)   ->    MINUS /dev/null                     1
+attribution from '--- SRCX/' (shipped)     ->    MINUS docs/qa-report-v2.19.6.md     1
+```
+
+The `SRCX/` / `DSTX/` prefixes are load-bearing for this and are not cosmetic: a **content** line
+whose text begins `++ ` renders as `+++ ` and would otherwise be parsed as a header.
+
+**3. Permit additions from a FINITE DERIVED SET, never from `--- /dev/null` (Phase-2 finding S2,
+BLOCKER — this is a correction of Phase 1's own repair).** Phase 1 permitted additions in "any file
+created by this cycle", detected as `--- /dev/null`, on the reasoning that **no filename is
+hardcoded and none can drift**. @security constructed the input that breaks it: a new, public,
+shipping `docs/report-index.md` republishing all 14 pre-move paths passes AC-7, AC-4 and AC-6
+simultaneously. A rule written to eliminate a hardcoded filename list had replaced a **bounded**
+exception set with an **unbounded** one. The permitted set is instead derived from the two literals
+this control already pins — `BASE` and `CYCLE_VERSION` — and is finite:
+
+| Permitted for ADDITIONS | Why |
+|---|---|
+| `CHANGELOG.md`, `docs/architecture.md`, `docs/retro.md`, `docs/spec.md` | the four append-only surfaces, already named by the AC |
+| `scripts/verify-ledger-annotations.sh` | AC-5 mandates the edit (defect D2) |
+| `docs/design-v${CYCLE_VERSION}.md` | this cycle's own shipping design doc; legitimately needs 14 (defect D3) |
+| `docs/internal/qa/qa-report-v${CYCLE_VERSION}.md` | the Phase-5 QA report |
+| `docs/internal/security/security-review-v${CYCLE_VERSION}.md` | the Phase-2 security review (already on this branch) |
+| `docs/internal/security/security-audit-v${CYCLE_VERSION}.md` | the Phase-6 audit |
+
+Permitted for REMOVALS: `scripts/verify-ledger-annotations.sh` **only**.
+
+**The drift objection is answered by failing CLOSED, not by widening.** If a cycle artifact is named
+off-pattern, its additions are *violations*, printed by name — loud, not silent. That is the
+opposite of `--- /dev/null`, which fails **open** and silently. Negative control run: dropping
+`docs/design-v${CYCLE_VERSION}.md` from the permitted set turns the **correct** cycle red with
+`PLUS docs/design-v2.19.12.md 14`, so the permitted-set leg demonstrably can fail (§E.4).
+
+**Rejected alternatives, named so they are not re-proposed.** (i) @security's remedy — print the
+bucket and declare an unexpected entry a *reviewer STOP* — was rejected as the primary control
+because it converts a silent permission into **a printed line a human must read**, which @security
+itself listed as untestable on its own NOT-RUN list. **The printing is retained regardless** (it is
+what made S2 visible, and it costs one line of output). (ii) A `docs/internal/**` **prefix** was
+rejected in favour of the three exact `CYCLE_VERSION`-derived paths: the prefix would permit
+additions anywhere under the move's own destination, and `docs/internal/` is protected from the
+release archive by exactly one `.gitattributes` line that AC-4 is structurally blind to (ADR-088
+amendment §5(a)). Measured cost of the narrower choice: on a modified movee the prefix form catches
+only the removal half, the exact form catches **both** halves (§E.4, case B6).
+
+**🔴 The `scripts/verify-ledger-annotations.sh` carve-out is safe ONLY because AC-5 asserts that
+file's content positionally.** The carve-out is a hole; AC-5's two greps (`==3` new-path, `==0`
+old-path) are what fill it. **If AC-5 is ever dropped or weakened, this carve-out becomes a silent
+blind spot on the one file the whole cycle's script-side correctness rests on.** No leg may be
+dropped — the same conjunction AC-6 carries.
+
+**Inventory guard: unchanged and retained.** `N=14 B=0`. It was never the defect. Its `exit 3` leg
+is demonstrated firing in §E.4.
+
+#### The control, verbatim
+
+```bash
+#!/usr/bin/env bash
+# AC-7 reference-freeze control - v2.19.12
+# Usage: ac7.sh <repo> <tip-rev>
+set -uo pipefail
+REPO="${1:-.}"; TIP="${2:-HEAD}"
+BASE="b43fa523f995736af70c483930935aed62b6a42b"
+CYCLE_VERSION="2.19.12"
+WORK="$(mktemp -d)"
+MOVESET="$WORK/moveset.list"
+git -C "$REPO" archive "$BASE" > "$WORK/base.tar"
+tar -tf "$WORK/base.tar" | /usr/bin/grep -E '^docs/(qa-report|security-audit|security-review)-' | sed 's#^docs/##' > "$MOVESET"
+N="$(/usr/bin/grep -c '' "$MOVESET" || true)"
+B="$(/usr/bin/grep -c '^[[:space:]]*$' "$MOVESET" || true)"
+if [ "$N" -ne 14 ]; then
+  echo "::error::AC-7 control BROKEN - moveset yields ${N} lines; expected 14."
+  exit 3
+fi
+if [ "$B" -ne 0 ]; then
+  echo "::error::AC-7 control BROKEN - moveset has ${B} blank/whitespace lines; expected 0."
+  exit 3
+fi
+echo "PATTERNS LOADED: $N"
+PERMIT_ADD="CHANGELOG.md docs/architecture.md docs/retro.md docs/spec.md scripts/verify-ledger-annotations.sh docs/design-v${CYCLE_VERSION}.md docs/internal/qa/qa-report-v${CYCLE_VERSION}.md docs/internal/security/security-review-v${CYCLE_VERSION}.md docs/internal/security/security-audit-v${CYCLE_VERSION}.md"
+PERMIT_DEL="scripts/verify-ledger-annotations.sh"
+git -C "$REPO" diff --find-renames=100% --src-prefix=SRCX/ --dst-prefix=DSTX/ "$BASE".."$TIP" > "$WORK/diff.txt"
+awk -v movesetfile="$MOVESET" -v permit_add="$PERMIT_ADD" -v permit_del="$PERMIT_DEL" '
+BEGIN{
+  n=0
+  while((getline ln < movesetfile) > 0) if(ln!="") M[++n]=ln
+  na=split(permit_add,PA," "); for(i=1;i<=na;i++) if(PA[i]!="") OKADD[PA[i]]=1
+  nd=split(permit_del,PD," "); for(i=1;i<=nd;i++) if(PD[i]!="") OKDEL[PD[i]]=1
+  src="?"; dst="?"; newfile=0
+}
+/^--- SRCX\//         { src=substr($0,10); newfile=0; next }
+/^--- \/dev\/null/    { src="/dev/null";   newfile=1; next }
+/^\+\+\+ DSTX\//      { dst=substr($0,10);            next }
+/^\+\+\+ \/dev\/null/ { dst="/dev/null";              next }
+/^[-+]/{
+  hit=0
+  for(i=1;i<=n;i++) if(index($0,M[i])>0){hit=1;break}
+  if(!hit) next
+  if(substr($0,1,1)=="-"){
+    if(src in OKDEL) OKD[src]++; else VD[src]++
+  } else {
+    ok = (dst in OKADD)
+    if(ok) OKA[dst]++; else VA[dst]++
+  }
+}
+END{
+  va=0; vd=0
+  for(f in VD) vd+=VD[f]
+  for(f in VA) va+=VA[f]
+  printf "REMOVED-LINE VIOLATIONS (a): %d\n", vd
+  for(f in VD) printf "   MINUS %-52s %3d\n", f, VD[f]
+  printf "ADDED-LINE VIOLATIONS (b): %d\n", va
+  for(f in VA) printf "   PLUS  %-52s %3d\n", f, VA[f]
+  ta=0; td=0
+  for(f in OKA) ta+=OKA[f]
+  for(f in OKD) td+=OKD[f]
+  printf "permitted: removals %d, additions %d\n", td, ta
+  for(f in OKD) printf "   (ok-) %-52s %3d\n", f, OKD[f]
+  for(f in OKA) printf "   (ok+) %-52s %3d\n", f, OKA[f]
+  if(va+vd>0){ print "VERDICT: exit 1 VIOLATION"; exit 1 }
+  print "VERDICT: exit 0 CLEAN"
+}' "$WORK/diff.txt"
+RC=$?
+rm -rf "$WORK"
+exit $RC
+```
+
+### E.4 — The test matrix that decided S2, executed
+
+**Method.** One disposable clone (`git clone --no-hardlinks`; the live repo was never mutated), built
+on the **real branch tip `84cf3b3`** — not a synthetic tree: the 14 `git mv` in one commit tagged
+`v2.19.12-r3`, then AC-5's complete edit, AC-8's forwarding note, AC-4's step and a `CHANGELOG.md`
+append in a descendant commit `v2.19.12-r4`. Every seeded case branches from `v2.19.12-r4`, so the
+A/B differs in exactly one variable.
+
+**The S2 decision, isolated to one variable.** Same tree, same script, only the permitted-additions
+rule differing:
+
+| Tree | `--- /dev/null` rule (Phase-1 form) | derived-set rule (shipped) |
+|---|---|---|
+| **Half A** — correct cycle | exit 0 CLEAN, `(a) 0 / (b) 0` | **exit 0 CLEAN, `(a) 0 / (b) 0`** |
+| **B1** — @security's `docs/report-index.md` | **exit 0 CLEAN**, `(ok+) docs/report-index.md 14` — GENERATION 9 reproduced | **exit 1 VIOLATION**, `PLUS docs/report-index.md 14` |
+| **B4** — new `tests/fixtures/` file citing 2 pre-move paths | exit 0 CLEAN | **exit 1 VIOLATION**, `PLUS tests/fixtures/release-surface/seeded-fixture.txt 2` |
+
+The mechanical option therefore works, and **no human is in the loop**. @security's printed-warning
+remedy is not needed as the control; the printing is kept as diagnostics.
+
+**Half A — satisfies the invariant, must not be flagged (`v2.19.12-r4`):**
+
+```
+PATTERNS LOADED: 14
+REMOVED-LINE VIOLATIONS (a): 0
+ADDED-LINE VIOLATIONS (b): 0
+permitted: removals 3, additions 20
+   (ok-) scripts/verify-ledger-annotations.sh                   3
+   (ok+) CHANGELOG.md                                           2
+   (ok+) docs/internal/security/security-review-v2.19.12.md     1
+   (ok+) docs/design-v2.19.12.md                               14
+   (ok+) scripts/verify-ledger-annotations.sh                   3
 VERDICT: exit 0 CLEAN
 ```
 
-**Executed — both seeded violations present:**
+**The orchestrator's constraint holds: `docs/design-v2.19.12.md`'s 14 legitimate additions do not
+trip.** The population was not narrowed far enough to break the correct cycle.
+
+**Half B — violates the invariant, must be flagged. Four constructions, all non-empty:**
+
 ```
-(a) REMOVED violations: 2
-    MINUS SRCX/docs/design-v2.19.10.md               1
-    MINUS SRCX/docs/internal/qa/qa-report-v2.19.10.md 1
-(b) ADDED violations: 0
-VERDICT: exit 1 VIOLATION
+B1  new public docs/report-index.md republishing all 14 pre-move paths
+    ADDED-LINE VIOLATIONS (b): 14
+       PLUS  docs/report-index.md                                  14      exit 1
+
+B2  citation REMOVAL seeded inside docs/internal/qa/qa-report-v2.19.10.md:399
+    REMOVED-LINE VIOLATIONS (a): 1
+       MINUS docs/internal/qa/qa-report-v2.19.10.md                 1      exit 1
+
+B4  new tests/fixtures/release-surface/seeded-fixture.txt citing 2 pre-move paths
+    ADDED-LINE VIOLATIONS (b): 2
+       PLUS  tests/fixtures/release-surface/seeded-fixture.txt      2      exit 1
+
+B6  a movee modified during the move (breaks R100 pairing; NOT-RUN #3 closed)
+    REMOVED-LINE VIOLATIONS (a): 5
+       MINUS docs/qa-report-v2.19.6.md                              5      <- S6: real path, not /dev/null
+    ADDED-LINE VIOLATIONS (b): 5
+       PLUS  docs/internal/qa/qa-report-v2.19.6.md                  5      exit 1
 ```
 
-**Strictly stronger in both directions:** false violations 35 → 0, and the half-B violation the AC was structurally blind to is now **caught**.
+**B2 is the half the superseded pathspec form was structurally blind to.** It is caught.
+**B6 gives double coverage with AC-6** and is the case that justifies exact derived paths over a
+`docs/internal/**` prefix: under a prefix rule the `PLUS` half would be permitted.
 
-**🔴 The `scripts/verify-ledger-annotations.sh` carve-out is safe ONLY because AC-5 asserts that file's content positionally.** The carve-out is a hole; AC-5's two greps (`==3` new-path, `==0` old-path) are what fill it. **If AC-5 is ever dropped or weakened, this carve-out becomes a silent blind spot on the one file the whole cycle's script-side correctness rests on.** State this in the AC text — it is the same "no leg may be dropped" conjunction that AC-6 carries, and it is the neighbouring-remedy interlock this cycle's method exists to surface.
+**Negative controls — so none of this is a check that cannot fail:**
 
-**Inventory guard: unchanged and retained.** `N=14 B=0` verified passing (`grep -c ''` / `grep -c '^[[:space:]]*$'`). The R3/R4 work on it stands; it was never the defect.
+```
+permitted-set leg   drop docs/design-v${CYCLE_VERSION}.md from PERMIT_ADD, run against the CORRECT cycle
+                    -> ADDED-LINE VIOLATIONS (b): 14 / PLUS docs/design-v2.19.12.md 14 / exit 1
 
-**Exit semantics: unchanged.** clean → **0** (the safety property), violation → **1**, broken inventory → **3** (diagnosis). AC-4's vacuity guard keeps `exit 1`: it has no fail-open, because its clean path is already 0. Consistency question, not a safety one — as R3 stated correctly.
+inventory leg       widen the moveset regex to a 4th stem (project-audit) -> N=15
+                    -> ::error::AC-7 control BROKEN - moveset yields 15 lines; expected 14.  exit 3
+```
+
+All three exit codes (0 / 1 / 3) were observed, each from a distinct input.
+
+**Neighbouring-remedy checks (the generation-7 shape).**
+
+- **S3 x AC-7.** Moving the ADR-088 flip and the ADR-037 index-row edit to Phase 4 (§D.5) means two
+  lines that are currently unchanged will be *removed* in a Phase-4 commit, and removals are
+  permitted only in `verify-ledger-annotations.sh`. Verified that neither line names a movee, in
+  **both** units — `docs/`-prefixed **and** the bare-filename unit AC-7 actually matches:
+  `/usr/bin/grep -c -F -f <14 docs/-prefixed names>` -> **0**;
+  `/usr/bin/grep -c -F -f <14 bare names>` -> **0**. Relocating them cannot trip AC-7(a).
+- **S1 x S4.** Pasting this script and enumerating the moveset in §D.4 both *add* movee-naming lines
+  to `docs/design-v2.19.12.md`. That is permitted by AC-7 — and it is also the direct demonstration
+  that any pinned dangling-citation figure is stale the moment the design doc is edited. See §H.
+- **S11 x AC-7.** §D.4's enumerated `scope_allow_delta` lists destination paths, which are not
+  movee names; the design doc is permitted for additions regardless.
+- **AC-5 x AC-7.** The ledger carve-out is filled only by AC-5's two positional greps. Both legs
+  re-confirmed on the post-move clone: `3` new-path, `0` old-path, numstat `3	3`.
+
+### E.5 — Diff-size magnitudes are NOT pinned (closes S7, on the S4 ruling)
+
+The Phase-1 draft pinned `3925 -> 119` diff lines. Phase 2 measured the same two forms at the branch
+base and got **`4664 -> 858`** (`36 -> 0` movee-naming lines) and asked for the figures to be
+labelled synthetic or replaced. **Replacing them would have been wrong.** Phase 2.1 measured the
+same two forms a third time, on a correct-cycle tree built from the real branch tip:
+
+| Measurer | superseded `:(exclude)` form | repaired `--find-renames=100%` form | tree-state |
+|---|---|---|---|
+| Phase 1 (@architect) | 3925 | 119 | synthetic clone, moveset-enumerating design doc only |
+| Phase 2 (@security) | 4664 | 858 | branch tip `83f317c` + its own end-state build |
+| Phase 2.1 (@architect) | **4683** | **1388** | branch tip `84cf3b3` + `v2.19.12-r4` |
+
+And the *"movee-naming lines"* sub-quantity, measured on the Phase-2.1 tree, is **27 -> 15** — not
+`36 -> 0`, because "movee-naming line" and "violating line" are **different quantities**: 15 of the
+repaired form's lines name a movee and are *permitted*.
+
+**Three competent measurers, three tree-states, and at least two different units for one English
+phrase.** That is the `Ambiguous-unit numeric claim` pattern — BINDING since v2.19.11 — firing for
+the fourth time in this cycle. **The magnitudes are therefore removed rather than replaced.** What
+reproduces in all three measurements, and is the actual claim, is the **direction and the
+mechanism**: the pathspec form inflates the diff by rendering all 14 movees as whole-file deletions;
+the rename-paired form does not. Anyone who wants a number runs:
+
+```bash
+git diff --find-renames=100% "$BASE".."<tip>" | wc -l
+git diff "$BASE".."<tip>" -- . ':(exclude)docs/internal/qa' ':(exclude)docs/internal/security' | wc -l
+```
+
+and states the tree-state it was run on.
 
 ---
 
@@ -248,17 +503,92 @@ Add the S4 step exactly as composed in the R1 fold-in, **plus `shell: bash`** (`
 ### D.4 — new/appended files
 
 - `docs/design-v2.19.12.md` — this document (new).
-- `docs/architecture.md` — ADR-088 amendment, ADR-091, index rows, AC-8 forwarding note (**append**; the index-cell edits in §G.3 are the sole in-place changes and name none of the 14).
+- `docs/architecture.md` — ADR-088 amendment, ADR-091, ADR-091 index row, AC-8 forwarding note (**append only at Phase 1**). The two in-place index-cell edits are **Phase-4 work** — see §D.5.
+- `docs/internal/security/security-review-v2.19.12.md` — the Phase-2 security review (new, already on the branch).
+- `docs/internal/qa/qa-report-v2.19.12.md` — the Phase-5 QA report, carrying the §E.3 control's stdout.
 - `docs/spec.md`, `CHANGELOG.md` — **append only**.
+
+**`scope_allow_delta` — enumerated, not cross-producted (closes Phase-2 finding S11).** The previous
+block used `security-(audit|review)-v2\.(18\.0|19\.0|19\.5|19\.6|19\.7|19\.9)\.md`, a
+**cross-product granting 12 destination paths where only 9 exist** — the three phantom grants were
+`security-audit-v2.19.5.md`, `security-review-v2.19.7.md`, `security-review-v2.19.9.md` — while
+**omitting** the Phase-2 report's own path. A write-scope grant must enumerate the moveset, and the
+moveset is already derived mechanically elsewhere in this design. Over-broad in one direction and
+short in the other is now corrected in both.
 
 ```yaml
 scope_allow_delta:
   add:
     - "docs/design-v2.19.12.md"
-    - "docs/internal/qa/qa-report-v2\\.(18\\.0|19\\.0|19\\.6|19\\.7|19\\.9)\\.md"
-    - "docs/internal/security/security-(audit|review)-v2\\.(18\\.0|19\\.0|19\\.5|19\\.6|19\\.7|19\\.9)\\.md"
+    - "docs/internal/qa/qa-report-v2.18.0.md"
+    - "docs/internal/qa/qa-report-v2.19.0.md"
+    - "docs/internal/qa/qa-report-v2.19.6.md"
+    - "docs/internal/qa/qa-report-v2.19.7.md"
+    - "docs/internal/qa/qa-report-v2.19.9.md"
+    - "docs/internal/qa/qa-report-v2.19.12.md"
+    - "docs/internal/security/security-audit-v2.18.0.md"
+    - "docs/internal/security/security-audit-v2.19.0.md"
+    - "docs/internal/security/security-audit-v2.19.6.md"
+    - "docs/internal/security/security-audit-v2.19.7.md"
+    - "docs/internal/security/security-audit-v2.19.9.md"
+    - "docs/internal/security/security-review-v2.18.0.md"
+    - "docs/internal/security/security-review-v2.19.0.md"
+    - "docs/internal/security/security-review-v2.19.5.md"
+    - "docs/internal/security/security-review-v2.19.6.md"
+    - "docs/internal/security/security-review-v2.19.12.md"
   remove: []
 ```
+
+**Count check, executed against the branch, not asserted:** the 14 destination paths above are the
+`git mv` targets of the 14 sources enumerated in §D.1 — same list, same order, `docs/` replaced by
+`docs/internal/{qa,security}/`. The two extra entries are this cycle's own reports
+(`security-review-v2.19.12.md`, already committed on this branch; `qa-report-v2.19.12.md`, owed at
+Phase 5). Total **17**. No regex alternation appears in the block, so no path can be granted that is
+not written out.
+
+### D.5 — Phase-4 only: the ADR-088 status flip and the ADR-037 index-row correction (closes S3)
+
+**These two in-place line edits were made at Phase 1 and have been REVERTED on this branch.** They
+are Phase-4 work and **MUST land in a commit that is a descendant of the `v2.19.12-r3` move
+commit.**
+
+| # | File | Edit |
+|---|---|---|
+| 1 | `docs/architecture.md` ADR-088 index row | status cell `PROPOSED (deferred at v2.19.10 Phase 1.3 …)` → `ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3, and ACCEPTED at Phase 1.2; number reserved and carried forward, cf. ADR-028)`, plus an `AMENDED by …` pointer to the v2.19.12 amendment record |
+| 2 | `docs/architecture.md` ADR-037 index row | the clause *"the retrofit that closes them has not yet shipped"* → the shipped form naming v2.19.12 |
+| 3 | `docs/architecture.md` ADR-088 amendment record, §Status and §4 | replace the "NOT FLIPPED BY THIS RECORD" placeholder with the flip record |
+
+**Why.** @security (S3) enumerated the reachable states of the Phase-1 flip and found the
+compensating control sits downstream of the risk it mitigates:
+
+| State | Phase-5 conjunction fires? | Outcome |
+|---|---|---|
+| Phase 4 lands all 14 | yes | flip becomes true |
+| Phase 4 lands 12 of 14 | yes (`R100 != 14`) | caught |
+| **owner descopes the retrofit at the Phase 3 gate** | **no — Phase 5 never runs** | **no control at all** |
+
+The third row is **what happened to this cycle's ancestor**: ADR-088 was minted ACCEPTED at v2.19.10
+Phase 1.2 and the owner moved the retrofit out at the Phase 3 gate — the deferral record exists
+because of that event, and that gate has not yet happened for v2.19.12. `docs/architecture.md`
+**ships**, so between Phase 1 and Phase 3 the branch was publishing, in the past tense, that a move
+which has not happened did happen — violating this design's own governing rule, *"An ADR that
+diagnoses a falsified status claim must not ship carrying one."*
+
+**The Phase-5 conjunction check is RETAINED as a second control.** @qa MUST verify: the ADR-088
+index cell reads ACCEPTED **and** `git archive HEAD | tar -tf - | grep -cE '^docs/(qa-report|security-audit|security-review)-'`
+returns 0. If @qa cannot run the conjunction, the flip is reverted rather than trusted.
+
+**Confirmed safe against AC-7, in both units** — the two lines a Phase-4 commit will *remove* name
+none of the 14: `/usr/bin/grep -c -F -f <14 docs/-prefixed names>` → **0**, and
+`/usr/bin/grep -c -F -f <14 bare names>` → **0** (the bare unit is what AC-7 actually matches).
+Relocating them cannot trip AC-7(a).
+
+### D.6 — AC-7 execution (closes S1)
+
+AC-7 has an implementation home and an owner. **@qa, Phase 5, pre-merge, locally**, runs the
+verbatim control in §E.3 over `BASE..<branch tip>` and pastes its stdout — including the
+`permitted:` bucket — into `docs/internal/qa/qa-report-v2.19.12.md`. @dev SHOULD run the same
+script before the Phase-4 commit. Not a CI step this cycle (§I item 2).
 
 ---
 
@@ -270,12 +600,10 @@ scope_allow_delta:
 
 **G.2 — ADR-091 (new).** *The reference-freeze control derives its population by rename-pairing, not pathspec exclusion.* Mints the §E.3 repair, carries the §Maturation Path section, and records the interlock that the `verify-ledger-annotations.sh` carve-out depends on AC-5.
 
-**G.3 — index-cell edits (DONE at Phase 1, this branch).** Both are executed; they are the **only two
-in-place line changes** in `docs/architecture.md` this cycle (`git diff --numstat` → `196	2`), and
-**neither removed line names any of the 14** (verified: `0` matches).
-- ADR-088 row: `PROPOSED (deferred …)` → `ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3 …, cf. ADR-028)`, plus an `AMENDED by …` pointer to the new amendment record.
-- ADR-037 row: the clause *"the retrofit that closes them has not yet shipped"* — **false at merge** — replaced with the shipped form naming v2.19.12.
-- ADR-091 row added after ADR-090.
+**G.3 — index-cell edits: REVERTED at Phase 2.1, relocated to Phase 4 (S3).** `docs/architecture.md`
+is now **purely append-only** against `main` on this branch — verified:
+`git diff main -- docs/architecture.md | /usr/bin/grep -c '^-[^-]'` → **0**. The two edits and their
+rationale are specified in §D.5.
 
 **Maturation-Path self-grep (Workflow step 5.5), measured BASE → working tree:**
 `**Future-state options:**` 58 → **60** · `**Concrete revisit triggers:**` 58 → **60** · `**Risk knowingly accepted:**` 58 → **60**.
@@ -295,7 +623,52 @@ correct. **If @qa cannot run that conjunction, the flip must be reverted rather 
 
 ## §H. Risks, boundaries, carry-forwards
 
-**Not guaranteed** (unchanged from the FINAL AC SET, restated so no reader infers more): internal reports at paths outside `^docs/<stem>-` are invisible to AC-4 by design — **`docs/project-audit-v2.6.1.md` ships today and stays shipping**; the ~56 dangling citations are *acknowledged* by AC-8's note, not repaired; **an AC-7 match is a candidate, not a proven violation** — it flags `.bak` filenames, vendored copies, and URLs naming a file in a *different repository*; a human confirms.
+**Not guaranteed** (restated so no reader infers more):
+
+1. **Internal documents at paths outside `^docs/<stem>-` are invisible to AC-4 by design, and the
+   class has more than one member (closes S5).** The Phase-1 draft named only
+   `docs/project-audit-v2.6.1.md`, which reads as if it were the sole exception. `.gitattributes`
+   export-ignores `docs/internal/`, `spec.md`, `retro.md` and `patterns.md`; **everything else under
+   `docs/` ships.** The internal-analysis documents that ship at `docs/` root are:
+   **every `docs/design-v*.md`** (this cycle adds its own), **`docs/project-audit-v2.6.1.md`**, and
+   **`docs/risk-register.md`**. Membership is enumerable at merge with
+   `git archive HEAD | tar -tf - | /usr/bin/grep -E '^docs/(design-v|project-audit-|risk-register)'`;
+   **no count is pinned here**, for the reason in item 2.
+   This cycle's own `docs/design-v2.19.12.md` ships and contains §I — a NOT-RUN list enumerating the
+   untested areas of the release-hygiene controls — plus §H naming exactly what `LEAK_PATTERN` is
+   blind to. **The cycle withdraws 14 QA/security reports from the public archive while adding, to
+   that same archive, a document that maps where the withdrawal controls are weak.** That is not
+   fixed here — ADR-037 made design docs public deliberately, and widening anything this cycle is
+   ruled out on measured grounds (below) — but it is now *stated*, which is the whole obligation of
+   a non-guarantee. Carried as `CF-v2.19.12-D`.
+
+2. **The dangling citations are acknowledged by AC-8's note, not repaired — and their number is
+   deliberately NOT pinned (closes S4).** Phase 2 was right that `~56/7` under-states the shipping
+   tree, and right about the mechanism: it is the same correction already made once in §B for the
+   archive absolute (`432 -> 418`, "because this cycle owes its own shipping design doc") and not
+   applied to the citation count. **But writing `66/8` into the spec would re-pin the figure the
+   simplification pass deliberately removed.** Measured this session, one quantity, four answers:
+
+   | Unit | Tree-state | Value |
+   |---|---|---|
+   | lines / files, `docs/`-prefixed | shipping archive of the correct-cycle end state | **66 / 8** |
+   | occurrences | same | **66** |
+   | lines / files | **working tree** at the same commit (includes export-ignored files) | **128 / 21** |
+   | lines / files, `docs/`-prefixed | shipping archive **before** this cycle's design doc existed | **56 / 7** |
+
+   Add the figures already in circulation — `59/8`, `60/8`, and the orchestrator's independently
+   measured `70` — and one English phrase, *"the dangling citations"*, has carried **six** values
+   across three units and three tree-states. `docs/design-v2.19.12.md` is itself one of the largest
+   contributors, and **this Phase-2.1 rework changed its contribution again** by pasting the §E.3
+   control and enumerating the moveset in §D.4. Any number written here is stale before it is read.
+
+   **Therefore: no citation count is pinned in this design, in the spec, or in the Guard Change
+   Summary.** The quantity, stated once and unpinned: *lines naming one of the 14 pre-move
+   `docs/`-prefixed paths, counted in the release archive of the merge commit.* It is recorded by
+   `CF-v2.19.12-E` **measured at merge**, which is what the FINAL AC SET already said.
+
+3. **An AC-7 match is a candidate, not a proven violation** — it flags `.bak` filenames, vendored
+   copies, and URLs naming a file in a *different repository*; a human confirms.
 
 **Do NOT widen `LEAK_PATTERN`.** Measured: a 4-stem match returns **15**, breaking AC-6's `R100 == 14` and AC-4's own "14 paths" prose simultaneously.
 
