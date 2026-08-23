@@ -44,6 +44,10 @@ now blocks the leak from recurring.
   (ADR-037's own precedent for this exact operation) and acknowledged by a forwarding note using the
   family-glob form `docs/{qa-report,security-audit,security-review}-v*.md` — never an individual
   filename, and no citation count is pinned (AC-8).
+- **Scope note: this closes the release-archive surface only.** This repository is public; the moved
+  reports (and everything else under `docs/internal/`) remain readable via `git clone` and the GitHub
+  web UI, both before and after this change. Already-published release archives (`v2.19.11` and
+  earlier) are unaffected and keep all 14. See `docs/spec.md`'s reduced-guarantee section.
 
 ## [2.19.11] - 2026-08-22
 
