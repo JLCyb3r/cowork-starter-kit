@@ -19,6 +19,32 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.12] - 2026-08-23
+
+**"S4 report-egress retrofit."** 14 internal QA and security reports shipped inside every public
+release archive since this project began; they are moved behind `docs/internal/`, and a CI gate
+now blocks the leak from recurring.
+
+- **The 14 reports leave the public release archive**, moved byte-unchanged (`git mv`, `R100`) into
+  `docs/internal/qa/` (5) and `docs/internal/security/` (9). `docs/design-v2.19.12.md` §D.1, AC-6.
+- **A new CI job, `archive-leak-check`, gates the archive-leak class going forward.** It asserts
+  zero `git archive` entries match `^docs/(qa-report|security-audit|security-review)-`, carries a
+  3-arm canary self-test (one per report family, each asserted individually so a single-arm pattern
+  break names itself) and a vacuity guard against an empty archive listing (ADR-088 amendment §1,
+  AC-4).
+- **`scripts/verify-ledger-annotations.sh`'s three `LA-03[abc]` citations are repointed** to the
+  reports' new location, and a stale annotation claiming one of them occurred "0 times" in
+  `docs/retro.md` is corrected — it occurs once (AC-5).
+- **ADR-088 is flipped from `PROPOSED (deferred)` to `ACCEPTED (v2.19.12)`**, and the ADR-037 index
+  row's past-tense claim is corrected to record that the retrofit shipped. Both land in a commit
+  descending from the move commit, not before it — an owner descope at the Phase 3 gate would have
+  left the flip with no compensating control otherwise (`docs/architecture.md` ADR-088 amendment
+  record, AC-8's sequencing binding).
+- **Prose references to the 14 moved files elsewhere in the repository are frozen, not rewritten**
+  (ADR-037's own precedent for this exact operation) and acknowledged by a forwarding note using the
+  family-glob form `docs/{qa-report,security-audit,security-review}-v*.md` — never an individual
+  filename, and no citation count is pinned (AC-8).
+
 ## [2.19.11] - 2026-08-22
 
 **"Tier A Debt."** Eight fixes to the release-surface evidence path, a stale citation class, and
