@@ -668,7 +668,6 @@ the ADR-088 index cell reads ACCEPTED **and**
 `git archive HEAD | tar -tf - | grep -cE '^docs/(qa-report|security-audit|security-review)-'` returns
 **0**. If @qa cannot run that conjunction, the flip is reverted rather than trusted.
 
-
 ---
 
 ## §H. Risks, boundaries, carry-forwards
