@@ -777,3 +777,100 @@ new ones are added by this rework.**
     the archive, and **AC-4 is structurally blind to that line's removal** (ADR-088 amendment §5(a)).
     Adding an assertion would be a new control and is out of this rework's scope; it is the largest
     standing exposure and is named in ADR-091's revisit triggers.
+
+---
+
+## §J. Phase 4 — R1 execution evidence (appended by @dev)
+
+> *ISO 15288 — Implementation Process. Appended, not rewritten — §E.3-§E.5 above are untouched.*
+
+**R1 commit:** `c4bf9ed233754e5643c2e1f82f506b24d6f3454f` — `dev: R1 — AC-4 archive-leak gate (S4),
+3-arm canary + vacuity guard (v2.19.12)`. Touches only `.github/workflows/quality.yml` (55 insertions,
+0 deletions), adding the `archive-leak-check` job exactly per §D.3: `LEAK_PATTERN`, 3-arm
+`CANARY_PATHS` with `EXPECTED_CANARIES=3` (each arm asserted individually), `MIN_ENTRIES=300`, the
+`git archive` scan, the vacuity guard, the leak assertion, and `shell: bash`. The leak-assertion error
+text was corrected at authoring time (never landed in the wrong form on this branch): it names only
+the paths the run actually matched — `"Each listed path matches ${LEAK_PATTERN} and belongs under
+docs/internal/{qa,security}/"` — rather than a blanket instruction to move *any* match, which would be
+wrong advice the day `LEAK_PATTERN` ever matches a legitimately public document.
+
+**Grep flavour used for every count below:** `type -a grep` → inline `grep` is the ugrep 7.8.4 zsh
+shim; `/usr/bin/grep` is BSD grep. **All counts below used `/usr/bin/grep`, invoked by absolute path.**
+GNU grep on `ubuntu-latest` remains unmeasured (§I item 1, unchanged).
+
+**RED proof, pre-move tree, at the R1 commit itself** (the move has not happened yet, so `HEAD` at
+`c4bf9ed2` is the pre-move tree by construction — the step's own bash body was extracted and run
+verbatim against `git archive HEAD`, with the same `env:` values the workflow YAML sets, no fallback
+defaults):
+
+```
+$ git rev-parse HEAD
+c4bf9ed233754e5643c2e1f82f506b24d6f3454f
+$ LEAK_PATTERN='^docs/(qa-report|security-audit|security-review)-' \
+  CANARY_PATHS='docs/qa-report-v9.9.9.md docs/security-audit-v9.9.9.md docs/security-review-v9.9.9.md' \
+  EXPECTED_CANARIES='3' MIN_ENTRIES='300' \
+  bash <extracted-step-body>
+::error::S4 — internal report(s) present in the public release archive:
+docs/qa-report-v2.18.0.md
+docs/qa-report-v2.19.0.md
+docs/qa-report-v2.19.6.md
+docs/qa-report-v2.19.7.md
+docs/qa-report-v2.19.9.md
+docs/security-audit-v2.18.0.md
+docs/security-audit-v2.19.0.md
+docs/security-audit-v2.19.6.md
+docs/security-audit-v2.19.7.md
+docs/security-audit-v2.19.9.md
+docs/security-review-v2.18.0.md
+docs/security-review-v2.19.0.md
+docs/security-review-v2.19.5.md
+docs/security-review-v2.19.6.md
+Each listed path matches ^docs/(qa-report|security-audit|security-review)- and belongs under docs/internal/{qa,security}/ (ADR-037, ADR-088).
+EXIT=1
+```
+
+**Exit 1. Exactly 14 paths enumerated** — matches the moveset in §D.1, one-to-one.
+
+**Five negative controls, run separately, each its own transcript:**
+
+```
+--- Control 1: typo the qa_report arm (LEAK_PATTERN qa-report -> qa_report) ---
+::error::S4 gate BROKEN — LEAK_PATTERN does not match canary 'docs/qa-report-v9.9.9.md'.
+::error::S4 gate BROKEN — 2 of 3 expected canaries matched LEAK_PATTERN.
+EXIT=1
+
+--- Control 2: typo the security_audit arm ---
+::error::S4 gate BROKEN — LEAK_PATTERN does not match canary 'docs/security-audit-v9.9.9.md'.
+::error::S4 gate BROKEN — 2 of 3 expected canaries matched LEAK_PATTERN.
+EXIT=1
+
+--- Control 3: typo the security_review arm ---
+::error::S4 gate BROKEN — LEAK_PATTERN does not match canary 'docs/security-review-v9.9.9.md'.
+::error::S4 gate BROKEN — 2 of 3 expected canaries matched LEAK_PATTERN.
+EXIT=1
+
+--- Control 4: CANARY_PATHS='' (empty) ---
+::error::S4 gate BROKEN — 0 of 3 expected canaries matched LEAK_PATTERN.
+EXIT=1
+
+--- Control 5: MIN_ENTRIES set one above the real count (432 measured, MIN_ENTRIES=433) ---
+::error::S4 gate BROKEN — archive listed 432 entries, expected >= 433.
+EXIT=1
+```
+
+**All six runs (the base RED proof plus the five negative controls) are RED, each for the reason its
+own construction targets** — controls 1-3 fail at the per-arm canary check (2 of 3, naming the broken
+arm's canary), control 4 fails the same check at 0 of 3, control 5 fails the vacuity guard. None of the
+five reached the archive-scan/leak-assertion code path, confirming the canary and vacuity legs are
+load-bearing gates in their own right, not merely defense-in-depth around the leak assertion.
+
+**Note on the archive-entry count.** §B measured 431 entries at `BASE`
+(`b43fa523f995736af70c483930935aed62b6a42b`). At `c4bf9ed2` (several non-file-count-affecting commits
+later on this branch, per `git log --oneline BASE..c4bf9ed2`) the measured count is **432** — a
+tree-state fact, not a contradiction of §B; nothing in AC-4 pins an absolute (§B Correction 1, same
+rule applies here).
+
+**Verification script was a disposable local file (`.ac4_step_verify.sh`, never committed) used only
+to extract and execute the step's `run:` body outside a real Actions runner; it was deleted after use
+— `git status --short` is clean at this point.** The real Actions-runner execution of this job remains
+open per §I item 5.
