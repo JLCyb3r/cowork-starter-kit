@@ -2121,6 +2121,61 @@ jobs:
         # promises.
         run: bash scripts/verify-ledger-annotations.sh
 
+  archive-leak-check:
+    name: S4 — Archive Leak Gate (v2.19.12, AC-4)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read  # only ever reads this repo's own git archive
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - name: S4 — no internal QA/security report ships in the release archive
+        shell: bash  # `for c in $CANARY_PATHS` does not word-split under zsh (ADR-088 amendment §1)
+        env:
+          LEAK_PATTERN: '^docs/(qa-report|security-audit|security-review)-'
+          CANARY_PATHS: 'docs/qa-report-v9.9.9.md docs/security-audit-v9.9.9.md docs/security-review-v9.9.9.md'
+          EXPECTED_CANARIES: '3'
+          MIN_ENTRIES: '300'
+        run: |
+          set -euo pipefail
+
+          # 1. Canary self-test FIRST, one arm per report family. A pattern typo'd
+          #    in only one arm still matches the other two canaries and would
+          #    otherwise report healthy — each arm is asserted individually so a
+          #    single-arm break names itself (ADR-088 amendment §1).
+          CANARY_HITS=0
+          for c in $CANARY_PATHS; do
+            if printf '%s\n' "$c" | grep -qE "$LEAK_PATTERN"; then
+              CANARY_HITS=$((CANARY_HITS + 1))
+            else
+              echo "::error::S4 gate BROKEN — LEAK_PATTERN does not match canary '${c}'."
+            fi
+          done
+          if [ "$CANARY_HITS" -ne "$EXPECTED_CANARIES" ]; then
+            echo "::error::S4 gate BROKEN — ${CANARY_HITS} of ${EXPECTED_CANARIES} expected canaries matched LEAK_PATTERN."
+            exit 1
+          fi
+
+          # 2. git archive is the only sound instrument — git check-attr reports
+          #    'unspecified' for an excluded AND a shipping file alike (measured,
+          #    docs/design-v2.19.12.md AC-PL-11).
+          ENTRIES="$(git archive HEAD | tar -tf -)"
+
+          # 3. Vacuity guard — an empty listing would pass the leak test trivially.
+          COUNT="$(printf '%s\n' "$ENTRIES" | grep -c . || true)"
+          if [ "$COUNT" -lt "$MIN_ENTRIES" ]; then
+            echo "::error::S4 gate BROKEN — archive listed ${COUNT} entries, expected >= ${MIN_ENTRIES}."
+            exit 1
+          fi
+
+          LEAKED="$(printf '%s\n' "$ENTRIES" | grep -E "$LEAK_PATTERN" || true)"
+          if [ -n "$LEAKED" ]; then
+            echo "::error::S4 — internal report(s) present in the public release archive:"
+            printf '%s\n' "$LEAKED"
+            echo "Each listed path matches ${LEAK_PATTERN} and belongs under docs/internal/{qa,security}/ (ADR-037, ADR-088)."
+            exit 1
+          fi
+          echo "S4 PASS — 0 of ${COUNT} archive entries match ${LEAK_PATTERN}."
+
   wizard-consistency-check:
     name: Wizard Consistency Check (audit F-8)
     runs-on: ubuntu-latest
