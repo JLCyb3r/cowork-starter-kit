@@ -11,6 +11,19 @@
 
 ## §A. Phase-1 header record
 
+> **PHASE 2.1 REWORK RECORD — 2026-08-23, @architect (opus), branch `release/v2.19.12-s4-report-egress`.**
+> Eight bounded items from `docs/internal/security/security-review-v2.19.12.md`. **The AC set was not
+> reopened.** Closed here: **S1** (§E.3 now carries the verbatim executed control; §D.6 names executor
+> and phase), **S2** (§E.3 Decision 3 + §E.4 — the `--- /dev/null` rule is replaced by a finite set
+> derived from `BASE` + `CYCLE_VERSION`; @security's `docs/report-index.md` construction is an
+> executed RED case), **S3** (§D.5 — the ADR-088 flip and the ADR-037 past-tense edit are **reverted
+> on this branch** and become Phase-4 work descending from the r3 move commit), **S4** (§H item 2 —
+> the citation figure is *unpinned*, not corrected to `66/8`; the orchestrator overruled @security
+> here), **S5** (§H item 1 — the non-guarantee names the class), **S6** (§E.3 change 2 — `^-`
+> attribution from `--- SRCX/`), **S7** (§E.5 — diff-size magnitudes removed, three measurers
+> tabulated), **S11** (§D.4 — `scope_allow_delta` enumerated, phantoms removed, the Phase-2 report's
+> own path added). Every claim below that changed carries the command that produced it.
+
 **Worktree discipline:** ENFORCED (SECURITY-SENSITIVE). First action was `git -C /Users/macbookpro/claude-cowork-config rev-parse HEAD` → `b43fa523f995736af70c483930935aed62b6a42b`, matching the orchestrator-supplied base. No drift.
 
 **Grep flavour behind every load-bearing count in this document.** Probed with `type -a grep` (never `bash -c 'type grep'`, which cannot see a zsh function):
@@ -389,8 +402,40 @@ permitted: removals 3, additions 20
 VERDICT: exit 0 CLEAN
 ```
 
-**The orchestrator's constraint holds: `docs/design-v2.19.12.md`'s 14 legitimate additions do not
+**The orchestrator's constraint holds: `docs/design-v2.19.12.md`'s legitimate additions do not
 trip.** The population was not narrowed far enough to break the correct cycle.
+
+**🔴 Read the `permitted:` counts as a tree-state sample, never as an expected value — including the
+ones printed above.** They are a function of the very documents this rework is editing. The
+transcript above was taken on branch tip `84cf3b3`, where `docs/design-v2.19.12.md` contributed
+**14**. Re-run after this rework's edits (tip `7497e77` + `r3` + `r4`) the same correct cycle
+returns:
+
+```
+REMOVED-LINE VIOLATIONS (a): 0
+ADDED-LINE VIOLATIONS (b): 0
+permitted: removals 3, additions 39
+   (ok-) scripts/verify-ledger-annotations.sh                   3
+   (ok+) CHANGELOG.md                                           2
+   (ok+) docs/internal/security/security-review-v2.19.12.md     1
+   (ok+) docs/design-v2.19.12.md                               31      <- was 14
+   (ok+) scripts/verify-ledger-annotations.sh                   3
+   (ok+) docs/spec.md                                           2
+VERDICT: exit 0 CLEAN
+```
+
+and `B1` re-run on the same tip is still `ADDED-LINE VIOLATIONS (b): 14 / PLUS docs/report-index.md
+14 / exit 1`. **`docs/design-v2.19.12.md` moved 14 → 31 because §E.3 now carries the verbatim script
+and §D.4 now enumerates the moveset.** Writing "31" down here would change it again — this is a
+fixed point that does not exist, and it is the same trap as S4 and S7 one level in.
+
+**The acceptance criterion is therefore the invariant, not any count:** on a correct cycle
+`(a) == 0` and `(b) == 0` and `exit == 0`; the `permitted:` bucket is diagnostics, and its contents
+are reviewed by *name* — an unexpected filename in it is the signal, not an unexpected number.
+
+**The live branch, as it stands after this rework, is CLEAN under the shipped control:**
+`BASE..HEAD` → `PATTERNS LOADED: 14 / (a) 0 / (b) 0 / exit 0`, with `removals 0` — confirming §D.5's
+revert made `docs/architecture.md` purely append-only.
 
 **Half B — violates the invariant, must be flagged. Four constructions, all non-empty:**
 
@@ -680,13 +725,51 @@ correct. **If @qa cannot run that conjunction, the flip must be reverted rather 
 
 ## §I. NOT-RUN — explicit
 
-Assume the next round mines this list first; that is what has happened every time.
+Assume the next round mines this list first; that is what has happened every time. **Updated at
+Phase 2.1 — three Phase-1 items were closed by execution, one by @security and two here, and three
+new ones are added by this rework.**
 
-1. **GNU grep on `ubuntu-latest` — still unmeasured by anyone, now five rounds running.** Every count here is BSD (`/usr/bin/grep`). Rank first for the first real CI run.
-2. **The repaired AC-7 control has never run in real CI**, only against a local simulated tree. `git archive "$BASE"` needs BASE's object: **exactly one** of 34 `actions/checkout` jobs sets `fetch-depth: 0`. AC-7 stays pre-merge-local **or** its host job declares it.
-3. **A modified movee** (content edited during the move) was not run against the repaired AC-7. Expected: it breaks `--find-renames=100%` pairing, so its content lines enter the diff and AC-7 fires — *double* coverage with AC-6. **Expected, not measured.**
-4. `diff.renameLimit` exhaustion and **case-only renames** against AC-6 — untested; first thing to attack if AC-6 is doubted. Note the repaired AC-7 now shares AC-6's dependence on rename detection, so a renameLimit failure degrades **both** controls together. **This is a new coupling introduced by §E.3 and is the single most likely place the next defect lives.**
-5. The repo's own `tests/` suite against a post-move tree — `tests/fixtures/release-surface/` has two files citing movesets.
-6. LP-01's `Branch not protected` 404 path against the real API.
-7. AC-4 inside a real Actions runner.
-8. `CF-v2.19.11-A` / ADR-090 overlap (S12) — not investigated; unchanged from Phase 0.
+1. **GNU grep on `ubuntu-latest` — still unmeasured by anyone, now six rounds running.** Every count
+   in this document is BSD (`/usr/bin/grep`, absolute path; inline `grep` in this harness is a
+   **ugrep 7.8.4** zsh shim). @security confirmed by probe that GNU is **unmeasurable on this host**
+   (`command -v ggrep gnugrep docker podman colima nix` → empty; no Homebrew gnubin), which is a
+   stronger statement than "not attempted" but is not a measurement. **Rank first for the first real
+   CI run.** @security also measured the shim/BSD gap for the first time and found it **real and
+   opposite in direction**: `grep -F -f` with a blank pattern line returns **1** under BSD (fails
+   open) and **0** under the shim.
+2. **The §E.3 control has never run in real CI**, only locally against simulated end-state trees
+   built from real clones. `git archive "$BASE"` needs BASE's object and exactly one of 34
+   `actions/checkout` jobs sets `fetch-depth: 0`. **This is why §D.6 assigns it to @qa at Phase 5,
+   locally, rather than to CI.** If a later cycle promotes it to CI, the host job must declare
+   `fetch-depth: 0`.
+3. **Case-only renames against AC-6 and AC-7** — not run, **and not runnable on this host**: the
+   filesystem is case-insensitive, so the collision cannot be materialised in a working tree. It
+   needs `git update-index` plumbing or a case-sensitive volume. The repaired AC-7 shares AC-6's
+   dependence on rename detection, so this case degrades **both** together.
+   *(The `diff.renameLimit` half of this item is CLOSED — @security ran the repaired control under
+   `git -c diff.renameLimit=1` and got a byte-identical diff with all 14 rename markers, because
+   `--find-renames=100%` pairs by content hash, not by the bounded inexact search.)*
+4. **The repo's own `tests/` suite against a post-move tree.** `tests/fixtures/release-surface/`
+   contains files citing movesets and sits inside a frozen surface. Unchanged, and now sharper: §E.4
+   case **B4** shows a *new* file under `tests/fixtures/` citing pre-move paths is correctly RED, but
+   the behaviour of the **existing** fixtures after the move is still unmeasured.
+5. **AC-4's composed YAML inside a real Actions runner**, including `shell: bash` word-splitting of
+   `CANARY_PATHS`. Verified by reading only, by two agents. Unchanged.
+6. **LP-01's `Branch not protected` 404 path** against the real API. Unchanged.
+7. **`CF-v2.19.11-A` / ADR-090 overlap (S12).** Not investigated. Unchanged from Phase 0.
+8. **NEW — the Phase-4 flip commit has not been executed.** §D.5 requires the ADR-088 status flip and
+   the ADR-037 index-row correction to land in a commit **descending from `v2.19.12-r3`**. What was
+   verified is only that the two lines they *remove* name none of the 14, in both units. **That the
+   commit is actually ordered after r3 is checkable only at Phase 4/5**, and no automated control
+   asserts the ancestry — @qa must check `git merge-base --is-ancestor <r3> <flip-commit>` by hand.
+9. **NEW — the derived permitted set is not asserted against the cycle's real artifact names.** The
+   control permits `docs/internal/qa/qa-report-v2.19.12.md` and
+   `docs/internal/security/security-audit-v2.19.12.md`, neither of which exists yet. If @qa or
+   @security name their report differently, the correct cycle goes RED — **loud, not silent**, and
+   fixable in one line, but it will look like a control failure to someone who has not read this
+   note. The Phase-2 report's real path was confirmed to match (`(ok+) 1`).
+10. **NEW — `.gitattributes` is not asserted by anything in this cycle.** Decision (3)'s three
+    internal permitted paths are safe only because `docs/internal/ export-ignore` keeps them out of
+    the archive, and **AC-4 is structurally blind to that line's removal** (ADR-088 amendment §5(a)).
+    Adding an assertion would be a new control and is out of this rework's scope; it is the largest
+    standing exposure and is named in ADR-091's revisit triggers.
