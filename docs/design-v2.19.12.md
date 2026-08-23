@@ -874,3 +874,90 @@ rule applies here).
 to extract and execute the step's `run:` body outside a real Actions runner; it was deleted after use
 — `git status --short` is clean at this point.** The real Actions-runner execution of this job remains
 open per §I item 5.
+
+---
+
+## §K. Phase 6.1 — post-audit documentation corrections (appended by @dev)
+
+> *ISO 15288 — Implementation Process, continued. Appended, not rewritten — §A-§J above are
+> untouched.* Source: `docs/internal/security/security-audit-v2.19.12.md` (Phase 6, PASS WITH
+> WARNINGS — 0 CRITICAL, 0 BLOCKER). No control logic changed by this section; the two WARNINGs
+> that name a remedy are recorded below as carry-forwards, not built.
+
+**S1 — the repository is PUBLIC; this cycle closes the release-archive surface only.** Verified this
+session: `gh repo view --json isPrivate` → `isPrivate: false`. `.gitattributes:2` names its own scope
+— *"Affects only `git archive` (release ZIPs/tarballs), not `git clone` or working tree."* All 84
+files under `docs/internal/` (`find docs/internal -type f | wc -l` → `84`), including the 14 reports
+this cycle moves, stay readable via `git clone` and the GitHub web UI, both before and after this
+merge. Nothing in §A-§J states this anywhere; it is now stated in `docs/spec.md`'s reduced-guarantee
+section (the "Not guaranteed" list) as the first item, ahead of the pre-existing S5 item. This is the
+single most important correction in this rework — the cycle's own one-line thesis, read alone, would
+lead a reviewer to conclude the reports became private. They did not.
+
+**S2 — forward-only, recorded.** `git archive v2.19.11 | tar -tf - | /usr/bin/grep -cE '^docs/(qa-report|security-audit|security-review)-'`
+→ **14**. Every already-published release archive keeps all 14, permanently. Added to `docs/spec.md`'s
+reduced-guarantee section alongside S1.
+
+**S3 — AC-8's control-test claim in `docs/spec.md` was false, and is corrected in place.** The claim
+*"an individual filename trips [AC-7]"* was true under the Phase-1 `--- /dev/null` form and was
+falsified by this design's own Phase-2.1 §E.3 repair: `docs/architecture.md` is one of
+`PERMIT_ADD`'s 9 entries and ships publicly, so all 14 pre-move paths named individually and appended
+to it pass AC-7 clean (`(ok+) docs/architecture.md 5`, `VERDICT: exit 0 CLEAN` — @security,
+`security-audit-v2.19.12.md` §Task 2). The identical payload in a non-permitted file still trips
+(`VERDICT: exit 1 VIOLATION`). §E.3's control itself is unchanged — this closes a prose claim about
+the control, not the control. `docs/spec.md`'s AC-8 section now states the corrected property.
+
+**S5 — the reduced-guarantee enumeration was re-opened one level up from where §H item 1 closed it.**
+§H item 1 (this document) fixed the Phase-1 draft's single-member framing by naming
+`docs/design-v*.md`, `docs/project-audit-v2.6.1.md` and `docs/risk-register.md` — but that named list
+is itself a closed enumeration over an open population, and it omitted `docs/assumptions.md`,
+`docs/owner-tasks.md` and `docs/next-steps.md` (same class: internal analysis shipping at `docs/`
+root). `docs/spec.md`'s reduced-guarantee section now states the rule instead —
+`.gitattributes` export-ignores exactly `docs/internal/`, `docs/spec.md`, `docs/retro.md`,
+`docs/patterns.md`; everything else under `docs/` ships — plus the live command
+(`git archive HEAD | tar -tf - | /usr/bin/grep -E '^docs/'`) that derives the population rather than
+naming it. §H item 1 above is left as written (append-only); this section is the correction of
+record.
+
+**Two carry-forwards recorded here, not built this cycle — control logic is unchanged:**
+
+- **`CF-v2.19.12-GATTR`** (closes the S4 audit finding). `scripts/release-archive-assert.sh` already
+  carries `docs/internal/` in its `DROP_PATHS` negative-assertion array and fires correctly: on a
+  disposable clone with the `docs/internal/ export-ignore` line deleted, the archive grew from 431 to
+  507 entries (83 `docs/internal/` files now shipping, 74 of them QA/security reports), the S4 gate
+  reported `PASS — 0 of 507` (structurally blind — `LEAK_PATTERN` cannot match a
+  `docs/internal/`-prefixed path), and `release-archive-assert.sh` returned `FAIL: DROP-list path
+  present in leak.zip: docs/internal/`, `rc=1` against that same archive, and `PASS — clean.zip
+  (DROP=14, KEEP=17)`, `rc=0` against a clean `HEAD` archive (positive control). Publication is
+  therefore guarded end-to-end today; what remains is a **detection-timing** gap — that assertion
+  runs at `publish-release.sh` time and at release-tag time, never on a PR, so a `.gitattributes`
+  regression merges green and blocks only at release. Remedy (~3 lines, reusing `$ENTRIES` the S4 job
+  already computes):
+  ```bash
+  INTERNAL="$(printf '%s\n' "$ENTRIES" | grep -c '^docs/internal/' || true)"
+  if [ "$INTERNAL" -ne 0 ]; then
+    echo "::error::S4 — ${INTERNAL} docs/internal/ entries in the archive; docs/internal/ export-ignore is missing from .gitattributes."
+    exit 1
+  fi
+  ```
+  Measured on both trees: `0` at `HEAD`, `89` on the removed-line tree (a different measurer's count
+  than the 83/74 above — both are correct, different denominators; neither is pinned as *the*
+  figure). Not a Tier-A cycle of its own.
+
+- **`CF-v2.19.12-PERMITSHAPE`** (closes @qa's Phase-5 residual and the diagnostics-only gap in §E.3).
+  `PERMIT_ADD`'s shape has no machine assertion — a silent widening is caught today only by a human
+  reading the `permitted:` bucket. Remedy (~4 lines, same idiom as the S4 gate's own canary count):
+  ```bash
+  PERMIT_ADD_COUNT="$(printf '%s\n' $PERMIT_ADD | /usr/bin/grep -c . || true)"
+  if [ "$PERMIT_ADD_COUNT" -ne 9 ]; then
+    echo "::error::AC-7 control BROKEN - PERMIT_ADD has ${PERMIT_ADD_COUNT} entries; expected 9."
+    exit 3
+  fi
+  ```
+  Not built this cycle — recording only, per the hard constraint that no control logic changes here.
+
+**AC-7 re-run at Phase 6.1, over `BASE..HEAD` on the real branch (not a disposable clone this time —
+this section's own edits are the only change since the Phase 6 audit commit):** see the dev commit
+that lands this section for the transcript. Expected and confirmed: `(a) 0 / (b) 0`, exit 0 — every
+edit in this section lands in a `PERMIT_ADD` member (`docs/architecture.md` is not touched by this
+cycle; `docs/design-v2.19.12.md` and `docs/spec.md` both are).
