@@ -119,7 +119,7 @@ verify-ledger-annotations: PASS — 19 of 19 static anchors resolved; 0 live-pro
 
 ### C.3 — ADR-088 amendment
 
-Authored and appended to `docs/architecture.md` as **"Amendment record — ADR-088 (appended v2.19.12 Phase 1)"**, per the house convention that ADRs are amended by appended record and never rewritten in place. It carries all five owed elements: the 3-arm canary; the delta-not-absolute restatement; the single reconciliation clause naming ADR-090's amendment §3 as operative; the ADR-037 index-row correction; and the two scope boundaries (`docs/internal/ export-ignore` as sole archive protection for 71 reports, and `LEAK_PATTERN`'s `^docs/` anchor leaving `docs/project-audit-v2.6.1.md` shipping). See §G.
+Authored and appended to `docs/architecture.md` as **"Amendment record — ADR-088 (appended v2.19.12 Phase 1)"**, per the house convention that ADRs are amended by appended record and never rewritten in place. It carries all five owed elements: the 3-arm canary; the delta-not-absolute restatement; the single reconciliation clause naming ADR-090's amendment §3 as operative; the ADR-037 index-row correction; and the two scope boundaries (`docs/internal/ export-ignore` as sole archive protection for 71 reports, and `LEAK_PATTERN`'s `^docs/` anchor leaving `docs/project-audit-v2.6.1.md` shipping). See §G. **Amended at Phase 2.1 (S3):** the record no longer flips ADR-088's status — it states explicitly that the index row still reads `PROPOSED (deferred)`, and that the flip together with the ADR-037 index-row correction is Phase-4 work descending from the r3 move commit (§D.5).
 
 ### C.4 — AC-7's partition logic, executed
 
@@ -641,7 +641,7 @@ script before the Phase-4 commit. Not a CI step this cycle (§I item 2).
 
 > *ISO 15288 — Information Management Process.*
 
-**G.1 — ADR-088 amendment** (appended record, §C.3): 3-arm canary replacing §Decision (5)'s single-family form; numeric claim restated as a **delta (−14 archive entries)**, never a hardcoded absolute; **one** reconciliation clause naming **ADR-090's amendment §3 as operative** (ADR-090's convention is aspirational outside its single guarded pair; ADR-088 §Decision (2)'s Class A/B ruling is the in-force reference-freeze rule); the two scope boundaries.
+**G.1 — ADR-088 amendment** (appended record, §C.3): 3-arm canary replacing §Decision (5)'s single-family form; numeric claim restated as a **delta (−14 archive entries)**, never a hardcoded absolute; **one** reconciliation clause naming **ADR-090's amendment §3 as operative** (ADR-090's convention is aspirational outside its single guarded pair; ADR-088 §Decision (2)'s Class A/B ruling is the in-force reference-freeze rule); the two scope boundaries. **Amended at Phase 2.1 (S3):** the record no longer flips ADR-088's status — it states explicitly that the index row still reads `PROPOSED (deferred)`, and that the flip together with the ADR-037 index-row correction is Phase-4 work descending from the r3 move commit (§D.5).
 
 **G.2 — ADR-091 (new).** *The reference-freeze control derives its population by rename-pairing, not pathspec exclusion.* Mints the §E.3 repair, carries the §Maturation Path section, and records the interlock that the `verify-ledger-annotations.sh` carve-out depends on AC-5.
 
@@ -653,16 +653,21 @@ rationale are specified in §D.5.
 **Maturation-Path self-grep (Workflow step 5.5), measured BASE → working tree:**
 `**Future-state options:**` 58 → **60** · `**Concrete revisit triggers:**` 58 → **60** · `**Risk knowingly accepted:**` 58 → **60**.
 All three increased by exactly **+2**, matching the two §Maturation Path sections authored (the ADR-088 amendment record and ADR-091). Equal deltas across all three headers is the evidence that none was paraphrased.
+**Re-run at Phase 2.1 after the ADR-091 revisions: 60 / 60 / 60, unchanged and still equal** — the rework extended two bullets inside ADR-091's existing §Maturation Path and minted no new section, so no header count should move, and none did.
 
-**🔴 Sequencing risk accepted, with a compensating check.** The flip is recorded at Phase 1 while the
-14 files have not yet moved, so **this branch is transiently self-contradictory until §D.1 lands**.
-That is tolerable only because the branch is unmerged and merge requires Phase 7. The compensating
-control is mandatory and is written into the amendment record itself: **Phase 5 (@qa) MUST verify the
-conjunction** — ADR-088 reads ACCEPTED **and** the archive returns 0 leak matches. If §D.1 is dropped
-or descoped and the flip survives, `main` ships the exact falsified-status error ADR-088 exists to
-correct. **If @qa cannot run that conjunction, the flip must be reverted rather than trusted.**
+**🔴 Sequencing risk: NOT accepted. REJECTED at Phase 2.1 (S3) — see §D.5.** The Phase-1 draft of
+this section accepted the flip at Phase 1 and offered a Phase-5 conjunction check as the compensating
+control. @security enumerated the reachable states and showed the control sits **downstream of the
+risk it mitigates**: an owner descope **at the Phase 3 gate** — the event that produced ADR-088's own
+deferral record — leaves no control at all, because Phase 5 never runs. The flip and the ADR-037
+index-row edit have been **reverted on this branch** and are specified as Phase-4 work in §D.5,
+required to land in a commit descending from the `v2.19.12-r3` move commit.
 
-**🔴 The flip is only honest if the move lands in the same branch.** ADR-088 §Decision (1) asserts the 14 *are* retrofitted. **Phase 5 (@qa) MUST verify the conjunction:** ADR-088 reads ACCEPTED **and** `git archive HEAD | tar -tf -` returns 0 leak matches. If the move is dropped and the flip survives, `main` carries exactly the falsified-status error ADR-088 was written to correct in ADR-037.
+**The Phase-5 conjunction check is RETAINED as a second control, not the only one.** @qa MUST verify:
+the ADR-088 index cell reads ACCEPTED **and**
+`git archive HEAD | tar -tf - | grep -cE '^docs/(qa-report|security-audit|security-review)-'` returns
+**0**. If @qa cannot run that conjunction, the flip is reverted rather than trusted.
+
 
 ---
 
