@@ -9032,19 +9032,52 @@ them, the ledger script keeps resolving, and no file in the repo silently loses 
 
 **Not guaranteed, and was not before either:**
 
-- **Internal documents at paths outside `^docs/<stem>-` stay in the public archive. [PHASE-2.1 —
-  S5: the class has more than one member, and naming only one under-stated it.]** `.gitattributes`
-  export-ignores `docs/internal/`, `spec.md`, `retro.md` and `patterns.md`; **everything else under
-  `docs/` ships.** The internal-analysis documents shipping at `docs/` root are **every
-  `docs/design-v*.md`** (this cycle adds its own), **`docs/project-audit-v2.6.1.md`**, and
-  **`docs/risk-register.md`**. Membership is enumerable at merge with
-  `git archive HEAD | tar -tf - | /usr/bin/grep -E '^docs/(design-v|project-audit-|risk-register)'`.
-  **This cycle's own `docs/design-v2.19.12.md` ships**, and it contains a NOT-RUN list of the
-  untested areas of the release-hygiene controls and a statement of exactly what `LEAK_PATTERN` is
-  blind to. The cycle withdraws 14 QA/security reports from the public archive while adding, to that
-  same archive, a document that maps where the withdrawal controls are weak. Not fixed here —
-  ADR-037 made design docs public deliberately — but stated, which is the whole obligation of a
-  non-guarantee. Carried as `CF-v2.19.12-D`.
+- **This cycle closes the release-archive surface only. [PHASE-6.1 — S1, the single most important
+  correction to this cycle's own framing.]** The repository is **PUBLIC**
+  (`gh repo view --json isPrivate` → `isPrivate: false`). `.gitattributes:2` states its own scope in
+  so many words: *"Affects only `git archive` (release ZIPs/tarballs), not `git clone` or working
+  tree."* `docs/internal/` is not a confidentiality boundary. Three surfaces, stated explicitly so a
+  reader does not have to infer them:
+
+  | Surface | Covered by this cycle? |
+  |---|---|
+  | Release archive (`git archive`, release ZIPs/tarballs) | **Yes** — this is what AC-4/AC-6/AC-7 gate |
+  | `git clone` (full working tree and history) | **No** — never in scope |
+  | GitHub web UI (github.com file browser) | **No** — never in scope |
+
+  All 84 files under `docs/internal/` (`find docs/internal -type f | wc -l`), including the 14 moved
+  reports and every prior security review, remain fully readable today and after this merge on the
+  latter two surfaces. This cycle's one-line thesis — *"14 internal QA and security reports ship
+  inside every public release archive. Move them behind `docs/internal/`"* — read alone, invites the
+  conclusion that the reports became private. They did not. Recorded per
+  `docs/internal/security/security-audit-v2.19.12.md` S1.
+
+- **Forward-only: already-published releases are unaffected. [PHASE-6.1 — S2.]**
+  `git archive v2.19.11 | tar -tf - | /usr/bin/grep -cE '^docs/(qa-report|security-audit|security-review)-'`
+  → **14**. Every release tag cut before this cycle permanently retains all 14 reports in its
+  archive; nothing about this retrofit is retroactive. This cycle protects only the *next* release
+  onward, never a past one. Recorded per `docs/internal/security/security-audit-v2.19.12.md` S2.
+
+- **Internal-analysis documents ship at `docs/` root by RULE, not by enumeration. [PHASE-2.1 — S5,
+  reopened one level up and closed again at PHASE-6.1 — S5.]** `.gitattributes` export-ignores
+  exactly four things: `docs/internal/` (directory prefix), `docs/spec.md`, `docs/retro.md`,
+  `docs/patterns.md`. **Everything else under `docs/` ships** — no hand-picked list, however
+  carefully drawn, is authoritative on its own; the Phase-2.1 pass named `docs/design-v*.md`,
+  `docs/project-audit-v2.6.1.md` and `docs/risk-register.md` and, in doing so, omitted
+  `docs/assumptions.md` (an assumption register — same class as the named `risk-register.md`),
+  `docs/owner-tasks.md` (the internal owner ledger) and `docs/next-steps.md` (internal Decision
+  Council sequencing) — all three carry the same kind of internal analysis. Verify the rule live,
+  rather than trusting any enumeration:
+  ```
+  git archive HEAD | tar -tf - | /usr/bin/grep -E '^docs/'
+  ```
+  every line that command returns ships; nothing under `docs/internal/` and none of the three named
+  exceptions ever will. **This cycle's own `docs/design-v2.19.12.md` ships**, and it contains a
+  NOT-RUN list of the untested areas of the release-hygiene controls and a statement of exactly what
+  `LEAK_PATTERN` is blind to. The cycle withdraws 14 QA/security reports from the public archive
+  while adding, to that same archive, a document that maps where the withdrawal controls are weak.
+  Not fixed here — ADR-037 made design docs public deliberately — but stated, which is the whole
+  obligation of a non-guarantee. Carried as `CF-v2.19.12-D`.
 - **The dangling citations are acknowledged, not repaired — and NO count is pinned. [PHASE-2.1 —
   S4.]** Phase 2 correctly showed `~56/7` under-states the shipping tree (it was measured before this
   cycle's own design doc existed) and proposed `66/8`. **Writing `66/8` in would re-pin the figure
@@ -9334,8 +9367,29 @@ commands in `docs/design-v2.19.12.md` §E.5 and states the tree-state.
 ## AC-8 — a note acknowledging the dangling citations
 
 An appended forwarding note in `docs/architecture.md` MUST exist and MUST carry the family-glob form
-`docs/{qa-report,security-audit,security-review}-v*.md`, **never an individual filename**
-(control-tested: the glob and the prose form pass AC-7; an individual filename trips it).
+`docs/{qa-report,security-audit,security-review}-v*.md`, **never an individual filename**.
+
+**[PHASE-6.1 — S3 correction.] An individual filename trips AC-7 only outside the permitted set —
+inside a permitted file it does not, and the note MUST NOT claim otherwise.** The Phase-1 form of
+this AC was control-tested against the `--- /dev/null` rule, where `docs/architecture.md` was
+unpermitted and an individual filename there did trip AC-7. The Phase-2.1 S2 remedy replaced that
+rule with the derived-permitted-set form, and `docs/architecture.md` is one of the 9 `PERMIT_ADD`
+entries — a file that ships publicly. @security demonstrated the consequence directly: all 14
+pre-move paths, named individually and appended to `docs/architecture.md` (a permanently permitted,
+publicly-shipping file), on a disposable clone at `a3347d3` —
+```
+ADDED-LINE VIOLATIONS (b): 0
+   (ok+) docs/architecture.md                                   5
+VERDICT: exit 0 CLEAN
+```
+— **exit 0, clean.** The identical payload in a non-permitted file trips it (`docs/faq-extra.md` →
+`VERDICT: exit 1 VIOLATION`). The S2 fix is correct and strictly stronger than the rule it replaced;
+it silently invalidated this neighbouring claim, exactly the *"test each remedy against its
+neighbouring remedies' output"* failure mode named below. The shipped note itself still complies —
+it uses the family-glob form and names no individual file — so nothing here changes what ships;
+only the false claim about the control is corrected. See
+`docs/internal/security/security-audit-v2.19.12.md` S3 for the full differential run, including the
+negative control removing `docs/architecture.md` from `PERMIT_ADD` (which restores the trip).
 
 **No citation count is pinned in this AC, and none may be added. [PHASE-2.1 — S4.]** The "60 across
 8 shipping files" pin was deleted at R4 because it did not reproduce; `59/8` and `56/7` were the next
