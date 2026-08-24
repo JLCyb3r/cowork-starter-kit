@@ -311,11 +311,50 @@ disclosures rather than caught defects).
 
 ### 10. Retrospective Verdict
 
-_(placeholder — filled in next commit)_
+The cycle shipped correctly — CI green, AC-4/AC-6 both closed cleanly, the archive-leak class is
+gated going forward, and every disclosed non-guarantee (public-repo exposure, the six-value citation
+count, `PERMIT_ADD`'s unasserted shape) is stated rather than papered over. But "shipped correctly"
+undersells how much rework it took to get there: eleven Phase-2 findings, four AC-7 design-stage
+defect generations, and — invisible to the formal Phase 5/6 reports because they landed after both —
+a further five findings (F1, F2, S1, S2, S7) inside the R3/R4 remedy rounds themselves. The project's
+own `Check-That-Cannot-Fail` discipline is the reason none of this reached `main`; it is also, by
+its ninth-plus consecutive cycle of firing, no longer a surprising result but an expected cost of
+doing this kind of work correctly. The one genuinely new finding this cycle contributes to the
+project's own self-knowledge is procedural, not technical: a corrective action produced its own next
+defect vector twice in direct sequence (R3→F1/F2, R4→S1/S2/S7), meeting this ledger's 3-instance
+promotion bar on its own pattern for the first time. Overall cycle health: good — the defect rate is
+high but every instance was caught before merge, by the mechanism designed to catch it, and the
+ambiguities that remain (the citation count, the GATTR/PERMITSHAPE gaps, the AC-7-in-CI gap) are all
+named, carried forward, and none of them silently assumed resolved.
 
 ### 11. Addendum — the retro's own guard blocker, and a third Council-side defect it exposed
 
-_(placeholder — filled in next commit)_
+This is the **second** attempt at this Phase 8 retrospective. The first produced the full analysis
+in §0 (defect catalog) and lost all of it at the write step: The-Council orchestrator's session pin
+(`.claude/projects/.session-pin-<pid>`) had been written for a PID that was no longer the live
+`claude` process by the time this retro ran. `scope-check.sh` could not resolve the pin, fell back to
+`registry.json`'s `active_project` (`self`), and gated every write this session attempted against
+**The-Council's own pipeline** rather than `claude-cowork-config`'s — the blocked write correctly
+refused, per this agent's own scope discipline, rather than being tunneled around, but nothing had
+been persisted incrementally, so the entire analysis was lost when the session ended.
+
+**This is a third instance of a known Council-side defect family:** a control meant to bind a cycle
+or session to its correct project, silently not binding, and failing in a direction that looks like
+"blocked, therefore safe" rather than "blocked, therefore the wrong gate fired." The prior two
+instances of this family are the `pre-spawn-check.sh` no-op flagged in earlier retros. This is
+Council-side infrastructure, not a defect in this repository, and is recorded here (§8) rather than
+fixed here, because fixing it is out of this project's scope — it belongs to The-Council's deferred
+`/self-improve` guard bundle.
+
+**The process lesson, independent of the root cause:** an agent that accumulates a large analysis in
+context and defers every write to the end loses everything to a late blocker, no matter how correct
+the analysis was. This retro's second attempt was run under an explicit binding instruction to commit
+early and incrementally instead — a skeleton first (`8b11c80`), then each section as it was written
+and verified (`fb325e9`, `d0b6187`, `d7e8a5c`, and this section's own commit), each pushed to
+`origin/qa/v2.19.12-retro` rather than held in an uncommitted working tree. **Recommend this as
+standing guidance for any agent producing a long analytical artifact under uncertain write
+conditions: commit a skeleton first, fill it in incrementally, and treat "the write succeeded" as
+confirmed only when `git log` shows it, not when the tool call returns.**
 
 ---
 
