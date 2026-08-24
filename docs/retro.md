@@ -6,11 +6,106 @@
 
 ### 0. Errors caught inside the cycle's own remedies, not in the original code
 
-_(placeholder — filled in next commit)_
+This cycle continues the project's now-established shape (v2.7.2 onward, `Check-That-Cannot-Fail`;
+v2.19.10 onward, `The cycle's own mandated corrective action was the next defect vector`): the large
+majority of what got caught was **inside a remedy**, not in the original code, and it was caught by
+**executing** the remedy in the failing direction, not by reading it. Ten defect generations were
+found across the cycle's implementation and re-review rounds (R1-R5); this entry documents the ones
+independently reproducible from the committed tree today, and is explicit about the two that are not
+(R1/R2's intermediate fix commits were squashed into the single merge commit `9a9961f` — the PR
+branch ref (`release/v2.19.12-s4-report-egress`) was deleted per this project's standard PR hygiene,
+so those intermediate diffs cannot be walked with `git log`; the four SHAs this entry does cite
+(`d51dd51`, `a218dfa`, `66403f3`, `08bc3ed`) are dangling objects still resolvable directly by hash,
+independently confirmed this session with `git show -s --format='%H %ci %s' <sha>` against each).
+
+**R3 (`d51dd51`) — two BLOCKERs, both inside the remedy for AC-5/AC-6, neither in the original move.**
+R3 itself is a byte-unchanged `git mv` of 14 files (`14 files changed, 0 insertions(+), 0
+deletions(-)`, confirmed via `git show --stat d51dd51`) — the defects are in the companion fix to
+`scripts/verify-ledger-annotations.sh` (AC-5) that R3's move made necessary, not in the move itself:
+- **F1** — AC-5's shipped GREEN result stayed coupled to whether its `LP-01` live branch-protection
+  probe actually executed, rather than to the ledger-annotation check AC-5 is nominally about. The
+  script's own SKIPPED/FAILED/EXECUTED tri-state for `LP-01` (`scripts/verify-ledger-annotations.sh`,
+  confirmed present this session at the `--no-probes`/no-token/executed branches) means a green AC-5
+  run and a run that silently skipped the live probe are not distinguishable from the exit code alone.
+- **F2** — a `grep -c` vs `grep -Ff` population mismatch produced a **blank-line vacuous pass**: the
+  count of one population was compared against a differently-scoped count of another, and an empty
+  intermediate value satisfied the comparison without the check ever having exercised a real
+  mismatch. This is the same idiom-level defect class the shipped `CF-v2.19.12-PERMITSHAPE` carry-
+  forward independently documents elsewhere in this cycle (`docs/design-v2.19.12.md:947-957`,
+  confirmed this session): `PERMIT_ADD_COUNT="$(printf '%s\n' $PERMIT_ADD | /usr/bin/grep -c . || true)"`
+  is an unquoted expansion piped into a count-of-non-empty-lines — exactly the shape that produces a
+  vacuous pass on an empty or malformed intermediate value, recorded there as **not built this
+  cycle, recording only**.
+
+**R4 (`a218dfa`) — two CRITICALs and one WARNING, all inside the remedy for the ADR-088 flip.**
+- **S1** — F3 and F4 (the two AC-7 diagnostic legs added to close the F1/F2 defects above) mutually
+  defeated each other: each leg's fix, read in isolation, was correct; run together, one leg's
+  correction silently undid the other's precondition.
+- **S2** — AC-7b's bare-filename check had a blind spot: a citation written as a bare filename with
+  no path prefix passed the check the same way a legitimately-out-of-scope reference would, because
+  the check's positive and negative cases were not distinguishable from the string alone.
+- **S7 (WARNING, not CRITICAL — the third and lowest-severity finding of this round)** — R4's fix
+  narrowed the AC-7 match to whitespace differences only, which closed S1/S2 but silently dropped
+  coverage for the non-whitespace cases the original (pre-R4) check still caught.
+
+Both rounds were caught by re-execution against the shipped script in the failing direction, inside
+the same cycle that produced the fix — the discipline `Check-That-Cannot-Fail` (BINDING since
+v2.13.0) and its sibling `The cycle's own mandated corrective action was the next defect vector`
+(WATCH 2/3 entering this cycle) both name. Four agents caught their own negative controls failing
+this cycle (`@security` ×2, `@architect` ×1, `@qa` ×1) — distinct from a *different* agent catching
+another's remedy, this is the harder and rarer case of a reviewer distrusting their own just-written
+fix enough to re-run it looking for the failure mode, and it is the discipline that found nearly
+every real defect this cycle, R3/R4 included.
+
+**The six-value citation-count ambiguity — and the record of it was itself ambiguous about its own
+count.** `docs/spec.md:9082-9090` and `docs/design-v2.19.12.md:673-717` both state, correctly and
+consistently with each other: measured this session in four ways, one quantity produced four
+answers — **66 lines / 8 files** and **66 occurrences** (explicitly marked "(same)" — one quantity in
+two units, not two quantities), **128 lines / 21 files** (working tree, includes export-ignored
+files), and **56/7** (shipping archive before this cycle's own design doc existed). Add the figures
+already in circulation elsewhere — `59/8`, `60/8`, and an independently measured `70` — and one
+English phrase carried **six value-representations** across three units and three tree-states. A
+six-item list circulated during this retro's own drafting — `59/8, 60/8, 66/8, 66, 70, 128/21` — that
+is wrong: it lists `66/8` and `66` as two separate items (the shipped text explicitly marks them as
+the same quantity) and it drops `56/7` entirely. The canonical set, per the shipped text, is `{66/8 ≡
+66 occ, 128/21, 56/7, 59/8, 60/8, 70}`. This is the pattern eating its own tail: `docs/patterns.md`'s
+`Ambiguous-unit numeric claim` row (BINDING since v2.19.11, promoted for exactly this failure shape)
+recurred **in the act of citing an instance of itself**, inside this retrospective's own drafting
+process. It is recorded here rather than silently corrected, per that row's own standing discipline:
+"any numeric claim carried across phases must be re-run against its own stated predicate at the
+point of citation, not restated from the prior phase's prose."
+
+**The public-repo reframing closed one surface, not the exposure.** The repo is PUBLIC
+(`security-audit-v2.19.12.md` S1, confirmed) — the 14 moved reports, and the rest of
+`docs/internal/`, remain fully readable via `git clone` and the GitHub web UI; this cycle closes only
+the **release-archive** surface. Independently counted this session: `find docs/internal -type f | wc
+-l` → **84** files currently readable this way. `CF-v2.19.12-GATTR` (fires only if a future
+`.gitattributes` regression is not caught before release) and `CF-v2.19.12-PERMITSHAPE` (the F2/S2
+diagnostics-only gap above) are both recorded, not built, this cycle — control logic is deliberately
+unchanged (`docs/design-v2.19.12.md:922-957`).
+
+**Rework rate is recomputable despite the branch deletion.** `git diff --shortstat 66403f3 9a9961f`
+→ `5 files changed, 910 insertions(+), 15 deletions(-)`; `git diff --name-only 66403f3 9a9961f` →
+`CHANGELOG.md`, `docs/design-v2.19.12.md`, `docs/internal/qa/qa-report-v2.19.12.md`,
+`docs/internal/security/security-audit-v2.19.12.md`, `docs/spec.md` — zero `.sh`/`.yml` files.
+**Post-Phase-4 code rework = 0%; all growth after R5's version bump is QA/security/doc-correction
+prose**, not implementation churn. See §4.
 
 ### 1. Cycle Summary
 
-_(placeholder — filled in next commit)_
+**"S4 report-egress retrofit"** (merged `9a9961f`, PR #114, SECURITY-SENSITIVE Tier A, single squash
+commit on `main`). 14 internal QA/security reports — shipped inside every public release archive
+since this project began — move behind `docs/internal/`, byte-unchanged (`git mv`, R100), and a new
+CI job (`archive-leak-check` in `.github/workflows/quality.yml`) gates the leak class going forward.
+The cycle ran a Phase 0-8 pipeline with an unusually long re-review tail: five implementation/fix
+rounds (R1-R5) after the initial design, two of which (R3, R4) each introduced new defects inside
+their own remedy before shipping clean, plus a Phase 6.1 post-audit documentation correction
+(`08bc3ed`). Phase 6 audit verdict: **PASS WITH WARNINGS**, CRITICAL 0 / BLOCKER 0 / WARNING 5 / INFO
+3 (`docs/internal/security/security-audit-v2.19.12.md`) — that count is of the **final shipped
+state**; the CRITICAL/BLOCKER findings named in §0 above were raised and closed inside the R3/R4
+re-review rounds themselves and do not appear in that final tally, which is by design (a Findings
+Summary reports what shipped, not the drafting history that produced it) but is worth stating plainly
+here so the 0/0 final count is not misread as "nothing went wrong."
 
 ### 2. Phase Findings Summary
 
