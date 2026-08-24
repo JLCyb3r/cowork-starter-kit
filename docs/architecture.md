@@ -55,7 +55,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-016 (amendment v2.6) | CMP byte-mirror + line-scan parser switch from `skill_bundle:` to `core_skills:` (paired with ADR-034) | ACCEPTED |
 | ADR-035 | Version-Consistency CI Gate (v2.7.2) — `version-consistency-check` job asserts `VERSION` == README badge == first `## [...]` CHANGELOG header; fails-closed on `[Unreleased]`-stranded content and on any missing/malformed signal; CI enforcement companion to ADR-033 release-artifact convention | ACCEPTED |
 | ADR-036 | CHANGELOG Dated-Split Convention (v2.7.2) — `[Unreleased]` accumulator is split into dated `## [x.y.z] - YYYY-MM-DD` sections at release time using the authoritative UTC commit date; line-level content preservation; formalizes the release step of ADR-033 | ACCEPTED |
-| ADR-037 | docs/ Information-Architecture Split + Default-Internal `.gitattributes` Convention (v2.8.0) — `docs/internal/{qa,security,compliance,process,planning}/` holds internal artifacts; the per-file DROP allowlist collapses to a single `docs/internal/ export-ignore` directory rule so a *new* `docs/*.md` file defaults to public-unless-placed-internal (closes D-9 latent-leak class); `spec.md`/`retro.md`/`patterns.md` retained at `docs/` root under Council-tooling exemption; `architecture.md`/`research/`/`project-audit-v2.6.1.md` become public | ACCEPTED — **AMENDED by the ADR-037 amendment record appended at v2.19.10 Phase 1.2 (§Consequences claim falsified by 14 leaked reports; §Maturation Path option (c) checks the wrong direction; `design-v2.19.7.md:82` cited a convention ADR-037 does not contain). That amendment record is IN FORCE — read both.** Note: **ADR-088, which supplies the remedy, is PROPOSED (deferred) as of Phase 1.3** — the corrections stand, the retrofit that closes them has not yet shipped |
+| ADR-037 | docs/ Information-Architecture Split + Default-Internal `.gitattributes` Convention (v2.8.0) — `docs/internal/{qa,security,compliance,process,planning}/` holds internal artifacts; the per-file DROP allowlist collapses to a single `docs/internal/ export-ignore` directory rule so a *new* `docs/*.md` file defaults to public-unless-placed-internal (closes D-9 latent-leak class); `spec.md`/`retro.md`/`patterns.md` retained at `docs/` root under Council-tooling exemption; `architecture.md`/`research/`/`project-audit-v2.6.1.md` become public | ACCEPTED — **AMENDED by the ADR-037 amendment record appended at v2.19.10 Phase 1.2 (§Consequences claim falsified by 14 leaked reports; §Maturation Path option (c) checks the wrong direction; `design-v2.19.7.md:82` cited a convention ADR-037 does not contain). That amendment record is IN FORCE — read both.** Note: **ADR-088, which supplies the remedy, shipped the retrofit in v2.19.12** — the corrections stand, and the 14 internal QA/security reports the amendment record identified are moved behind `docs/internal/{qa,security}/` |
 | ADR-038 | Starter-File Self-Contained Regeneration + CI Drift-Marker Guard (v2.8.0) — the 7 `examples/*/project-instructions-starter.txt` are fully self-contained regenerations of the current v2.7 3-turn interview (NOT thin pointers into `WIZARD.md`), because the paste-only persona has no filesystem access to resolve a pointer; a new additive `quality.yml` step fails the build on any retired-interview marker across all 7 starters (case-insensitive, negative-control-proven) | ACCEPTED |
 | ADR-039 | Canonical Q1 Single-Source Enforcement (v2.8.0) — `WIZARD.md`:44 is the authoritative Q1 opener; `.claude/skills/setup-wizard/SKILL.md` quotes it verbatim and drops its duplicate embedded preset menu (deferring the "not sure" branch to WIZARD.md's Uncertainty Fallback); `CLAUDE.md` retains a compact, meaning-preserving paraphrase (single-source discipline, not budget-forced — 326/400 word headroom confirmed) | ACCEPTED |
 | ADR-040 | Draft-First Routing Presentation (v2.9.0 Dynamic Reclaim) — supersedes the *presentation* aspects of the undocumented v2.7.0 `e2f622d` change: Path A/B/C are presented as equally-first-class *drafts* the user shapes (draft framing + a one-parenthetical `matched: [fixed-vocab token]` reasoning fragment + a three-way close: run / adjust / set aside and go custom), replacing the binary "That sounds like [Preset] — is that right?" verdict; the retired cost-asymmetry tie-break sentence ("a wrong suggestion costs one 'no', while a false Path C costs the whole scaffold") is removed while the tie-break's *routing purpose* is preserved byte-behaviourally; the `≥2` threshold, 16-token `match_signals`, stemming, and the C-v2.4-6/C-v2.4-7 security notes are byte-unchanged | ACCEPTED |
@@ -108,9 +108,10 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-085 | The runtime-string register lives in `CONTRIBUTING.md` — chosen on adjacency to the checklist a contributor editing a `description` already reads, NOT on the "does not ship" argument (Phase 1 verified `CONTRIBUTING.md` is itself `export-ignore`d, `.gitattributes:16`); the rule it carries is a **floor on guarantees, not a style preference** — a rewrite may simplify wording but may never weaken a stated guarantee, and where plain language and a safety clause conflict the clause wins (inline-define the term, never compress the sentence); weakening-by-**addition** is called out explicitly because presence-based checks structurally cannot see it (v2.19.10 AC-PL-4 / AC-PL-7) | ACCEPTED |
 | ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED — **AMENDED by ADR-087; read both** |
 | ADR-087 | **AMENDS ADR-086 §Decision (4).** Two rules minted after Phase 2 found ADR-086's own two remedies were the 4th and 5th instruments this cycle that cannot fail: **(1) fixture-anchor independence** — a fault-injection fixture may never be anchored on content the same cycle mandates changing (AC-PL-6's `sed` quoted `apply/verify/rollback machinery`, the exact description cell AC-PL-1 must rewrite; post-rewrite both fixtures no-op and the gate turns permanently red), remedied by a field-2-anchored positional `awk` verified 29 on BOTH trees plus a mandatory `cmp -s` fixture-validity guard; **(2) scope-matched instruments** — uniqueness determines whether presence-testing is *usable*, scope determines whether an instrument is *sufficient*; a file-wide count froze row 6's announcement while leaving the restriction clause deletable at GREEN, remedied by anchor-scoped extraction asserting BOTH halves (the house pattern at `quality.yml:753-785` the original design failed to cite). Also: occurrences are counted with `grep -oF \| wc -l` not `grep -cF`; an instrument's claim is stated to what it actually fires on (the compound fixture's legs do NOT fire independently — reflow-only is GREEN at 30 and is covered by `wizard-consistency-check` instead) (v2.19.10 Phase-2 amendment, S1/S2) | ACCEPTED |
-| ADR-088 | **AMENDS ADR-037** (owner-directed Phase-1.2 addendum, S4). **14** internal QA/security reports ship in every public release archive; they are retrofitted into `docs/internal/{qa,security}/` via `git mv` (ADR-037's own mechanism, 14 × `R100`), closing an **intermittent** placement lapse (v2.19.4 *is* internal, falsifying §E.9's clean-cutoff account). Three decisions: **(1)** the archive-leak gate is written in the direction the leak travels — **zero `git archive` entries match `^docs/(qa-report\|security-audit\|security-review)-`** — because ADR-037's option (c) (`docs/internal/**` absent from the archive) is *vacuously satisfied by a file never placed internal*; **(2)** `git check-attr` is rejected as unsound — it returns `unspecified` for an excluded and a shipping file alike; only `git archive` proves what ships; **(3)** references are ruled by **differential execution**, not inspection — Class A (a machine resolves it as a path; population **exactly 3**, `verify-ledger-annotations.sh` LA-03a/b/c) is repaired, Class B (historical records, comments, diagnostics, CI step names, fixture headers) is **frozen**, per ADR-037's own precedent of leaving 25 dead paths in `architecture.md` green for 11+ versions. Gate carries a **canary self-test** because a typo'd pattern returns 0 = indistinguishable from GREEN. **Escalates the cycle Tier B → Tier A** (TIER-1: Class A repair necessarily modifies `scripts/`); Guard Change Summary owed. **DEFERRED-TO-RETROFIT-CYCLE at v2.19.10 Phase 1.3** — the owner split the retrofit out at the gate so Tier A is the successor cycle's whole ceremony; nothing here is implemented by v2.19.10. Build-ready handoff: `docs/design-v2.19.10.md` §J | **PROPOSED (deferred at v2.19.10 Phase 1.3 — was ACCEPTED at Phase 1.2; number reserved for the S4 retrofit cycle, cf. ADR-028)** |
+| ADR-088 | **AMENDS ADR-037** (owner-directed Phase-1.2 addendum, S4). **14** internal QA/security reports ship in every public release archive; they are retrofitted into `docs/internal/{qa,security}/` via `git mv` (ADR-037's own mechanism, 14 × `R100`), closing an **intermittent** placement lapse (v2.19.4 *is* internal, falsifying §E.9's clean-cutoff account). Three decisions: **(1)** the archive-leak gate is written in the direction the leak travels — **zero `git archive` entries match `^docs/(qa-report\|security-audit\|security-review)-`** — because ADR-037's option (c) (`docs/internal/**` absent from the archive) is *vacuously satisfied by a file never placed internal*; **(2)** `git check-attr` is rejected as unsound — it returns `unspecified` for an excluded and a shipping file alike; only `git archive` proves what ships; **(3)** references are ruled by **differential execution**, not inspection — Class A (a machine resolves it as a path; population **exactly 3**, `verify-ledger-annotations.sh` LA-03a/b/c) is repaired, Class B (historical records, comments, diagnostics, CI step names, fixture headers) is **frozen**, per ADR-037's own precedent of leaving 25 dead paths in `architecture.md` green for 11+ versions. Gate carries a **canary self-test** because a typo'd pattern returns 0 = indistinguishable from GREEN. **Escalates the cycle Tier B → Tier A** (TIER-1: Class A repair necessarily modifies `scripts/`); Guard Change Summary owed. **DEFERRED-TO-RETROFIT-CYCLE at v2.19.10 Phase 1.3** — the owner split the retrofit out at the gate so Tier A is the successor cycle's whole ceremony; nothing here is implemented by v2.19.10. Build-ready handoff: `docs/design-v2.19.10.md` §J | **ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3, and ACCEPTED at Phase 1.2; number reserved and carried forward, cf. ADR-028). AMENDED by the ADR-088 amendment record appended at v2.19.12 Phase 1 (§Amendment record — ADR-088, below).** |
 | ADR-089 | Release-surface evidence seams fail **loudly and closed**, never silently (v2.19.11 AC-1) — `evidence_tags()` stops discarding `git ls-remote`'s stderr with `2>/dev/null`; it captures stderr in a `mktemp` file (S-A6), reads `rc` explicitly, prints an `::error::` carrying git's own words, and `exit 2` (contract/tool error, the house code at 12 sites) instead of letting `set -euo pipefail` abort the `:218` assignment with a bare, undiagnosable **128**. Three decisions: **(1)** **no caller-side bracket** at `:218` — the `exit 2` inside the function terminates the `$( )` subshell and top-level `set -e` propagates it *as* exit 2 (verified end-to-end); adding a `set +e`/`rc=$?` bracket without rc=2 propagation yields exit **0** and a universal `MISSING-TAG`, manufacturing the very defect Phase 0's amendment falsified. **(2)** **`rc=$?` is reachable inside `$( )` ONLY because bash's `inherit_errexit` is OFF** (`grep -rn 'inherit_errexit\|shopt' scripts/ .github/` → **0** hits) — demonstrated, not asserted: prepending `shopt -s inherit_errexit` to the fixed function restores the silent exit-128 defect exactly. **(3)** **NOT `2>&1` into the captured variable** — git can exit **0** while writing to stderr, and `:286` matches the captured evidence with `grep -qF "refs/tags/v${tok}"` against the whole line, so a merged stream turns a broken-ref diagnostic into a **tag-exists GREEN** (fail-OPEN, demonstrated). Credential-leak assertion is an inspection (`://[^/[:space:]]*@`), never a `sed` redactor. `Reusability: project-specific` | ACCEPTED (v2.19.11) |
 | ADR-090 | **Citations are anchored to headings, written in a backtick-delimited form, and the anchor is CI-enforced by derivation from the citing file** (v2.19.11 AC-2 + AC-3) — the repo-wide convention minted to close the `CONTRIBUTING.md:129` class, where a 33-line insertion silently broke 53 line-pinned citations and 31 green CI jobs saw none of it. Four decisions: **(1)** a citation is `` `<file> § <unique heading text>` ``, and **the backticks are load-bearing, not cosmetic** — they terminate the anchor so the guard's `` [^`]+ `` extraction cannot run greedily to end-of-line (the un-delimited form yielded `N_DISTINCT=5` and red-lined CI on a *correctly executed* de-pin). **(2)** the CI guard **derives** the expected anchor from the citing file and never hardcodes it in the workflow — the hardcoded form lets an author drop a qualifier from one citation while both "zero stale pins" and "heading is unique" stay GREEN and the citation resolves to nothing. **(3)** the guard is an **inline step**, never a file under `scripts/` (TIER-4), and asserts three things: exactly 1 distinct cited anchor, cited exactly `EXPECTED_CITES` times, resolving to exactly 1 heading. **(4)** every pipeline feeding an assertion carries `\|\| true`, because `grep` exits 1 on zero matches and an unguarded assignment under `set -euo pipefail` aborts the step **undiagnosably** — the ADR-089 defect class, found inside this guard's own first draft. Companion: the AC-8b/AC-9b per-row registry gate ships as **one step, one parser copy** (self-test and assertion sharing a single `check_row()`), which owes no `PARSER_COPIES`-style pin and lets the self-test exercise the same code path the assertion runs. `Reusability: candidate-constituent` | ACCEPTED (v2.19.11) |
+| ADR-091 | **The reference-freeze control derives its population by rename-pairing, not pathspec exclusion** (v2.19.12 AC-7) — excluding a rename's *destination* with `:(exclude)` does not hide the pair, it **prevents the pairing**, so every movee renders as a whole-file deletion while the addition half is hidden. Executed against a real simulated end-state tree, the pathspec form returned **35 violations on a completely correct cycle** and was simultaneously **blind** to a citation removal inside `docs/internal/` (diff byte-identical in size with and without it) — both halves of the symmetric difference non-empty, found only when the partition was finally run after four review rounds. Five decisions: **(1)** exclude pairs by `--find-renames=100%` over the whole repo with **no `:(exclude)`** (diff shrinks sharply — magnitude deliberately unpinned, three measurers got three pairs; `docs/internal/**` stays in population); **(2)** partition **statefully**, taking `^-` attribution from `--- SRCX/` and `^+` from `+++ DSTX/` — a control that strips headers then rules on "which file" is not computable, and one that reads both sides off `+++` reports every deletion against `/dev/null`; **(3)** permit additions from a **finite set derived from `CYCLE_VERSION`** (four append-only surfaces, `verify-ledger-annotations.sh`, and the cycle's own `design-v<CV>.md` / `qa-report-v<CV>.md` / `security-review-v<CV>.md` / `security-audit-v<CV>.md`) — **corrected at Phase 2.1 from an earlier `--- /dev/null` form that permitted additions in ANY new file, which passed a public `docs/report-index.md` republishing all 14 pre-move paths**; drift now fails CLOSED and loud instead of open and silent; **(4)** the `verify-ledger-annotations.sh` carve-out is safe **only because AC-5 asserts that file positionally** — the dependency is part of the decision and no leg may be dropped; **(5)** clean → 0 (safety), violation → 1, broken inventory → 3 (diagnosis). Verified both directions: 35 → **0** false violations, and four half-B constructions **all caught** (public index file, removal inside `docs/internal/`, new `tests/fixtures/` file, modified movee); two negative controls fire and all three exit codes were observed. Introduces a real coupling — the control now shares AC-6's dependence on rename detection, so `diff.renameLimit` exhaustion degrades **both** at once. `Reusability: candidate-constituent` | ACCEPTED (v2.19.12) |
 
 ---
 
@@ -14664,3 +14665,290 @@ Appended to the existing trigger list (a)-(d):
   script and structurally cannot see it, so the convention's population grows while its enforced
   population does not. **This is the trigger most likely to fire silently**, and it is the argument
   for option (c) — forbidding non-conforming citation forms in newly added lines — over option (a).
+
+---
+
+## Amendment record — ADR-088 (appended v2.19.12 Phase 1; ADR-088's own text is NOT rewritten)
+
+Recorded per the same append-only house convention ADR-088 itself used to amend ADR-037, and ADR-087
+used to amend ADR-086: the record is left intact and the change is appended.
+
+**Status of ADR-088: FLIPPED — `ACCEPTED (v2.19.12)`.** The index row above now reads
+`ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3, and ACCEPTED at Phase 1.2;
+number reserved and carried forward, cf. ADR-028)`. The flip, together with the ADR-037 index-row
+past-tense correction described in §4 below, lands in this commit — a **descendant of the
+`v2.19.12-r3` move commit** (`d51dd51ba0808d93f20e70d6f0e9b56d6c7bfcd7`, tagged `v2.19.12-r3`), per
+the sequencing this record itself mandated below. House precedent for the flip: **ADR-028**, minted
+`PROPOSED in v2.3.0` and flipped in v2.5.
+
+> **🔴 Why the flip is Phase-4 work and not Phase-1 work — this is a correction of this record's own
+> first draft.** The draft appended at Phase 1 flipped the status immediately and relied on a
+> Phase-5 conjunction check by @qa as its compensating control. @security's Phase-2 review (S3)
+> enumerated the reachable states and found the control sits **downstream of the risk it mitigates**:
+> if the owner descopes the retrofit at the **Phase 3 gate**, Phase 5 never runs and there is no
+> control at all. That is not hypothetical — **it is what happened to this ADR's own ancestor.**
+> ADR-088 was minted ACCEPTED at v2.19.10 Phase 1.2 and the owner moved the retrofit out at the
+> Phase 3 gate; the deferral record in ADR-088's own index cell exists because of that event.
+> A doc-only commit is also independently harvestable: a later cycle taking "just the ADR work"
+> from this branch would inherit a false past-tense claim with no control anywhere in its path.
+> ADR-088 §Decision (1) asserts the 14 reports *are* retrofitted, and **an ADR that diagnoses a
+> falsified status claim must not ship carrying one** (this record's own governing principle).
+
+> **The Phase-5 conjunction check is RETAINED as a second control, not as the only one.**
+> **Phase 5 (@qa) MUST verify the conjunction:** the ADR-088 index cell reads ACCEPTED **and**
+> `git archive HEAD | tar -tf - | grep -cE '^docs/(qa-report|security-audit|security-review)-'`
+> returns **0**. If @qa cannot run that conjunction, the flip must be reverted rather than trusted.
+>
+> **@dev pre-ran the conjunction at Phase 4, on the working tree that became this commit — this
+> does NOT substitute for @qa's own Phase-5 run.** `git archive HEAD | tar -tf - | /usr/bin/grep -cE
+> '^docs/(qa-report|security-audit|security-review)-'` → **0**; index cell reads ACCEPTED (above).
+> Both legs held.
+
+### 1. §Decision (5)'s canary is replaced — single-family → 3-arm
+
+§Decision (5) specifies a canary of one family (`docs/qa-report-v9.9.9.md` → 1 match). **That canary
+passes while missing 9 of the 14 leaking files**, including the ones that make this cycle Tier A: a
+`LEAK_PATTERN` typo'd in only the `security-audit` or `security-review` arm still matches the
+`qa-report` canary and reports healthy.
+
+**Operative form:** `CANARY_PATHS` carries **three** paths, one per family
+(`docs/qa-report-v9.9.9.md docs/security-audit-v9.9.9.md docs/security-review-v9.9.9.md`), with
+`EXPECTED_CANARIES=3` asserted before use and **each arm tested individually**. Reviewed across five
+negative controls: three single-arm typos, an empty canary list, and a `MIN_ENTRIES` breach — each
+RED, each naming the arm it caught. The step also carries `shell: bash`, because
+`for c in $CANARY_PATHS` does not word-split under zsh and a spurious `S4 gate BROKEN` is itself a
+defect trigger.
+
+### 2. The numeric claim is a DELTA, not a hardcoded absolute
+
+§Decision (5) cites *"real archive = 430 entries pre-move, 416 post-move"*. Those absolutes were
+already wrong when written and drift with every commit. Measured at
+`b43fa523f995736af70c483930935aed62b6a42b`: **431** entries pre-move; **418** on the simulated end
+state (431 − 14 movees + 1 new `docs/design-v2.19.12.md`).
+
+**Operative claim, restated:** *the retrofit removes exactly **14** entries matching
+`^docs/(qa-report|security-audit|security-review)-` from the release archive, and the post-move count
+of such entries is **0**.* **No absolute entry count is normative.** The gate interpolates `${COUNT}`
+and pins only `MIN_ENTRIES` as a floor, so no control depends on the absolute — only prose does, and
+prose citing 430/416/417 is superseded by this clause.
+
+### 3. Reconciliation with ADR-090 — one clause, ADR-090's amendment §3 is operative
+
+Where ADR-090 and ADR-088 appear to speak to the same question, **ADR-090's amendment record §3 ("The
+honest statement of ADR-090's coverage") is the operative text**: ADR-090 mints a repo-wide citation
+convention but ships enforcement for **exactly one file-pair**, and **the convention is aspirational
+everywhere except the pair its guard names**.
+
+It follows that ADR-090 imposes **no obligation** on this cycle's 14 movees or their citations.
+**ADR-088 §Decision (2)'s Class A / Class B reference ruling is the in-force reference-freeze rule
+for this retrofit** — Class A (a machine resolves it as a path; population exactly 3) is repaired,
+Class B is frozen. There is no contradiction to resolve, only a scope confusion to close: the two
+ADRs govern disjoint populations. **`CF-v2.19.11-A` (S12) is therefore not a blocker on this flip**;
+it remains deferred on its own terms.
+
+### 4. The ADR-037 index-row note becomes false at merge — corrected in this commit
+
+The ADR-037 index row used to close: *"the retrofit that closes them has not yet shipped."* That was
+**true through Phases 1-3** and became **false the moment this cycle's move landed** (`v2.19.12-r3`,
+`d51dd51ba0808d93f20e70d6f0e9b56d6c7bfcd7`). The correction — rewriting the clause to record that
+the retrofit shipped in v2.19.12 — lands in **this same commit** as the ADR-088 status flip (see
+§Status above), a descendant of `v2.19.12-r3`. The ADR-037 amendment record itself is unchanged and
+remains in force.
+
+`docs/architecture.md` ships in the public release archive, so the ordering here is not
+bookkeeping: claim-early / mitigation-late would put a false past-tense assertion into a shipping
+file for the whole of Phases 1-3.
+
+### 5. Two scope boundaries this retrofit creates — named so no future editor "consolidates" them
+
+**(a) `docs/internal/ export-ignore` becomes the sole `git archive`-surface protection for 71
+internal reports** (up from 57). **AC-4 is structurally blind to the removal of that rule**, because
+`LEAK_PATTERN` is anchored at `^docs/` and matches only the three report stems: on a tree with the
+`.gitattributes` line deleted, AC-4 returns `S4 PASS` and exit 0 **while 71 internal reports ship**.
+`scripts/release-archive-assert.sh` exits 1 on that same archive. Per ADR-079 the two are **not**
+duplicate negative lists — they cover disjoint failure modes, one source of truth
+(`.gitattributes`), two independent observers — so ADR-079's "two copies drift and fail OPEN" hazard
+does not apply. **Do not merge or "consolidate" them: deleting either removes the only check covering
+its case.**
+
+**(b) `LEAK_PATTERN`'s `^docs/` anchor leaves `docs/project-audit-v2.6.1.md` shipping.** It carries
+CRITICAL/HIGH/MEDIUM/LOW findings, names an upstream repository and a permission failure, and is in
+the public archive **today**. It is invisible to AC-4 and AC-7 alike, so `S4 PASS — 0 of 418 archive
+entries match …` is **true and misleading**. **Do NOT widen the pattern:** measured, a 4-stem match
+returns **15**, which breaks AC-6's `R100 == 14` and AC-4's own "14 paths" prose simultaneously.
+Carried forward as `CF-v2.19.12-D`, knowingly out of scope.
+
+### 6. AC-8 forwarding note — the dangling citations acknowledged, not repaired
+
+This retrofit does not rewrite prose references to the 14 moved files (ADR-037's own precedent,
+§Decision (3) above: Class B references are frozen). Any citation elsewhere in this repository of a
+path matching `docs/{qa-report,security-audit,security-review}-v*.md` — the family-glob form, never
+an individual filename — may no longer resolve at that path after this retrofit; the file has moved
+to `docs/internal/{qa,security}/` and is recoverable with `git log --follow`. **No count of affected
+citations is pinned here or anywhere in this cycle's artifacts** — six values across three units and
+three tree-states were measured for that one English phrase this cycle (`docs/design-v2.19.12.md`
+§H item 2), and the design's own contribution to the count changes every time it is edited. A reader
+who wants the number runs the family-glob grep against the tree they care about and states the
+tree-state.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** (a) widen the archive gate from a three-stem regex to a positive
+  allow-list of publishable `docs/` paths, inverting it to default-deny and dissolving boundary (b);
+  (c) fold the `.gitattributes` `export-ignore` assertion into AC-4 so boundary (a)'s blind spot
+  closes without merging the two instruments; (d) promote the gate out of inline YAML into a
+  ShellCheck-scanned script under `scripts/`, accepting the Tier-1 escalation that implies.
+- **Concrete revisit triggers:** a fifteenth report appears at `docs/` root (the pattern's population
+  assumption breaks); `docs/project-audit-v2.6.1.md` is cited in a leak report or customer question;
+  `.gitattributes` is edited by any cycle (boundary (a) is live); a new internal-report family is
+  introduced whose stem is not one of the three; or `scripts/release-archive-assert.sh` and this gate
+  are proposed for consolidation.
+- **Risk knowingly accepted:** the archive gate is a three-stem denylist, so an internal document
+  that is not named `qa-report-*`, `security-audit-*` or `security-review-*` ships unnoticed —
+  **exactly the failure mode `docs/project-audit-v2.6.1.md` demonstrates today**. We accept it this
+  cycle because the alternative (widening) provably breaks three other controls, and because the
+  cycle's guarantee is scoped to the 14 named reports, not to archive hygiene in general.
+
+---
+
+## ADR-091: The reference-freeze control derives its population by rename-pairing, not pathspec exclusion (v2.19.12)
+
+**Status:** ACCEPTED (v2.19.12). **Cycle:** v2.19.12, Phase 1. **Companion:** ADR-088, ADR-090.
+`Reusability: candidate-constituent`
+
+### Context
+
+AC-7 asserts that no file outside the 14 rename pairs gains or loses a line naming any of the 14. It
+expressed "excluding the 14 rename pairs" as two `git diff` pathspec exclusions on the **destination**
+directories (`:(exclude)docs/internal/qa`, `:(exclude)docs/internal/security`).
+
+**Executed at Phase 1 against a full simulated end-state tree built from a real clone at BASE — the
+control returns 35 violations on a completely correct cycle**, and is simultaneously blind to a real
+violation. Four rounds of review, including one round convened specifically to hunt this defect
+class, did not find it, because the partition where the population lives had never been run.
+
+> `POPULATION(invariant)` = every file in the repo, minus the 14 rename pairs.
+> `POPULATION(proxy)` = every file outside the two destination directories, **with the 14 movees
+> present as whole-file deletions**.
+
+Both halves of the symmetric difference are non-empty:
+- **Satisfies invariant, violates proxy:** a correct cycle → **35 false violations** (15 movee
+  self-citations rendered as deletions, 3 + 3 from AC-5's own mandated edit, 14 from this cycle's own
+  design document).
+- **Violates invariant, satisfies proxy:** a citation removal seeded inside
+  `docs/internal/qa/qa-report-v2.19.10.md` is **invisible** — the diff is byte-identical in size
+  with and without it. (The *invariance* is the finding. The absolute line count is deliberately not
+  recorded: three measurers on three tree-states produced three different pairs of magnitudes for
+  this one quantity — `design-v2.19.12.md` §E.5.)
+
+### Decision
+
+**(1) Exclude the rename pairs by rename DETECTION, never by pathspec.** Run
+`git diff --find-renames=100%` over the **whole repository with no `:(exclude)`**. A byte-unchanged
+rename then emits `rename from` / `rename to` and **no content lines at all**, so the pairs drop out
+mechanically — while `docs/internal/**` remains *inside* the population. Excluding a destination path
+does not hide a rename; it **prevents the pairing** and thereby guarantees the deletion half is
+visible while the addition half is hidden. The repaired form's diff is dramatically smaller; the
+magnitude is not pinned here, for the reason in §Context.
+
+**(2) Preserve file attribution through the partition, and take it from the correct side.** A
+control that filters diff headers out and then rules on "which file the line is in" is not
+computable. Track `--- SRCX/` and `+++ DSTX/` statefully, and **attribute `^-` lines from the
+`--- SRCX/` header and `^+` lines from `+++ DSTX/`**. Taking both from `+++` — which the design's
+first draft described — reports every deletion-side violation against `/dev/null` on a
+delete-plus-add pair (a movee modified during the move). Detection and exit code stay correct; the
+**diagnosis** is destroyed, and in this lineage an illegible alarm has repeatedly become the next
+generation's defect. Use the unambiguous `SRCX/` / `DSTX/` prefixes so a content line beginning
+`++ ` cannot be mistaken for a header.
+
+**(3) Permit additions from a FINITE set DERIVED from the cycle's own identity — never from
+"any file this cycle created".** *(Corrected at Phase 2.1. The first draft of this decision permitted
+additions in any file created by the cycle, detected as `--- /dev/null`, reasoning that "no filename
+is hardcoded and none can drift". @security constructed the input that breaks it: a new, **public,
+shipping** `docs/report-index.md` republishing all 14 pre-move paths passes this control, AC-4 and
+AC-6 simultaneously. A rule written to eliminate a hardcoded filename list had replaced a **bounded**
+exception set with an **unbounded** one — the ninth consecutive generation in which a mandated remedy
+was itself the next defect.)*
+
+Additions naming a movee are permitted **only** in: the four append-only surfaces
+(`docs/architecture.md`, `docs/retro.md`, `docs/spec.md`, `CHANGELOG.md`),
+`scripts/verify-ledger-annotations.sh`, and the cycle's own artifacts derived from `CYCLE_VERSION` —
+`docs/design-v${CYCLE_VERSION}.md`, `docs/internal/qa/qa-report-v${CYCLE_VERSION}.md`,
+`docs/internal/security/security-review-v${CYCLE_VERSION}.md`,
+`docs/internal/security/security-audit-v${CYCLE_VERSION}.md`. Removals are permitted only in
+`scripts/verify-ledger-annotations.sh`.
+
+**The drift objection is answered by failing CLOSED, not by widening.** A cycle artifact named
+off-pattern has its additions reported as violations, by name — loud. `--- /dev/null` fails **open**
+and silently. Verified: dropping `docs/design-v${CYCLE_VERSION}.md` from the permitted set turns a
+**correct** cycle red, so the leg can fail.
+
+**A `docs/internal/**` prefix was considered and rejected** in favour of the three exact
+`CYCLE_VERSION`-derived internal paths. `docs/internal/` is kept out of the release archive by
+exactly one `.gitattributes` line, and AC-4 is structurally blind to that line's removal (ADR-088
+amendment §5(a)); a prefix rule would compound the two. Measured cost of the narrower choice: on a
+movee modified during the move, the prefix form catches only the removal half; the exact form
+catches **both**.
+
+**The permitted bucket is printed by filename regardless.** It is what made the `--- /dev/null`
+defect visible, and it costs one line of output. It is diagnostics, not the control — this decision
+deliberately does **not** rest on a human reading a printed warning.
+
+**(4) The carve-out is safe only because of a NEIGHBOURING control, and that dependency is part of
+this decision.** Carving `scripts/verify-ledger-annotations.sh` out of both halves leaves a hole in
+the one file the cycle's script-side correctness rests on. **AC-5's positional assertions (field-2
+anchored, `== 3` new path and `== 0` old path) are what fill it.** If AC-5 is ever dropped or
+weakened, this carve-out silently becomes a blind spot. No leg may be dropped — the same conjunction
+ADR-088's companion AC-6 carries.
+
+**(5) Exit semantics unchanged:** clean → **0** (the safety property that stops
+`if ! control; then echo clean; fi` from converting BROKEN into a pass), violation → **1**, broken
+inventory → **3** (a diagnostic distinction, carrying none of that safety).
+
+### Consequences
+
+Verified in both directions: correct cycle → **exit 0, zero violations** (from 35); every seeded
+violation caught, including the one the pathspec form was structurally blind to. Four half-B
+constructions were run — a new public file republishing the moveset index, a citation removal inside
+`docs/internal/`, a new `tests/fixtures/` file, and a movee modified during the move — and all four
+are RED. Two negative controls fire (`exit 1` from dropping the design doc out of the permitted set
+against a *correct* cycle; `exit 3` from a moveset inventory of 15), so the check can fail and its
+BROKEN leg is not decorative. All three exit codes were observed from distinct inputs.
+
+**`diff.renameLimit` is closed as a hazard for AC-7 (Phase 2).** Under `git -c diff.renameLimit=1`
+the repaired control's diff is byte-identical, with all 14 rename markers present:
+`--find-renames=100%` pairs by exact content hash, not by the O(n²) inexact search the limit bounds.
+The **case-only-rename** half remains untested and unrunnable on a case-insensitive host.
+
+**A new coupling is introduced.** The control now shares AC-6's dependence on rename detection: any
+future failure of rename detection degrades **both** controls at once, AC-6 losing its `R100`
+evidence and AC-7 regaining the spurious deletion lines. `diff.renameLimit` was nominated at Phase 1
+as the most likely realisation of this risk and was **attacked and could not be broken** at Phase 2;
+the coupling itself remains, and case-only renames remain untested.
+
+**Generality.** The failure is not specific to this cycle: *any* control that excludes a rename's
+destination by pathspec and then reasons about the source is measuring a population it did not
+intend. That is why this is minted as an ADR rather than folded into ADR-088.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+- **Future-state options:** (a) raise `diff.renameLimit` explicitly in the control and assert the
+  rename count is exactly 14 before partitioning, converting the silent-degradation mode into a loud
+  one; (b) replace substring matching with whole-path matching to retire the documented false-positive
+  class (`.bak` names, vendored copies, URLs naming another repository); (c) generalise the control
+  into a reusable script under `scripts/` once a second cycle needs a reference-freeze, accepting the
+  Tier-1 escalation.
+- **Concrete revisit triggers:** any cycle that moves more than ~50 files at once (renameLimit
+  territory); the first false positive a reviewer has to dismiss by hand; a second cycle needing a
+  reference freeze; any proposal to re-introduce a `:(exclude)` pathspec into this control; **a
+  cycle whose own artifacts are not named `<kind>-v<CYCLE_VERSION>.md`** (Decision (3)'s derived set
+  stops matching and the correct cycle goes red — loud, but it needs the set updated in the same
+  edit); **any edit to `.gitattributes`' `docs/internal/ export-ignore` line**, which is what makes
+  the three internal permitted paths safe; or **any proposal to re-widen Decision (3) to a prefix or
+  to "any file this cycle created"**.
+- **Risk knowingly accepted:** the control reports **candidates, not violations** — a human must
+  confirm each match refers to this repository's `docs/` copy — and it degrades silently if rename
+  detection fails. We accept both this cycle because the alternative (hand-maintained pathspec
+  enumerations) is the exact form that produced three defect generations, and because AC-6's
+  independent `R100` legs would go red in most renameLimit scenarios. **We additionally accept that
+  Decision (3)'s permitted set is per-cycle and must be re-derived by the next cycle that needs this
+  control** — a maintenance cost taken deliberately in exchange for the exception set being finite
+  and enumerable at review time, which the `--- /dev/null` form was not.

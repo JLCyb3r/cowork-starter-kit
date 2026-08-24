@@ -131,9 +131,9 @@ anchor_records() {
 "LA-02a${US}scripts/verify-vendored-orphans.sh${US}exists${US}-${US}CF-v2.19.5-B closure command (orphan check on disk)" \
 "LA-02b${US}.github/workflows/sync-agency.yml${US}min1${US}exit 1${US}CF-v2.19.5-D closure command (LICENSE branch really exits 1)" \
 "LA-02c${US}.github/workflows/sync-agency.yml${US}min1${US}flagged_files<<${US}CF-v2.19.5-E closure command (heredoc delimiter form present)" \
-"LA-03a${US}docs/security-audit-v2.19.6.md${US}min1${US}S-A3${US}S-A3 recorded in its REAL location (not docs/retro.md, where it occurs 0 times)" \
-"LA-03b${US}docs/security-audit-v2.19.6.md${US}min1${US}S-A9${US}S-A9 recorded in its REAL location" \
-"LA-03c${US}docs/security-audit-v2.19.6.md${US}min1${US}S-A10${US}S-A10 recorded in its REAL location" \
+"LA-03a${US}docs/internal/security/security-audit-v2.19.6.md${US}min1${US}S-A3${US}S-A3 recorded in its REAL location (docs/retro.md cites it in passing 1 time, per v2.19.12 AC-5 measurement; this file is the authoritative record)" \
+"LA-03b${US}docs/internal/security/security-audit-v2.19.6.md${US}min1${US}S-A9${US}S-A9 recorded in its REAL location" \
+"LA-03c${US}docs/internal/security/security-audit-v2.19.6.md${US}min1${US}S-A10${US}S-A10 recorded in its REAL location" \
 "LA-04a${US}CHANGELOG.md${US}eq:1${US}^## \[1\.0\.0\]${US}AC-PUB-10 v1.0.0 anchor (replaces the stale CHANGELOG.md:1038 citation)" \
 "LA-04b${US}CHANGELOG.md${US}eq:1${US}^## \[1\.1\.1\]${US}AC-PUB-10 v1.1.1 anchor (replaces the stale CHANGELOG.md:991 citation)" \
 "LA-04c${US}CHANGELOG.md${US}eq:1${US}^## \[2\.0\.1\]${US}AC-C1 backfilled 2.0.1 section (FORWARD — RED until Phase 4)" \

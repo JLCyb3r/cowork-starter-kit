@@ -9009,3 +9009,444 @@ executing the prescribed thing in the direction that should make it RED:
   *Reason:* the original leg contradicted the AC's own prose and was satisfied by **deleting** the
   phrase the AC requires be re-attributed.
 
+---
+
+# Spec — v2.19.12 "S4 report-egress retrofit"
+
+**Finalized at Phase 1 by @architect, 2026-08-23, onto `release/v2.19.12-s4-report-egress`.**
+**Classification:** SECURITY-SENSITIVE — Tier A. COMPLIANCE-SENSITIVE = NO.
+**BASE (literal):** `b43fa523f995736af70c483930935aed62b6a42b`
+**Design document:** `docs/design-v2.19.12.md`
+
+**One idea:** 14 internal QA and security reports ship inside every public release archive. Move them
+behind `docs/internal/`, and gate the leak in CI so it cannot recur.
+
+Source of the AC text below: the `## FINAL AC SET — v2.19.12 (simplification pass)` section of the
+cycle scratchpad, which supersedes the R1/R2/R3 fold-ins. Carried faithfully, with the corrections
+Phase 1 was explicitly commissioned to derive recorded inline and marked **[PHASE-1 CORRECTION]**.
+
+## The guarantee this cycle ships
+
+The 14 internal reports leave the public release archive, byte-unchanged, nothing else moves with
+them, the ledger script keeps resolving, and no file in the repo silently loses a citation to them.
+
+**Not guaranteed, and was not before either:**
+
+- **This cycle closes the release-archive surface only. [PHASE-6.1 — S1, the single most important
+  correction to this cycle's own framing.]** The repository is **PUBLIC**
+  (`gh repo view --json isPrivate` → `isPrivate: false`). `.gitattributes:2` states its own scope in
+  so many words: *"Affects only `git archive` (release ZIPs/tarballs), not `git clone` or working
+  tree."* `docs/internal/` is not a confidentiality boundary. Three surfaces, stated explicitly so a
+  reader does not have to infer them:
+
+  | Surface | Covered by this cycle? |
+  |---|---|
+  | Release archive (`git archive`, release ZIPs/tarballs) | **Yes** — this is what AC-4/AC-6/AC-7 gate |
+  | `git clone` (full working tree and history) | **No** — never in scope |
+  | GitHub web UI (github.com file browser) | **No** — never in scope |
+
+  All 84 files under `docs/internal/` (`find docs/internal -type f | wc -l`), including the 14 moved
+  reports and every prior security review, remain fully readable today and after this merge on the
+  latter two surfaces. This cycle's one-line thesis — *"14 internal QA and security reports ship
+  inside every public release archive. Move them behind `docs/internal/`"* — read alone, invites the
+  conclusion that the reports became private. They did not. Recorded per
+  `docs/internal/security/security-audit-v2.19.12.md` S1.
+
+- **Forward-only: already-published releases are unaffected. [PHASE-6.1 — S2.]**
+  `git archive v2.19.11 | tar -tf - | /usr/bin/grep -cE '^docs/(qa-report|security-audit|security-review)-'`
+  → **14**. Every release tag cut before this cycle permanently retains all 14 reports in its
+  archive; nothing about this retrofit is retroactive. This cycle protects only the *next* release
+  onward, never a past one. Recorded per `docs/internal/security/security-audit-v2.19.12.md` S2.
+
+- **Internal-analysis documents ship at `docs/` root by RULE, not by enumeration. [PHASE-2.1 — S5,
+  reopened one level up and closed again at PHASE-6.1 — S5.]** `.gitattributes` export-ignores
+  exactly four things: `docs/internal/` (directory prefix), `docs/spec.md`, `docs/retro.md`,
+  `docs/patterns.md`. **Everything else under `docs/` ships** — no hand-picked list, however
+  carefully drawn, is authoritative on its own; the Phase-2.1 pass named `docs/design-v*.md`,
+  `docs/project-audit-v2.6.1.md` and `docs/risk-register.md` and, in doing so, omitted
+  `docs/assumptions.md` (an assumption register — same class as the named `risk-register.md`),
+  `docs/owner-tasks.md` (the internal owner ledger) and `docs/next-steps.md` (internal Decision
+  Council sequencing) — all three carry the same kind of internal analysis. Verify the rule live,
+  rather than trusting any enumeration:
+  ```
+  git archive HEAD | tar -tf - | /usr/bin/grep -E '^docs/'
+  ```
+  every line that command returns ships; nothing under `docs/internal/` and none of the three named
+  exceptions ever will. **This cycle's own `docs/design-v2.19.12.md` ships**, and it contains a
+  NOT-RUN list of the untested areas of the release-hygiene controls and a statement of exactly what
+  `LEAK_PATTERN` is blind to. The cycle withdraws 14 QA/security reports from the public archive
+  while adding, to that same archive, a document that maps where the withdrawal controls are weak.
+  Not fixed here — ADR-037 made design docs public deliberately — but stated, which is the whole
+  obligation of a non-guarantee. Carried as `CF-v2.19.12-D`.
+- **The dangling citations are acknowledged, not repaired — and NO count is pinned. [PHASE-2.1 —
+  S4.]** Phase 2 correctly showed `~56/7` under-states the shipping tree (it was measured before this
+  cycle's own design doc existed) and proposed `66/8`. **Writing `66/8` in would re-pin the figure
+  the simplification pass deliberately removed.** Measured this session, one quantity, four answers:
+  **66 lines / 8 files** (`docs/`-prefixed, shipping archive of the end state), **66 occurrences**
+  (same), **128 lines / 21 files** (working tree at the same commit), **56/7** (shipping archive
+  before this cycle's design doc). With `59/8`, `60/8` and an independently measured `70` already in
+  circulation, one English phrase has carried **six** values across three units and three
+  tree-states — and this Phase-2.1 rework changed `docs/design-v2.19.12.md`'s own contribution
+  again. **The quantity, stated once and unpinned:** *lines naming one of the 14 pre-move
+  `docs/`-prefixed paths, counted in the release archive of the merge commit.* `CF-v2.19.12-E`
+  records it **measured at merge**, which is what this AC set already said.
+- **AC-7 tells you a line is a candidate, not a proven violation** — a human confirms.
+
+## AC-4 — no internal report ships in the release archive
+
+The S4 gate ships inline in `.github/workflows/quality.yml` exactly as composed in the R1 fold-in
+(`LEAK_PATTERN`, 3-arm `CANARY_PATHS`, `EXPECTED_CANARIES=3`, `MIN_ENTRIES=300`, archive scan,
+vacuity guard, leak assertion), **plus `shell: bash`** — `for c in $CANARY_PATHS` does not word-split
+under zsh, and a spurious `S4 gate BROKEN` is the exact trigger that cost this cycle four generations
+of defects.
+
+RED evidence: against the pre-move tree the step MUST exit 1 and enumerate **14** paths. Negative
+controls, each run separately: three single-arm typos, the empty-canary case, and a `MIN_ENTRIES`
+breach — each MUST be RED.
+
+**[PHASE-1 CORRECTION] The GREEN literal is `S4 PASS — 0 of 418 archive entries match …`, not 417.**
+Measured at BASE: 431 archive entries; end state 431 − 14 + 1 (`docs/design-v2.19.12.md`) = **418**;
+leak matches on the simulated end-state tree = **0**. Re-measured independently at Phase 2.1 on a
+correct-cycle tree built from branch tip `84cf3b3`: **418 entries, 0 leak matches** — reproduced.
+**Nothing normative depends on either number** — the step interpolates `${COUNT}` and pins only
+`MIN_ENTRIES` as a floor. `418` is *the archive-entry count of one specific end-state tree*, and any
+commit that adds or removes a shipping file changes it (@security measured **419** on a tree carrying
+one extra public file). **Only the delta — exactly 14 entries removed, 0 remaining — is normative**,
+per the ADR-088 amendment §2. Prose citing 417 is wrong; prose citing 418 as a standing fact is
+citing a tree-state.
+
+**Stated scope boundary, NOT a pattern widening.** `LEAK_PATTERN` is anchored at `^docs/<stem>-` and
+is therefore blind to a report shipping at a root-level path or a sibling subdirectory. **Do NOT
+widen it:** measured, a 4-stem match returns **15**, breaking AC-6's `R100 == 14` and AC-4's own
+"14 paths" prose at once. Record the boundary in the ADR-088 amendment; carry
+`docs/project-audit-v2.6.1.md` forward as knowingly out of scope. **Also correct the step's error
+text** — it currently instructs moving any match into `docs/internal/`, which for a legitimately
+public document removes it from every release.
+
+## AC-5 — evidence the three script paths were repaired
+
+> `POPULATION(invariant)` = the three `LA-03a/b/c` **`AFILE` field values** are the new internal path.
+> `POPULATION(proxy)` = the path appears between the record ID and the next `${US}` delimiter — field 2, positionally.
+
+```bash
+/usr/bin/grep -cE 'LA-03[abc]\$\{US\}docs/internal/security/security-audit-v2\.19\.6\.md\$\{US\}' \
+  scripts/verify-ledger-annotations.sh || true    # MUST be 3
+/usr/bin/grep -cE 'LA-03[abc]\$\{US\}docs/security-audit-v2\.19\.6\.md\$\{US\}' \
+  scripts/verify-ledger-annotations.sh || true    # MUST be 0
+git diff --numstat "$BASE"..HEAD -- scripts/verify-ledger-annotations.sh | cut -f1,2   # MUST be 3<TAB>3
+bash scripts/verify-ledger-annotations.sh --no-probes                                  # MUST exit 0 post-move
+```
+
+All four legs executed at Phase 1 on a real post-move clone: **3**, **0**, **`3	3`**, **rc 0**
+(`PASS — 19 of 19 static anchors resolved`).
+
+**[PHASE-1 CORRECTION 1] The numstat expectation IS `3	3`.** The Phase-0 instruction that it "is no
+longer `3 3`" is wrong: the annotation is **field 5 of the same physical line** as the `AFILE`, so
+correcting it modifies a line the repath already modifies. Re-derived by execution, not assumed.
+**The literal is not the whole requirement** — `3	3` holds only while each record occupies one
+physical line. The binding invariant: *exactly the three LA-03 records change, each stays one
+physical line, and no other line in the file changes.* The positional greps carry the evidence;
+`numstat` corroborates.
+
+**[PHASE-1 CORRECTION 2] Every AC-5 assertion pipeline MUST carry `|| true`.** `/usr/bin/grep -c`
+**exits 1 when the count is 0**, so the "MUST be 0" leg aborts any step under `set -euo pipefail`.
+Observed live at Phase 1. This is the ADR-089 defect class that ADR-090 §Decision (4) names.
+
+**Still owed in the same edit:** LA-03a's annotation claims S-A3 is *"not docs/retro.md, where it
+occurs 0 times."* **False** — measured at BASE with `/usr/bin/grep -c`, `docs/retro.md` matches
+`S-A3`, `S-A9` and `S-A10` **1 / 1 / 1**. Correct the stale annotation in the same edit; a
+good-faith implementer otherwise has a signposted wrong repair target that passes.
+
+`--no-probes` is retained so the exit-0 leg is deterministic offline. It is a corroborating leg, not
+the evidence. LP-01 is a separate population: its failure text means *could not ask*, not *the answer
+was no*.
+
+## AC-6 — exactly the 14 moved, byte-unchanged, and stayed so
+
+`git show --format= --name-status --find-renames=100% <R3-sha>` → **`R100` count == 14** and
+**`A/D/M` count == 0**; plus the cumulative `BASE..<branch-tip>` legs, the `delta == 14` archive
+control, and `leak == 0`.
+
+**🔴 THE CONJUNCTION IS LOAD-BEARING AND NO LEG MAY BE DROPPED.** R4 proved the dangerous half empty
+across three constructions — and the `R100` leg **alone** is a silent pass on the first of them. A
+future simplifier who drops a leg reopens it.
+
+**Two conditions.** The single-commit leg binds on the **`v2.19.12-r3` tag**, never on the squash
+commit (which reports `A/D/M = 4` on a correct cycle — a false BROKEN). And R4's EMPTY verdict is
+three constructions deep, **not proof**: `diff.renameLimit` exhaustion and case-only renames are
+untested and are the first thing to attack if AC-6 is ever doubted.
+
+## AC-7 — no other file gains or loses a line naming the 14
+
+**🔴 [PHASE-1 CORRECTION — the AC as written FAILS on a correct cycle. Executed, 35 false violations.]**
+
+Phase 1 executed the partition logic — the one piece of this set nobody had run — against a full
+simulated end-state tree built from a real clone at BASE. Four defects, all measured; full transcripts
+in `docs/design-v2.19.12.md` §E:
+
+1. **The rename-pair exclusion achieves the opposite of its intent.** `:(exclude)docs/internal/qa`
+   and `:(exclude)docs/internal/security` exclude the **destination** paths, so git cannot pair the
+   renames and each movee renders as a **whole-file deletion** — 15 removed-line violations from
+   movee self-citations alone.
+2. **`scripts/verify-ledger-annotations.sh` trips both halves** (3 removals + 3 additions) on the
+   edit **AC-5 mandates**. The superseded AC-7a excluded this file explicitly; the R4 simplification
+   deleted the exclusion along with the pathspec list.
+3. **`docs/design-v2.19.12.md` trips half (b) 14 times** — a new shipping file the AC set itself
+   depends on, not among the four append-only surfaces.
+4. **The partition is not computable from `$OUT` as constructed** — the pipeline filters out the
+   `+++ DSTX/` headers, discarding the file attribution that "outside the four append-only surfaces"
+   requires.
+
+**Both halves of the symmetric difference are non-empty.** Half A: a correct cycle yields 35 false
+violations. Half B: a genuine citation removal seeded in `docs/internal/qa/qa-report-v2.19.10.md`
+is **invisible** — the diff is byte-identical in size with and without it. Textbook denominator
+drift; it survived R4 because R4 tested the inventory guard and the header filter, and the partition
+is where the population lives.
+
+**Repaired AC-7 (binding). THE CONTROL IS THE SCRIPT BELOW, NOT THIS PROSE.**
+
+**[PHASE-2.1 CORRECTION — S1.]** The Phase-1 form of this AC ended its bash block at the `git diff`
+line and handed the partition to four English bullets. `/usr/bin/grep -c awk docs/design-v2.19.12.md`
+returned **0**: there was no program anywhere in the cycle's artifacts. The partition is where four
+defect generations landed, so a control that every runner re-derives is not a control. The verbatim
+executed script is now the AC. Full transcripts, the A/B that decided the permitted-set rule, and
+the negative controls are in `docs/design-v2.19.12.md` §E.3-§E.5.
+
+**Executor and phase (binding):** **@qa runs it at Phase 5, pre-merge, locally**, over
+`BASE..<branch tip>`, and pastes the stdout — **including the `permitted:` bucket** — into
+`docs/internal/qa/qa-report-v2.19.12.md`. **@dev SHOULD run it before the Phase-4 commit.** It is
+deliberately **not** a CI step this cycle: `git archive "$BASE"` needs BASE's object, and exactly one
+of 34 `actions/checkout` jobs sets `fetch-depth: 0`.
+
+```bash
+#!/usr/bin/env bash
+# AC-7 reference-freeze control - v2.19.12
+# Usage: ac7.sh <repo> <tip-rev>
+set -uo pipefail
+REPO="${1:-.}"; TIP="${2:-HEAD}"
+BASE="b43fa523f995736af70c483930935aed62b6a42b"
+CYCLE_VERSION="2.19.12"
+WORK="$(mktemp -d)"
+MOVESET="$WORK/moveset.list"
+git -C "$REPO" archive "$BASE" > "$WORK/base.tar"
+tar -tf "$WORK/base.tar" | /usr/bin/grep -E '^docs/(qa-report|security-audit|security-review)-' | sed 's#^docs/##' > "$MOVESET"
+N="$(/usr/bin/grep -c '' "$MOVESET" || true)"
+B="$(/usr/bin/grep -c '^[[:space:]]*$' "$MOVESET" || true)"
+if [ "$N" -ne 14 ]; then
+  echo "::error::AC-7 control BROKEN - moveset yields ${N} lines; expected 14."
+  exit 3
+fi
+if [ "$B" -ne 0 ]; then
+  echo "::error::AC-7 control BROKEN - moveset has ${B} blank/whitespace lines; expected 0."
+  exit 3
+fi
+echo "PATTERNS LOADED: $N"
+PERMIT_ADD="CHANGELOG.md docs/architecture.md docs/retro.md docs/spec.md scripts/verify-ledger-annotations.sh docs/design-v${CYCLE_VERSION}.md docs/internal/qa/qa-report-v${CYCLE_VERSION}.md docs/internal/security/security-review-v${CYCLE_VERSION}.md docs/internal/security/security-audit-v${CYCLE_VERSION}.md"
+PERMIT_DEL="scripts/verify-ledger-annotations.sh"
+git -C "$REPO" diff --find-renames=100% --src-prefix=SRCX/ --dst-prefix=DSTX/ "$BASE".."$TIP" > "$WORK/diff.txt"
+awk -v movesetfile="$MOVESET" -v permit_add="$PERMIT_ADD" -v permit_del="$PERMIT_DEL" '
+BEGIN{
+  n=0
+  while((getline ln < movesetfile) > 0) if(ln!="") M[++n]=ln
+  na=split(permit_add,PA," "); for(i=1;i<=na;i++) if(PA[i]!="") OKADD[PA[i]]=1
+  nd=split(permit_del,PD," "); for(i=1;i<=nd;i++) if(PD[i]!="") OKDEL[PD[i]]=1
+  src="?"; dst="?"; newfile=0
+}
+/^--- SRCX\//         { src=substr($0,10); newfile=0; next }
+/^--- \/dev\/null/    { src="/dev/null";   newfile=1; next }
+/^\+\+\+ DSTX\//      { dst=substr($0,10);            next }
+/^\+\+\+ \/dev\/null/ { dst="/dev/null";              next }
+/^[-+]/{
+  hit=0
+  for(i=1;i<=n;i++) if(index($0,M[i])>0){hit=1;break}
+  if(!hit) next
+  if(substr($0,1,1)=="-"){
+    if(src in OKDEL) OKD[src]++; else VD[src]++
+  } else {
+    ok = (dst in OKADD)
+    if(ok) OKA[dst]++; else VA[dst]++
+  }
+}
+END{
+  va=0; vd=0
+  for(f in VD) vd+=VD[f]
+  for(f in VA) va+=VA[f]
+  printf "REMOVED-LINE VIOLATIONS (a): %d\n", vd
+  for(f in VD) printf "   MINUS %-52s %3d\n", f, VD[f]
+  printf "ADDED-LINE VIOLATIONS (b): %d\n", va
+  for(f in VA) printf "   PLUS  %-52s %3d\n", f, VA[f]
+  ta=0; td=0
+  for(f in OKA) ta+=OKA[f]
+  for(f in OKD) td+=OKD[f]
+  printf "permitted: removals %d, additions %d\n", td, ta
+  for(f in OKD) printf "   (ok-) %-52s %3d\n", f, OKD[f]
+  for(f in OKA) printf "   (ok+) %-52s %3d\n", f, OKA[f]
+  if(va+vd>0){ print "VERDICT: exit 1 VIOLATION"; exit 1 }
+  print "VERDICT: exit 0 CLEAN"
+}' "$WORK/diff.txt"
+RC=$?
+rm -rf "$WORK"
+exit $RC
+```
+
+**What the three changes from the Phase-0 form are, and why:**
+
+1. **No `:(exclude)` pathspec — exclude the pairs by rename DETECTION.** A byte-unchanged rename
+   emits `rename from` / `rename to` and **no content lines**, so the 14 pairs drop out mechanically
+   while `docs/internal/**` stays *inside* the population, closing half B. Excluding a destination
+   path does not hide a rename; it **prevents the pairing**.
+2. **Attribution is taken from the correct side (S6).** `^-` lines from the preceding `--- SRCX/`
+   header, `^+` lines from `+++ DSTX/`. Reading both from `+++` reports every deletion-side
+   violation against `/dev/null` on a delete-plus-add pair — detection and exit code stay right, the
+   **diagnosis** is destroyed, and a spurious-BROKEN reading is what cost this cycle four
+   generations. The `SRCX/` / `DSTX/` prefixes are load-bearing: a content line beginning `++ `
+   renders as `+++ ` and would otherwise parse as a header.
+3. **[PHASE-2.1 CORRECTION — S2, BLOCKER.] Additions are permitted from a FINITE set derived from
+   `BASE` + `CYCLE_VERSION`, never from `--- /dev/null`.** The Phase-1 form permitted additions in
+   *any* file created by this cycle, on the reasoning that "no filename is hardcoded and none can
+   drift." @security built the input that breaks it: a new **public, shipping** `docs/report-index.md`
+   listing all 14 pre-move paths returns `(ok+) docs/report-index.md 14` under AC-7,
+   `S4 PASS — 0 of 419` under AC-4 (it does not match `LEAK_PATTERN`), and leaves AC-6's delta at
+   exactly 14 (it lands outside the r3 commit). **All three controls green while the cycle publicly
+   republishes the index of the reports it just withdrew.** A rule written to eliminate a hardcoded
+   filename list had replaced a **bounded** exception set with an **unbounded** one.
+   **Permitted for additions:** the four append-only surfaces (`docs/architecture.md`,
+   `docs/retro.md`, `docs/spec.md`, `CHANGELOG.md`), `scripts/verify-ledger-annotations.sh`, and the
+   cycle's own artifacts `docs/design-v${CYCLE_VERSION}.md`,
+   `docs/internal/qa/qa-report-v${CYCLE_VERSION}.md`,
+   `docs/internal/security/security-review-v${CYCLE_VERSION}.md`,
+   `docs/internal/security/security-audit-v${CYCLE_VERSION}.md`.
+   **Permitted for removals:** `scripts/verify-ledger-annotations.sh` only.
+   **Drift now fails CLOSED and loud** — an off-pattern cycle artifact has its additions printed as
+   violations by name — where `--- /dev/null` failed open and silent. **The permitted bucket is
+   still printed by filename**; that is diagnostics, and the control does not rest on a human
+   reading it.
+
+**Exit semantics:** clean → **0** (the safety property); violation → **1**; broken inventory → **3**
+(diagnosis). AC-4's vacuity guard keeps `exit 1`: its clean path is already 0, so it has no
+fail-open — a consistency question, not a safety one.
+
+**Verified at Phase 2.1, one input in each half of the symmetric difference, plus two negative
+controls.** Half A (correct cycle, built on the real branch tip `84cf3b3` + the 14 `git mv` +
+AC-5's edit + AC-8's note + AC-4's step + a CHANGELOG append) → `(a) 0, (b) 0, exit 0 CLEAN`, with
+`docs/design-v2.19.12.md`'s 14 legitimate additions **permitted, not tripping**. Half B, four
+constructions, **all exit 1**: the public `docs/report-index.md` (`PLUS ... 14`); a citation removal
+inside `docs/internal/qa/qa-report-v2.19.10.md` (`MINUS ... 1` — the case the pathspec form was
+structurally blind to); a new `tests/fixtures/` file citing two pre-move paths (`PLUS ... 2`); and a
+movee modified during the move (`MINUS docs/qa-report-v2.19.6.md 5` **and** `PLUS
+docs/internal/qa/qa-report-v2.19.6.md 5` — double coverage with AC-6, and a real path rather than
+`/dev/null`). Negative controls: dropping `docs/design-v${CYCLE_VERSION}.md` from the permitted set
+turns the **correct** cycle red, and widening the moveset regex to a fourth stem yields `N=15` and
+`exit 3`. All three exit codes observed from distinct inputs.
+
+**🔴 The `scripts/verify-ledger-annotations.sh` carve-out is safe ONLY because AC-5 asserts that
+file's content positionally.** The carve-out is a hole; AC-5's two greps are what fill it. **If AC-5
+is dropped or weakened, this becomes a silent blind spot on the one file the cycle's script-side
+correctness rests on.** No leg may be dropped — same conjunction AC-6 carries.
+
+**Known and accepted: AC-7 false alarms are LOUD, never silent.** It flags a `.bak` filename, a
+vendored copy elsewhere, and a URL naming a file **in a different repository**. **A match is a
+CANDIDATE**; the reviewer confirms it refers to this repo's `docs/` copy.
+
+**[PHASE-1 NOTE — new coupling.] The repaired control now shares AC-6's dependence on rename
+detection.** Phase 2 attacked the nominated realisation of that risk and could not break it: under
+`git -c diff.renameLimit=1` the repaired control's diff is byte-identical with all 14 rename markers
+present, because `--find-renames=100%` pairs by exact content hash rather than the O(n²) inexact
+search the limit bounds. **The coupling remains; case-only renames remain untested** and are not
+runnable on a case-insensitive host.
+
+**[PHASE-2.1 — S7.] No diff-size magnitude is pinned in this AC.** The Phase-1 draft cited
+`3925 → 119` lines. Phase 2 measured `4664 → 858` at the branch base; Phase 2.1 measured
+`4683 → 1388` on a correct-cycle tree, and the "movee-naming lines" sub-quantity as `27 → 15` rather
+than `36 → 0` — because *movee-naming line* and *violating line* are different quantities. Three
+competent measurers, three tree-states, at least two units, one English phrase. That is the
+`Ambiguous-unit numeric claim` pattern (BINDING since v2.19.11). The reproducible claim is the
+**direction and mechanism**, not the magnitude; a verifier who wants a number runs the two `wc -l`
+commands in `docs/design-v2.19.12.md` §E.5 and states the tree-state.
+
+## AC-8 — a note acknowledging the dangling citations
+
+An appended forwarding note in `docs/architecture.md` MUST exist and MUST carry the family-glob form
+`docs/{qa-report,security-audit,security-review}-v*.md`, **never an individual filename**.
+
+**[PHASE-6.1 — S3 correction.] An individual filename trips AC-7 only outside the permitted set —
+inside a permitted file it does not, and the note MUST NOT claim otherwise.** The Phase-1 form of
+this AC was control-tested against the `--- /dev/null` rule, where `docs/architecture.md` was
+unpermitted and an individual filename there did trip AC-7. The Phase-2.1 S2 remedy replaced that
+rule with the derived-permitted-set form, and `docs/architecture.md` is one of the 9 `PERMIT_ADD`
+entries — a file that ships publicly. @security demonstrated the consequence directly: all 14
+pre-move paths, named individually and appended to `docs/architecture.md` (a permanently permitted,
+publicly-shipping file), on a disposable clone at `a3347d3` —
+```
+ADDED-LINE VIOLATIONS (b): 0
+   (ok+) docs/architecture.md                                   5
+VERDICT: exit 0 CLEAN
+```
+— **exit 0, clean.** The identical payload in a non-permitted file trips it (`docs/faq-extra.md` →
+`VERDICT: exit 1 VIOLATION`). The S2 fix is correct and strictly stronger than the rule it replaced;
+it silently invalidated this neighbouring claim, exactly the *"test each remedy against its
+neighbouring remedies' output"* failure mode named below. The shipped note itself still complies —
+it uses the family-glob form and names no individual file — so nothing here changes what ships;
+only the false claim about the control is corrected. See
+`docs/internal/security/security-audit-v2.19.12.md` S3 for the full differential run, including the
+negative control removing `docs/architecture.md` from `PERMIT_ADD` (which restores the trip).
+
+**No citation count is pinned in this AC, and none may be added. [PHASE-2.1 — S4.]** The "60 across
+8 shipping files" pin was deleted at R4 because it did not reproduce; `59/8` and `56/7` were the next
+two answers; Phase 2 measured `66/8` on the post-move shipping tree and Phase 2.1 reproduced that
+figure exactly **and** measured `128/21` for the same phrase on the working tree. Six values, three
+units, three tree-states. **The carry-forward records the count measured at merge, with its unit and
+tree-state named, never a figure inherited from a fold-in.** Confirmed and retained: **0** citations
+are markdown links (`/usr/bin/grep -rnE '\]\([^)]*docs/(qa-report|security-audit|security-review)-v[0-9]'`
+over the shipping tree → zero), so `link-check` stays green, and `docs/architecture.md` **does**
+ship, so the note reaches users.
+
+**Do NOT leave redirect stubs at `docs/` root** — they match `LEAK_PATTERN` and make AC-6's delta 13.
+
+## Sequencing binding on Phase 1 and Phase 4 — the ADR-088 flip
+
+**[PHASE-2.1 — S3.] The ADR-088 status flip and the ADR-037 index-row past-tense correction are
+Phase-4 work, and MUST land in a commit descending from the `v2.19.12-r3` move commit.** They were
+made at Phase 1 and have been **reverted** on this branch; `docs/architecture.md` is now purely
+append-only against `main` (verified: `git diff main -- docs/architecture.md | /usr/bin/grep -c '^-[^-]'`
+→ **0**).
+
+The Phase-1 mitigation was a Phase-5 conjunction check by @qa. Enumerating the reachable states shows
+it sits **downstream of the risk it mitigates**: if the owner descopes the retrofit **at the Phase 3
+gate**, Phase 5 never runs and there is no control at all. **That is exactly what happened to this
+cycle's ancestor** — ADR-088 was minted ACCEPTED at v2.19.10 Phase 1.2 and the owner moved the
+retrofit out at the gate; ADR-088's deferral record exists because of that event, and the v2.19.12
+gate has not yet happened. `docs/architecture.md` **ships in the public release archive**, so between
+Phase 1 and Phase 3 the branch was publishing, in the past tense, that a move which has not happened
+did happen — violating the design's own rule that *an ADR which diagnoses a falsified status claim
+must not ship carrying one*. Doc-only commits are also independently harvestable by a later cycle
+taking "just the ADR work".
+
+**The Phase-5 conjunction check is RETAINED as a second control:** @qa verifies the ADR-088 index
+cell reads ACCEPTED **and** `git archive HEAD | tar -tf - | grep -cE '^docs/(qa-report|security-audit|security-review)-'`
+returns 0. If @qa cannot run it, the flip is reverted rather than trusted.
+
+**Verified safe against AC-7 in both units** — the two lines the Phase-4 commit will *remove* name
+none of the 14: `/usr/bin/grep -c -F -f <14 docs/-prefixed names>` → **0** and
+`/usr/bin/grep -c -F -f <14 bare names>` → **0** (the bare unit is what AC-7 actually matches, and is
+the unit Phase 2 did not test).
+
+## Measurement discipline binding on every later phase
+
+**Name the grep flavour and shell behind any load-bearing count.** In this harness inline `grep` is a
+**ugrep 7.8.4 shim** (a zsh function from the Claude Code shell snapshot); inside `bash <script>.sh`
+it is BSD grep. Probe with `type -a grep`, never `bash -c 'type grep'`. **Every count in this spec and
+in `docs/design-v2.19.12.md` was taken with `/usr/bin/grep` (BSD), invoked by absolute path.** GNU
+grep on `ubuntu-latest` — the flavour CI runs — remains **unmeasured by anyone after five rounds**
+and is ranked first for the first real CI run.
+
+**For each assertion, write `POPULATION(invariant)` and `POPULATION(proxy)` and execute one input in
+each half of the symmetric difference.** RED/GREEN/BROKEN is three points inside the proxy's own
+frame and cannot see a denominator mismatch; four rounds of it missed six defects of one shape, and
+a fifth defect of that shape was found at Phase 1 in AC-7.
+
+**Test each remedy against its neighbouring remedies' output, not only against the defect it was
+written to fix.** Generation 7 was two individually correct fixes where one supplied the exact string
+the other checked for. The AC-5 ↔ AC-7 collision recorded above is the same shape and is invisible to
+any single-AC review.
+
