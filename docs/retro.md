@@ -179,23 +179,135 @@ disclosures rather than caught defects).
 
 ### 5. What Worked
 
-_(placeholder — filled in next commit)_
+- **Re-execution discipline caught everything real.** Every defect in §0 — F1, F2, S1, S2, S7, and
+  all eleven Phase-2 findings — was caught by running the check or the fix in the failing direction
+  against the live shipped artifact, never by reading it and concluding. This is the project's
+  established `Check-That-Cannot-Fail` discipline (BINDING since v2.13.0) holding for its ninth-plus
+  consecutive cycle.
+- **Four agents distrusted their own just-written fixes.** `@security` ×2, `@architect` ×1, `@qa` ×1
+  re-ran their own remedies looking for the failure mode rather than trusting the fix because they
+  wrote it — the harder, rarer form of this discipline, and the one that found nearly every real
+  defect this cycle.
+- **The non-guarantee disclosures held the line the AC set asked for.** AC-8's six-value ambiguity
+  and the S1 public-repo-exposure disclosure were both stated plainly rather than papered over with
+  a false precision — exactly the "state it, don't fake it" bar `Ambiguous-unit numeric claim`'s
+  standing discipline sets.
+- **Carry-forwards were recorded rather than silently deferred.** `CF-v2.19.12-A/B/D/E/GATTR/
+  PERMITSHAPE` all have a durable, shipped, machine-locatable home (`docs/design-v2.19.12.md`), not
+  a chat-only mention — the exact bar `qa-report-v2.19.12.md` Task 5 verified.
 
 ### 6. What Didn't
 
-_(placeholder — filled in next commit)_
+- **The formal Phase 5/6 gates predated part of what shipped.** As flagged in §2, R3
+  (`17:03:53`), R4 (`17:07:56`), and R5 (`17:09:36`) all postdate the Phase 5 report (`15:30:00Z`)
+  and Phase 6 report (`16:05:00Z`). The F1/F2/S1/S2/S7 defect-and-remedy chain in §0 was therefore
+  never covered by either formal report — it was caught by an ad-hoc re-review that has no
+  standalone committed artifact of its own. A retro reconstructing this cycle from `docs/internal/`
+  alone would not see it.
+- **AC-7's control has never executed under GNU grep** (`security-audit-v2.19.12.md`: "AC-7's GNU
+  gap remains open — it has still never executed under GNU grep, by design (it is not a CI step)").
+  Compensated by manual re-verification at Phase 5, not closed.
+- **`CF-v2.19.12-PERMITSHAPE` ships as a known, unasserted gap** — the exact `grep -c .` /
+  unquoted-expansion idiom that produced F2 inside R3's fix is *also* present, unrepaired, in the
+  shipped `PERMIT_ADD_COUNT` check, recorded rather than fixed this cycle.
+- **The six-value citation-count ambiguity recurred inside this retro's own drafting** — see §0. The
+  `Ambiguous-unit numeric claim` row is BINDING and its standing discipline still did not prevent a
+  wrong six-item list from circulating during this cycle's own retrospective process, before this
+  pass caught and corrected it against the shipped text.
+- **A Council-side infrastructure defect stranded this retro's first attempt.** The orchestrator's
+  session pin was written for a PID that was no longer the live process by the time this retro ran;
+  `scope-check.sh` fell back to the registry's `active_project` (`self`) and gated every write
+  against The-Council's own pipeline instead of this project's. The first Phase 8 pass produced a
+  full analysis and lost all of it when the blocked write could not be tunneled around. See §11.
 
 ### 7. Pattern candidate — checked against `docs/patterns.md`, not asserted
 
-_(placeholder — filled in next commit)_
+- **`Check-That-Cannot-Fail`** (BINDING since v2.13.0) — append-only evidence added: F1/F2 (R3) and
+  S1/S2/S7 (R4) are new instances of the same discipline, each caught by executing the fix in the
+  failing direction. Not a new row; strengthens the existing one.
+- **`Ambiguous-unit numeric claim`** (BINDING since v2.19.11) — append-only evidence added: the
+  six-value citation-count ambiguity (§0) is a fourth-or-later instance, and — notably — the row's
+  own standing discipline was violated and then self-corrected *inside this retro's drafting*, not
+  only inside a prior cycle's shipped artifact. Worth citing precisely because it demonstrates the
+  discipline applies to the ledger's own process, not only to cycle content.
+- **`The cycle's own mandated corrective action was the next defect vector`** (WATCH 2/3 entering
+  this cycle, v2.19.10 1st instance, v2.19.11 2nd instance per `docs/patterns.md:58`) — **this cycle
+  is the 3rd instance.** R3's companion fix for AC-5/AC-6 produced F1/F2; R4's fix for those produced
+  S1/S2/S7 — a corrective action becoming its own next defect vector, twice in sequence, inside one
+  cycle. **Criterion for promotion is met. Recommend: PROMOTE TO BINDING.**
+- **NEW — WATCH 1/3, three candidates, not yet promotable (this is their 1st instance each):**
+  - *Denominator drift* — F2's `grep -c` vs `grep -Ff` mismatch and S2's AC-7b bare-filename blind
+    spot both stem from comparing two differently-scoped counts without pinning what each side
+    actually counts, the same root mechanism `docs/patterns.md`'s existing rows describe for other
+    surfaces but not yet named as its own row.
+  - *Neighbouring-remedy blindness* — a fix scoped correctly to its own AC still broke a
+    precondition a **different**, adjacent AC's remedy depended on (S1: F3/F4 mutual defeat). Not
+    the same shape as "the fix broke itself" (`Check-That-Cannot-Fail`) or "the fix broke its own
+    later self" (`the cycle's own mandated corrective action...`) — this is one remedy breaking a
+    *sibling* remedy.
+  - *Inherited-unread ledger* — the wrong six-value list that circulated in this retro's own
+    drafting process (§0, §6) was inherited from an earlier framing and restated without being
+    checked against the shipped text it claimed to summarize, until this pass re-read the source.
+- **NEW — WATCH 2/3:** *"The control goes RED on the cycle's own mandated work"* — distinct from the
+  three above: this names the specific recurring shape where a negative-control or CI gate correctly
+  fires red, and the thing it fires on is the AC the *same cycle* mandated (S1/AC-7 permitting
+  additions in a file the cycle's own AC-8 requires disclosing; AC-4's `.gitattributes`-blindness
+  firing on the exact class the cycle's own move created). 1st instance recorded here for this
+  project; needs 2 more before WATCH 2/3 → BINDING consideration, per the ledger's existing
+  3-instance convention. (Distinguishing this from the four rows above: those are about a *fix*
+  becoming a defect vector; this is about a *correct, unmodified control* firing on new material the
+  cycle itself introduced — a different mechanism, not a restatement.)
+- **Declined to split:** the self-catch of the six-value list inside this retro's own drafting (§0)
+  is `Check-That-Cannot-Fail`'s and `Ambiguous-unit numeric claim`'s textbook success case — the
+  discipline caught its own violation before it shipped. Splitting this into its own row would
+  demote the discipline that worked (by implying the existing rows don't already cover
+  self-application) rather than reward it. Recorded as reasoning, not just outcome, per this
+  cycle's own explicit instruction to preserve the *why*, not only the *what*.
 
 ### 8. Carry-forwards for the next cycle
 
-_(placeholder — filled in next commit)_
+- **`CF-v2.19.12-A`** — `.github/CODEOWNERS` `docs/security/` row is inert; the move does not bring
+  the reports under owner routing.
+- **`CF-v2.19.12-B`** — re-scope `CF-v2.19.11-A` from a post-merge measurement.
+- **`CF-v2.19.12-D`** — `docs/project-audit-v2.6.1.md` knowingly out of scope for this cycle's
+  archive-leak controls.
+- **`CF-v2.19.12-E`** — the dangling-citation count is recorded as *measured at merge*, never
+  inherited or restated from a prior phase — this is the operative fix for the six-value ambiguity
+  in §0, going forward.
+- **`CF-v2.19.12-GATTR`** — `.gitattributes` regression detection runs at publish/release time only,
+  never at PR time; a ~3-line remedy is specified but not built (`docs/design-v2.19.12.md:922-943`).
+- **`CF-v2.19.12-PERMITSHAPE`** — `PERMIT_ADD`'s shape has no machine assertion; a ~4-line remedy is
+  specified but not built (`docs/design-v2.19.12.md:947-957`). Also the site of the exact idiom that
+  produced F2 — fixing this closes both the disclosed gap and the demonstrated defect class.
+- **AC-7-in-CI gap** — AC-7's control has never executed under GNU grep and is not a CI step; stays
+  compensated by manual Phase 5 re-verification, not closed.
+- **Open process question (new, this retro)** — why did R3/R4/R5 land chronologically after the
+  Phase 5 and Phase 6 reports that were nominally gating them? Nothing in the committed record
+  answers this; recommend the next cycle's Phase 0 either explain the ordering or tighten the
+  convention so a Phase 5/6 report's timestamp always postdates every commit it covers.
+- **Council-side (third instance of this defect family)** — the orchestrator's session pin can go
+  stale mid-cycle when the live process PID changes, silently falling back to the registry's
+  `active_project` and gating every subagent write against the wrong project's pipeline. Same
+  family as the `pre-spawn-check.sh` no-op this project's own retros have flagged before: a control
+  meant to bind a cycle to its project, silently not binding. This is Council-side infrastructure,
+  not a `claude-cowork-config` defect — belongs to The-Council's deferred `/self-improve` guard
+  bundle, which now holds three defects of this family.
 
 ### 9. Next-cycle recommendation
 
-_(placeholder — filled in next commit)_
+1. Build `CF-v2.19.12-GATTR` and `CF-v2.19.12-PERMITSHAPE` — both are fully specified, both are
+   small (~3-4 lines each), and PERMITSHAPE closes a demonstrated defect class, not just a
+   disclosed gap.
+2. Promote `The cycle's own mandated corrective action was the next defect vector` to BINDING in
+   `docs/patterns.md` (criterion met, §7) and adopt its standing discipline explicitly: for any AC
+   whose remedy is itself a fix to a companion script (not just a prose edit), the reviewer must
+   re-run that companion script in the failing direction before trusting the remedy's own green.
+3. Resolve the open process question in §8 — either the R3-R5-after-Phase-6 ordering is intentional
+   (state why in the next Phase 1 record) or the convention should require every Phase 5/6 report to
+   be re-dated (or re-issued) once the commits it covers are actually final.
+4. Do not let `CF-v2.19.12-E`'s discipline lapse: the next citation of the dangling-citation count,
+   anywhere, must be measured fresh against the shipping archive at that point, never restated from
+   this entry or from `docs/spec.md`.
 
 ### 10. Retrospective Verdict
 
