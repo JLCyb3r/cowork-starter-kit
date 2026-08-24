@@ -126,6 +126,30 @@ ad-hoc re-review after the last formal gate, not by either gate itself. Nothing 
 committed record explains why R3-R5 landed after Phase 6 rather than before it; this is recorded as
 an open process question in §8, not resolved here.
 
+**RETRACTED (added at coordinator review, before merge):** the process note above is wrong, and the
+error is instructive enough to keep rather than delete. `2026-08-23T15:30:00Z` and
+`2026-08-23T16:05:00Z` are the hand-authored `## Date:` narrative headers inside
+`qa-report-v2.19.12.md` and `security-audit-v2.19.12.md`; `17:03:53`/`17:07:56`/`17:09:36` are `git
+show --format=%ci` commit timestamps in the committer's local zone, `+02:00`. Comparing a UTC value
+against a `+02:00` value without converting either one is exactly this project's own **BINDING**
+`Ambiguous-unit numeric claim` failure shape: two units, one comparison, a false conclusion. Measured
+in one unit (UTC, `git show --format=%aI`, converted): `66403f3` (R5) `15:09:36Z` → `a3347d3` (Phase
+5 commit) `15:27:54Z` → `179a0dd` (Phase 6 commit) `15:46:47Z` → `08bc3ed` (Phase 6.1) `15:58:49Z`.
+Strictly increasing. Full Phase-4 sequence, same unit: R1 `14:59:26Z` → R1-evidence `15:02:09Z` → R2
+`15:03:31Z` → R3 (`d51dd51`) `15:03:53Z` → R4 (`a218dfa`) `15:07:56Z` → R5 `15:09:36Z`. **Every gate
+reviewed exactly what existed at the time it signed off; there was never a timing anomaly.** The §0
+defect catalog (F1/F2/S1/S2/S7) is unaffected by this retraction — those were genuinely caught by a
+re-review pass with no standalone committed artifact, which is a true and separate observation from
+the false timing-gap claim retracted here. **A contributing cause, not solely this retro's error:**
+the report headers this comparison used are hand-authored narrative timestamps — Z-suffixed per the
+house timestamp convention, which makes them read as measured and authoritative — but they were
+never cross-checked against the git commit timestamps of the work they describe at authoring time.
+A hand-typed value carrying the correct format is not the same as a measured one; the format
+compliance is what let the unit-mixing error stand unnoticed through drafting and into this branch's
+earlier commits. See §8 (carry-forward removed, replaced with this retraction) and
+`docs/patterns.md`'s `Ambiguous-unit numeric claim` row for the third self-referential instance this
+produces.
+
 ### 3. AC Difficulty Assessment
 
 - **AC-6 (move the 14 reports, byte-unchanged)** — Easy. `git mv` only, 0 insertions/deletions,
@@ -204,6 +228,14 @@ disclosures rather than caught defects).
   never covered by either formal report — it was caught by an ad-hoc re-review that has no
   standalone committed artifact of its own. A retro reconstructing this cycle from `docs/internal/`
   alone would not see it.
+  **RETRACTED (added at coordinator review, before merge) — see §2 for the full correction.** The
+  bullet above compares a UTC report-header value against `+02:00` commit timestamps without
+  converting either to a common unit. Measured correctly, all UTC: `a3347d3` (Phase 5 commit)
+  `15:27:54Z`, `179a0dd` (Phase 6 commit) `15:46:47Z`, both strictly after R5 (`66403f3`,
+  `15:09:36Z`). **There was never a timing anomaly; every gate reviewed exactly what existed.** What
+  remains true and is **not** retracted: the F1/F2/S1/S2/S7 defect-and-remedy chain was caught by an
+  ad-hoc re-review pass with no standalone committed artifact of its own — that observation does not
+  depend on the retracted timing claim and stands on its own evidence (§0).
 - **AC-7's control has never executed under GNU grep** (`security-audit-v2.19.12.md`: "AC-7's GNU
   gap remains open — it has still never executed under GNU grep, by design (it is not a CI step)").
   Compensated by manual re-verification at Phase 5, not closed.
