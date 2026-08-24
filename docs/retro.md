@@ -2,6 +2,58 @@
 
 ---
 
+## [v2.19.12] - 2026-08-23 — "S4 report-egress retrofit"
+
+### 0. Errors caught inside the cycle's own remedies, not in the original code
+
+_(placeholder — filled in next commit)_
+
+### 1. Cycle Summary
+
+_(placeholder — filled in next commit)_
+
+### 2. Phase Findings Summary
+
+_(placeholder — filled in next commit)_
+
+### 3. AC Difficulty Assessment
+
+_(placeholder — filled in next commit)_
+
+### 4. Metrics
+
+_(placeholder — filled in next commit)_
+
+### 5. What Worked
+
+_(placeholder — filled in next commit)_
+
+### 6. What Didn't
+
+_(placeholder — filled in next commit)_
+
+### 7. Pattern candidate — checked against `docs/patterns.md`, not asserted
+
+_(placeholder — filled in next commit)_
+
+### 8. Carry-forwards for the next cycle
+
+_(placeholder — filled in next commit)_
+
+### 9. Next-cycle recommendation
+
+_(placeholder — filled in next commit)_
+
+### 10. Retrospective Verdict
+
+_(placeholder — filled in next commit)_
+
+### 11. Addendum — the retro's own guard blocker, and a third Council-side defect it exposed
+
+_(placeholder — filled in next commit)_
+
+---
+
 ## [v2.19.11] - 2026-08-22 — "Pay the Tier-A debt"
 
 **Eight fixes to the release-surface evidence path, a stale-citation class, and two registry rows the
