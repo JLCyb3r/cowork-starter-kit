@@ -109,15 +109,73 @@ here so the 0/0 final count is not misread as "nothing went wrong."
 
 ### 2. Phase Findings Summary
 
-_(placeholder — filled in next commit)_
+| Phase | Agent | Findings Count | Severity Breakdown | Committed record |
+|---|---|---|---|---|
+| 2 (Review) | @security | 11 | 2 CRITICAL/BLOCKER (S1, S2), 5 WARNING (S3-S7), 4 INFO (S8-S11) | `security-review-v2.19.12.md` |
+| 2.1 (rework) | @architect | 8 closed | (of the 11 above: S1,S2,S3,S4,S5,S6,S7,S11) | `design-v2.19.12.md` §A header record |
+| 5 (Testing) | @qa | 0 | 0 BLOCKER; 1 accepted-risk observation (permitted-bucket shape, no machine assertion) | `qa-report-v2.19.12.md`, Verdict: APPROVED |
+| 6 (Audit, final) | @security | 8 | 0 CRITICAL, 0 BLOCKER, 5 WARNING (S1-S5), 3 INFO (S6-S8) | `security-audit-v2.19.12.md`, Status: PASS WITH WARNINGS |
+| R3/R4 re-review (post-Phase-6, pre-Phase-6.1) | @qa / @security (re-review pass) | 5 | 2 BLOCKER (F1, F2 — R3), 2 CRITICAL (S1, S2 — R4), 1 WARNING (S7 — R4) | not committed as a standalone report — see §0 and the process note below |
+| 6.1 (post-audit doc correction) | @dev | — | doc-only, no severity | `08bc3ed`, "CHANGELOG scope note for v2.19.12 (S1)" |
+
+**Process note, worth flagging on its own:** the Phase 5 report is dated `2026-08-23T15:30:00Z` and
+the Phase 6 report `2026-08-23T16:05:00Z`; the R3 (`17:03:53`), R4 (`17:07:56`), and R5 (`17:09:36`)
+implementation commits all postdate both. The formal Phase 5/6 sign-offs therefore predate part of
+what actually shipped in `9a9961f` — the R3/R4 defect-and-remedy chain in §0 was caught by an
+ad-hoc re-review after the last formal gate, not by either gate itself. Nothing in this cycle's
+committed record explains why R3-R5 landed after Phase 6 rather than before it; this is recorded as
+an open process question in §8, not resolved here.
 
 ### 3. AC Difficulty Assessment
 
-_(placeholder — filled in next commit)_
+- **AC-6 (move the 14 reports, byte-unchanged)** — Easy. `git mv` only, 0 insertions/deletions,
+  confirmed via `git show --stat d51dd51`.
+- **AC-4 (CI gate blocks the archive-leak class)** — Hard. Four defect generations before the
+  shipped `shell: bash` + `LEAK_PATTERN` + 3-arm `CANARY_PATHS` form closed cleanly (per
+  `security-audit-v2.19.12.md` Task 1: "the zsh word-split defect that cost this cycle four defect
+  generations cannot recur").
+- **AC-7 (dangling-citation partition, both halves of the symmetric difference)** — Hard. Four
+  defect generations at the design stage alone (`docs/design-v2.19.12.md` §E, D1-D4), then two more
+  (F1/F2) inside the R3 companion fix, then two more (S1/S2) inside the R4 remedy for those. This AC
+  is the single largest source of rework in the cycle.
+- **AC-5 (ledger-annotation verification, `LP-01` branch-protection probe)** — Hard. F1 above; the
+  GREEN/SKIPPED coupling was not caught until the R3 re-review.
+- **AC-8 (dangling-citation count, non-guarantee disclosure)** — Not-Verified as a fixed number by
+  design: the AC set deliberately does not pin a count (§0, six-value ambiguity) — difficulty is
+  not applicable in the usual sense; the AC's actual bar (disclose the ambiguity rather than pin a
+  stale figure) was met.
+- **ADR-088/ADR-037 (status flip + index-row correction)** — Medium. Correctly sequenced (flip
+  commit `a218dfa` confirmed descendant of move commit `d51dd51`, `qa-report-v2.19.12.md:151`), but
+  the flip itself (R4) was the vector for S1/S2 above.
 
 ### 4. Metrics
 
-_(placeholder — filled in next commit)_
+**Rework rate (post-Phase-4/R5 close to merge):** `git diff --shortstat 66403f3 9a9961f` → 5 files,
+910 insertions(+), 15 deletions(-). `git diff --name-only 66403f3 9a9961f | grep -cE '\.sh$|\.yml$'`
+→ **0**. **Code rework = 0%**; all 910/15 lines are in `CHANGELOG.md`, `docs/design-v2.19.12.md`,
+`docs/internal/qa/qa-report-v2.19.12.md`, `docs/internal/security/security-audit-v2.19.12.md`, and
+`docs/spec.md` — QA/security/doc-correction prose, not implementation churn.
+
+**Phase durations:** NOT MEASURED for Phases 0-4 — no per-phase-boundary timestamp is committed to
+this repo prior to the Phase 5 report (this project does not maintain a `pipeline.md` phase log;
+timestamps come from each report's own `## Date:` header and commit timestamps). What is measurable
+from committed timestamps: Phase 5 report `15:30:00Z` → Phase 6 report `16:05:00Z` (35 min) → R3
+`17:03:53` (58 min) → R4 `17:07:56` (4 min) → R5 `17:09:36` (2 min) → Phase 6.1 doc note `17:58:49`
+(49 min) → merge `9a9961f` next day `05:19:41` (≈7h21m gap, almost certainly PR-review/merge wait
+time rather than agent work, and overlapping with this retro's own first, blocked attempt).
+**BASE → merge, full cycle wall-clock span:** `b43fa523` (`2026-08-22 14:19:57`, the v2.19.11 retro
+merge) → `9a9961f` (`2026-08-24 05:19:41`) = **≈39 hours**, of which the densely-committed working
+window (Phase 5 through Phase 6.1) spans **≈2.5 hours** on 2026-08-23.
+
+**Token cost:** NOT MEASURED — this project does not write a `metrics.json` token ledger; that
+instrumentation lives in The-Council's own project state, not in a per-target-repo file, and this
+repo has none.
+
+**Issues prevented (`qa_issues_prevented`, this retro's own count of what the pipeline caught that
+would otherwise have shipped):** blocker = 4 (AC-7 F1/F2 at R3, S1/S2 at R4), warning = 1 (S7 at
+R4), plus the 2 CRITICAL/BLOCKER + 5 WARNING closed at Phase 2.1. Total across the full cycle:
+**blocker = 6, warning = 6, info = 4** (excluding Phase 6's final-state INFO items, which are
+disclosures rather than caught defects).
 
 ### 5. What Worked
 
