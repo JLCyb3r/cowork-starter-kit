@@ -317,6 +317,11 @@ disclosures rather than caught defects).
   Phase 5 and Phase 6 reports that were nominally gating them? Nothing in the committed record
   answers this; recommend the next cycle's Phase 0 either explain the ordering or tighten the
   convention so a Phase 5/6 report's timestamp always postdates every commit it covers.
+  **RETRACTED (added at coordinator review, before merge) — not a carry-forward.** This was a
+  UTC-vs-`+02:00` unit-mixing error (see §2 for the full correction and measured-in-one-unit
+  sequence). The gates are strictly ordered after every commit they cover; there is no ordering
+  question to hand to the next cycle. Left in place above rather than deleted so the record shows
+  the finding was made and then withdrawn, not silently dropped.
 - **Council-side (third instance of this defect family)** — the orchestrator's session pin can go
   stale mid-cycle when the live process PID changes, silently falling back to the registry's
   `active_project` and gating every subagent write against the wrong project's pipeline. Same
