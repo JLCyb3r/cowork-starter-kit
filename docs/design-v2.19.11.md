@@ -1103,10 +1103,17 @@ RED-d — awk range endpoint renamed (vacuity):
 matches.`"*, **claiming the vacuity guard fires on this fixture. It does not.** Re-run against the
 real file at this file's own cited base, both the END-anchor-renamed and the START-anchor-renamed
 `awk` variants: renaming the END anchor does not make the range match nothing — it makes the range
-match **everything from the START anchor to EOF** (measured: 886 lines), because `awk` range
-matching stays "inside" the range once opened until its end pattern is found, and an end pattern
-that never matches never closes it. `886` is not `< 3`, so **leg 1's vacuity guard passes through
-undetected**, and the RED this fixture actually produces comes from **leg 2** — the unterminated
+match **everything from the START anchor to EOF** — because `awk` range matching stays "inside"
+the range once opened until its end pattern is found, and an end pattern that never matches never
+closes it. Re-measured at `BASE` (`b7b844716aa3146f212907ee381a49256aa1fd13`, the same SHA §I.3
+pins) with `/usr/bin/awk` (BSD awk 20200816) and `/usr/bin/wc -l`/`/usr/bin/grep`: the range's own
+extent — START line through true EOF, inclusive, blank lines included — is **1242 raw lines**.
+That is not the number leg 1 tests, though, and this is a definitional gap, not a transcription
+error: the control's `LINES` variable (H.3's script, `:1044`) pipes the range through `grep -c .`
+first, which drops the range's 356 blank lines, leaving **`LINES=886`** — the figure the RED-d
+block above already states correctly, because it is describing the variable, not the range. `886`
+is not `< 3` either, so **leg 1's vacuity guard passes through undetected**, and the RED this
+fixture actually produces comes from **leg 2** — the unterminated
 range now sweeps in a second, unrelated `"all three"` occurrence later in `CHANGELOG.md`, so
 `N_ALLTHREE` reads `2` instead of `0` and the ordinary `[ "$N_ALLTHREE" -eq 0 ] || FAIL=1` assertion
 fires. The RENAMED-START variant is the one that actually exercises the vacuity guard as originally

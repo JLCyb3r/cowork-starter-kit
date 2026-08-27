@@ -10418,7 +10418,7 @@ lands on the **sanitizer**, which is why (g) exists as a separate item.
 - [ ] **AC-B0** — amendment appended; role-axis generalization (not file-axis); ambiguity tie-breaker
       present; append-only discharge rule present, scoped **by reference to ADR-088's Class-B
       enumeration** (not a fresh narrower list) and carrying the live/closed boundary and the
-      deferral-reachability clause; NO factual occurrence-count claim; all 5 numbered
+      deferral-reachability clause; NO factual occurrence-count claim; all 6 numbered
       elements present as distinct locatable text; **all 3** `Decision (3)` loci corrected by
       superseding cross-reference and **none by in-place edit**, `docs/design-v2.19.11.md` included;
       **ADR-088's index-row/body numbering divergence recorded, and the body ruled authoritative**;
