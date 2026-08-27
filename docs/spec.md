@@ -9568,6 +9568,26 @@ present as distinct, locatable text.
    single "per-tuple expected count" collapses them and breaks on precisely the one tuple that has a
    real count.
 
+   **`sort -u` in the extraction pipeline MUST be `LC_ALL=C sort -u` (binding).** `sort -u` uniques by
+   `strcoll`, not by bytes, so two **byte-distinct** anchors that collate equal are merged into one
+   line — and the merge direction is a **false GREEN**: `N_DISTINCT` becomes `1` and the
+   `expected 1 distinct cited anchor` assertion passes on a file that cites two different headings.
+   This is the same locale hazard already pinned for the sanitizer in AC-S15 item 3, on the one
+   pipeline member where the failure *satisfies* an assertion instead of breaking it.
+
+   **Proven at Phase 1.1, not asserted** — GNU coreutils 9.11 is present on the authoring host at
+   `/opt/homebrew/bin/gsort`, so this did not have to wait for CI:
+
+   ```
+   printf 'Placeholder authoring rules\nPlaceholder authoring\302\255 rules\n' \
+     | LC_ALL=en_US.UTF-8 gsort -u | grep -c .   -> 1   (MERGED — false green)
+   printf 'Placeholder authoring rules\nPlaceholder authoring\302\255 rules\n' \
+     | LC_ALL=C          gsort -u | grep -c .   -> 2   (correct)
+   ```
+
+   The two inputs differ by one **U+00AD SOFT HYPHEN** — invisible in rendered text, and ignorable at
+   every collation level, which is exactly why a reviewer would not see the second anchor either.
+
 3. **Match the heading level-agnostically (h1–h6) using WHOLE-LINE EQUALITY ONLY.**
    **Exactly two admissible implementations:**
 
@@ -9615,9 +9635,28 @@ present as distinct, locatable text.
    `scripts/canonicalize-scan.sh`, `skills/self-apply/SKILL.md`.
 
    **The population is scoped, and the scoping is load-bearing — see Technical Constraints
-   §Tripwire-population for why a repo-wide pin is not implementable.** Two properties are binding:
+   §Tripwire-population for why a repo-wide pin is not implementable.** Three properties are binding:
    - **`.github/workflows/quality.yml` is itself in the counted set** (the guard's own source carries
      the form). The check MUST include it and MUST NOT self-exclude by accident.
+   - **NAMED-MEMBERSHIP ASSERTION — required, and NOT a restatement of the bullet above.** Before the
+     count is compared to the pin, assert **by name** that `.github/workflows/quality.yml` is a member
+     of the matched file list. A membership failure MUST emit its own diagnostic — *"the anchor
+     guard's own source file has dropped out of the counted population"* — and MUST NOT be permitted
+     to surface only as an off-by-one against the pin.
+
+     **The mode this closes is SELF-DROP-OUT, and it is reachable from this spec's own instructions.**
+     The bullet above guards the *exclusion filter* (do not add `--exclude-dir=.github` by accident).
+     It does not guard *the file ceasing to match the pattern*, which is a different event with
+     identical arithmetic. Re-measured at Phase 1: `quality.yml` carries the guard-visible form on
+     **exactly one line** — the `N_CITES=` line — and only because both backticks sit on that line.
+     Item 4b directs @dev to apply the `PARSER_FRAG1`/`PARSER_FRAG2` fragment-split idiom inside this
+     same step. Applied to the citation literal, at any split point that separates the opening
+     backtick from the closing one or that breaks the `CONTRIBUTING.md §` prefix, that single line
+     stops matching — extraction is line-based. The count falls to **5** against a pin of **6**, CI
+     goes RED on a **correct** implementation, and the cheapest apparent fix is to lower the pin to 5,
+     which permanently and silently removes the guard's own source file from surveillance. **A pin
+     that fails on a correct tree is the failure class this cycle exists to fix** (C7's own words).
+     This assertion converts that off-by-one into a named diagnostic pointing at the real cause.
    - **The tripwire COUNTS; it never extracts-and-resolves.** It must not interpolate a discovered
      anchor into any command. See Technical Constraints §Never-glob-and-resolve.
 
@@ -10088,11 +10127,32 @@ and that is not a choice. It closes for free by implementing every S14/W1/S15 ne
 | **(g)** | **sanitizer locale behaviour** under the pinned `LC_ALL=C`, including the ASCII-marker requirement |
 | **(h)** | **the NC-5 prefix-truncation fixture** returns `N_HEADS=0` |
 
-**(b) is non-discriminating for matching mode.** On the h2 anchor, `-F` and `-xF` both return 1;
-only h3-and-deeper anchors expose substring containment, because `### X` contains `## X` while
-`## X` contains no shallower prefix. **(a), (c) and (h) carry all the discriminating power for
-matching mode**; (b) tests level-agnosticism, a different property. Do not read (b)'s green as
-evidence about matching mode.
+**(b) is non-discriminating for ONE forbidden matcher, not for matching mode generally — the C16
+rationale note is corrected here, its mandate unchanged.** The note previously read: *"On the h2
+anchor, `-F` and `-xF` both return 1; only h3-and-deeper anchors expose substring containment,
+because `### X` contains `## X` while `## X` contains no shallower prefix."* **The stated reason is
+false: `## X` does contain `# X`.** Re-measured at Phase 1.1 against the real file, `/usr/bin/grep`
+2.6.0-FreeBSD:
+
+```
+grep -cF  '# Placeholder authoring rules' CONTRIBUTING.md          -> 1   (matches the h2 line)
+grep -cxF '# Placeholder authoring rules' CONTRIBUTING.md          -> 0
+awk '{i=index($0,"# Placeholder authoring rules"); if(i>0) print i}' CONTRIBUTING.md  -> 2
+```
+
+The guard sums across h1–h6 (item 3), so on the h2 anchor bare `-F` yields `N_HEADS=2` and whole-line
+yields `1`. **(b) therefore DOES discriminate the unanchored substring matchers** — bare `grep -cF`
+and interpolated `grep -cE` — and item (c)'s `== 1`, never `>= 1`, is what makes that visible.
+
+What (b) genuinely cannot discriminate is **`index($0,s)==1`**, and for a different reason than the
+one given: the false match begins at **offset 2**, so a prefix-anchored test rejects it. The
+`index`-versus-whole-line divergence appears only on suffix **deletion**. **(h) is the only proof item
+that discriminates `index($0,s)==1`**; (a), (b) and (c) discriminate the unanchored matchers; (b) also
+tests level-agnosticism, a separate property. Do not read (b)'s green as proof that the matcher is not
+prefix-shaped — that is (h)'s job alone.
+
+**The mandate is unchanged: 8 proof items, and the checklist reads "All 8".** Only the rationale was
+wrong, and it was wrong in the direction of understating (b).
 
 **(d) does not cover the sanitizer.** `$ANCHOR` never contains `§` (the extraction `sed` strips the
 prefix), so (d) guards the extraction regex — the surface that is probably fine. The locale hazard
