@@ -22,12 +22,32 @@ Every number in `phase1-binding-conditions-v2.19.13.md` was **re-run, not adopte
 numbers @architect itself wrote in Round 1 and Round 2. Three inherited numbers did not survive
 re-measurement; they are recorded in §B.2 with the commands that falsified them.
 
+**Phase 1.1 — deliberation conditions applied (APPROVE WITH CONDITIONS, 0 blockers).** @security
+returned 4 WARNING + 5 INFO and @dev 1 MEDIUM + 3 LOW; every condition was a sentence-level document
+edit and **scope was untouched**. The same re-run discipline was applied to this round's conditions.
+Two more inherited claims did not survive it, and both were corrected rather than implemented:
+
+| claim | source | measured |
+|---|---|---|
+| *"(b) is non-discriminating because `## X` contains no shallower prefix"* | this spec, from C16 | **FALSE.** `grep -cF '# Placeholder authoring rules' CONTRIBUTING.md` → **1**. `## X` does contain `# X`. See §B.6. |
+| *"`sort -u` locale merge — unprovable locally, no GNU binary"* | @security S5 | **FALSE.** GNU coreutils 9.11 is installed (`/opt/homebrew/bin/gsort`). Proved it in one command instead of deferring to CI. See §B.7. |
+
+One further defect was found in this document's own inputs and is **not** on either reviewer's list —
+the ADR-088 index-row/body numbering divergence, §B.8. It is the root cause of the `Decision (3)`
+census, and it also decided @dev's FINDING 1 (§B.9).
+
+**Running total: 6 of 20 Phase-1 conditions and 2 of 13 Phase-1.1 conditions falsified by re-run**,
+plus 2 defects found in @architect's own prior output. The rule is holding because it is being turned
+on its own author, not only on reviewers.
+
 ---
 
 ## Table of contents
 
 - §A — Phase 1 Design Header (mandatory records)
 - §B — Binding-conditions disposition + defects found IN the conditions file
+  (§B.6–§B.9 added at Phase 1.1: two falsified deliberation claims, the ADR-088 numbering root cause,
+  and the ruling on @dev FINDING 1)
 - §C — Technical design
 - §D — File-by-File Implementation Plan + `scope_allow_delta`
 - §E — B1 verification
@@ -277,6 +297,132 @@ demonstrate that prefix-shaped broken pointers exist in the wild; they are **not
 false-green inside the guard. **C1 does not depend on them** — the reachable in-scope case (a
 half-done CF-A repair) was reproduced directly and is sufficient alone.
 
+### B.6 — Phase 1.1: the C16 rationale note was arguing from a false premise
+
+@security S4 challenged one sentence in §GNU/BSD: *"(b) is non-discriminating for matching mode …
+because `### X` contains `## X` while `## X` contains no shallower prefix."* Re-measured rather than
+adopted, and the challenge holds — `## X` **does** contain `# X`:
+
+```
+/usr/bin/grep -cF  '# Placeholder authoring rules' CONTRIBUTING.md   -> 1     (matches the h2 line)
+/usr/bin/grep -cxF '# Placeholder authoring rules' CONTRIBUTING.md   -> 0
+/usr/bin/awk '{i=index($0,"# Placeholder authoring rules"); if(i>0) print NR": index="i}' \
+             CONTRIBUTING.md                                          -> 114: index=2
+```
+
+The consequence is larger than the reviewer stated, and in the opposite direction. The guard sums
+across h1–h6, so on the **h2** anchor bare `-F` returns `N_HEADS=2` where whole-line returns `1`.
+**(b) therefore does discriminate the unanchored matchers** — it was being *undersold*, not oversold.
+What (b) truly cannot discriminate is `index($0,s)==1`, and the reason is the `index=2` above: the
+false match starts at offset 2, so a prefix-anchored test rejects it. That divergence surfaces only on
+suffix **deletion**, which is (h)'s job and (h)'s alone.
+
+Corrected in `docs/spec.md` §GNU/BSD. **C16's mandate is untouched** — 8 proof items, checklist reads
+"All 8". Only the rationale was wrong, and a wrong rationale attached to a correct mandate is the
+worse of the two failures: it teaches @dev and @qa a false rule they will apply somewhere else.
+
+### B.7 — Phase 1.1: "unprovable locally" was itself unverified, and the locale merge is real
+
+@security S5 flagged `sort -u` as the one member of the extraction pipeline whose locale-dependence
+*satisfies* an assertion rather than breaking it, and filed it as unprovable locally for want of a GNU
+binary. The finding is right; the caveat is not. Checked before accepting it:
+
+```
+/opt/homebrew/bin/gsort --version   -> sort (GNU coreutils) 9.11
+/opt/homebrew/bin/gtr   --version   -> tr   (GNU coreutils) 9.11
+ls /opt/homebrew/bin/ggrep /opt/homebrew/bin/gawk /opt/homebrew/bin/gsed  -> all absent
+```
+
+**GNU coreutils is installed.** The blanket "no GNU tooling on the authoring host" claim — carried in
+§F and in `docs/spec.md` §Assumptions — is too broad, and it happens to be wrong about exactly the two
+binaries this cycle's locale hazards live in. With `gsort` the merge took one command:
+
+```
+printf 'Placeholder authoring rules\nPlaceholder authoring\302\255 rules\n' \
+  | LC_ALL=en_US.UTF-8 gsort -u | grep -c .    -> 1    MERGED (false green)
+printf 'Placeholder authoring rules\nPlaceholder authoring\302\255 rules\n' \
+  | LC_ALL=C          gsort -u | grep -c .    -> 2    correct
+```
+
+Two byte-distinct anchors, differing by a single **U+00AD SOFT HYPHEN**, collate equal and are merged
+— so `N_DISTINCT` reads 1 and the `expected 1 distinct cited anchor` assertion **passes on a file
+citing two different headings**. The character is invisible in rendered text, which is why a human
+reviewer would not catch what the guard just waved through. `LC_ALL=C sort -u` pinned in AC-S14
+item 2.
+
+`gtr` also reproduced the sanitizer's locale split (`LC_ALL=C` deletes `§`, `en_US.UTF-8` preserves
+it) and Defect 3(a)'s eaten ellipsis marker, both identical to the BSD results — so proof items (f)
+and (g) are now **partially closed locally**, with glibc-versus-macOS collation tables as the residual
+rather than "no binary exists". Items (a), (b), (c), (d), (e) and (h) still need CI: no GNU `grep`,
+`awk` or `sed`.
+
+### B.8 — Phase 1.1: the `Decision (3)` census has a root cause, and it is ADR-088 itself
+
+Not raised by either reviewer. Found while ruling on @dev's FINDING 1, by reading ADR-088 instead of
+citing it. **ADR-088 numbers its own decisions two different ways:**
+
+```
+index row, docs/architecture.md:111 — "Three decisions:"
+  (1) archive-leak gate   (2) git check-attr rejected   (3) references ruled by differential
+                                                            execution — Class A/Class B  <-- HERE
+body, "### Decision" — six decisions:
+  (1) retrofit the 14 via git mv
+  (2) repair only the references a machine resolves; freeze the rest              <-- AND HERE
+  (3) mint the archive-leak gate   (4) git archive is the instrument
+  (5) canary                       (6) design-v2.19.* asymmetry
+```
+
+Under the index row, `§Decision (3)` **is** the reference-class ruling. The six census loci are
+therefore not typos — they are a faithful reading of a summary the repository still publishes.
+
+This matters for B0 in two ways. First, correcting three citing sites while leaving the index row
+unreconciled fixes the symptom and leaves the generator running: the next reader of the index row
+mints mis-pointer number seven, and B0's census goes stale by construction. Second, it changes the
+right *mechanism* — see §B.9. B0 item 3 now carries both a ruling that the **body** numbering is
+authoritative (the same more-specific-artifact rule C6 applied to the push table) and an instruction
+to record the divergence in the amendment. The amendment is an append to `docs/architecture.md`, so
+this costs no new scope and does not edit the index row, which is itself inside an append-only record.
+
+### B.9 — Phase 1.1: ruling on @dev FINDING 1 — B0 item 3 wins, AC-CF-B item 3 is corrected
+
+**The conflict is real.** B0 item 3: the in-scope `Decision (3)` mis-pointers get *"a superseding
+cross-reference appended below the record, never an in-place edit."* AC-CF-B item 3: the same line,
+`docs/design-v2.19.11.md`'s `Under ADR-088 §Decision (3)'s`, *"is corrected to `(2)`"* — the direct-edit
+verb its two siblings carry. @dev was right that it inherited that verb when C9 folded it in at
+Phase 1, and right to refuse to guess.
+
+**Ruled: appended superseding note. Not a direct edit.** @dev's own preferred resolution — CF-B's
+specific wording beats B0's general one, per this cycle's C6 precedent — is sound *in form*, but its
+premise is that this locus differs from the other two in a way that matters. Measured, it differs in a
+way that does not:
+
+| locus | sits inside | closed record? |
+|---|---|---|
+| `docs/architecture.md` `\| Site \| Class (ADR-088 §Decision (3)) \| Ships? \|` | `## Amendment record — ADR-090` | yes |
+| `docs/architecture.md` `§Decision (3) above: Class B references are frozen` | `## Amendment record — ADR-088` | yes |
+| `docs/design-v2.19.11.md` `Under ADR-088 §Decision (3)'s` | `### E.5`, ordinary design-doc body | **yes** |
+
+@dev is correct that the third is not inside an amendment block. But the property that selects the
+mechanism is **closed-versus-live**, not amendment-block-versus-body, and on that axis all three
+match. Four grounds, all measured:
+
+1. **The file is in the class.** ADR-088's Class-B clause enumerates append-only historical records
+   and names a **sibling design doc**, `docs/design-v2.19.8.md`, among them.
+2. **It is closed.** `docs/design-v2.19.11.md` shipped two cycles ago.
+3. **The specificity argument selects the wrong winner** for the reason above.
+4. **Decisive, and only visible because of §B.8:** `(3)` was *defensible when written*, against
+   ADR-088's index row. An in-place rewrite would destroy a reading the repository still publishes —
+   precisely the harm ADR-088's own second ground for freezing names (*"a v2.18.0 retro entry … was
+   true when written"*). An appended note preserves both numberings, which is what a reader standing
+   at that line actually needs.
+
+**Items 1 and 2 of AC-CF-B keep the direct verb, and that is not an inconsistency.** Item 2 is purely
+additive (a clause is *gained*; zero deletions). Item 1 replaces a transcript that was **never true of
+any tree**, so it has no date-indexed truth-value to protect and freezing it would only preserve an
+invitation to re-derive from a false record. Item 3 is the only one that would overwrite a defensible
+past reading. That distinction is now written into the AC so a later auditor does not "consolidate"
+the three verbs.
+
 ---
 
 ## §C — Technical design
@@ -311,9 +457,26 @@ authored every cycle by design; `tests/` fixtures are deliberately broken contro
 a live Class-A pointer without violating a rule already stated elsewhere. The remaining surface —
 workflows, scripts, skills, templates, ceremony files — is exactly where one would appear.
 
-**Two implementation constraints:** the guard's own source file is inside the counted set and must not
-be self-excluded by accident; and the tripwire **counts files only** — it must never extract, resolve,
-or re-expand a discovered anchor (§C.4).
+**Three implementation constraints:** the guard's own source file is inside the counted set and must
+not be self-excluded by accident; the tripwire **counts files only** — it must never extract, resolve,
+or re-expand a discovered anchor (§C.4); and the `docs/`/`tests/` exclusion is written as a **rooted
+path prefix**, never as a bare `--exclude-dir=docs`. The two forms agree today only by accident —
+measured, there are **zero** nested directories named `docs` or `tests` below the root — so a later
+`examples/*/docs/` would widen the blind spot with the pin still reading 6.
+
+**Self-drop-out, and why a named assertion is required (@security S1).** The first constraint above
+guards the *exclusion filter*. It does not guard **the guard's own file ceasing to match the
+pattern**, which is a different event with identical arithmetic. `quality.yml` carries the guard form
+on **exactly one line** — the `N_CITES=` line — and only because both backticks sit on it. AC-S14
+item 4b sends @dev into that same step with the `PARSER_FRAG1`/`PARSER_FRAG2` split idiom; applied to
+the citation literal it breaks that line, the count reads **5** against a pin of **6**, and CI reds on
+a **correct** implementation. The cheapest-looking fix is lowering the pin — which permanently removes
+the guard's own source from surveillance. AC-S14 item 5 therefore asserts membership **by name**, with
+its own diagnostic, so the failure names its cause instead of presenting as an off-by-one.
+
+This is the third time in this cycle that a proposed control's failure mode is *"reds a correct
+tree, and the obvious repair silently shrinks the guarded population"* — after C13's repo-wide pin and
+C7's residue pin. It is worth naming as the recurring shape rather than the third coincidence.
 
 ### C.3 The sanitizer and its two-legged control
 
@@ -367,7 +530,38 @@ setup guard (`for f in reflow pipe-sa pipe-pg deleted`). **W1 therefore adds no 
 files** — 3 generator lines, 3 self-test legs, and 3 new entries in the setup-guard list, all inline.
 This is what keeps W1 compliant with the "stay INLINE, never `scripts/`" constraint.
 
-### C.6 Anti-pattern scan
+### C.6 Phase-4 execution discipline — hold commits, push by P-row (@dev FINDING 2)
+
+**This is an instruction to @dev, not background.** It cuts directly against ordinary habit (commit,
+push, watch CI), and following the habit reds CI on correct work.
+
+**Rule: within a push group, commit locally and DO NOT PUSH until every commit in that P-row is
+ready.** `docs/spec.md` §Push sequence defines the groups P0–P4; the push tip is what CI evaluates, so
+intermediate commit-level reds are structurally invisible and acceptable, while **no push-level red
+is acceptable.**
+
+**Why it is load-bearing rather than tidy.** `registry-sha256-check` recomputes each hash against
+**every row on every run** — it is not incremental and has no notion of "this commit didn't touch that
+skill". So a byte change to `skills/self-apply/SKILL.md` pushed *without* its paired field-8 bump in
+the same push produces a genuine, correct RED against a change that is itself correct and merely
+half-landed. Two of this cycle's rows are exposed:
+
+| push | byte change | paired cell | consequence if pushed apart |
+|---|---|---|---|
+| **P1** | CF-A edits `skills/self-apply/SKILL.md` | `self-apply` field 8 | hash drift RED |
+| **P3** | S5a edits `skills/pull-updates/SKILL.md` | `pull-updates` field 8 | hash drift RED |
+
+Commit-level pairing is optional; **push-level pairing is mandatory** (`docs/spec.md` §sha256 plan).
+Regenerate via `scripts/registry-hash.sh <slug>` — never by hand, and never by copying the hash out of
+CI error text, which is how a wrong-but-consistent value gets laminated in.
+
+**One consequence worth expecting so it is not misread as a new defect:** inside
+`registry-sha256-check`, W1's step runs *before* the sha256 drift step, so a W1 fixture error during
+P2/P3 aborts the job before the hash diagnostic ever runs. Fix W1 first, re-push, then read the hash
+result. A green W1 is a precondition for the hash diagnostic being meaningful, not merely for it being
+green.
+
+### C.7 Anti-pattern scan
 
 | # | Anti-pattern | Finding |
 |---|---|---|
@@ -514,7 +708,9 @@ in this repo. Recorded, not decided.
 | `CF-v2.19.13-DECISION3-RESIDUE` | 3 remaining `Decision (3)` mis-pointer loci (`security-audit-v2.19.11.md` x2, `docs/retro.md` x1). | LOW | Deferred **with a stated inclusion test** so the next auditor can re-derive the set. All export-ignored, all in append-only records. |
 | `S10` | `CONTRIBUTING.md`'s malformed self-citation — no space after the section sign, invisible to the extraction regex by construction. | LOW | Named carry-forward, not scheduled. Maintainer surface (S13). |
 | `A15` | Registry-row-count pin is defeatable by a compensating pair. | LOW | Stays deferred. No row added this cycle (30 = 30, re-confirmed). |
-| GNU/BSD | Every local measurement is BSD grep 2.6.0-FreeBSD / BSD awk / macOS. **No GNU binary and no container runtime on the authoring host.** | HIGH until CI | Closed by proof items (a) through (h) executing on `ubuntu-latest` on this cycle's own PR. Stated as **untested**, never as passing. |
+| GNU/BSD | **Corrected at Phase 1.1 — the earlier blanket claim was wrong.** No GNU `grep`, `awk` or `sed` and no container runtime on the authoring host, so matching-mode and extraction-regex results are BSD-only. **But GNU coreutils 9.11 IS present** (`gsort`, `gtr`), covering both binaries the locale hazards live in. | **MEDIUM** until CI (was HIGH) | Items (a)(b)(c)(d)(e)(h) still closed only by `ubuntu-latest` on this cycle's own PR, stated as **untested**. Items (f) and (g) **partially closed locally** under GNU coreutils (§B.7); residual there is glibc-versus-macOS collation tables, not absence of a binary. |
+| Lint surface on `tests/**.md` | The 3 new fixture/record files land inside markdownlint's `**/*.md` glob and lychee's `--offline "**/*.md"`; `tests/` is excluded from neither. | LOW | Named in `docs/spec.md` Technical Constraints §Lint surface, with the active rule set measured (`MD041` is **disabled**; `MD047`/`MD009`/`MD012`/`MD010` are not). Repo's own pre-push CI-pitfall class. |
+| `CONTRIBUTING.md` hardcoding | ADR-092 pins one target document where ADR-090's citation form is generic. Measured latent: all 33 guard-visible occurrences target `CONTRIBUTING.md`, zero target anything else. | LOW (latent) | Named under ADR-092 §Risk knowingly accepted, with a revisit trigger on the first non-`CONTRIBUTING.md` target. Goes live in triplicate — guard, tripwire and census blind at the same instant — so it is stated as a re-runnable measurement, not an assurance. |
 | `%0A` decoding | GitHub Actions' handling of percent-encoded newlines at error/stdout sinks remains **UNRUN by anyone**. | INFO | Explicitly **not** load-bearing for AC-S15's correctness, and less so after sanitization. Not promoted to fact. |
 | Model drift + per-slug variance | AC-S5b is a one-time invocation, 1 slug of 3. | MEDIUM | Both named in the risk-register CLOSED text. The sha256 gate makes the *text* durable, not a future model's behaviour. |
 | Anchor-guard step responsibility count | The step now carries ~4 responsibilities. | LOW | Accepted; splitting would break the Interference Constraint. Retirement path = ADR-092 option (a). |
@@ -535,3 +731,17 @@ That is the 14th generation of this project's named failure mode, and it was fou
 whose purpose was to end it. The corrective is not more prose — it is ADR-092 §Maturation Path
 option (a): make the primitive a single shared function so there is one place to be right, instead of
 a new place to be wrong in every remedy.
+
+**Phase 1.1 addendum.** The deliberation round produced **zero blockers** and thirteen sentence-level
+conditions, and the same rule was turned on them: **two did not survive re-measurement** (§B.6, §B.7),
+and one defect neither reviewer raised was found by reading a cited ADR instead of citing it (§B.8 —
+ADR-088 numbers its own decisions two different ways, which is the root cause of the entire
+`Decision (3)` census and which decided @dev's FINDING 1 in §B.9). A third self-inflicted instance was
+caught *while writing the fix for* @security S6: the first draft of ADR-092's risk paragraph
+illustrated the `CONTRIBUTING.md` hardcoding with a specimen citation naming another file, which made
+that paragraph's own *"zero target any other file"* measurement false by its own hand. Re-running the
+count found it at 1; the illustration was rewritten as prose and the count returned to 0.
+
+The pattern across all three is one thing: **a claim about the repository, written from inference and
+never re-run against it.** It does not matter whether the author is a reviewer, a prior phase, or the
+same agent forty minutes earlier. The only control that has caught any of them is running the command.
