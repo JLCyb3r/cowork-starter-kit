@@ -186,13 +186,30 @@ were independently re-run and matched to the digit.
 
 ### B.1 — C13's pin of 16 REDs on this cycle's own correct tree
 
-**Measured:** repo-wide guard-visible population = **15 files** (enumerated in §C.2). This cycle's
-correct deliverables add **three**: `docs/design-v2.19.13.md` (this document — it must quote the
-canonical anchor to specify the repair), the NC-5 prefix-truncation fixture, and the S15 injection
-fixture. The latter two must carry the guard form or they cannot function.
+**Measured:** repo-wide guard-visible population = **15 files** (enumerated in §C.2). This cycle
+adds **at least three more**, guaranteed:
 
-A pin of 16 therefore fails on a **fully correct** v2.19.13 tree, and drifts again every subsequent
-cycle as each adds a design doc.
+| addition | why it must carry the guard form |
+|---|---|
+| `tests/fixtures/citation/nc5-prefix-truncated.md` | the guard must extract an anchor from it, or the control cannot run |
+| `tests/fixtures/citation/s15-injection-control.md` | same |
+| `templates/skill-template/SKILL.md` | CF-A backtick-wraps it; that is the point of the repair |
+
+Post-cycle the repo-wide count is therefore **18 at minimum**. A pin of 16 fails on a **fully
+correct** v2.19.13 tree — by 2, before this cycle's own internal reports are even written.
+
+**A correction to my own first draft of this finding, recorded because the discipline applies to me
+too.** I initially wrote that `docs/design-v2.19.13.md` would be a fourth addition, "because it must
+quote the canonical anchor to specify the repair". **I then measured it: it does not.** This document
+uses the generic form and bare anchor text, and never the full backticked `CONTRIBUTING.md` citation,
+so it did not enter the population. The claim was an inference presented as a measurement — the exact
+defect shape of generation 13 — and it is struck.
+
+The per-cycle churn argument survives, but on **better** evidence than the one I first reached for:
+every cycle emits a new `qa-report-v<N>.md`, `security-review-v<N>.md` and usually a
+`security-audit-v<N>.md` under `docs/internal/`, and **five of those recurring per-cycle reports
+already carry the guard form** (v2.19.10 and v2.19.11 vintages). For a citation-repair cycle they
+near-certainly will again. That is a measured recurrence, not a projection about authoring style.
 
 **This is the same failure class C7 deleted the residue pin for**, six conditions later in the same
 document — C7's own words: *"a pin that fails on a correct tree is the same failure class this cycle

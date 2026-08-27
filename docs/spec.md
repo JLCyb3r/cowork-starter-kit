@@ -9959,11 +9959,15 @@ A repo-wide pin **is not implementable on a correct tree**, and pinning one woul
 this cycle's own remedy, the exact defect the residue pin was deleted for.
 
 Measured at Phase 1: the repo-wide guard-visible population is **15 files**. This cycle's own correct
-deliverables add **three more** — `docs/design-v2.19.13.md` (this cycle's design doc, which must
-quote the canonical anchor to specify the repair), the NC-5 prefix-truncation fixture, and the S15
-injection-control fixture (both of which must carry the guard form to function at all). A repo-wide
-pin of 16 therefore goes RED on a **fully correct** v2.19.13 tree, and every subsequent cycle adds at
-least one more design doc.
+deliverables add **at least three more**, all guaranteed: the NC-5 prefix-truncation fixture and the
+S15 injection-control fixture (both must carry the guard form or the controls cannot run at all), and
+`templates/skill-template/SKILL.md`, which enters the population precisely because CF-A backtick-wraps
+it. Post-cycle the repo-wide count is **18 at minimum**, so a repo-wide pin of 16 goes RED on a
+**fully correct** v2.19.13 tree — by 2, before this cycle's own internal reports are written.
+
+The drift then recurs every cycle: each cycle emits a new `qa-report-v<N>.md`,
+`security-review-v<N>.md` and usually a `security-audit-v<N>.md` under `docs/internal/`, and **five
+such recurring per-cycle reports already carry the guard form** (v2.19.10 and v2.19.11 vintages).
 
 Scoping the pin to non-`docs/`, non-`tests/` files makes it stable **without weakening it**, and the
 scoping follows B0's own role axis rather than cutting across it:
