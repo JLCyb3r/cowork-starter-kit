@@ -277,6 +277,19 @@ EXIT=1
 **Do NOT add a `sed` redactor.** The assertion inspects; it must not mangle the diagnostic AC-1
 exists to surface.
 
+**Added at v2.19.13 Phase 4 (AC-CF-B item 2, purely additive — zero deletions).** The GREEN
+direction above (no userinfo in the real emitted block) reflects **git's own URL-handling
+behavior**, not code-level redaction performed by `verify-release-surface.sh`. Checked rather than
+assumed: `scripts/verify-release-surface.sh` contains no `sed`/`awk`/regex step that strips or masks
+credential-shaped text anywhere in its `evidence_tags()` or `evidence_body()` paths — the only `sed`
+usage in the script is `sed 's/^/    /'`, an indentation prefix, unrelated to redaction. The fixture
+`git ls-remote --tags` is run against in Leg 1/1b's harness (`https://example.invalid/nope.git`)
+carries no embedded userinfo, so git's own diagnostic never contains any to begin with; the GREEN
+result is an absence of input, not a removal performed on the way out. Do not read the GREEN leg as
+evidence that this script sanitizes credentials — it does not, and the RED leg (`cred-red.sh`,
+above) exists precisely because a fixture that DOES carry userinfo is not defended against by
+anything in this script.
+
 **Leg 3 — `EVIDENCE_DIR` mode byte-unchanged.** The real script and the real patched script, same
 evidence directory, same floor, output hashed:
 
@@ -634,6 +647,33 @@ the ADR now; only the repair moves to v2.19.12.
 
 **Handoff to @qa (Phase 5):** verify the amendment record exists and that ADR-090's coverage claim
 is not asserted anywhere beyond one file-pair. **Handoff to v2.19.12:** `CF-v2.19.11-A`, above.
+
+### E.6 Erratum — v2.19.13 superseding note on the `§Decision (3)` citation above (AC-CF-B item 3)
+
+**This file has shipped (v2.19.11) and is closed** — per the append-only discipline `docs/
+architecture.md`'s B0 amendment states explicitly (§1's live/closed boundary), a closed design
+document is corrected only by an appended record, never in place. This note is that appended
+record; §E.5's sentence above, *"Under ADR-088 §Decision (3)'s differential-execution rule the
+other seven sites are Class B ... and are frozen,"* is left **byte-unchanged**.
+
+**The correction:** `§Decision (3)` in that sentence denotes ADR-088's **body** Decision (2) — the
+Class A/B reference-freeze ruling — not the archive-leak gate that is ADR-088's body Decision (3).
+This is not a typo unique to this file: ADR-088's own **index row** (`docs/architecture.md`, the
+ADR-088 summary line) numbers the reference-class ruling `(3)`, and this sentence is a faithful
+reading of that index row. The two numbering schemes diverge; ADR-088's amendment record appended
+at v2.19.13 Phase 4 (`docs/architecture.md`, *"Amendment record — ADR-088 §Decision (2)/(3): ...
+"*) rules the **body** numbering authoritative and records the divergence in full — see that
+amendment for the complete ruling, the root-cause table, and the full census (6 mis-pointer loci
+total; this file's §E.5 sentence is one of the 3 in scope, corrected this same way).
+
+**Mechanism, stated so a later auditor does not "consolidate" this with H.1/H.2 above:** this is an
+**appended superseding note**, never a direct edit — unlike H.1 (a false transcript with no
+date-indexed truth-value to protect) and the Leg-2 addition above (purely additive, zero deletions),
+this locus would have overwritten a reading that was **defensible when written**, against ADR-088's
+own index row. `docs/architecture.md`'s B0 amendment §3 rules on exactly this conflict (its own
+§MECHANISM RULING, four grounds) and this note applies that ruling locally, so a reader standing at
+§E.5's sentence finds the correction without having to already know to look in `docs/
+architecture.md`.
 
 ---
 
@@ -1052,9 +1092,47 @@ RED-c — phrase DELETED outright (what the SPEC's leg `1 -> 0` would have requi
                                                                         AC-10: RED     EXIT=1
 
 RED-d — awk range endpoint renamed (vacuity):
-  ::error::AC-10 control BROKEN - bullet extraction returned 0 lines; the awk range no longer matches.
-                                                                                       EXIT=1
+  LINES=886 (the range runs UNTERMINATED to EOF, not 0 lines — the END anchor no longer
+  matches, so awk never closes the range; the `< 3` vacuity guard does NOT fire on 886)
+  N_ALLTHREE=1 (corrected below — leg 2's `grep -c` counts matching LINES on the flattened
+  single-line bullet, so it saturates at 1 no matter how many "all three" occurrences the
+  unterminated range sweeps in) -> FAIL=1                                AC-10: RED   EXIT=1
 ```
+
+**CORRECTED at v2.19.13 Phase 4 (AC-CF-B item 1) — the transcript above previously read**
+*"`::error::AC-10 control BROKEN - bullet extraction returned 0 lines; the awk range no longer
+matches.`"*, **claiming the vacuity guard fires on this fixture. It does not.** Re-run against the
+real file at this file's own cited base, both the END-anchor-renamed and the START-anchor-renamed
+`awk` variants: renaming the END anchor does not make the range match nothing — it makes the range
+match **everything from the START anchor to EOF** — because `awk` range matching stays "inside"
+the range once opened until its end pattern is found, and an end pattern that never matches never
+closes it. Re-measured at `BASE` (`b7b844716aa3146f212907ee381a49256aa1fd13`, the same SHA §I.3
+pins) with `/usr/bin/awk` (BSD awk 20200816) and `/usr/bin/wc -l`/`/usr/bin/grep`: the range's own
+extent — START line through true EOF, inclusive, blank lines included — is **1242 raw lines**.
+That is not the number leg 1 tests, though, and this is a definitional gap, not a transcription
+error: the control's `LINES` variable (H.3's script, `:1044`) pipes the range through `grep -c .`
+first, which drops the range's 356 blank lines, leaving **`LINES=886`** — the figure the RED-d
+block above already states correctly, because it is describing the variable, not the range. `886`
+is not `< 3` either, so **leg 1's vacuity guard passes through undetected**, and the RED this
+fixture actually produces comes from **leg 2** — but not by the mechanism first written here.
+
+**CORRECTED again, same session — the passage above previously read `N_ALLTHREE=2`, "an incidental
+double-match."** Re-measured against the same pinned `BASE` (`b7b844716aa3146f212907ee381a49256aa1fd13`)
+with `/usr/bin/grep` (BSD grep, GNU-compatible 2.6.0-FreeBSD): `` /usr/bin/grep -noF 'all three'
+CHANGELOG.md `` finds **three** occurrences, not two — `:36`, `:110`, `:256` — and the unterminated
+range (line 35 through true EOF) sweeps in the latter two, `:110` and `:256`, in addition to the
+original `:36`. But leg 2 does not count occurrences: it flattens the whole bullet to **one line**
+first (`FLAT="$(... | tr '\n' ' ')"`) and only then runs `grep -cF 'all three'` on `$FLAT`, and
+`grep -c` counts matching **lines**, not substring hits. A single line either contains the string or
+it doesn't, so `N_ALLTHREE` can only ever be `0` or `1` — never `2`, regardless of how many textual
+occurrences the unterminated range absorbs. Measured this way, `N_ALLTHREE` reads `1`, not `2`, and
+the ordinary `[ "$N_ALLTHREE" -eq 0 ] || FAIL=1` assertion still fires (`1 ≠ 0`) — leg 2's RED
+verdict is unaffected; only the reported value and the "double-match" mechanism were wrong. The
+RENAMED-START variant is the one that actually exercises the vacuity guard as originally
+described: with the START anchor renamed, the range never opens, `BULLET` is empty, `LINES=0`, and
+leg 1 correctly fires `AC-10 control BROKEN` at `EXIT=1`. Both variants were re-run this session
+against the real file; both are RED, but by two different mechanisms, and only one of them is the
+vacuity guard.
 
 RED-b and RED-c are the two the spec's control could not distinguish from a correct fix.
 

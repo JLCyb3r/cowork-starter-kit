@@ -720,11 +720,19 @@ jobs:
           fi
           echo "AC-PL-6 PASSED — ${ACTUAL} rows carry a valid sha256 cell in field 8 (pin: ${AC_PL_6_EXPECTED_HEX_ROWS})."
 
-      - name: AC-8b/AC-9b — per-row structural integrity of the gated registry rows (v2.19.11, ADR-090 companion)
+      - name: AC-8b/AC-9b — per-row structural integrity of the gated registry rows (v2.19.11 ADR-090 companion, widened v2.19.13 AC-W1 — ADR-092)
         run: |
           set -euo pipefail
           REG="${1:-curated-skills-registry.md}"
-          GATED_SLUGS="self-apply prompt-gate"
+          # [AC-W1] Widened from 2 to 5 slugs: S11 rewrites self-archive/self-upgrade's
+          # description cells and S5 bumps pull-updates's sha256 cell this cycle, and
+          # neither was gated before this widening — a stray '|' in either edit would
+          # have been caught only by the aggregate hex-row count, which a compensating
+          # pair can defeat. NF==9 and the field-8 hex regex are NOT relaxed or widened
+          # by this change (docs/risk-register.md v2.19.11-PULL-ROW-1 voids its own
+          # acceptance basis if either is) — only the slug list grows, which is strictly
+          # strengthening.
+          GATED_SLUGS="self-apply prompt-gate self-archive self-upgrade pull-updates"
           check_row() {
             awk -F'|' -v row="$2" 'BEGIN{seen=0;ok=0} {n=$2; gsub(/ /,"",n); if(n==row){seen++; s=$8; gsub(/ /,"",s); if(NF==9 && s ~ /^[0-9a-f]{64}$/) ok++}} END{exit (seen==1 && ok==1)?0:1}' "$1"
           }
@@ -740,8 +748,21 @@ jobs:
           sed 's/^| self-apply |/|self-apply|/' "$REG" > "$FIX/reflow.md"
           awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-sa.md"
           awk -F'|' 'BEGIN{OFS="|"} $2==" prompt-gate " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-pg.md"
+          # [AC-W1] 3 new pipe-injection fixtures, one per newly-gated slug, mirroring
+          # the existing pipe-sa/pipe-pg pattern exactly (same generator shape, same
+          # shared check_row()).
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-archive " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-arc.md"
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-upgrade " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-upg.md"
+          awk -F'|' 'BEGIN{OFS="|"} $2==" pull-updates " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-pu.md"
           grep -v '^| self-apply |' "$REG" > "$FIX/deleted.md"
-          for f in reflow pipe-sa pipe-pg deleted; do
+          # [AC-W1] The 3 new fixtures are added to this SAME no-op setup guard list. A
+          # new fixture whose field-2 anchor fails to match would otherwise be a silent
+          # no-op with a misleading diagnostic — reporting GREEN having tested nothing.
+          # The row-deletion vacuity leg is deliberately NOT duplicated per new slug:
+          # check_row() is shared, slug-parametric code, and the existing self-apply
+          # deletion leg below already proves it non-vacuous for every slug that calls
+          # it (stated explicitly per AC-W1, not left for a reader to reconstruct).
+          for f in reflow pipe-sa pipe-pg pipe-arc pipe-upg pipe-pu deleted; do
             if cmp -s "$REG" "$FIX/$f.md"; then
               echo "::error::AC-8b FIXTURE SETUP FAILED - the ${f} fixture was a no-op; its field-2 anchor no longer exists in the registry. Repair the FIXTURE anchor. Do NOT relax the assertions below."
               exit 1
@@ -751,10 +772,13 @@ jobs:
           if ! check_row "$FIX/reflow.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a benign whitespace reflow of the row pipes was reported as damage (false positive)."; fail=1; fi
           if check_row "$FIX/pipe-sa.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a pipe injected into self-apply description was NOT detected."; fail=1; fi
           if check_row "$FIX/pipe-pg.md" prompt-gate; then echo "::error::AC-9b SELF-TEST FAILED - a pipe injected into prompt-gate description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-arc.md" self-archive; then echo "::error::AC-W1 SELF-TEST FAILED - a pipe injected into self-archive description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-upg.md" self-upgrade; then echo "::error::AC-W1 SELF-TEST FAILED - a pipe injected into self-upgrade description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-pu.md" pull-updates; then echo "::error::AC-W1 SELF-TEST FAILED - a pipe injected into pull-updates description was NOT detected."; fail=1; fi
           if check_row "$FIX/deleted.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a deleted self-apply row was NOT detected; the check is vacuous."; fail=1; fi
           if [ "$fail" -ne 0 ]; then exit 1; fi
-          echo "AC-8b/AC-9b self-test PASSED - reflow GREEN, both pipe injections RED, row deletion RED."
-          echo "AC-8b/AC-9b PASSED - gated slugs verified: ${GATED_SLUGS}."
+          echo "AC-8b/AC-9b/AC-W1 self-test PASSED - reflow GREEN, all 5 pipe injections RED, row deletion RED."
+          echo "AC-8b/AC-9b/AC-W1 PASSED - gated slugs verified: ${GATED_SLUGS}."
 
       - name: Verify curated-skills-registry.md sha256 matches skills/<slug>/SKILL.md (fail-closed on drift)
         run: |
@@ -1433,39 +1457,253 @@ jobs:
           fi
           echo "SF-S-1 PASSED — no pip/npm install, no curl/wget in scripts/canonicalize-scan.sh."
 
-      - name: Citation anchor resolves to exactly one heading (AC-3, v2.19.11 — ADR-090)
+      - name: Citation anchor resolves — 4-tuple enumeration, whole-line equality, sanitized diagnostics (AC-S14 + AC-S15, v2.19.13 — ADR-092)
         run: |
           set -euo pipefail
-          SCRIPT="${1:-scripts/canonicalize-scan.sh}"
-          DOC="${2:-CONTRIBUTING.md}"
-          EXPECTED_CITES=5
-          # [S1, @security Phase 2] BOTH halves below are load-bearing and neither alone is
-          # sufficient. `grep -cF` on an unreadable file writes NOTHING to stdout (the "0" it
-          # prints on a zero-match is only printed once the file opens) and exits 2; `|| true`
-          # then captures the EMPTY STRING. `[ "" -ne 1 ]` is not false, it is an ERROR — the
-          # test returns 2, an `if` treats non-zero as FALSE, `set -e` is exempt inside an `if`
-          # condition, and the step falls through to the PASSED line and exit 0. Demonstrated
-          # against a renamed CONTRIBUTING.md and against a $DOC that is a directory.
-          #   Half 1 — the -r precheck: gives the DIAGNOSABLE error for the common case.
-          #   Half 2 — the "${X:-x}" string comparison: closes every remaining route to an
-          #            empty capture (a directory passes -r; so does a mid-run permission
-          #            change). Do NOT drop it and keep only the precheck.
-          # Do NOT "simplify" these back to `-ne`. A count from `grep -c` never has a leading
-          # zero, so string equality is exact here.
-          for f in "$SCRIPT" "$DOC"; do
-            if [ ! -r "$f" ]; then
-              echo "::error::anchor guard — '${f}' is missing or unreadable, so the citation cannot be resolved at all. This is the citation-rot case the guard exists to catch; it must never report PASSED."
+          # [ADR-092 Decision (1)] Resolution primitive, shared by the real per-tuple
+          # loop below AND every GNU-proof self-test further down in this SAME step
+          # (ADR-090's "one step, one parser copy" discipline — GitHub Actions steps do
+          # not share shell state, so a self-test in a different step could not invoke
+          # this same code path; the Interference Constraint keeps S14+S15 one step for
+          # exactly this reason). Sums whole-line matches (`grep -cxF`) across h1-h6, so
+          # a heading's DEPTH is irrelevant while its TEXT must match in full. Two
+          # forbidden alternatives and why: `index($0,s)==1` is a prefix test — greens a
+          # truncated/rotted anchor, silently; bare `grep -cF` is substring containment
+          # — reddens a correct file whose heading text nests inside a longer one,
+          # noisily. Neither is used here.
+          resolve_heads() {
+            local anchor="$1" doc="$2" total=0 lvl prefix n
+            for lvl in 1 2 3 4 5 6; do
+              prefix="$(printf '#%.0s' $(seq 1 "$lvl")) "
+              n="$(grep -cxF "${prefix}${anchor}" "$doc" || true)"
+              total=$((total + n))
+            done
+            printf '%s' "$total"
+          }
+
+          # [ADR-092 Decision (5)] ANCHOR_SAFE sanitizer for failure-sink diagnostics.
+          # A NEW value on every call — the raw anchor is never overwritten in place,
+          # because this step is now a 4-iteration loop and an in-place overwrite would
+          # poison the next iteration's match pattern. Order is BINDING: strip -> collapse
+          # -> truncate(80) -> mark. `LC_ALL=C` is pinned for the collapse stage because
+          # `tr -cd '[:print:]'` is locale-dependent (measured: en_US.UTF-8 preserves a
+          # multibyte section sign, C strips it — a security control cannot depend on an
+          # inherited environment variable). The lossy marker is ASCII-only because the
+          # pinned collapse strips multibyte, so a multibyte marker would itself be
+          # silently damaged by the very pipeline it exists to annotate — a marker that
+          # can be silently damaged cannot signal silent damage. Truncation is marked
+          # `...[truncated]`; any other loss (stripped `%`/`:`, or a collapsed
+          # non-printable byte) is marked `...[sanitized]`.
+          sanitize() {
+            local raw="$1" safe truncated=0 changed=0
+            safe="$(printf '%s' "$raw" | tr -d '%:' | LC_ALL=C tr -cd '[:print:]')"
+            if [ "${#safe}" -gt 80 ]; then safe="${safe:0:80}"; truncated=1; fi
+            [ "$safe" = "$raw" ] || changed=1
+            if [ "$truncated" -eq 1 ]; then
+              safe="${safe}...[truncated]"
+            elif [ "$changed" -eq 1 ]; then
+              safe="${safe}...[sanitized]"
+            fi
+            printf '%s' "$safe"
+          }
+
+          # Shared extraction pipeline — the guard-visible citation form, prefix/suffix
+          # stripped. `LC_ALL=C sort -u` is BINDING (AC-S14 item 2): an inherited-locale
+          # `sort -u` collates by strcoll and silently merges two byte-distinct anchors
+          # differing only by an invisible character (measured: a pair differing by one
+          # U+00AD SOFT HYPHEN merges under en_US.UTF-8, stays 2 under C).
+          extract_anchor() {
+            grep -oE "\`CONTRIBUTING\\.md § [^\`]+\`" "$1" | sed "s/^\`CONTRIBUTING\\.md § //; s/\`\$//" | LC_ALL=C sort -u
+          }
+
+          # [ADR-092 Decision (2)] 4-tuple enumeration — NEVER a glob, NEVER resolved by
+          # discovery. This repository records historical security-test payloads in the
+          # citation form (docs/internal/security/security-review-v2.19.11.md) whose
+          # anchors are shell command-substitution and quote-breakout strings; a guard
+          # that globbed files and interpolated a discovered anchor into a command would
+          # re-expand them. TUPLES_FRAG1/FRAG2 exist ONLY for the non-duplication check
+          # below (item 4b) — split so that check's own source line cannot match itself
+          # (the PARSER_FRAG1/PARSER_FRAG2 discipline already established at
+          # quality.yml:703-704) — the single line below is the actual definition used.
+          TUPLES_FRAG1='TUPLES="scripts/canonicalize-scan.sh|CONTRIBUTING.md|5 skills/self-apply/SKILL.md|CONTRIBUTING.md|1 PROMOTE.md|CONTRIBUTING.md|1'
+          TUPLES_FRAG2=' templates/skill-template/SKILL.md|CONTRIBUTING.md|1"'
+          TUPLES="scripts/canonicalize-scan.sh|CONTRIBUTING.md|5 skills/self-apply/SKILL.md|CONTRIBUTING.md|1 PROMOTE.md|CONTRIBUTING.md|1 templates/skill-template/SKILL.md|CONTRIBUTING.md|1"
+
+          # --- Self-integrity (4a) — population completeness: catches the enumeration
+          # silently shrinking (or growing without a reviewed pin bump). ---
+          N_TUPLES="$(printf '%s\n' "$TUPLES" | wc -w | tr -d ' ')"
+          if [ "$N_TUPLES" -ne 4 ]; then
+            echo "::error::anchor guard SELF-INTEGRITY (4a) FAILED — expected exactly 4 enumerated tuples, found ${N_TUPLES}. The enumeration silently shrank or grew."
+            exit 1
+          fi
+
+          # --- Self-integrity (4b) — non-duplication: catches a copy-paste divergence
+          # of the enumeration elsewhere in this file. Orthogonal to 4a; neither
+          # substitutes for the other. ---
+          TUPLE_COPIES="$(grep -cF "${TUPLES_FRAG1}${TUPLES_FRAG2}" .github/workflows/quality.yml || true)"
+          if [ "$TUPLE_COPIES" -ne 1 ]; then
+            echo "::error::anchor guard SELF-INTEGRITY (4b) FAILED — expected the 4-tuple enumeration's core expression to appear exactly once in .github/workflows/quality.yml, found ${TUPLE_COPIES}. A copy-paste divergence is possible."
+            exit 1
+          fi
+          echo "anchor guard self-integrity PASSED — 4 tuples, 1 copy of the enumeration."
+
+          # --- Main per-tuple loop ---
+          for t in $TUPLES; do
+            SCRIPT="${t%%|*}"
+            rest="${t#*|}"
+            DOC="${rest%%|*}"
+            EXPECTED_CITES="${rest##*|}"
+
+            if [ ! -r "$SCRIPT" ] || [ ! -r "$DOC" ]; then
+              echo "::error::anchor guard — '${SCRIPT}' or '${DOC}' is missing or unreadable, so the citation cannot be resolved at all. This is the citation-rot case the guard exists to catch; it must never report PASSED."
+              exit 1
+            fi
+
+            ANCHOR="$(extract_anchor "$SCRIPT")"
+            N_DISTINCT="$(printf '%s\n' "$ANCHOR" | grep -c . || true)"
+            if [ "${N_DISTINCT:-x}" != "1" ]; then
+              echo "::error::anchor guard [${SCRIPT}] — expected 1 distinct cited anchor, found ${N_DISTINCT:-<non-numeric>}. Extracted (sanitized): $(sanitize "$ANCHOR")"
+              exit 1
+            fi
+
+            N_CITES="$(grep -cF "\`CONTRIBUTING.md § ${ANCHOR}\`" "$SCRIPT" || true)"
+            if [ "${N_CITES:-x}" != "$EXPECTED_CITES" ]; then
+              echo "::error::anchor guard [${SCRIPT}] — expected ${EXPECTED_CITES} citations, found ${N_CITES:-<non-numeric>}. Anchor (sanitized): $(sanitize "$ANCHOR")"
+              exit 1
+            fi
+
+            N_HEADS="$(resolve_heads "$ANCHOR" "$DOC")"
+            if [ "$N_HEADS" != "1" ]; then
+              echo "::error::anchor guard [${SCRIPT}] — anchor resolves to ${N_HEADS} headings in ${DOC}, expected exactly 1 (never 'at least 1'). Anchor (sanitized): $(sanitize "$ANCHOR")"
+              exit 1
+            fi
+
+            # Success sink — safe integer counts and the tuple's own hardcoded file path
+            # only. The contributor-derived anchor text is DROPPED here, per AC-S15.
+            echo "anchor guard PASSED [${SCRIPT} -> ${DOC}] distinct=${N_DISTINCT} cites=${N_CITES} headings=${N_HEADS}"
+          done
+
+          # --- Item 6 — `, rule 2` presence-and-placement (firing control for the CF-A
+          # mandate: tests both that `, rule 2` survived AND that it sits immediately
+          # outside the closing backtick). ---
+          for f in skills/self-apply/SKILL.md PROMOTE.md; do
+            N_RULE2="$(grep -cF '(S1 security carry-forward)`, rule 2' "$f" || true)"
+            if [ "${N_RULE2:-x}" != "1" ]; then
+              echo "::error::anchor guard [${f}] — expected exactly 1 occurrence of ', rule 2' placed immediately outside the closing backtick, found ${N_RULE2:-<non-numeric>}. A repair may have dropped 'rule 2' or left it inside the backticks."
               exit 1
             fi
           done
-          ANCHOR="$(grep -oE "\`CONTRIBUTING\\.md § [^\`]+\`" "$SCRIPT" | sed "s/^\`CONTRIBUTING\\.md § //; s/\`\$//" | sort -u || true)"
-          N_DISTINCT="$(printf "%s\\n" "$ANCHOR" | grep -c . || true)"
-          if [ "${N_DISTINCT:-x}" != "1" ]; then echo "::error::anchor guard — expected 1 distinct cited anchor, found ${N_DISTINCT:-<non-numeric>}."; exit 1; fi
-          N_CITES="$(grep -cF "\`CONTRIBUTING.md § ${ANCHOR}\`" "$SCRIPT" || true)"
-          if [ "${N_CITES:-x}" != "$EXPECTED_CITES" ]; then echo "::error::anchor guard — expected ${EXPECTED_CITES} citations, found ${N_CITES:-<non-numeric>}."; exit 1; fi
-          N_HEADS="$(grep -cF "### ${ANCHOR}" "$DOC" || true)"
-          if [ "${N_HEADS:-x}" != "1" ]; then echo "::error::anchor guard — '${ANCHOR}' resolves to ${N_HEADS:-<non-numeric>} headings, expected 1."; exit 1; fi
-          echo "anchor guard PASSED — anchor='${ANCHOR}' distinct=${N_DISTINCT} cites=${N_CITES} headings=${N_HEADS}"
+          echo "anchor guard ', rule 2' placement PASSED for skills/self-apply/SKILL.md and PROMOTE.md."
+
+          # --- Item 5 — citation-site-count tripwire (population-growth detector).
+          # [ADR-092 Decision (3)] Counts FILES ONLY — never extracts, resolves, or
+          # re-expands a discovered anchor (§Never-glob-and-resolve: this repository
+          # records shell-payload anchors in the citation form, and the tripwire must
+          # stay safe against them by construction). Population excludes `docs/` (Class-B
+          # quotations inside historical records; a new one is authored every cycle by
+          # design) and `tests/` (deliberately broken controls). The exclusion is a
+          # ROOTED PATH PREFIX, never a bare `--exclude-dir`, because the two forms agree
+          # today only by accident (zero nested docs/tests dirs below the root) and a
+          # bare name filter would silently widen the blind spot at any future depth. ---
+          TRIPWIRE_PIN=6
+          TRIPWIRE_LIST="$(grep -rlE '`CONTRIBUTING\.md § [^`]+`' . --exclude-dir=.git | grep -v '^\./docs/' | grep -v '^\./tests/' | sort)"
+          N_TRIPWIRE="$(printf '%s\n' "$TRIPWIRE_LIST" | grep -c . || true)"
+          # Named-membership assertion — required, and not a restatement of the exclusion
+          # above. Guards SELF-DROP-OUT: the guard's own source carries the citation form
+          # on exactly one line (this step's own N_CITES literal), and an unrelated edit
+          # to that line could make it stop matching without touching the exclusion
+          # filter at all. On self-drop-out this fails with a NAMED diagnostic rather
+          # than surfacing only as a bare off-by-one against the pin.
+          SELF_MEMBER="$(printf '%s\n' "$TRIPWIRE_LIST" | grep -cxF './.github/workflows/quality.yml' || true)"
+          if [ "${SELF_MEMBER:-x}" != "1" ]; then
+            echo "::error::anchor guard TRIPWIRE FAILED — the anchor guard's own source file (.github/workflows/quality.yml) has dropped out of the counted population. This is a self-drop-out (an edit broke the one line carrying the guard-visible form), not an ordinary population change."
+            exit 1
+          fi
+          if [ "${N_TRIPWIRE:-x}" != "$TRIPWIRE_PIN" ]; then
+            echo "::error::anchor guard TRIPWIRE FAILED — ${N_TRIPWIRE:-<non-numeric>} non-docs/non-tests files carry the guard-visible citation form, expected exactly ${TRIPWIRE_PIN}. A new citation site was likely added (or removed) outside docs/ and tests/; if intentional and reviewed, bump TRIPWIRE_PIN in this step (ADR-092 Decision (3))."
+            exit 1
+          fi
+          echo "anchor guard tripwire PASSED — ${N_TRIPWIRE} files (pin ${TRIPWIRE_PIN}), self-membership confirmed."
+
+          # --- GNU-proof self-tests (a)-(d),(h),(f),(g) — proven in CI, on ubuntu-latest,
+          # against this cycle's own PR (ADR-092 §GNU/BSD, 8 in-workflow proof items;
+          # item (e) is proven by the AC-8b/AC-9b legs in the registry-sha256-check job
+          # continuing to pass for the 2 original slugs after W1 widens GATED_SLUGS). ---
+
+          # (a) whole-line match, h3 anchor.
+          if [ "$(resolve_heads 'Worked-example authoring rules (S1 security carry-forward)' CONTRIBUTING.md)" != "1" ]; then
+            echo "::error::GNU-proof (a) FAILED — h3 anchor did not resolve to exactly 1 heading."
+            exit 1
+          fi
+          # (b) whole-line match, h2 anchor — discriminates the unanchored substring
+          # matchers (a bare `grep -cF` search for this text also matches inside the
+          # unrelated `# Placeholder authoring rules` prefix elsewhere in the doc,
+          # returning 2; whole-line equality correctly returns 1).
+          if [ "$(resolve_heads 'Placeholder authoring rules' CONTRIBUTING.md)" != "1" ]; then
+            echo "::error::GNU-proof (b) FAILED — h2 anchor did not resolve to exactly 1 heading."
+            exit 1
+          fi
+          # (c) heading-collision fixture, GENERATED at runtime, never committed (mktemp
+          # precedent already in this workflow, quality.yml:626 `FIX="$(mktemp -d)"`).
+          # Must resolve to 2 so `== 1` REDs on input where `>= 1` would wrongly GREEN —
+          # the discriminator for the "check that cannot fail" defect found at Phase 2.D.
+          # Invokes the SAME resolve_heads() the real assertion above uses.
+          PROOF_C_DIR="$(mktemp -d)"
+          trap 'rm -rf "$PROOF_C_DIR"' EXIT
+          printf '## Dup anchor\n\nbody text\n\n## Dup anchor\n' > "$PROOF_C_DIR/dup.md"
+          N_DUP="$(resolve_heads 'Dup anchor' "$PROOF_C_DIR/dup.md")"
+          if [ "$N_DUP" != "2" ]; then
+            echo "::error::GNU-proof (c) FIXTURE-VALIDITY FAILED — expected the duplicate-heading fixture to resolve to 2, got ${N_DUP}. The fixture is a no-op and proves nothing."
+            exit 1
+          fi
+          echo "GNU-proof (c) PASSED — duplicate-heading fixture resolves to ${N_DUP} (would wrongly GREEN under '>= 1'; correctly REDs under '== 1')."
+          # (d) extraction regex's multibyte section sign (U+00A7) survives extraction
+          # under the runner's locale — re-extract the real anchor from the real citing
+          # script and confirm it matches byte-for-byte.
+          D_ANCHOR="$(extract_anchor scripts/canonicalize-scan.sh)"
+          if [ "$D_ANCHOR" != "Worked-example authoring rules (S1 security carry-forward)" ]; then
+            echo "::error::GNU-proof (d) FAILED — extraction regex produced an unexpected anchor: $(sanitize "$D_ANCHOR")"
+            exit 1
+          fi
+          echo "GNU-proof (a)(b)(d) PASSED."
+          # (h) NC-5 — prefix-truncation fixture, the ONLY proof that discriminates
+          # whole-line equality from `index($0,s)==1`. The committed fixture cites the
+          # real heading MINUS its trailing parenthetical; it must resolve to ZERO.
+          NC5_ANCHOR="$(extract_anchor tests/fixtures/citation/nc5-prefix-truncated.md)"
+          NC5_HEADS="$(resolve_heads "$NC5_ANCHOR" CONTRIBUTING.md)"
+          if [ "$NC5_HEADS" != "0" ]; then
+            echo "::error::GNU-proof (h) / NC-5 FAILED — the prefix-truncated anchor resolved to ${NC5_HEADS} headings, expected 0. Whole-line equality may have regressed to prefix matching."
+            exit 1
+          fi
+          echo "GNU-proof (h) / NC-5 PASSED — prefix-truncated anchor correctly resolves to 0."
+
+          # (f)/(g) — sanitizer RED/GREEN under GNU, and locale behaviour under the
+          # pinned LC_ALL=C, including the ASCII-marker requirement. The payload lives in
+          # a COMMITTED FIXTURE FILE, never a shell one-liner — measured, the naive
+          # `printf` form errors in zsh and silently drops the percent sign in bash.
+          INJ_ANCHOR="$(extract_anchor tests/fixtures/citation/s15-injection-control.md)"
+          INJ_SAFE="$(sanitize "$INJ_ANCHOR")"
+          # Leg A — injection shape neutralized: no literal %0A, no raw `::error::` +
+          # marker sequence (the guard's own workflow-generated `::error::` prefix on the
+          # error lines above is expected and is not asserted against here).
+          if printf '%s' "$INJ_SAFE" | grep -qF '%0A'; then
+            echo "::error::GNU-proof (f) Leg A FAILED — sanitized output still contains a literal %0A."
+            exit 1
+          fi
+          if printf '%s' "$INJ_SAFE" | grep -qF '::error::INJECTED-MARKER-7f3a'; then
+            echo "::error::GNU-proof (f) Leg A FAILED — sanitized output still contains the raw '::error::INJECTED-MARKER-7f3a' injection shape."
+            exit 1
+          fi
+          # Leg B — diagnostic preserved: the marker itself must still be present,
+          # proving the anchor was SANITIZED, not DROPPED — the substantive decision of
+          # AC-S15. A sanitizer that simply deletes the value would pass Leg A and fail
+          # Leg B.
+          if ! printf '%s' "$INJ_SAFE" | grep -qF 'INJECTED-MARKER-7f3a'; then
+            echo "::error::GNU-proof (g) Leg B FAILED — sanitized output dropped the diagnostic marker entirely."
+            exit 1
+          fi
+          echo "GNU-proof (f)(g) PASSED — Leg A and Leg B both hold."
+          echo "anchor guard: all 8 in-workflow GNU-proof items (a)-(h) PASSED."
 
   lock-file-zero-sha-check:
     name: Lock File Zero-SHA Rejection (S9)
