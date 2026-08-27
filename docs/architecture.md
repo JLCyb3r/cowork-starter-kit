@@ -112,6 +112,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-089 | Release-surface evidence seams fail **loudly and closed**, never silently (v2.19.11 AC-1) — `evidence_tags()` stops discarding `git ls-remote`'s stderr with `2>/dev/null`; it captures stderr in a `mktemp` file (S-A6), reads `rc` explicitly, prints an `::error::` carrying git's own words, and `exit 2` (contract/tool error, the house code at 12 sites) instead of letting `set -euo pipefail` abort the `:218` assignment with a bare, undiagnosable **128**. Three decisions: **(1)** **no caller-side bracket** at `:218` — the `exit 2` inside the function terminates the `$( )` subshell and top-level `set -e` propagates it *as* exit 2 (verified end-to-end); adding a `set +e`/`rc=$?` bracket without rc=2 propagation yields exit **0** and a universal `MISSING-TAG`, manufacturing the very defect Phase 0's amendment falsified. **(2)** **`rc=$?` is reachable inside `$( )` ONLY because bash's `inherit_errexit` is OFF** (`grep -rn 'inherit_errexit\|shopt' scripts/ .github/` → **0** hits) — demonstrated, not asserted: prepending `shopt -s inherit_errexit` to the fixed function restores the silent exit-128 defect exactly. **(3)** **NOT `2>&1` into the captured variable** — git can exit **0** while writing to stderr, and `:286` matches the captured evidence with `grep -qF "refs/tags/v${tok}"` against the whole line, so a merged stream turns a broken-ref diagnostic into a **tag-exists GREEN** (fail-OPEN, demonstrated). Credential-leak assertion is an inspection (`://[^/[:space:]]*@`), never a `sed` redactor. `Reusability: project-specific` | ACCEPTED (v2.19.11) |
 | ADR-090 | **Citations are anchored to headings, written in a backtick-delimited form, and the anchor is CI-enforced by derivation from the citing file** (v2.19.11 AC-2 + AC-3) — the repo-wide convention minted to close the `CONTRIBUTING.md:129` class, where a 33-line insertion silently broke 53 line-pinned citations and 31 green CI jobs saw none of it. Four decisions: **(1)** a citation is `` `<file> § <unique heading text>` ``, and **the backticks are load-bearing, not cosmetic** — they terminate the anchor so the guard's `` [^`]+ `` extraction cannot run greedily to end-of-line (the un-delimited form yielded `N_DISTINCT=5` and red-lined CI on a *correctly executed* de-pin). **(2)** the CI guard **derives** the expected anchor from the citing file and never hardcodes it in the workflow — the hardcoded form lets an author drop a qualifier from one citation while both "zero stale pins" and "heading is unique" stay GREEN and the citation resolves to nothing. **(3)** the guard is an **inline step**, never a file under `scripts/` (TIER-4), and asserts three things: exactly 1 distinct cited anchor, cited exactly `EXPECTED_CITES` times, resolving to exactly 1 heading. **(4)** every pipeline feeding an assertion carries `\|\| true`, because `grep` exits 1 on zero matches and an unguarded assignment under `set -euo pipefail` aborts the step **undiagnosably** — the ADR-089 defect class, found inside this guard's own first draft. Companion: the AC-8b/AC-9b per-row registry gate ships as **one step, one parser copy** (self-test and assertion sharing a single `check_row()`), which owes no `PARSER_COPIES`-style pin and lets the self-test exercise the same code path the assertion runs. `Reusability: candidate-constituent` | ACCEPTED (v2.19.11) |
 | ADR-091 | **The reference-freeze control derives its population by rename-pairing, not pathspec exclusion** (v2.19.12 AC-7) — excluding a rename's *destination* with `:(exclude)` does not hide the pair, it **prevents the pairing**, so every movee renders as a whole-file deletion while the addition half is hidden. Executed against a real simulated end-state tree, the pathspec form returned **35 violations on a completely correct cycle** and was simultaneously **blind** to a citation removal inside `docs/internal/` (diff byte-identical in size with and without it) — both halves of the symmetric difference non-empty, found only when the partition was finally run after four review rounds. Five decisions: **(1)** exclude pairs by `--find-renames=100%` over the whole repo with **no `:(exclude)`** (diff shrinks sharply — magnitude deliberately unpinned, three measurers got three pairs; `docs/internal/**` stays in population); **(2)** partition **statefully**, taking `^-` attribution from `--- SRCX/` and `^+` from `+++ DSTX/` — a control that strips headers then rules on "which file" is not computable, and one that reads both sides off `+++` reports every deletion against `/dev/null`; **(3)** permit additions from a **finite set derived from `CYCLE_VERSION`** (four append-only surfaces, `verify-ledger-annotations.sh`, and the cycle's own `design-v<CV>.md` / `qa-report-v<CV>.md` / `security-review-v<CV>.md` / `security-audit-v<CV>.md`) — **corrected at Phase 2.1 from an earlier `--- /dev/null` form that permitted additions in ANY new file, which passed a public `docs/report-index.md` republishing all 14 pre-move paths**; drift now fails CLOSED and loud instead of open and silent; **(4)** the `verify-ledger-annotations.sh` carve-out is safe **only because AC-5 asserts that file positionally** — the dependency is part of the decision and no leg may be dropped; **(5)** clean → 0 (safety), violation → 1, broken inventory → 3 (diagnosis). Verified both directions: 35 → **0** false violations, and four half-B constructions **all caught** (public index file, removal inside `docs/internal/`, new `tests/fixtures/` file, modified movee); two negative controls fire and all three exit codes were observed. Introduces a real coupling — the control now shares AC-6's dependence on rename detection, so `diff.renameLimit` exhaustion degrades **both** at once. `Reusability: candidate-constituent` | ACCEPTED (v2.19.12) |
+| ADR-092 | **A citation resolves by whole-line equality, and the guard that proves it counts an enumerated, scoped population it never re-expands** (v2.19.13 S14/S15 + B0) — closes a four-generation defect chain in which each prescription was authored by whoever had just corrected the previous one. Six decisions: **(1)** a citation resolves iff `level-prefix + anchor` equals a heading line **in full** (`grep -cxF` or `awk '$0 == s'`); `index($0,s)==1` (prefix test — **greens a rotted citation, silently**), bare `grep -cF` (substring — **reddens a correct file**) and interpolated `grep -cE` (parentheses become a capture group — **returns 0 on a correct file**) are all forbidden, and **a control that discriminates equality from prefix matching must DELETE a suffix, not add one** — both pre-existing negative controls added characters and were blind to the defect for two review rounds. **(2)** the population is an explicit enumeration, **never a glob**, because this repo records historical security-test payloads *in the citation form* whose anchors are command-substitution strings — **never glob-and-resolve**; a discovered anchor is only ever a quoted argument to a fixed-string matcher. **(3)** the growth tripwire pins a **count of files** over a population **scoped to exclude `docs/` and `tests/`** — a pin whose population includes artifacts the cycle itself creates is **not a control, it is a scheduled false alarm**. **(4)** Class A/B is a **role** test, file- and ships-agnostic; ambiguity resolves to **Class A**; and Class A is an **obligation, not an edit method** — inside an append-only record it is discharged by a superseding cross-reference, never an in-place edit, or the tie-breaker silently mandates rewriting history. **(5)** contributor-derived text is **sanitized at failure sinks, dropped at success sinks**, with a new variable, fail-fast loop discipline, an **explicitly pinned `LC_ALL=C`** (the collapse is locale-dependent — same input, two answers) and an **ASCII-only** lossy marker, because **a marker that can be silently damaged cannot signal silent damage**. **(6)** its control needs **two legs** — injection-shape absent *and* marker still present — since a colon-free marker survives sanitization by construction and a single absence assertion could never go GREEN. `Reusability: candidate-constituent` | ACCEPTED (v2.19.13) |
 
 ---
 
@@ -14952,3 +14953,145 @@ intend. That is why this is minted as an ADR rather than folded into ADR-088.
   Decision (3)'s permitted set is per-cycle and must be re-derived by the next cycle that needs this
   control** — a maintenance cost taken deliberately in exchange for the exception set being finite
   and enumerable at review time, which the `--- /dev/null` form was not.
+
+---
+
+## ADR-092: A citation resolves by whole-line equality, and the guard that proves it counts an enumerated, scoped population it never re-expands (v2.19.13)
+
+**Status:** ACCEPTED (v2.19.13) · **Reusability:** candidate-constituent
+
+### Context
+
+v2.19.11 (ADR-090) minted the backtick-delimited `` `<file> § <heading>` `` citation form and a CI
+guard that derives the expected anchor from the citing file. v2.19.13 extends that guard from one
+hardcoded pair to four enumerated tuples, and — in the course of doing so — three successive attempts
+to specify *how* the anchor is matched each shipped a different defect. This ADR records the
+resolution primitive, the population rule, and the safety properties the primitive alone does not
+give, so the next author does not re-derive them.
+
+The defect chain, recorded because the pattern is the point:
+
+| Gen | Prescription | Author | Failure direction |
+|---|---|---|---|
+| 11 | fixed-string substring match against constructed prefixes, never measured | scope brief | **reddens a CORRECT file** — noisy, self-announcing |
+| 12 | an `index()`-based prefix test, called "anchored string equality" | reviewer condition | **greens a BROKEN citation** — silent, strictly worse |
+| 13 | an occurrence-count asserted over the wrong denominator, tightened into a "verified" measurement | reviewer wording + remedy author | **ships a false measurement into a permanent ADR** |
+| 14 | a population pin computed against a tree that excluded the cycle's own deliverables | binding-conditions file | **REDs on a fully correct tree** |
+
+Every generation was introduced by an author correcting the previous one. Generation 14 was found at
+Phase 1 by re-running the conditions file's own numbers instead of adopting them.
+
+### Decision
+
+**(1) A citation resolves iff the constructed heading candidate — the level prefix concatenated with
+the cited anchor — equals a heading line IN FULL.** Exactly two admissible implementations:
+`grep -cxF` with the candidate as a fixed string, or `awk -v s=CANDIDATE '$0 == s'`.
+
+Three forms are forbidden, and they fail in three different directions:
+
+| forbidden form | why |
+|---|---|
+| `index($0, s) == 1` | a **prefix** test — anchored at the start, unbounded at the end. Certifies a truncated (rotted) anchor as resolved. Silent. |
+| bare `grep -cF` | substring containment — a search for the h2 form matches inside the h3 line. Reddens a **correct** file. |
+| `grep -cE` with an interpolated anchor | a real anchor containing parentheses becomes a capture group; the match silently returns 0 on a correct file. |
+
+Only whole-line equality fails in none of the three directions.
+
+**A control that can distinguish equality from prefix matching must DELETE a suffix, not add one.**
+Both pre-existing negative controls in this repository added characters, and both return 0 under
+prefix matching *and* under equality — which is why generation 12 survived two review rounds. A
+prefix-truncation fixture is therefore mandatory, and is the only control with discriminating power
+for matching mode.
+
+**(2) The guarded population is an explicit enumeration, never a glob — and the reason is safety, not
+only precision.** This repository records historical security-test payloads *in the citation form*,
+inside `docs/internal/`, whose anchors are shell command-substitution and quote-breakout strings.
+They are legitimate Class-B records and must not be edited. A guard that globbed files and
+interpolated each discovered anchor into a command would re-expand them. Therefore: **never
+glob-and-resolve.** Where any tooling must handle a discovered anchor at all, it passes it as a
+quoted argument to a fixed-string matcher — never into a regex, never back through a shell.
+
+**(3) A population tripwire pins a COUNT OF FILES over a SCOPED population, and the scope is part of
+the control.** The tripwire exists to detect a *new* citation site appearing — the one failure a
+per-tuple assertion structurally cannot see. Its population **excludes `docs/` and `tests/`**:
+`docs/` occurrences are Class-B quotations inside historical records, and a new one is authored every
+cycle by design; `tests/` fixtures are deliberately broken controls whose "repair" would break their
+own RED legs. What remains — workflows, scripts, skills, templates, and the top-level ceremony files —
+is exactly where a live Class-A pointer appears. **A pin whose population includes artifacts the
+cycle itself creates is not a control; it is a scheduled false alarm.** The guard's own source file is
+inside the counted set, and the count must not self-exclude by accident.
+
+**(4) Class A/B is a ROLE test, applied file-agnostically and ships-agnostically; ambiguity resolves
+to Class A; and Class A is an OBLIGATION, not an EDIT METHOD.** An occurrence that quotes or
+illustrates the convention is Class B; one a reader is expected to follow is Class A; where the role
+is genuinely ambiguous **it is Class A**, failing safe toward repair. Because the rule is
+ships-agnostic and this repository is full of append-only historical records that quote citations
+ambiguously, the tie-breaker requires a discharge rule or it silently mandates rewriting history:
+**inside an append-only record, a Class-A obligation is discharged by a superseding cross-reference
+appended below, or by a recorded deferral — never by an in-place edit.** The tie-breaker fails safe
+toward *repair*, not toward *rewriting*. This also removes any need to assert a factual
+occurrence-count inside the amendment, which is how generation 13 arose.
+
+**(5) A contributor-derived value at a failure sink is SANITIZED, never dropped; at a success sink it
+is dropped entirely.** The failure sink is the reachable one — it fires on any non-resolving anchor,
+i.e. the attacker-controlled case — and it is the only diagnostic a human gets, so deleting it trades
+one defect for another. Sanitization is specified completely rather than left to the implementer: a
+**new** variable (never an in-place overwrite, because the step is now a loop), fail-fast loop
+discipline, strip the percent and colon characters, collapse to printable under an **explicitly
+pinned `LC_ALL=C`**, truncate at 80 characters, and mark lossiness with an **ASCII-only** marker.
+
+The locale must be pinned because `tr -cd '[:print:]'` returns different answers under `C` and under
+UTF-8 for the same input — a security control that depends on an inherited environment variable is
+not a control. The marker must be ASCII because the pinned collapse strips multibyte, so a multibyte
+marker is itself silently damaged — **and a marker that can be silently damaged cannot signal silent
+damage.**
+
+**(6) The control for (5) has two legs, because a safe marker survives sanitization.** Leg A asserts
+the injection shape is gone; **Leg B asserts the marker is still present**, which is what proves the
+value was sanitized rather than dropped. A single "marker absent" assertion is unsatisfiable on a
+correct implementation once the marker is chosen so that colon-stripping alone cannot satisfy it —
+so choosing the safer marker without rebuilding the assertion converts a weak control into a
+permanently failing one.
+
+### Consequences
+
+- The anchor guard grows from one pair to four tuples, with per-tuple distinct-anchor and
+  citation-count quantities kept **separate**, because one tuple legitimately carries 5 occurrences of
+  1 anchor and a collapsed single count breaks precisely there.
+- Two orthogonal self-integrity assertions are required, not one: a population-completeness count
+  (catches the enumeration shrinking) and a fragment-split non-duplication count (catches a paste).
+  Substituting either for the other removes the only mechanical defense against the risk this design
+  explicitly accepts.
+- Coverage remains partial and is **named, not implied**: `CF-v2.19.13-CITATION-CENSUS` records the
+  shipping files outside the tuple population, and two known-broken Class-A pointers in `.github/`
+  are deferred by decision — both unbackticked, therefore invisible to the extraction regex by
+  construction, and one with an anchor that does not exist on any single line.
+- Every number in this cycle carries unit, tree-state and binary, and — the rule this cycle produced —
+  **a number inherited from a reviewer is not verified until the recipient re-runs it.** Four of the
+  twenty binding conditions handed to Phase 1 were falsified by that re-run.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) promote whole-line-equality resolution into a **single shared shell
+  function** in `quality.yml`, sourced by every citation assertion, retiring the per-call-site
+  judgment that produced three of the four defect generations — cheapest, and the one that addresses
+  the fact that each generation was authored by whoever had just fixed the previous one;
+  (b) replace the enumerated 4-tuple with a **generated** enumeration derived from the tripwire's own
+  scoped file list, making population and guard the same object and dissolving the census gap
+  entirely; (c) extend the role rule with a **machine-checkable Class-B marker** — an explicit inline
+  annotation on quotation-form citations — so classification stops being an inspection and the
+  tripwire can safely widen to `docs/`; (d) repair the two `.github/` pointers and the
+  `CONTRIBUTING.md` self-citation, retiring the "invisible by construction" exemption class;
+  (e) leave all of it as specified and accept that the next cycle re-derives the population boundary.
+- **Concrete revisit triggers:** the tripwire's pinned count changes for any reason other than a
+  deliberate, ADR-recorded population change; a fifth citation tuple is proposed; any proposal to
+  relax whole-line equality, to widen the tripwire to `docs/`, or to re-scope Class A/B by filename or
+  by ships-status; a heading in `CONTRIBUTING.md` acquires a colon or percent character, which would
+  make the sanitizer lossy on a legitimate anchor for the first time; or a second section sign appears
+  inside any citation.
+- **Risk knowingly accepted:** the guarded population is smaller than the obligated population, and
+  nothing reconciles them. The tuple enumeration covers 4 files; the tripwire detects growth only
+  outside `docs/` and `tests/`; the role rule is repo-wide. A new Class-A citation authored inside
+  `docs/`, or a rotted anchor in an already-counted file that no tuple names, is detected by nothing
+  in this design. This is accepted for a patch cycle, is named as `CF-v2.19.13-CITATION-CENSUS`, and
+  option (b) above is the intended retirement path.
