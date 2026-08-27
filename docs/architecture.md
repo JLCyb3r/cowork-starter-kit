@@ -15087,11 +15087,38 @@ permanently failing one.
   deliberate, ADR-recorded population change; a fifth citation tuple is proposed; any proposal to
   relax whole-line equality, to widen the tripwire to `docs/`, or to re-scope Class A/B by filename or
   by ships-status; a heading in `CONTRIBUTING.md` acquires a colon or percent character, which would
-  make the sanitizer lossy on a legitimate anchor for the first time; or a second section sign appears
-  inside any citation.
+  make the sanitizer lossy on a legitimate anchor for the first time; a second section sign appears
+  inside any citation; **the first citation targeting a document other than `CONTRIBUTING.md` is
+  authored anywhere in the repository**, which converts the hardcoding named under §Risk knowingly
+  accepted from latent to live and is invisible to all three of this design's checks simultaneously;
+  or **a directory named `docs` or `tests` appears at any depth below the repository root**, which
+  breaks the equivalence the tripwire's rooted-prefix exclusion currently relies on.
 - **Risk knowingly accepted:** the guarded population is smaller than the obligated population, and
   nothing reconciles them. The tuple enumeration covers 4 files; the tripwire detects growth only
-  outside `docs/` and `tests/`; the role rule is repo-wide. A new Class-A citation authored inside
-  `docs/`, or a rotted anchor in an already-counted file that no tuple names, is detected by nothing
-  in this design. This is accepted for a patch cycle, is named as `CF-v2.19.13-CITATION-CENSUS`, and
-  option (b) above is the intended retirement path.
+  outside `docs/` and `tests/`; the role rule is repo-wide. **Three** causes are undetected by
+  anything in this design, not two: (i) a new Class-A citation authored inside `docs/`; (ii) a rotted
+  anchor in an already-counted file that no tuple names — an existing citation going stale because a
+  heading moved; and (iii) **a newly authored broken citation in an already-counted non-`docs/`
+  file** — for instance a second, bogus citation added to `CHANGELOG.md`. Cause (iii) is invisible for
+  a reason of its own and was previously unnamed: **the tripwire counts FILES, not occurrences**, so a
+  file already in the population absorbs any number of further citations without moving the pin, while
+  no tuple names it. It is distinct from (ii), which is decay of a citation that was once correct;
+  (iii) is authorship of one that never was. This is accepted for a patch cycle, is named as
+  `CF-v2.19.13-CITATION-CENSUS`, and option (b) above is the intended retirement path.
+
+  **A fourth exposure, latent rather than live: this ADR hardcodes `CONTRIBUTING.md` where ADR-090's
+  form is the generic `` `<file> § <heading>` ``.** The 4-tuple, the extraction regex and the tripwire
+  pattern all name that one document. Measured on this tree, nothing is currently escaping: every
+  guard-visible citation occurrence in the repository targets `CONTRIBUTING.md`, and **zero** target
+  any other file. But if the gap ever goes live it goes live in triplicate and silently — the first
+  Class-A pointer of the identical backticked shape whose target file is `README.md` rather than
+  `CONTRIBUTING.md` would be invisible to the anchor guard (no tuple names it), to the tripwire (the
+  pattern does not match it) and to the census (same pattern) **at the same instant**, with no single
+  check going yellow to signal it. Accepted rather than fixed here because generalizing the pattern is
+  the same work as option (b) above and belongs with it. Stated as a measurement a later auditor can
+  re-run, not as an assurance.
+
+  *That illustration is deliberately written in prose rather than as a specimen citation.* Rendering
+  it as a specimen would have made this paragraph's own measurement false the moment it was written —
+  the count of non-`CONTRIBUTING.md` targets would read 1, sourced from the sentence claiming it reads
+  zero. Drafted that way at first, and caught by re-running the count instead of trusting it.
