@@ -720,11 +720,19 @@ jobs:
           fi
           echo "AC-PL-6 PASSED — ${ACTUAL} rows carry a valid sha256 cell in field 8 (pin: ${AC_PL_6_EXPECTED_HEX_ROWS})."
 
-      - name: AC-8b/AC-9b — per-row structural integrity of the gated registry rows (v2.19.11, ADR-090 companion)
+      - name: AC-8b/AC-9b — per-row structural integrity of the gated registry rows (v2.19.11 ADR-090 companion, widened v2.19.13 AC-W1 — ADR-092)
         run: |
           set -euo pipefail
           REG="${1:-curated-skills-registry.md}"
-          GATED_SLUGS="self-apply prompt-gate"
+          # [AC-W1] Widened from 2 to 5 slugs: S11 rewrites self-archive/self-upgrade's
+          # description cells and S5 bumps pull-updates's sha256 cell this cycle, and
+          # neither was gated before this widening — a stray '|' in either edit would
+          # have been caught only by the aggregate hex-row count, which a compensating
+          # pair can defeat. NF==9 and the field-8 hex regex are NOT relaxed or widened
+          # by this change (docs/risk-register.md v2.19.11-PULL-ROW-1 voids its own
+          # acceptance basis if either is) — only the slug list grows, which is strictly
+          # strengthening.
+          GATED_SLUGS="self-apply prompt-gate self-archive self-upgrade pull-updates"
           check_row() {
             awk -F'|' -v row="$2" 'BEGIN{seen=0;ok=0} {n=$2; gsub(/ /,"",n); if(n==row){seen++; s=$8; gsub(/ /,"",s); if(NF==9 && s ~ /^[0-9a-f]{64}$/) ok++}} END{exit (seen==1 && ok==1)?0:1}' "$1"
           }
@@ -740,8 +748,21 @@ jobs:
           sed 's/^| self-apply |/|self-apply|/' "$REG" > "$FIX/reflow.md"
           awk -F'|' 'BEGIN{OFS="|"} $2==" self-apply " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-sa.md"
           awk -F'|' 'BEGIN{OFS="|"} $2==" prompt-gate " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-pg.md"
+          # [AC-W1] 3 new pipe-injection fixtures, one per newly-gated slug, mirroring
+          # the existing pipe-sa/pipe-pg pattern exactly (same generator shape, same
+          # shared check_row()).
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-archive " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-arc.md"
+          awk -F'|' 'BEGIN{OFS="|"} $2==" self-upgrade " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-upg.md"
+          awk -F'|' 'BEGIN{OFS="|"} $2==" pull-updates " {$3=$3 "| "} 1' "$REG" > "$FIX/pipe-pu.md"
           grep -v '^| self-apply |' "$REG" > "$FIX/deleted.md"
-          for f in reflow pipe-sa pipe-pg deleted; do
+          # [AC-W1] The 3 new fixtures are added to this SAME no-op setup guard list. A
+          # new fixture whose field-2 anchor fails to match would otherwise be a silent
+          # no-op with a misleading diagnostic — reporting GREEN having tested nothing.
+          # The row-deletion vacuity leg is deliberately NOT duplicated per new slug:
+          # check_row() is shared, slug-parametric code, and the existing self-apply
+          # deletion leg below already proves it non-vacuous for every slug that calls
+          # it (stated explicitly per AC-W1, not left for a reader to reconstruct).
+          for f in reflow pipe-sa pipe-pg pipe-arc pipe-upg pipe-pu deleted; do
             if cmp -s "$REG" "$FIX/$f.md"; then
               echo "::error::AC-8b FIXTURE SETUP FAILED - the ${f} fixture was a no-op; its field-2 anchor no longer exists in the registry. Repair the FIXTURE anchor. Do NOT relax the assertions below."
               exit 1
@@ -751,10 +772,13 @@ jobs:
           if ! check_row "$FIX/reflow.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a benign whitespace reflow of the row pipes was reported as damage (false positive)."; fail=1; fi
           if check_row "$FIX/pipe-sa.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a pipe injected into self-apply description was NOT detected."; fail=1; fi
           if check_row "$FIX/pipe-pg.md" prompt-gate; then echo "::error::AC-9b SELF-TEST FAILED - a pipe injected into prompt-gate description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-arc.md" self-archive; then echo "::error::AC-W1 SELF-TEST FAILED - a pipe injected into self-archive description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-upg.md" self-upgrade; then echo "::error::AC-W1 SELF-TEST FAILED - a pipe injected into self-upgrade description was NOT detected."; fail=1; fi
+          if check_row "$FIX/pipe-pu.md" pull-updates; then echo "::error::AC-W1 SELF-TEST FAILED - a pipe injected into pull-updates description was NOT detected."; fail=1; fi
           if check_row "$FIX/deleted.md" self-apply; then echo "::error::AC-8b SELF-TEST FAILED - a deleted self-apply row was NOT detected; the check is vacuous."; fail=1; fi
           if [ "$fail" -ne 0 ]; then exit 1; fi
-          echo "AC-8b/AC-9b self-test PASSED - reflow GREEN, both pipe injections RED, row deletion RED."
-          echo "AC-8b/AC-9b PASSED - gated slugs verified: ${GATED_SLUGS}."
+          echo "AC-8b/AC-9b/AC-W1 self-test PASSED - reflow GREEN, all 5 pipe injections RED, row deletion RED."
+          echo "AC-8b/AC-9b/AC-W1 PASSED - gated slugs verified: ${GATED_SLUGS}."
 
       - name: Verify curated-skills-registry.md sha256 matches skills/<slug>/SKILL.md (fail-closed on drift)
         run: |
