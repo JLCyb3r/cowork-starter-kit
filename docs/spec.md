@@ -9493,12 +9493,49 @@ containing all of the following as distinct, locatable text:
    >
    > **Discharge rule for append-only records (binding, and part of the tie-breaker, not a
    > qualification of it).** Class A states an *obligation*, not an *edit method*. Where a Class-A
-   > occurrence sits inside an append-only historical record — `CHANGELOG.md`, `docs/retro.md`, a
-   > `docs/internal/security/security-audit-*.md`, or an already-appended `## Amendment record`
-   > block — the obligation is discharged by a **superseding cross-reference appended below**, or by
-   > an explicitly recorded deferral, and **never by an in-place edit**. Without this rule the
-   > tie-breaker would mandate rewriting the repository's own history, which the append-only
-   > discipline forbids; the tie-breaker fails safe toward *repair*, not toward *rewriting*.
+   > occurrence sits inside an **append-only historical record**, the obligation is discharged by a
+   > **superseding cross-reference appended below**, or by an **explicitly recorded deferral**, and
+   > **never by an in-place edit**. Without this rule the tie-breaker would mandate rewriting the
+   > repository's own history, which the append-only discipline forbids; the tie-breaker fails safe
+   > toward *repair*, not toward *rewriting*.
+   >
+   > **Scope is a ROLE TEST, and the enumeration is ADR-088's — do not restate it here.** A record is
+   > append-only when it functions as *a record of what was true or decided at a past moment*: its
+   > truth-value is indexed to its own date, so rewriting it destroys evidence instead of correcting
+   > it. The in-force enumeration is the Class-B clause of ADR-088's section headed
+   > `Reference-class ruling — two classes, one mechanical test`, which names `docs/architecture.md`,
+   > `docs/retro.md`, `docs/spec.md`, `docs/risk-register.md`, `docs/design-v2.19.8.md` and
+   > `CHANGELOG.md`. **This rule adopts that population by reference and does not re-derive it.**
+   >
+   > *Why by reference and not as a list.* The Round-2 draft enumerated four items — `CHANGELOG.md`,
+   > `docs/retro.md`, `security-audit-*.md`, an already-appended `## Amendment record` block. Measured
+   > against ADR-088's own clause, that list is **narrower**: it omits `docs/spec.md`,
+   > `docs/risk-register.md` and the **design-doc family** (ADR-088 names `docs/design-v2.19.8.md`
+   > explicitly), and it narrows `docs/architecture.md` from the whole file to amendment blocks inside
+   > it. Two in-force rules would then return **different answers to "is this record append-only?"**
+   > with nothing noting the divergence — structurally the same unnoted-substitution defect item 2
+   > below exists to name, committed inside the remedy for it.
+   >
+   > **The live/closed boundary is what makes the role test decidable.** A record acquires the
+   > append-only obligation **when its own cycle closes**. Inside its own cycle a spec section or a
+   > design document is the live working artifact and is corrected **in place** — house practice:
+   > `docs/design-v2.19.11.md` §H.3 (*"CORRECTED at Phase 1, and the correction is the point"*) and
+   > `docs/design-v2.19.10.md` §C.0 (*"amendment, Phase-2 finding S9"*). Once its cycle has shipped,
+   > the same file is corrected **only by an appended record** — house practice:
+   > `docs/design-v2.19.11.md` §I.2, titled **"Placement — append, never rewrite"**, and
+   > `docs/design-v2.19.12.md` §K (*"post-audit documentation corrections (appended by @dev)"*). This
+   > is why v2.19.13 corrects its own `docs/spec.md` section in place and must **not** correct
+   > `docs/design-v2.19.11.md` in place. See item 3.
+   >
+   > **A recorded deferral MUST be reachable from the occurrence.** The sibling mechanism — a
+   > superseding cross-reference — is inherently local: a reader standing at the broken pointer finds
+   > it. A deferral recorded only in a carry-forward table somewhere else is not, and a reader who
+   > follows the broken pointer learns nothing. A deferral therefore discharges the obligation only
+   > if **either** (i) a note at or adjacent to the occurrence names the deferral id, **or** (ii) the
+   > deferral record states explicitly why no local note is owed — for example that the file is
+   > `export-ignore`d maintainer surface carrying a named id in `docs/risk-register.md`. **Silence at
+   > the occurrence is not a discharge.** Stating (ii) is cheap; leaving it unstated is how a
+   > deferral becomes indistinguishable from an oversight one cycle later.
 
    **Item 1 carries NO factual claim about how many occurrences exist in any file.** (See the
    Condition Ledger, C4: the Round-2 draft's parenthetical *"verified: 10 lines, none a live
@@ -9521,16 +9558,70 @@ containing all of the following as distinct, locatable text:
 
    All three should read `(2)`.
 
+   **ROOT CAUSE — found at Phase 1.1, and it is not the citing sites. ADR-088 numbers its own
+   decisions two different ways, and under one of them `(3)` is CORRECT.** Re-measured against
+   `docs/architecture.md`:
+
+   ```
+   ADR-088 index row (:111) — "Three decisions:"
+     (1) the archive-leak gate ... (2) git check-attr is rejected ... (3) references are ruled by
+     differential execution — Class A ... Class B ... is frozen        <- the reference-class ruling
+   ADR-088 body (### Decision) — six decisions:
+     (1) Retrofit the 14 via git mv
+     (2) Repair only the references a machine resolves; freeze the rest <- the reference-class ruling
+     (3) Mint the archive-leak gate in the direction the leak travels
+     (4) git archive is the instrument   (5) canary   (6) design-v2.19.* asymmetry
+   ```
+
+   So the "mis-pointers" are not typos: they are a faithful reading of ADR-088's **index row**, which
+   the repository still publishes. **The amendment MUST therefore do two things, not one:**
+
+   - **(3a) Rule the body authoritative.** `§Decision (N)` denotes the **body's** numbering; the index
+     row is a summary and its internal numbering is not citable. This follows the same
+     more-specific-artifact rule C6 applied to the push table. Under it, `(2)` is the correct target
+     and all six census loci stand as mis-pointers.
+   - **(3b) State the divergence in the amendment text.** Correcting three citing sites while leaving
+     the index row unreconciled fixes the symptom and leaves the generator running: the next reader of
+     the index row mints mis-pointer number seven, and the census in this AC becomes stale by
+     construction. The amendment is an append to `docs/architecture.md` and is the correct place to
+     record this — **it does not edit the index row**, which is inside an append-only record.
+
+   **MECHANISM RULING (settles the B0-item-3 / AC-CF-B-item-3 conflict — @dev FINDING 1).** All three
+   in-scope loci are corrected by an **appended superseding cross-reference, never an in-place edit**,
+   including `docs/design-v2.19.11.md`. AC-CF-B item 3 is corrected to match; the two instructions are
+   no longer both standing. Grounds, all re-measured at Phase 1.1:
+
+   1. **The file is in the class.** ADR-088's Class-B clause names a **sibling design doc**,
+     `docs/design-v2.19.8.md`, in its enumeration of append-only historical records. Design docs are
+     append-only by the in-force ADR's own words.
+   2. **It is closed, not live.** `docs/design-v2.19.11.md` shipped two cycles ago. Per item 1's
+     live/closed boundary, the append-only obligation has attached.
+   3. **@dev's specificity argument is sound in form but selects the wrong winner.** Its premise is
+     that this locus is unlike the other two. Measured, that is half true: it is unlike them in **not**
+     sitting inside an `## Amendment record` block (it sits in `### E.5`, an ordinary design-doc body
+     section, while `:14604` sits in the ADR-090 amendment record and `:14785` in the ADR-088 one).
+     It is **like** them in being a closed cross-cycle record. The property that selects the mechanism
+     is closed-versus-live, not amendment-block-versus-body.
+   4. **Decisive:** given the root cause above, `(3)` was *defensible when written* against ADR-088's
+     index row. An in-place rewrite would destroy a reading the repository still publishes, which is
+     precisely the harm ADR-088's own second ground for freezing names (*"a v2.18.0 retro entry ...
+     was true when written"*). An appended note records both numberings, which is what a reader
+     standing at that line actually needs.
+
    **Stated inclusion test for the census** (previously missing, which is why it could not be
    audited): *an occurrence is a mis-pointer iff it uses `§Decision (3)` to denote the **Class A/B
-   reference ruling***. Occurrences citing ADR-088's *actual* Decision (3) (the archive-leak /
+   reference ruling***. Occurrences citing ADR-088's *actual* body Decision (3) (the archive-leak /
    permitted-path gate), or citing ADR-087's / ADR-089's / ADR-090's own Decision (3), are **not**
-   mis-pointers and are correctly left alone.
+   mis-pointers and are correctly left alone. Per (3a), "actual" means the **body's** numbering.
 
    **Deferred by decision — exactly 3 loci, measured (see Condition Ledger C9 for the correction):**
    `docs/internal/security/security-audit-v2.19.11.md` (2 occurrences) and `docs/retro.md`
    (1 occurrence). All three are export-ignored (maintainer surface only), and all three sit in
-   append-only records, so item 1's discharge rule applies.
+   append-only records, so item 1's discharge rule applies. **Reachability (item 1, clause (ii)):** no
+   local note is owed at these three occurrences because all three files are `export-ignore`d
+   maintainer surface and the deferral carries the named id `CF-v2.19.13-DECISION3-RESIDUE` in
+   `docs/risk-register.md`. That sentence is the discharge — it is stated here rather than left
+   implicit, because an unstated deferral is indistinguishable from an oversight one cycle later.
 
 4. **Marks as superseded, by content-anchored forward pointer** (never an edit to a file this
    amendment does not own): the security-review line *"`CF-v2.19.11-A` / ADR-090 overlap (S12). Not
@@ -9966,8 +10057,23 @@ mechanism.
    that the GREEN direction (no userinfo in emitted stderr) reflects **git's own URL-handling
    behavior**, not code-level redaction by `verify-release-surface.sh`.
 3. **The `Decision (3)` mis-pointer** in this file (content anchor: `Under ADR-088 §Decision (3)'s`)
-   is corrected to `(2)` — folded in here per B0 item 3, because this file is already open in the
-   same push (P4).
+   is superseded — folded in here per B0 item 3, because this file is already open in the same push
+   (P4). **Mechanism: an appended superseding note, NOT an in-place edit** — the cited line's bytes
+   are left alone and a note is appended stating that `§Decision (3)` there denotes ADR-088's
+   **body** Decision (2), and that ADR-088's index row numbers the same decision `(3)`, which is why
+   the original reading was defensible. **This bullet's verb was `is corrected to (2)` in the
+   finalized spec, matching the direct-edit wording of items 1 and 2, and that was wrong** — it
+   inherited the verb from its siblings when C9 folded it in at Phase 1, and it contradicted B0
+   item 3's "never an in-place edit". Ruled at Phase 1.1 in favour of B0 item 3; see B0 item 3
+   §MECHANISM RULING for the four grounds. @dev is not to choose between two instructions here.
+
+   **Items 1 and 2 keep the direct-edit verb, deliberately and on the same rule.** They are not
+   inconsistent with item 3: item 2 is purely **additive** (a clause is *gained*, zero deletions,
+   which is what "append" means inside a paragraph), and item 1 replaces a **transcript that was
+   never true of any tree** — it has no date-indexed truth-value to preserve, so freezing it protects
+   nothing and actively invites a reader to re-derive from a false record. Item 3 is the only one of
+   the three that would **overwrite a defensible past reading**, and that is exactly the distinction
+   the discharge rule draws. Stated here so a later auditor does not "consolidate" the three verbs.
 
 **POPULATION check:** trivial by construction — invariant = proxy = these 3 exact passages.
 
