@@ -9556,7 +9556,10 @@ containing all of the following as distinct, locatable text:
      at Phase 1 per C9**: CF-B edits this same file in the same push, P4, so the cut previously drawn
      on AC ownership was arbitrary against cycle scope)
 
-   All three should read `(2)`.
+   **The correct target is `(2)`, and `(2)` is what each appended note SAYS — it is never what the
+   cited line is edited to.** The three cited lines' bytes are left unchanged in all three cases.
+   Read this sentence as naming the *content of the correction*, not an edit instruction; the
+   mechanism is fixed below and admits no in-place variant.
 
    **ROOT CAUSE — found at Phase 1.1, and it is not the citing sites. ADR-088 numbers its own
    decisions two different ways, and under one of them `(3)` is CORRECT.** Re-measured against
