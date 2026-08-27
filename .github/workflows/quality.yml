@@ -1433,7 +1433,7 @@ jobs:
           fi
           echo "SF-S-1 PASSED — no pip/npm install, no curl/wget in scripts/canonicalize-scan.sh."
 
-      - name: Citation anchor resolves to exactly one heading (AC-3, v2.19.11 — ADR-090)
+      - name: Citation anchor resolves to exactly one heading — whole-line equality (v2.19.13 P0, AC-S14 precursor — ADR-092)
         run: |
           set -euo pipefail
           SCRIPT="${1:-scripts/canonicalize-scan.sh}"
@@ -1458,13 +1458,30 @@ jobs:
               exit 1
             fi
           done
-          ANCHOR="$(grep -oE "\`CONTRIBUTING\\.md § [^\`]+\`" "$SCRIPT" | sed "s/^\`CONTRIBUTING\\.md § //; s/\`\$//" | sort -u || true)"
+          # [ADR-092 Decision (1)] `LC_ALL=C sort -u` — an inherited-locale `sort -u`
+          # collates by strcoll and silently merges two byte-distinct anchors that
+          # differ only by an invisible character (measured: a pair differing by one
+          # U+00AD SOFT HYPHEN). Pinned to byte comparison.
+          ANCHOR="$(grep -oE "\`CONTRIBUTING\\.md § [^\`]+\`" "$SCRIPT" | sed "s/^\`CONTRIBUTING\\.md § //; s/\`\$//" | LC_ALL=C sort -u || true)"
           N_DISTINCT="$(printf "%s\\n" "$ANCHOR" | grep -c . || true)"
           if [ "${N_DISTINCT:-x}" != "1" ]; then echo "::error::anchor guard — expected 1 distinct cited anchor, found ${N_DISTINCT:-<non-numeric>}."; exit 1; fi
           N_CITES="$(grep -cF "\`CONTRIBUTING.md § ${ANCHOR}\`" "$SCRIPT" || true)"
           if [ "${N_CITES:-x}" != "$EXPECTED_CITES" ]; then echo "::error::anchor guard — expected ${EXPECTED_CITES} citations, found ${N_CITES:-<non-numeric>}."; exit 1; fi
-          N_HEADS="$(grep -cF "### ${ANCHOR}" "$DOC" || true)"
-          if [ "${N_HEADS:-x}" != "1" ]; then echo "::error::anchor guard — '${ANCHOR}' resolves to ${N_HEADS:-<non-numeric>} headings, expected 1."; exit 1; fi
+          # [ADR-092 Decision (1)] Level-agnostic WHOLE-LINE EQUALITY, replacing the
+          # prior hardcoded-h3 substring match — two defects in one line: the level was
+          # pinned to h3, and the match was substring rather than whole-line. Exactly
+          # two admissible forms exist (`grep -cxF` / `awk '$0 == s'`); `index($0,s)==1`
+          # (a prefix test) and bare `grep -cF` (substring) are both forbidden — the
+          # first greens a truncated/rotted anchor (silent), the second reddens a
+          # correct file whose heading text nests inside a longer one (noisy). `N_HEADS`
+          # is asserted `== 1`, never `>= 1` — see AC-S14 GNU-proof item (c).
+          N_HEADS=0
+          for lvl in 1 2 3 4 5 6; do
+            PREFIX="$(printf '#%.0s' $(seq 1 "$lvl")) "
+            N_LVL="$(grep -cxF "${PREFIX}${ANCHOR}" "$DOC" || true)"
+            N_HEADS=$((N_HEADS + N_LVL))
+          done
+          if [ "$N_HEADS" != "1" ]; then echo "::error::anchor guard — '${ANCHOR}' resolves to ${N_HEADS} headings, expected exactly 1 (never 'at least 1')."; exit 1; fi
           echo "anchor guard PASSED — anchor='${ANCHOR}' distinct=${N_DISTINCT} cites=${N_CITES} headings=${N_HEADS}"
 
   lock-file-zero-sha-check:
