@@ -10343,9 +10343,20 @@ lands on the **sanitizer**, which is why (g) exists as a separate item.
   load-bearing for AC-S15's correctness.
 - [UNTESTED] Which behaviour `pull-updates`' prose produces against S5b's damaged fixture, until the
   invocation is actually run at Phase 4/5.
-- [UNTESTED] Whether GNU `grep`/`awk`/`tr` on `ubuntu-latest` reproduce any local result. No GNU
-  binary and no container runtime on the authoring host. This is what proof items (a)–(h) exist for,
-  and it is stated as untested rather than as passing.
+- [UNTESTED] Whether GNU `grep`/`awk`/`sed` on `ubuntu-latest` reproduce any local result. **No GNU
+  `grep`, `awk` or `sed` on the authoring host** (checked at Phase 1.1: `ggrep`, `gawk`, `gsed` all
+  absent), and no container runtime. This is what proof items (a), (b), (c), (d), (e) and (h) exist
+  for, and it is stated as untested rather than as passing.
+- [CONFIRMED — the blanket "no GNU tooling" claim was too broad and is corrected here] **GNU
+  coreutils 9.11 IS present**, at `/opt/homebrew/bin/gsort` and `/opt/homebrew/bin/gtr`. That covers
+  both binaries this spec's locale hazards actually live in. Re-run at Phase 1.1 under GNU, not
+  merely under BSD: `LC_ALL=C gtr -cd '[:print:]'` deletes `§` and `LC_ALL=en_US.UTF-8` preserves it
+  (identical to the BSD result, so AC-S15 item 3's pin is confirmed under the runner's own
+  coreutils); `LC_ALL=en_US.UTF-8 gsort -u` merges two anchors differing only by U+00AD and
+  `LC_ALL=C gsort -u` does not; `printf 'abc…[truncated]' | LC_ALL=C gtr -cd '[:print:]'` yields
+  `abc[truncated]`, confirming Defect 3(a) under GNU. **Proof items (f) and (g) are therefore
+  partially closed locally**, and the residual for them is glibc-versus-macOS collation tables, not
+  "no binary exists". Do not repeat the blanket claim.
 
 ## Out of Scope — explicit non-goals by id
 
@@ -10408,9 +10419,24 @@ that falsified each. Applying any of the four as written would have shipped a de
 
 **Defect 1 — C13's pin of 16 fails on this cycle's own correct tree.**
 Measured: repo-wide guard-visible population = **15 files**. This cycle correctly adds three more
-(`docs/design-v2.19.13.md`, the NC-5 fixture, the S15 fixture), all of which must carry the guard
-form to do their jobs. A pin of 16 therefore RED-s on a fully correct v2.19.13 tree, and drifts again
-every subsequent cycle. **This is the same failure class C7 deleted the residue pin for** — "a pin
+(the NC-5 fixture, the S15 fixture, and `templates/skill-template/SKILL.md`, which enters the
+population precisely because CF-A backtick-wraps it), all of which must carry the guard form to do
+their jobs. A pin of 16 therefore RED-s on a fully correct v2.19.13 tree — by 2, before this cycle's
+own internal reports are written — and drifts again every subsequent cycle, since five recurring
+per-cycle reports under `docs/internal/` already carry the form.
+
+> **Correction applied at Phase 1.1 (S2).** This paragraph previously named `docs/design-v2.19.13.md`
+> as the third addition. That claim was struck from Technical Constraints §Tripwire-population by
+> commit `da2b4bf` and **was not struck here**, so the corrected and uncorrected versions of one fact
+> sat ~290 lines apart in the same document — with the uncorrected one in the Condition Ledger, which
+> is the artifact @qa ticks. Re-measured at Phase 1.1, a `grep -rl` for the guard-visible form over
+> the tree (excluding `.git`) returns **15 files**, and
+> `docs/design-v2.19.13.md` is **not** among them — that document deliberately uses the generic form
+> and bare anchor text, never the full backticked citation. `grep -nF 'design-v2.19.13.md'
+> docs/spec.md` now returns **3 hits, all inside this note** — no live claim survives elsewhere in
+> the document.
+
+**This is the same failure class C7 deleted the residue pin for** — "a pin
 that fails on a correct tree is the same failure class this cycle exists to fix" — reintroduced six
 conditions later, in the same document. The tripwire's security purpose is preserved exactly by
 scoping the population (see Technical Constraints §Tripwire-population); only the denominator changed.
