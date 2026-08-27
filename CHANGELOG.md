@@ -19,6 +19,42 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.13] - 2026-08-27
+
+**"Citation Repair + Registry-Row Integrity."** The anchor-resolution guard minted at v2.19.11 had
+a matching primitive that silently certified a truncated citation as resolved; this cycle replaces
+it with whole-line equality, widens the guard from one file-pair to four, closes a
+malformed-registry-row gap in the update flow, and repairs the three citations that were broken
+before the guard could ever see them.
+
+- **The anchor-resolution guard now matches whole lines, level-agnostically (h1-h6), never a
+  substring or a prefix.** `index($0,s)==1` and bare `grep -cF` are both forbidden — the first
+  silently certifies a truncated/rotted citation, the second falsely reddens a correct file.
+  Extended from one hardcoded `SCRIPT`/`DOC` pair to an explicit 4-tuple enumeration (never a glob
+  — this repo carries shell-payload anchors in the citation form that a glob would re-expand), with
+  a citation-site tripwire (pinned population, scoped to exclude `docs/` and `tests/`) and 8
+  in-workflow proof items run on every PR (ADR-092).
+- **Contributor-derived text in the guard's diagnostics is sanitized at failure sinks, dropped at
+  success sinks**, closing a log-injection surface (a new `ANCHOR_SAFE` variable, `LC_ALL=C`-pinned
+  collapse, 80-char truncation, ASCII-only lossy marker).
+- **Three malformed citations repaired**: `skills/self-apply/SKILL.md`, `PROMOTE.md`, and
+  `templates/skill-template/SKILL.md` now cite `CONTRIBUTING.md`'s real headings.
+- **`pull-updates` now refuses to trust a damaged registry row.** A pipe-shifted `self-apply`,
+  `self-archive`, or `self-upgrade` row no longer reads as a valid `sha256` verification source;
+  the skill refuses and surfaces a plain-language fallback instead of proceeding on an undefined
+  field. Verified with a real invocation against a damaged fixture, not a code review alone.
+- **The `self-archive`/`self-upgrade` registry rows no longer over-claim immunity to change.** Both
+  now name the one real exception: `pull-updates` still installs a missing safety skill as its own
+  labeled, checksum-verified backfill step.
+- **CI now gates `self-archive`, `self-upgrade`, and `pull-updates`'s registry rows** for structural
+  damage (pipe injection, field-count drift), matching the coverage `self-apply` and `prompt-gate`
+  already had.
+- **Two documentation corrections carried forward from v2.19.11 and v2.19.12**, appended without
+  rewriting either record: an ADR-088 amendment generalizing the Class A/B reference-freeze rule
+  into a role test and naming the `§Decision (3)` mis-pointer's root cause (ADR-088 numbers its own
+  decisions two different ways), and a corrected negative-control transcript in
+  `docs/design-v2.19.11.md`.
+
 ## [2.19.12] - 2026-08-23
 
 **"S4 report-egress retrofit."** 14 internal QA and security reports shipped inside every public
