@@ -15083,6 +15083,42 @@ permanently failing one.
   tripwire can safely widen to `docs/`; (d) repair the two `.github/` pointers and the
   `CONTRIBUTING.md` self-citation, retiring the "invisible by construction" exemption class;
   (e) leave all of it as specified and accept that the next cycle re-derives the population boundary.
+
+  **INTERFERENCE CONSTRAINT — (b) × (c) may not be taken as a pair, and (c) may not be taken first.**
+  Recorded in the same form and for the same reason as this cycle's S14 × S15 constraint (design
+  §A.6, Rechtin: *"in partitioning, choose the elements so that they are as independent as
+  possible"*): the two options read as complementary — (b) generates the population, (c) makes
+  membership machine-checkable, and together they appear to dissolve both the census gap and the
+  `docs/` exclusion at once. **They do not compose, and the obstruction is this ADR's own
+  §Decision (4).**
+
+  Option (c)'s marker must be an **inline annotation on the occurrence** — that is what makes it
+  machine-checkable rather than another inspection. But the occurrences that force the `docs/`
+  exclusion in the first place are the historical security-test payloads in
+  `docs/internal/security/security-review-v2.19.11.md`, and that file is a **closed-cycle,
+  append-only record**. §Decision (4) rules that inside such a record a Class-A/B obligation is
+  discharged by a superseding cross-reference appended below, **never by an in-place edit**. So this
+  ADR forbids placing the marker on **exactly the occurrences that need it**. Take (b) after (c) and
+  those payloads enter the generated population **unmarked and structurally unmarkable** — not
+  "unmarked yet", but unmarkable without violating (4) — and the generated enumeration then feeds
+  anchors that are shell interpolation and command-substitution strings into the resolution path
+  §Decision (2) exists to keep them out of. **The retrofit-hostility is the point: (c) is cheap on
+  text authored after it, and impossible on text authored before it.**
+
+  **The exposure is five occurrences, not three** — measured at v2.19.13 Phase 2.1 by extracting them
+  rather than recalling them (`` /usr/bin/grep -noE '`CONTRIBUTING\.md § [^`]+`' `` → six hits, one
+  benign at `:252`): `$(touch /tmp/AC3_PWNED)` at `:512`, `x"; touch /tmp/AC3_PWNED2; echo "` at
+  `:516`, `$(id)` at `:520`, **and the two previously uncounted `${ANCHOR}` interpolations at `:193`
+  and `:504`**. The last two are quotations of the guard's *own source line* and read as
+  documentation rather than as payloads, which is precisely why they were missed — **a marker scheme
+  sized to the three self-announcing payloads would have left the two quiet ones unmarked while
+  reporting complete coverage.**
+
+  **Consequently:** (b) is safe alone (it inherits the existing `docs/`/`tests/` exclusion, so the
+  payload file never enters the population); (c) alone is safe but delivers no widening; and the
+  pairing must **first** settle how a Class-B marker attaches to an append-only record — by an
+  appended manifest keyed to line content, or by an explicit carve-out amending (4) — **before**
+  either is scheduled. That ordering decision is the prerequisite, not an implementation detail.
 - **Concrete revisit triggers:** the tripwire's pinned count changes for any reason other than a
   deliberate, ADR-recorded population change; a fifth citation tuple is proposed; any proposal to
   relax whole-line equality, to widen the tripwire to `docs/`, or to re-scope Class A/B by filename or
