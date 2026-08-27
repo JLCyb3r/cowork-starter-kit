@@ -1094,8 +1094,9 @@ RED-c — phrase DELETED outright (what the SPEC's leg `1 -> 0` would have requi
 RED-d — awk range endpoint renamed (vacuity):
   LINES=886 (the range runs UNTERMINATED to EOF, not 0 lines — the END anchor no longer
   matches, so awk never closes the range; the `< 3` vacuity guard does NOT fire on 886)
-  N_ALLTHREE=2 (an incidental double-match of "all three" elsewhere in CHANGELOG.md, reached
-  only because the range now runs unterminated) -> FAIL=1                AC-10: RED   EXIT=1
+  N_ALLTHREE=1 (corrected below — leg 2's `grep -c` counts matching LINES on the flattened
+  single-line bullet, so it saturates at 1 no matter how many "all three" occurrences the
+  unterminated range sweeps in) -> FAIL=1                                AC-10: RED   EXIT=1
 ```
 
 **CORRECTED at v2.19.13 Phase 4 (AC-CF-B item 1) — the transcript above previously read**
@@ -1113,10 +1114,21 @@ error: the control's `LINES` variable (H.3's script, `:1044`) pipes the range th
 first, which drops the range's 356 blank lines, leaving **`LINES=886`** — the figure the RED-d
 block above already states correctly, because it is describing the variable, not the range. `886`
 is not `< 3` either, so **leg 1's vacuity guard passes through undetected**, and the RED this
-fixture actually produces comes from **leg 2** — the unterminated
-range now sweeps in a second, unrelated `"all three"` occurrence later in `CHANGELOG.md`, so
-`N_ALLTHREE` reads `2` instead of `0` and the ordinary `[ "$N_ALLTHREE" -eq 0 ] || FAIL=1` assertion
-fires. The RENAMED-START variant is the one that actually exercises the vacuity guard as originally
+fixture actually produces comes from **leg 2** — but not by the mechanism first written here.
+
+**CORRECTED again, same session — the passage above previously read `N_ALLTHREE=2`, "an incidental
+double-match."** Re-measured against the same pinned `BASE` (`b7b844716aa3146f212907ee381a49256aa1fd13`)
+with `/usr/bin/grep` (BSD grep, GNU-compatible 2.6.0-FreeBSD): `` /usr/bin/grep -noF 'all three'
+CHANGELOG.md `` finds **three** occurrences, not two — `:36`, `:110`, `:256` — and the unterminated
+range (line 35 through true EOF) sweeps in the latter two, `:110` and `:256`, in addition to the
+original `:36`. But leg 2 does not count occurrences: it flattens the whole bullet to **one line**
+first (`FLAT="$(... | tr '\n' ' ')"`) and only then runs `grep -cF 'all three'` on `$FLAT`, and
+`grep -c` counts matching **lines**, not substring hits. A single line either contains the string or
+it doesn't, so `N_ALLTHREE` can only ever be `0` or `1` — never `2`, regardless of how many textual
+occurrences the unterminated range absorbs. Measured this way, `N_ALLTHREE` reads `1`, not `2`, and
+the ordinary `[ "$N_ALLTHREE" -eq 0 ] || FAIL=1` assertion still fires (`1 ≠ 0`) — leg 2's RED
+verdict is unaffected; only the reported value and the "double-match" mechanism were wrong. The
+RENAMED-START variant is the one that actually exercises the vacuity guard as originally
 described: with the START anchor renamed, the range never opens, `BULLET` is empty, `LINES=0`, and
 leg 1 correctly fires `AC-10 control BROKEN` at `EXIT=1`. Both variants were re-run this session
 against the real file; both are RED, but by two different mechanisms, and only one of them is the

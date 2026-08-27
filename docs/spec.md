@@ -10217,11 +10217,20 @@ embedded in a regex and never re-expanded by a shell.
 ### §Census carry-forward (moved out of AC-S14 — a CI step cannot state a carry-forward)
 
 `CF-v2.19.13-CITATION-CENSUS`. A full population census was considered and judged too heavy for a
-patch cycle. Named and carried rather than silently accepted: **3 shipping files** —
-`docs/architecture.md`, `docs/design-v2.19.10.md`, `docs/design-v2.19.11.md` — carry guard-form
-citations outside the 4-tuple's population today, all Class B under B0's role-axis ruling. A future
-citing file added to any of these, or a new file, is **not** detected by the anchor guard; AC-S14
-item 5's tripwire detects growth only in the non-`docs/`, non-`tests/` population.
+patch cycle. Named and carried rather than silently accepted. **CORRECTED at Phase 6.1 — this
+passage originally read "3 shipping files," measured before this cycle's own design doc existed to
+join the population it counts.** Re-measured via `git archive HEAD` (proves what ships) intersected
+with `` /usr/bin/grep -rlE '`CONTRIBUTING\.md § [^`]+`' `` over `docs/*.md`, minus the
+`.gitattributes` export-ignore set (`docs/internal/`, `docs/spec.md`, `docs/retro.md`,
+`docs/patterns.md`): **4 shipping files** — `docs/architecture.md`, `docs/design-v2.19.10.md`,
+`docs/design-v2.19.11.md`, `docs/design-v2.19.13.md` — carry guard-form citations outside the
+4-tuple's population today, all Class B under B0's role-axis ruling. This is a repo-wide,
+docs/-scoped figure, not a pin, per the `CONTRIBUTING.md`-hardcoding precedent (`docs/design-v2.19.13.md`
+§F): it grows by construction whenever a cycle's own `design-vX.Y.Z.md` quotes the guard's citation
+form as documentation — exactly how `docs/design-v2.19.13.md:562` joined it this cycle — so re-run
+the measurement for the live count rather than trust this digit next cycle. A future citing file
+added to any of these, or a new file, is **not** detected by the anchor guard; AC-S14 item 5's
+tripwire detects growth only in the non-`docs/`, non-`tests/` population.
 
 ### §Known-broken Class-A citations in `.github/` (deferred by decision, named not silent)
 
