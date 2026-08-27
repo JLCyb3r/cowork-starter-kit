@@ -108,7 +108,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-085 | The runtime-string register lives in `CONTRIBUTING.md` — chosen on adjacency to the checklist a contributor editing a `description` already reads, NOT on the "does not ship" argument (Phase 1 verified `CONTRIBUTING.md` is itself `export-ignore`d, `.gitattributes:16`); the rule it carries is a **floor on guarantees, not a style preference** — a rewrite may simplify wording but may never weaken a stated guarantee, and where plain language and a safety clause conflict the clause wins (inline-define the term, never compress the sentence); weakening-by-**addition** is called out explicitly because presence-based checks structurally cannot see it (v2.19.10 AC-PL-4 / AC-PL-7) | ACCEPTED |
 | ADR-086 | One parser, one pin — registry row-structure integrity is asserted by a **single** inline `awk` count of rows carrying a valid 64-char lowercase-hex field 8, pinned at 30, declared once at job level inside `registry-sha256-check` (TIER-4: never under `scripts/`, no cross-job `needs:`/`outputs:`); two independently fragile parsers were rejected because a compound reword-plus-reflow breaks both identically and **cancels**, and a bare `NF!=9` sweep was rejected because it false-positives at 9 on the clean tree; generalized rule minted: **a presence test is sound only where the protected string is unique in its file — verify, never assume; where it is not, compare pre/post counts** (applied to AC-PL-7 row 6, whose `grep -qF` returned GREEN on deletion because the string occurs twice in `WIZARD.md`) (v2.19.10 AC-PL-6 / AC-PL-7 row 6) | ACCEPTED — **AMENDED by ADR-087; read both** |
 | ADR-087 | **AMENDS ADR-086 §Decision (4).** Two rules minted after Phase 2 found ADR-086's own two remedies were the 4th and 5th instruments this cycle that cannot fail: **(1) fixture-anchor independence** — a fault-injection fixture may never be anchored on content the same cycle mandates changing (AC-PL-6's `sed` quoted `apply/verify/rollback machinery`, the exact description cell AC-PL-1 must rewrite; post-rewrite both fixtures no-op and the gate turns permanently red), remedied by a field-2-anchored positional `awk` verified 29 on BOTH trees plus a mandatory `cmp -s` fixture-validity guard; **(2) scope-matched instruments** — uniqueness determines whether presence-testing is *usable*, scope determines whether an instrument is *sufficient*; a file-wide count froze row 6's announcement while leaving the restriction clause deletable at GREEN, remedied by anchor-scoped extraction asserting BOTH halves (the house pattern at `quality.yml:753-785` the original design failed to cite). Also: occurrences are counted with `grep -oF \| wc -l` not `grep -cF`; an instrument's claim is stated to what it actually fires on (the compound fixture's legs do NOT fire independently — reflow-only is GREEN at 30 and is covered by `wizard-consistency-check` instead) (v2.19.10 Phase-2 amendment, S1/S2) | ACCEPTED |
-| ADR-088 | **AMENDS ADR-037** (owner-directed Phase-1.2 addendum, S4). **14** internal QA/security reports ship in every public release archive; they are retrofitted into `docs/internal/{qa,security}/` via `git mv` (ADR-037's own mechanism, 14 × `R100`), closing an **intermittent** placement lapse (v2.19.4 *is* internal, falsifying §E.9's clean-cutoff account). Three decisions: **(1)** the archive-leak gate is written in the direction the leak travels — **zero `git archive` entries match `^docs/(qa-report\|security-audit\|security-review)-`** — because ADR-037's option (c) (`docs/internal/**` absent from the archive) is *vacuously satisfied by a file never placed internal*; **(2)** `git check-attr` is rejected as unsound — it returns `unspecified` for an excluded and a shipping file alike; only `git archive` proves what ships; **(3)** references are ruled by **differential execution**, not inspection — Class A (a machine resolves it as a path; population **exactly 3**, `verify-ledger-annotations.sh` LA-03a/b/c) is repaired, Class B (historical records, comments, diagnostics, CI step names, fixture headers) is **frozen**, per ADR-037's own precedent of leaving 25 dead paths in `architecture.md` green for 11+ versions. Gate carries a **canary self-test** because a typo'd pattern returns 0 = indistinguishable from GREEN. **Escalates the cycle Tier B → Tier A** (TIER-1: Class A repair necessarily modifies `scripts/`); Guard Change Summary owed. **DEFERRED-TO-RETROFIT-CYCLE at v2.19.10 Phase 1.3** — the owner split the retrofit out at the gate so Tier A is the successor cycle's whole ceremony; nothing here is implemented by v2.19.10. Build-ready handoff: `docs/design-v2.19.10.md` §J | **ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3, and ACCEPTED at Phase 1.2; number reserved and carried forward, cf. ADR-028). AMENDED by the ADR-088 amendment record appended at v2.19.12 Phase 1 (§Amendment record — ADR-088, below).** |
+| ADR-088 | **AMENDS ADR-037** (owner-directed Phase-1.2 addendum, S4). **14** internal QA/security reports ship in every public release archive; they are retrofitted into `docs/internal/{qa,security}/` via `git mv` (ADR-037's own mechanism, 14 × `R100`), closing an **intermittent** placement lapse (v2.19.4 *is* internal, falsifying §E.9's clean-cutoff account). Three decisions: **(1)** the archive-leak gate is written in the direction the leak travels — **zero `git archive` entries match `^docs/(qa-report\|security-audit\|security-review)-`** — because ADR-037's option (c) (`docs/internal/**` absent from the archive) is *vacuously satisfied by a file never placed internal*; **(2)** `git check-attr` is rejected as unsound — it returns `unspecified` for an excluded and a shipping file alike; only `git archive` proves what ships; **(3)** references are ruled by **differential execution**, not inspection — Class A (a machine resolves it as a path; population **exactly 3**, `verify-ledger-annotations.sh` LA-03a/b/c) is repaired, Class B (historical records, comments, diagnostics, CI step names, fixture headers) is **frozen**, per ADR-037's own precedent of leaving 25 dead paths in `architecture.md` green for 11+ versions. Gate carries a **canary self-test** because a typo'd pattern returns 0 = indistinguishable from GREEN. **Escalates the cycle Tier B → Tier A** (TIER-1: Class A repair necessarily modifies `scripts/`); Guard Change Summary owed. **DEFERRED-TO-RETROFIT-CYCLE at v2.19.10 Phase 1.3** — the owner split the retrofit out at the gate so Tier A is the successor cycle's whole ceremony; nothing here is implemented by v2.19.10. Build-ready handoff: `docs/design-v2.19.10.md` §J | **ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3, and ACCEPTED at Phase 1.2; number reserved and carried forward, cf. ADR-028). AMENDED by the ADR-088 amendment record appended at v2.19.12 Phase 1 (§Amendment record — ADR-088, below). FURTHER AMENDED by the role-axis generalization and `Decision (3)` mis-pointer correction appended at v2.19.13 Phase 4 (§Amendment record — ADR-088 §Decision (2)/(3), below).** |
 | ADR-089 | Release-surface evidence seams fail **loudly and closed**, never silently (v2.19.11 AC-1) — `evidence_tags()` stops discarding `git ls-remote`'s stderr with `2>/dev/null`; it captures stderr in a `mktemp` file (S-A6), reads `rc` explicitly, prints an `::error::` carrying git's own words, and `exit 2` (contract/tool error, the house code at 12 sites) instead of letting `set -euo pipefail` abort the `:218` assignment with a bare, undiagnosable **128**. Three decisions: **(1)** **no caller-side bracket** at `:218` — the `exit 2` inside the function terminates the `$( )` subshell and top-level `set -e` propagates it *as* exit 2 (verified end-to-end); adding a `set +e`/`rc=$?` bracket without rc=2 propagation yields exit **0** and a universal `MISSING-TAG`, manufacturing the very defect Phase 0's amendment falsified. **(2)** **`rc=$?` is reachable inside `$( )` ONLY because bash's `inherit_errexit` is OFF** (`grep -rn 'inherit_errexit\|shopt' scripts/ .github/` → **0** hits) — demonstrated, not asserted: prepending `shopt -s inherit_errexit` to the fixed function restores the silent exit-128 defect exactly. **(3)** **NOT `2>&1` into the captured variable** — git can exit **0** while writing to stderr, and `:286` matches the captured evidence with `grep -qF "refs/tags/v${tok}"` against the whole line, so a merged stream turns a broken-ref diagnostic into a **tag-exists GREEN** (fail-OPEN, demonstrated). Credential-leak assertion is an inspection (`://[^/[:space:]]*@`), never a `sed` redactor. `Reusability: project-specific` | ACCEPTED (v2.19.11) |
 | ADR-090 | **Citations are anchored to headings, written in a backtick-delimited form, and the anchor is CI-enforced by derivation from the citing file** (v2.19.11 AC-2 + AC-3) — the repo-wide convention minted to close the `CONTRIBUTING.md:129` class, where a 33-line insertion silently broke 53 line-pinned citations and 31 green CI jobs saw none of it. Four decisions: **(1)** a citation is `` `<file> § <unique heading text>` ``, and **the backticks are load-bearing, not cosmetic** — they terminate the anchor so the guard's `` [^`]+ `` extraction cannot run greedily to end-of-line (the un-delimited form yielded `N_DISTINCT=5` and red-lined CI on a *correctly executed* de-pin). **(2)** the CI guard **derives** the expected anchor from the citing file and never hardcodes it in the workflow — the hardcoded form lets an author drop a qualifier from one citation while both "zero stale pins" and "heading is unique" stay GREEN and the citation resolves to nothing. **(3)** the guard is an **inline step**, never a file under `scripts/` (TIER-4), and asserts three things: exactly 1 distinct cited anchor, cited exactly `EXPECTED_CITES` times, resolving to exactly 1 heading. **(4)** every pipeline feeding an assertion carries `\|\| true`, because `grep` exits 1 on zero matches and an unguarded assignment under `set -euo pipefail` aborts the step **undiagnosably** — the ADR-089 defect class, found inside this guard's own first draft. Companion: the AC-8b/AC-9b per-row registry gate ships as **one step, one parser copy** (self-test and assertion sharing a single `check_row()`), which owes no `PARSER_COPIES`-style pin and lets the self-test exercise the same code path the assertion runs. `Reusability: candidate-constituent` | ACCEPTED (v2.19.11) |
 | ADR-091 | **The reference-freeze control derives its population by rename-pairing, not pathspec exclusion** (v2.19.12 AC-7) — excluding a rename's *destination* with `:(exclude)` does not hide the pair, it **prevents the pairing**, so every movee renders as a whole-file deletion while the addition half is hidden. Executed against a real simulated end-state tree, the pathspec form returned **35 violations on a completely correct cycle** and was simultaneously **blind** to a citation removal inside `docs/internal/` (diff byte-identical in size with and without it) — both halves of the symmetric difference non-empty, found only when the partition was finally run after four review rounds. Five decisions: **(1)** exclude pairs by `--find-renames=100%` over the whole repo with **no `:(exclude)`** (diff shrinks sharply — magnitude deliberately unpinned, three measurers got three pairs; `docs/internal/**` stays in population); **(2)** partition **statefully**, taking `^-` attribution from `--- SRCX/` and `^+` from `+++ DSTX/` — a control that strips headers then rules on "which file" is not computable, and one that reads both sides off `+++` reports every deletion against `/dev/null`; **(3)** permit additions from a **finite set derived from `CYCLE_VERSION`** (four append-only surfaces, `verify-ledger-annotations.sh`, and the cycle's own `design-v<CV>.md` / `qa-report-v<CV>.md` / `security-review-v<CV>.md` / `security-audit-v<CV>.md`) — **corrected at Phase 2.1 from an earlier `--- /dev/null` form that permitted additions in ANY new file, which passed a public `docs/report-index.md` republishing all 14 pre-move paths**; drift now fails CLOSED and loud instead of open and silent; **(4)** the `verify-ledger-annotations.sh` carve-out is safe **only because AC-5 asserts that file positionally** — the dependency is part of the decision and no leg may be dropped; **(5)** clean → 0 (safety), violation → 1, broken inventory → 3 (diagnosis). Verified both directions: 35 → **0** false violations, and four half-B constructions **all caught** (public index file, removal inside `docs/internal/`, new `tests/fixtures/` file, modified movee); two negative controls fire and all three exit codes were observed. Introduces a real coupling — the control now shares AC-6's dependence on rename detection, so `diff.renameLimit` exhaustion degrades **both** at once. `Reusability: candidate-constituent` | ACCEPTED (v2.19.12) |
@@ -15158,3 +15158,197 @@ permanently failing one.
   it as a specimen would have made this paragraph's own measurement false the moment it was written —
   the count of non-`CONTRIBUTING.md` targets would read 1, sourced from the sentence claiming it reads
   zero. Drafted that way at first, and caught by re-running the count instead of trusting it.
+
+---
+
+## Amendment record — ADR-088 §Decision (2)/(3): role-axis generalization and the `Decision (3)` mis-pointer correction (appended v2.19.13 Phase 4 — B0; ADR-088's own text is NOT rewritten)
+
+Recorded per the same append-only house convention ADR-088 itself used to amend ADR-037, ADR-087
+used to amend ADR-086, and the v2.19.12 amendment record above used to amend ADR-088 a first time:
+the original record is left intact and the correction is appended. This is the **second** amendment
+to ADR-088 — the v2.19.12 amendment record above (§Status flip, §Decision (5) canary, §Reconciliation
+with ADR-090) is unchanged and remains in force; this record does not restate it.
+
+### 1. The role-axis generalization (ships-agnostic)
+
+An occurrence of the `` `<file> § <heading>` `` citation form that functions as a **quotation or
+illustration of the convention itself** — inside a fenced block, or in prose that names it as an
+example of the canonical or the broken form — is **Class B** under ADR-088 §Decision (2), and is
+outside both ADR-088's freeze and ADR-090's repair obligation, regardless of which file it appears
+in and regardless of whether that file ships. An occurrence that functions as a **live pointer a
+reader is expected to follow** is **Class A** and is obligated, on the same file-agnostic and
+ships-agnostic basis.
+
+**Ambiguity tie-breaker: where an occurrence's role is genuinely ambiguous, it is Class A.**
+
+**Discharge rule for append-only records (binding, and part of the tie-breaker, not a qualification
+of it).** Class A states an *obligation*, not an *edit method*. Where a Class-A occurrence sits
+inside an **append-only historical record**, the obligation is discharged by a **superseding
+cross-reference appended below**, or by an **explicitly recorded deferral**, and **never by an
+in-place edit**. Without this rule the tie-breaker would mandate rewriting the repository's own
+history, which the append-only discipline forbids; the tie-breaker fails safe toward *repair*, not
+toward *rewriting*.
+
+**Scope is a ROLE TEST, and the enumeration is ADR-088's — not restated here.** A record is
+append-only when it functions as *a record of what was true or decided at a past moment*: its
+truth-value is indexed to its own date, so rewriting it destroys evidence instead of correcting it.
+The in-force enumeration is the Class-B clause of ADR-088's own reference-class ruling above
+(§Decision (2)), which names `docs/architecture.md`, `docs/retro.md`, `docs/spec.md`,
+`docs/risk-register.md`, `docs/design-v2.19.8.md` and `CHANGELOG.md`. This rule adopts that
+population by reference and does not re-derive it as a fresh, narrower list.
+
+**The live/closed boundary is what makes the role test decidable.** A record acquires the
+append-only obligation **when its own cycle closes**. Inside its own cycle a spec section or a
+design document is the live working artifact and is corrected **in place** — house practice:
+`docs/design-v2.19.11.md` §H.3 (*"CORRECTED at Phase 1, and the correction is the point"*) and
+`docs/design-v2.19.10.md` §C.0 (*"amendment, Phase-2 finding S9"*). Once its cycle has shipped, the
+same file is corrected **only by an appended record** — house practice: `docs/design-v2.19.11.md`
+§I.2, titled *"Placement — append, never rewrite,"* and `docs/design-v2.19.12.md` §K
+(*"post-audit documentation corrections (appended by @dev)"*). This is why v2.19.13 corrects its own
+`docs/spec.md` section in place and does **not** correct `docs/design-v2.19.11.md` in place — see
+§3 below.
+
+**A recorded deferral MUST be reachable from the occurrence.** The sibling mechanism — a superseding
+cross-reference — is inherently local: a reader standing at the broken pointer finds it. A deferral
+recorded only in a carry-forward table somewhere else is not, and a reader who follows the broken
+pointer learns nothing. A deferral therefore discharges the obligation only if **either** (i) a note
+at or adjacent to the occurrence names the deferral id, **or** (ii) the deferral record states
+explicitly why no local note is owed — for example that the file is `export-ignore`d maintainer
+surface carrying a named id in `docs/risk-register.md`. **Silence at the occurrence is not a
+discharge.**
+
+**This item carries no factual claim about how many occurrences of the citation form exist in any
+file.** The tie-breaker above makes such a count unnecessary — an ambiguous occurrence defaults to
+obligated instead of needing to be individually asserted Class B.
+
+### 2. The mechanism ADR-090's amendment table actually used
+
+ADR-090's own amendment record (above, *"Amendment record — ADR-090 §Maturation Path and
+§Consequences"*, §2's `Site | Class (ADR-088 §Decision (3)) | Ships?` table) reuses ADR-088's Class A
+/ Class B labels under a **substituted test** — *"live pointer + ships"* — where ADR-088's own test
+is *"a machine resolves it as a path."* Neither ADR notes the substitution anywhere. Naming this
+explicitly is what dissolves the apparent contradiction between the two ADRs: they are not disagreeing
+about the same test, they are silently running two different tests under one shared vocabulary.
+
+### 3. Correcting the `Decision (3)` mis-pointers — 3 loci in scope, 3 deferred, root cause named
+
+**Root cause, found at v2.19.13 Phase 1.1 by reading ADR-088 instead of citing it: ADR-088 numbers
+its own decisions two different ways, and under one of them `(3)` is correct.**
+
+```
+ADR-088 index row (above, "Three decisions:")
+  (1) the archive-leak gate ... (2) git check-attr is rejected ... (3) references are ruled by
+  differential execution — Class A ... Class B ... is frozen        <- the reference-class ruling
+ADR-088 body ("### Decision", below)
+  (1) Retrofit the 14 via git mv
+  (2) Repair only the references a machine resolves; freeze the rest <- the reference-class ruling
+  (3) Mint the archive-leak gate in the direction the leak travels
+  (4) git archive is the instrument   (5) canary   (6) design-v2.19.* asymmetry
+```
+
+So the citing sites below are not typos: they are a faithful reading of ADR-088's **index row**,
+which this repository still publishes. **This amendment therefore does two things, not one:**
+
+- **(3a) The body's numbering is ruled authoritative.** `§Decision (N)` denotes the **body's**
+  numbering; the index row is a summary and its internal numbering is not citable. Under this rule
+  `(2)` is the correct target and every citing site below is a mis-pointer.
+- **(3b) The divergence is stated here, in the amendment, rather than left implicit.** Correcting the
+  citing sites while leaving the index row unreconciled fixes the symptom and leaves the generator
+  running: the next reader of the index row would mint mis-pointer number seven. This amendment does
+  **not** rewrite the index row's three-decision summary text (an append-only record, defensible when
+  written); it corrects the index row's **`Status` cell** instead — a different cell, and a different
+  question — see §6 below, which is what makes this ruling reachable from the occurrence that mints
+  the defect.
+
+**Stated inclusion test for the census: an occurrence is a mis-pointer iff it uses `§Decision (3)`
+to denote the Class A/B reference ruling.** Occurrences citing ADR-088's *actual* body Decision (3)
+(the archive-leak / permitted-path gate — see ADR-088's own body, and ADR-087's Maturation Path,
+which self-cites its own unrelated Decision (3)), or citing ADR-087's / ADR-089's own Decision (3),
+are **not** mis-pointers and are correctly left alone.
+
+**In scope — exactly 3 loci, each corrected below by a superseding cross-reference, never an
+in-place edit:**
+
+1. This file, the `Site | Class (ADR-088 §Decision (3)) | Ships?` table header inside
+   *"Amendment record — ADR-090 §Maturation Path and §Consequences"* §2, above.
+2. This file, the sentence *"Any citation elsewhere in this repository of a path matching ...
+   (ADR-037's own precedent, §Decision (3) above: Class B references are frozen)"* inside
+   *"Amendment record — ADR-088"* (v2.19.12) §6, above.
+3. `docs/design-v2.19.11.md`, the sentence *"Under ADR-088 §Decision (3)'s differential-execution
+   rule the other seven sites are Class B ... and are frozen"* in §E.5.
+
+**For all three: `§Decision (3)` there denotes ADR-088's body Decision (2) — the reference-class
+ruling — under the body-authoritative rule (3a) above. The cited lines' bytes are left unchanged in
+all three cases; this paragraph is the correction, not an instruction to edit them.**
+`docs/design-v2.19.11.md` gains its own local erratum note pointing back to this amendment (§E.6,
+appended in the same v2.19.13 push) — see that file for the locally-reachable form of this same
+correction.
+
+**Deferred — exactly 3 loci, with the reachability excuse stated (never silent):**
+`docs/internal/security/security-audit-v2.19.11.md` (`§Decision (3)` used to denote the reference
+ruling at 2 sites: the S12 finding row, and the paragraph beginning *"ADR-088 §Decision (3) rules
+these Class B and frozen"*) and `docs/retro.md` (1 site: the v2.19.11 retro entry's WARNING-carry
+paragraph, *"ADR-088 §Decision (3) and ADR-090 give opposite answers for the same three files"*).
+All three sit in append-only records and are `export-ignore`d maintainer surface; per item 1's
+discharge rule clause (ii), no local note is owed at these three occurrences because the deferral
+carries the named id `CF-v2.19.13-DECISION3-RESIDUE` in `docs/risk-register.md`. Two further
+occurrences of the literal string `§Decision (3)` were checked and correctly excluded by the
+inclusion test above: `docs/design-v2.19.11.md`'s own §J.3 (*"recorded in ADR-089 §Decision (3)"* —
+cites ADR-089's own decision, not ADR-088's) and `docs/retro.md`'s AC-1 entry (*"see ADR-089
+§Decision (3)"* — same). Total mis-pointer loci = 6; in scope = 3; deferred = 3.
+
+### 4. `CF-v2.19.11-A` / ADR-090 overlap (S12) — marked superseded
+
+The line reading *"`CF-v2.19.11-A` / ADR-090 overlap (S12). Not investigated. Unchanged from
+Phase 0."* in `docs/internal/security/security-review-v2.19.12.md` (a file this amendment does not
+own, and does not edit) is **superseded** by CF-v2.19.11-A having landed in this same v2.19.13 cycle
+(the citation repair of `skills/self-apply/SKILL.md` and `PROMOTE.md`) and by §2 above, which names
+the substitution that made the ADR-088/ADR-090 "overlap" apparent rather than real. The overlap is
+investigated as of this amendment; no further action is owed on that S12 line.
+
+### 5. The worked-example illustration is now historical
+
+ADR-090's own amendment record above (*"Amendment record — ADR-090 §Maturation Path and
+§Consequences"* §1) quotes, inside a fenced block, `` skills/self-apply/SKILL.md:45 `CONTRIBUTING.md
+§ Worked-example authoring rules, rule 2` `` as an illustration of the non-conforming citation form.
+**With `CF-v2.19.11-A` landed in this same v2.19.13 cycle, that quoted line no longer describes any
+state that exists in `skills/self-apply/SKILL.md`** — the fenced block is left byte-unchanged (a
+correct historical record of what was true when ADR-090's amendment was written) and is Class B under
+§1's role test; this sentence is the note that makes its historical status explicit.
+
+### 6. Reachability — ADR-088's index-row `Status` cell gains a pointer to this amendment
+
+Items 3(3a)/(3b) rule the **body** numbering authoritative and record the divergence, but a reader
+who never opens this amendment is reached by neither. The index row above (ADR-088's summary row) is
+the precise site where mis-pointer number seven would be minted, and until this edit it carried no
+pointer to the ruling that corrects it.
+
+**Ground — this amendment's own §1 reachability rule, applied to a superseding ruling rather than a
+deferral.** §1 states *"A recorded deferral MUST be reachable from the occurrence,"* with two
+discharges: (i) a note at or adjacent to the occurrence, or (ii) an explicit statement of why no
+local note is owed. Neither is satisfied by silence at the index row, and §1's closing rule is
+unconditional: **silence at the occurrence is not a discharge.** The rule is worded for deferrals,
+but its ground — reachability from the occurrence — applies at least as much to a *superseding
+ruling*: a deferral leaves the reader correct-but-incomplete, whereas an unreconciled index row
+leaves the reader **confidently wrong**, holding a reading this repository still publishes.
+
+**The discharge:** ADR-088's index-row `Status` cell (above) gains a pointer to this amendment, in
+the form that cell already uses. **This is house practice on this exact row, measured, not
+proposed** — at `9a9961f` (v2.19.12) the same cell was rewritten in place from `PROPOSED (deferred...
+)` to `ACCEPTED (v2.19.12 ...). AMENDED by the ADR-088 amendment record appended at v2.19.12 Phase 1
+...`, an in-place edit whose entire purpose was making an appended amendment reachable from the index
+row. This is that same move a second time, on the same row, for the same reason.
+
+**The `bodies` parenthetical at the head of B0's own AC — "append-only — ADR-088's and ADR-090's
+bodies are NOT edited in place" — is left exactly as written.** The word **bodies** is load-bearing
+and already correct: it constrains the ADR **bodies**, and an index-row `Status` cell is not a body.
+The two clauses are already consistent; only the *appearance* of tension needed a record. ADR bodies
+and the index row's three-decision summary text are not edited anywhere in this amendment — the one
+byte that changes outside this appended block is the `Status` cell, below.
+
+**Status of ADR-088: appended-to only.** The index row's `Status` cell now reads (this same commit):
+`ACCEPTED (v2.19.12 — was PROPOSED (deferred) at v2.19.10 Phase 1.3, and ACCEPTED at Phase 1.2;
+number reserved and carried forward, cf. ADR-028). AMENDED by the ADR-088 amendment record appended
+at v2.19.12 Phase 1 (§Amendment record — ADR-088, below). FURTHER AMENDED by the role-axis
+generalization and `Decision (3)` mis-pointer correction appended at v2.19.13 Phase 4 (§Amendment
+record — ADR-088 §Decision (2)/(3), below).`
