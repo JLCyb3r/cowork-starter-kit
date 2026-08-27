@@ -2,6 +2,363 @@
 
 ---
 
+## [v2.19.13] - 2026-08-27 — "Citation Repair + Registry-Row Integrity"
+
+### 0. Errors caught inside the cycle's own remedies, not in the original code
+
+This cycle's central material is the same shape this project's retros have tracked since v2.7.2
+(`Check-That-Cannot-Fail`) and named explicitly at v2.19.10 (`The cycle's own mandated corrective
+action was the next defect vector`, BINDING since v2.19.12): the overwhelming majority of what was
+wrong this cycle was never in the original code — it was introduced by a reviewer, a fold-in, or a
+rework pass **while producing the fix for something else**, and caught only by re-executing the claim
+rather than reading it.
+
+The handoff into this retrospective stated *"eighteen defect generations, authored by six different
+participants."* That number does not appear written down anywhere in this cycle's committed record —
+not in `pipeline.md`, not in `deliberation-log.md`, not in either scratchpad marker block. Per this
+cycle's own standing rule (below), an inherited number is not adopted until the recipient re-runs it,
+so it was re-run. The reconstruction below is built entry-by-entry from the 23-row Phase Log and the
+binding-conditions file, not from the prompt's summary.
+
+**Reconstructed ledger (this cycle only; a cross-cycle defect inherited from `docs/design-v2.19.11.md`
+§H.4 and repaired at Phase 4 is excluded — it did not originate this cycle):**
+
+| # | Defect | Author | Found by | Phase |
+|---|---|---|---|---|
+| 1 | `grep -F` w/o `-x` returns false GREEN on a currently-correct file (BLOCKER 1) — the brief's own unmeasured option | orchestrator | @architect + @security (independent convergence) | 0.D R1 |
+| 2 | "11 files/14 lines" residue cited as post-repair when it was a pre-repair snapshot | @architect | @pm | 0.R1 Fold-in |
+| 3 | R1 condition "anchored string equality" (`index()==1`) is prefix matching, not equality — greens a broken citation | @security | @architect (joint) | 0.D R2 |
+| 4 | B0 amendment's "verified: 10 lines, none a live pointer" — unverified assertion, then strengthened to "verified" | @architect → @pm | joint | 0.D R2 |
+| 5 | "%0A control MET" — verified with a different shell than the artifact specifies (fires in bash, not zsh) | @security | orchestrator adjudication | 0.D R2 |
+| 6 | Residue count wrong again (both reviewers' 14 and 12 under by one; correct 9/13) | @architect + @pm | joint | 0.D R2 |
+| 7 | C13 adds a 16-file pin six conditions after C7 says delete the pin — unreconciled consolidation | orchestrator | @architect | 1. Design |
+| 8 | C9's "≥4 deferred" — actually 3, on C9's own inclusion test | @architect | @architect (self) | 1. Design |
+| 9 | C15's truncation marker sits inside the locale-dependent pipe C15 itself flags | @security | @architect | 1. Design |
+| 10 | C20's colon-free marker survives the sanitizer, so "marker absent" could never GREEN | @security | @architect | 1. Design |
+| 11 | C4's ambiguity tie-breaker mandates rewriting append-only history | @architect | @architect (self) | 1. Design |
+| 12 | "`design-v2.19.13.md` must quote the canonical anchor" — measured false | @architect | @architect (self, same draft) | 1. Design |
+| 13 | Pin-of-6 self-drop-out mode: the fragment-split idiom S14 itself mandates drops `quality.yml` from its own count | @architect | @security | 1.D |
+| 14 | "proof item (b) non-discriminating because `## X` has no shallower prefix" — measured false (`## X` *does* contain `# X`) | @security | @security | 1.D |
+| 15 | Edit 1 (item 6) left `spec.md:9590` asserting the amendment "does not edit the index row" | @architect | @architect (self) | 2.1 |
+| 16 | §C.4 said three hazardous payload forms; there are five | @architect | @architect (self) | 2.1 |
+| 17 | "six of 15 files exist in The-Council" — actually four | @architect | @architect (self) | 2.1 |
+| 18 | The 33→32 citation-count correction was stale the moment it was written — writing it moved the count | @architect | @architect (self) | 2.1 |
+| 19 | "No description cell has EVER been rewritten" — generalized from one commit pair; a counterexample exists | @security | @architect | 2.D |
+| 20 | `comm -23` mishandles multi-thousand-character rows; a self-test against itself returned 0 and looked like it worked | @architect | @architect (self) | 2.D |
+| 21 | C-SEC-3's option framing understated — the correct remedy is an inline annotation, not a widened tripwire | @security | @architect | 2.D |
+| 22 | C-SEC-1 conclusion ("out of scope") false; mechanism (pin precedence) correct | @security | @architect | 2.D |
+| 23 | AC-B0's top-level spec checklist stayed at "5" after item 6 was added at 2.1 | @architect | @qa | 5, fixed 5.1 |
+| 24 | `CF-v2.19.13-CITATION-CENSUS` said "3 shipping files"; the cycle's own design doc joined the population and made it 4 | @pm | @security | 6, fixed 6.1 |
+| 25 | N_ALLTHREE=2 stated in the Phase-5.1 correction — the value is structurally unreachable (only 0/1 possible) | @dev | @security | 6, fixed 6.1 |
+| 26 | Already-shipped B0 commit claimed a risk-register ID that existed only in the design doc | @dev (propagating spec.md wording) | @dev (self) | 4 |
+| 27 | `@@TS@@` unresolved template placeholder shipped into the 6.1 row's own Timestamp column | orchestrator | @qa | 7 |
+| 28 | Second GCS's "99 quoted pattern lines" does not reproduce under any counting method (72/73/83, depending on definition) | @security | @qa | 7 |
+| 29 | `pipeline.md`'s "6.1 Audit fixes" row states `2026-08-27T14:22:00Z`; the commit's actual UTC time is `10:45:44Z` — a `+04:00` local clock reading relabeled `Z` | orchestrator | @qa (this retro) | 8 (new) |
+
+**29 in-cycle instances, five distinct authors** (orchestrator 4, @architect 12, @security 9, @pm 3 —
+2 shared with @architect, @dev 2), **found across six roles** (@architect, @security, @qa, @pm, the
+orchestrator, and @architect/@security catching themselves). This does not reproduce "eighteen,
+authored by six" on either axis: the count is materially higher (29, not 18 — and that excludes several
+findings this table folds into single rows for compactness, e.g. 2.1's four self-falsifications), and
+the participant span is **five**, not six — nothing in the committed record shows @qa *authoring* a
+defect this cycle; every @qa appearance in this ledger is on the "found by" side. The qualitative claim
+("very large recursive-defect count, spread across most of the roster") holds up. The specific integer
+and the specific six-way split do not, and — fittingly — that is now itself a **third-hop instance** of
+the same standing rule: @architect/@security handed a number to a spec draft without re-running it
+(gen 12/13); the orchestrator's own retro brief handed a defect-generation *count* to this retro
+without re-running it either. The mechanism this cycle produced applies to the mechanism's own summary.
+
+**Row #29 is a genuinely new finding, not previously flagged anywhere in this cycle's record** — a
+live instance of this project's own **BINDING** `Ambiguous-unit numeric claim` pattern, found by
+converting every cited commit's `%cI` to UTC and discovering one row (6.1 Audit fixes) does not sit
+between its neighbors when ordered correctly. Verified: `4a3272802` commits at `2026-08-27T14:45:44
++04:00` = `10:45:44Z`; the pipeline row's own Notes-column timestamp says `2026-08-27T14:22:00Z`. Every
+other row's stated timestamp reproduces its git-derived UTC time within a few minutes; this one is off
+by roughly 3h36m — consistent with the local `+04:00` wall-clock hour being copied into a field
+labeled `Z` without conversion. No downstream decision depended on this field's ordering (the merge
+gate reads commit SHAs and CI state, not this column), so it did not affect the outcome — but it is the
+identical failure shape the prior cycle's own retro (§2 of `[v2.19.12]`, above) found and retracted in
+*its own drafting*, now found live in the *pipeline record itself* rather than in a retro draft.
+
+### 1. Cycle Summary
+
+**"Citation Repair + Registry-Row Integrity"** — merged `d7c1f1c`, PR #116, squash-merged, SECURITY-
+SENSITIVE Tier A. Eight items, stable in scope and dependency order from the first brief through
+merge, closing three named residuals from `docs/retro.md`'s own v2.19.11/v2.19.12 entries: a citation-
+matching CI step rebuilt to whole-line equality (`AC-S14`), a workflow-command-injection sanitizer for
+the one reachable `::error::` sink (`AC-S15`), two malformed anchor repairs (`AC-CF-A`), an ADR-088/
+ADR-090 numbering reconciliation (`AC-B0`), a Decision-(3) mis-pointer fix at two loci (`AC-CF-B`), a
+recorded live model invocation closing a year-old risk row (`AC-S5a`/`AC-S5b`), and three new pipe-
+injection fixtures (`AC-W1`). **Zero scope defects were found across every review this cycle ran** —
+two full Phase-0.D deliberation rounds, two parallel Phase-1/Phase-2 deliberations (1.D, 2.D), two
+rework passes (1.1, 2.1), and the formal Phase 5/6 gates. Every one of the ~29 defects in §0 was a
+wording, denominator, or control-firing error inside a remedy — none was "we're building the wrong
+thing." This is the 13th consecutive patch on the v2.19.0 rung (`v2.19.1`–`v2.19.13`; verified via
+`git tag -l 'v2.19*'`); the roadmap's own words for this stretch (`docs/roadmap.md:5`) are "patch-level
+storefront/truth-repair releases on top of v2.19.0 — no new functional rung, no ladder row of their
+own." v3.0 (the spawn-only engine) is named there as the Q4 headline; the ladder has not gained a row
+since v2.19.0 shipped 2026-07-22.
+
+### 2. Phase Findings Summary
+
+23 Phase Log rows (independently counted — `sed -n '239,269p' pipeline.md | grep -c '^| [0-9]'` → 23;
+the inherited "21 rows" claim in this retro's own briefing does not reproduce). Condensed:
+
+| Phase | Agent(s) | Verdict | Findings this pass |
+|---|---|---|---|
+| 0 / 0.D R1 / 0.R1 fold-in / 0.D R2 / 0.C close | @pm, @architect, @security (parallel), Owner | 0.D BLOCKED → BLOCKED → CLOSED with 20 binding conditions | 2 new (Requirements) + 3 BLOCKER/9 HIGH converged (R1) + 2 fold-in corrections + 3 BLOCKER/1 CRITICAL (R2, same defect independently found twice) |
+| 1 / 1.D / 1.1 | @architect, @security+@dev (parallel) | DONE → APPROVE w/ CONDITIONS ×2 → DONE | 4 of 20 conditions found wrong + root cause of B0 found (2 incompatible ADR numberings) + 1 WARNING (self-drop-out pin) + 5 more falsified claims |
+| 2 / 2.D / 2.1 | @security, @architect+@qa (parallel) | APPROVE w/ CONDITIONS (0 CRIT/2 WARN/2 INFO, GCS #1 written) → APPROVE w/ CONDITIONS ×2 → DONE | S4 overgeneralization found false; `comm -23` self-catch; 4 more falsified claims, incl. the self-perturbing 33/32 count |
+| 3 / 3.P | Owner, orchestrator | APPROVED / RESOLVED | C-SEC-1 pre-flight discriminates (positive + negative controls both correct) |
+| 4 | @dev | DONE — 27 commits, 6 push groups, every CI tip green | 2 self-found-and-fixed (RED-d transcript from a prior cycle, own risk-register-ID error) |
+| 5 / 5.1 | @qa, @dev | PASS (1 MINOR + 1 INFO, neither blocking) → DONE | AC-B0 checklist stale (5 vs 6); 886-vs-1242 resolved as both-correct, different quantities |
+| 6 / 6.1 | @security, @dev | PASS WITH WARNINGS (0 CRIT/3 WARN/5 INFO, GCS #2 written) → DONE | N_ALLTHREE=2 unreachable; census 3-vs-4 shipping files |
+| 7 / 7.2 | @qa, orchestrator | APPROVED FOR MERGE → MERGED | `@@TS@@` placeholder; GCS "99" count doesn't reproduce; all 21 (at the time) rows re-checked, only one had it |
+
+### 3. AC Difficulty Assessment
+
+| AC | Guarantee | Difficulty | Basis |
+|---|---|---|---|
+| AC-S14 (whole-line citation match, 4-tuple self-integrity, sanitized interpolation) | HARDEST | The core guard logic; carries gen 3, 7, 13 above plus 5 of the 20 binding conditions (C1, C2, C10, C12, C13). |
+| AC-S15 (sanitize the reachable `::error::` sink) | HARDEST (tied) | BLOCKER 3 at R1 and its replacement control *still didn't fire* at R2 (C3) — the negative control failed twice before landing; locale-dependent `tr` hazard (C15) found only by testing under two locales. |
+| AC-B0 (ADR-088/090 reconciliation) | HARD | Required a full root-cause pass (§0 #7-#12, #15-#18) before the 6th review found the actual cause — two ADRs publish incompatible numberings of the same three decisions. |
+| AC-CF-A (anchor repair) | HARD | Carries gen 3 (the whole-cycle's worst defect — a false GREEN) directly, plus the anchor-content finding (`, rule 2` placement) the original brief missed entirely. |
+| AC-S5b (recorded model invocation) | HARD (verification burden, not mechanism) | Closes on a one-shot, non-repeating model invocation; @qa independently re-invoked it at Phase 5 rather than trust the Phase-4 transcript — the only AC this cycle whose closure required *live re-execution of a judgment call*, not just a command. |
+| AC-CF-B (Decision-3 mis-pointer, 2 loci) | MODERATE | Same line, two conflicting edit-mechanism instructions (B0 vs CF-B) traced to one fold-in inheriting the wrong verb from a sibling bullet (§0 not listed, caught at 1.D). |
+| AC-W1 (3 new pipe-injection fixtures) | MODERATE | Contained; one condition (C12, add to the no-op setup guard) was the only real gap. |
+| AC-S5a (static clause) | EASY | Confirmed clean by both reviewers at every round; zero rework. |
+
+### 4. Quality Baseline Comparison (Tier-1 agents)
+
+All four `.claude/skills/{pm,architect,security,qa}/quality-baseline.json` files are `"live_tested":
+false, "threshold_calibrated": false` — the 0.80 pass bar is aspirational, not empirically fitted.
+None of the scenarios is a live test harness; this section maps this cycle's *observed* behavior onto
+each scenario's *expected_behavior* where a genuine match exists, and says plainly where it doesn't.
+
+- **@pm (QP1-3):** QP1 (ambiguous-intent escalation) and QP3 (conflict escalation) were not exercised
+  — the brief was already well-scoped. QP2 (clear-intent spec quality) is a fair match: @pm's Phase 0
+  draft surfaced two gaps the brief never stated (§0 rows are downstream of this). Mixed: strong
+  verification instinct, but @pm's own R1 wording (§0 #4, "verified") is the one place a hedge became
+  a false claim. **Directionally PASS on the one exercised scenario; two not exercised.**
+- **@architect (QA1-5):** none of the five scenarios (N+1 detection, destructive-migration escalation,
+  speculative-abstraction refusal, Hyrum's-Law API design, deprecation planning) maps onto this
+  cycle's actual surface — a CI citation guard, not a schema/migration cycle. The baseline itself is
+  stale relative to what this project now asks @architect to do most often (guard/CI logic, not
+  schema). **Not scoreable against this baseline; flagged as a baseline-staleness gap, not an @architect
+  quality gap** — separately, @architect authored 12 of the 29 §0 instances (the most of any
+  participant) but also found or self-caught the largest share of them, including the actual root
+  cause four prior reviews missed.
+- **@security (QS1-3):** QS2 (external-data/injection vector, LLM01) is close to a bullseye — this
+  cycle's central technical risk *was* untrusted contributor text reaching a `::error::` workflow
+  command, and @security's sanitizer analysis (both-BSD-and-GNU `tr`, locale hazards, colon-stripping)
+  is the strongest single piece of adversarial work in the cycle. QS1 (guard-modification/scope_allow
+  detection) matches the Tier-A classification and the target-repo `dev.md`-widening risk (C-SEC-1)
+  closely. QS3 (fail-open/fail-closed classification) is a looser match by analogy (SELF_MEMBER firing
+  before the pin comparison). **PASS on the scenarios that map, on real work** — but @security also
+  authored 9 of the 29 §0 instances, including the single worst one (gen 3, the false-GREEN prefix
+  match), so the injection analysis and the self-generated-defect rate are both real and both high.
+- **@qa (QQ1-6):** QQ1 (flaky-test quarantine) and QQ4 (planning drift-check) were not exercised. QQ2
+  (AC coverage completeness — the stale AC-B0 checklist), QQ5 (wire-through/re-invocation — the AC-S5b
+  live re-invocation), and QQ6 (enumeration vs. spot-check — proof item (c), and re-checking all 21
+  rows for `@@TS@@` rather than sampling) all map closely, and in each case the cycle's actual behavior
+  exceeded the baseline's stated pass criteria. **This is the strongest showing of the four baselines
+  on exercised scenarios** — with the standing caveat that @qa is both the actor being scored and the
+  scorer at Phase 8, an inherent conflict this section does not resolve, only names.
+
+### 5. Metrics
+
+**Rework rate — re-derived, not adopted.** `git diff --shortstat c909149 4a32728` → 3 files, 44
+insertions(+), 16 deletions(-) = 60 lines. `git diff --shortstat 9f6ddc2 c909149` (Phase-4 total from
+base) → 17 files, 2975(+)/47(-) = 3022 lines. **60/3022 = 1.985% ≈ 2.0%**, reproduces exactly.
+`git diff --stat c909149 4a32728 -- .github/workflows/quality.yml` and `-- scripts/` both return
+**empty** — independently confirmed: **0% of the shipped guard code changed after Phase 4.** All 60
+rework lines are documentation (`docs/spec.md`, `docs/risk-register.md`, `docs/design-v2.19.13.md`).
+
+**Phase durations — git-derived UTC, not the hand-typed pipeline.md column** (the prior cycle's own
+retro, and §0 #29 above, are why: a hand-typed value in the correct format is not the same as a
+measured one). Commit `%cI` converted to UTC for every branch tip:
+
+| Segment | Span | Duration |
+|---|---|---|
+| Phase 0 (0.A open → 0.C close) | `2026-08-26T18:40:59Z` → `2026-08-27T05:32:52Z` | **10h52m** |
+| Phase 1 (Design + 1.D + 1.1) | `05:32:52Z` → `07:25:12Z` (`dd8eab2`) | 1h52m |
+| Phase 2 (Review + 2.D + 2.1) | `07:25:12Z` → `08:26:51Z` (`f440e17`) | 1h02m |
+| Phase 3 (Gate + pre-flight) | `08:26:51Z` → `08:53:46Z` | 27m |
+| Phase 4 (Implementation) | `08:53:46Z` → `09:43:34Z` (`c909149`) | 50m |
+| Phase 5-5.1 (Testing + doc fixes) | `09:43:34Z` → `10:13:34Z` (`e115a79`) | 30m |
+| Phase 6-6.1 (Audit + doc fixes) | `10:13:34Z` → `10:45:44Z` (`4a32728`) | 32m |
+| Phase 7-7.2 (Approval + merge, incl. owner decision latency) | `10:45:44Z` → `12:16:58Z` (`d7c1f1c`) | 1h31m |
+| **Full cycle** | `2026-08-26T18:40:59Z` → `2026-08-27T12:16:58Z` | **17h36m** |
+
+**Phase 0 alone is 62% of total wall-clock** — more time was spent on requirements and two rounds of
+adversarial deliberation than on every subsequent phase combined, including implementation and merge.
+
+**Token cost:** NOT MEASURED. `.claude/projects/claude-cowork-config/metrics.json` (The-Council-side
+ledger) is stale — its last entry is `2026-08-21T18:48:14Z`, `pipeline_cycle` 26, roughly five weeks
+and multiple cycles before this one opened. This retro's own briefing estimated "on the order of 4M
+tokens across ~20 agent runs"; that figure is unverifiable against any instrumented source and is not
+adopted here, consistent with §0's standing rule — it is plausible given the volume actually read
+(the single v2.19.13 Phase Log block alone is 65KB; `deliberation-log.md`'s two rounds run ~1,500
+lines) but "plausible" is not "measured."
+
+**Issues prevented.** Two views, because no single severity taxonomy was used consistently across
+eight review passes: (a) **formal-report tally** (Phase 2 + Phase 6 only, the two named security
+reports a reader would actually open): 0 CRITICAL, 5 WARNING, 7 INFO, 4+ conditions. (b) **full-cycle
+reconstruction** (§0's 29-row ledger, classified by what each entry would have shipped as): roughly
+9 BLOCKER/CRITICAL-tier (a false-GREEN citation matcher, an unfireable injection control, an
+unreachable-value assertion, a false ADR claim, a mis-pinned tripwire), 14 WARNING-tier, 6 INFO/MINOR-
+tier. **(b) is the more honest number** — most of §0 was caught and fixed inside a single rework pass
+before it was ever logged as a formal "finding," so it never appears in (a) at all. `qa_issues_prevented`
+recorded for this cycle: **blocker=9, warning=14, info=6** (full-cycle basis, superseding the
+formal-report-only view for metrics purposes).
+
+### 6. What Worked
+
+- **Re-execution, not re-reading, caught every real defect.** The orchestrator's own adjudication of
+  the `%0A` control (running it in both shells rather than trusting either reviewer's claim), @dev's
+  re-derivation of the 886-vs-1242 "discrepancy" (both numbers were correct, measuring different
+  things), and @qa's independent re-invocation of AC-S5b's live model call are the same discipline
+  applied three different ways — none of them would have been caught by reading the artifact.
+- **The GNU/BSD gap closed by real execution, not simulation.** Every proof item (a)-(h) ran on
+  `ubuntu-latest`; the orchestrator fetched the actual CI log rather than trusting the PR's green
+  checkmark. This matches the prior cycle's own retro finding that real CI beats scratch-PR
+  simulation for closing environment-parity gaps.
+- **The injection surface was attacked, not just reviewed.** @security ran the shipped sanitizer
+  against real newlines, carriage returns, ANSI escapes, and percent-escapes under both BSD and GNU
+  `tr`, and could not construct a survivor — this is adversarial testing, not a checklist pass.
+  Correctly tiered SECURITY-SENSITIVE for exactly this reason.
+- **Self-catches outnumbered externally-caught defects among the two most active reviewers.**
+  @architect self-caught roughly half its own 12 instances (C9, C4, the design-doc population claim,
+  the `comm -23` mishandling, and three of the four 2.1 falsifications) before anyone else had to.
+
+### 7. What Didn't
+
+- **The review process was, this cycle, a measurable net source of new defects — not just a filter
+  for old ones.** 12 of the 29 §0 instances were authored by @architect and 9 by @security, and the
+  overwhelming majority of both were introduced *inside* their own review/rework passes (R1 conditions
+  wrong at R2; R2 conditions wrong at Phase 1; Phase-1-Design claims wrong within the same commit).
+  The mechanism caught everything it introduced, but it introduced a lot — three defect generations
+  (11, 12, 13) were found in the deliberation layer alone, before a single implementation line existed.
+- **A negative control failed to fire twice before it was fixed.** AC-S15's `%0A` injection control
+  did not fire at R1 (BLOCKER 3), was replaced, and *still* did not fire correctly at R2 (C3) — the
+  replacement was verified with a shell other than the one CI actually runs. The same verification
+  gap (a reviewer checking with a different command than the artifact specifies) recurred a third time
+  in the same round on a different claim (§0 #5).
+- **A number handed from one reviewer to another was adopted twice without being re-run**, and both
+  times it was wrong: the residue count (14, then 12, both under by one) and the pin count (16, added
+  six conditions after a different condition said to delete the pin entirely, in the same document).
+- **The pipeline record itself now carries one of this cycle's own defect classes** (§0 #29) — a
+  timestamp mislabeled by timezone, in exactly the shape the prior cycle's retro caught in its own
+  draft. Nobody checked it before now because nothing downstream depended on that field's ordering,
+  which is precisely how a defect class survives inside a record whose stated job is catching it.
+
+### 8. Pattern candidates — checked against `docs/patterns.md`, not asserted
+
+Four already-**BINDING** patterns recurred this cycle and are cited, not re-promoted:
+`Check-That-Cannot-Fail` (the `comm -23` self-test, §0 #20), `Verifier-that-cannot-PASS` (the `%0A`
+control that couldn't fire, §0 #5), `Ambiguous-unit numeric claim` (886-vs-1242, resolved as both
+correct but under-specified; and independently, §0 #29's timestamp), and `The cycle's own mandated
+corrective action was the next defect vector` (the whole of §0).
+
+Two existing **WATCH** rows advance:
+
+- **`Denominator drift`** (WATCH 1/3 → **2/3 this cycle**): `CF-v2.19.13-CITATION-CENSUS` said "3
+  shipping files"; the cycle's own `docs/design-v2.19.13.md` joined the population between when the
+  census was written and when it was cited, making the true count 4. Two populations compared without
+  re-pinning what changed between the measurements — the textbook shape.
+- **`Inherited-unread ledger`** (WATCH 1/3 → **2/3 this cycle**): recorded at this cycle's own Phase
+  0.A open (`pipeline.md:16`) — three carry-forwards (`CF-v2.19.12-A`, `-B`, `-D`) dropped at the
+  retro-to-handoff hop between v2.19.12 closing and v2.19.13 opening, recovered only because the
+  orchestrator read `docs/retro.md` directly rather than trusting the handoff note. The pattern
+  recurred on itself one cycle after being logged, which is the same self-referential shape as §0.
+
+**One new candidate, first instance:** *"A number inherited from a reviewer is not verified until the
+recipient re-runs it"* (this cycle's own named standing rule, `0.C 0.D Close` row). This is closely
+related to `Ambiguous-unit numeric claim` and `Denominator drift` — all three are numeric-trust
+failures — but distinct in mechanism: those two are about what is being measured (units, populations);
+this one is about *who measured it last* and whether the next person re-executed it or copied it. §0
+#3, #5, #6, and #29 of this cycle are all instances. Logged at **WATCH 1/3**, not merged into either
+existing row — a future retro should make the merge/split call once a second independent cycle
+produces a clean instance; forcing it now on one data point would overfit.
+
+Checked and **not** promoted: `The control goes RED on the cycle's own mandated work` (WATCH 2/3) —
+no clean instance this cycle; nothing here is a correct, unmodified negative control firing on new
+material the same cycle introduced.
+
+### 9. Carry-forwards for the next cycle
+
+| ID | Status | Note |
+|---|---|---|
+| `CF-v2.19.13-CITATION-CENSUS` | OPEN | Full census of the citation form across all shipping files was deferred by decision (patch-cycle-size grounds); corrected denominator is 4, not 3 or the originally-recommended full build-out. |
+| `CF-v2.19.13-MEMBERSHIP-NC` | OPEN, correctly scoped | `SELF_MEMBER` diagnostic has no committed negative control; no false-GREEN is possible (verified — count still reads 5 vs 6 and CI still REDs on self-drop-out), only message quality is unproven. |
+| `CF-v2.19.13-GITHUB-CLASSA` | OPEN, deferred by decision | Two live Class-A pointers (`.github/CODEOWNERS:8`, `.github/workflows/release-assets.yml:4`) remain broken today; outside CF-A, the 4-tuple, and Out of Scope. |
+| `CF-v2.19.13-DECISION3-RESIDUE` | RESOLVED into a tracked row | 3 loci + inclusion test now exist as an actual row in `docs/risk-register.md` (NF=7) — this cycle's own remedy for the "false measurement in a permanent ADR" failure shape. |
+| `S3` / `v2.19.11-PULL-ROW-1` | CLOSED, disposition documented | Closed on a one-shot, non-repeating model invocation; owner-level judgment call, honestly recorded as such rather than presented as a repeatable guarantee. |
+| Second GCS "99 quoted pattern lines" | Non-blocking, flagged | Does not reproduce under any counting method @qa tried (72 literal `scope_allow` entries / 73 quoted strings / 83 any-quoted-substring). The file itself is unmodified either way — a wrong number inside a correct verdict, not a wrong verdict. |
+| `S10` | ACCEPTED, not scheduled | `CONTRIBUTING.md:39`'s malformed self-citation (`##Placeholder authoring rules` — no space) is structurally invisible to S14's extraction regex by construction; maintainer-surface only. |
+| `A15` | Deferred, unchanged | Registry-row-count pin (`AC_PL_6_EXPECTED_HEX_ROWS`) survives into the next row-adding cycle; this cycle adds no row (confirmed: hex rows stayed 30 throughout). |
+| **New** — `pipeline.md`'s 6.1-row timestamp | Cosmetic, non-blocking | `2026-08-27T14:22:00Z` should read approximately `10:45:44Z` (see §0 #29). Recorded here rather than silently corrected in place, per this project's own precedent for retracted/corrected findings (leave the record showing the finding was made, not edit history away). |
+
+### 10. Next-cycle recommendation
+
+**Not a mandate — an experiment worth running once, to actually test proportionality instead of
+debating it.** The 0.D-close decision this cycle rejected a third deliberation round on cost grounds
+(~700k-1M more tokens on an already-~3M-token Phase 0) but ran a *second* full round before applying
+that reasoning — R1 already converged, independently, on the same three blockers from both reviewers.
+For the next patch-scale cycle on a stable, previously-reviewed surface (not this cycle's kind of
+first-time CI-guard work), consider: one 0.D round, then real-CI-execution as the second check
+(matching what already closed the GNU/BSD gap "for free," per the v2.19.12 retro's own finding above)
+instead of a mandatory second prose round. Measure whether defect-generation count and time-to-merge
+both improve. If they don't, the two-round discipline is vindicated with actual evidence instead of
+precedent alone.
+
+### 11. Retrospective Verdict
+
+**Quality baseline comparison:** see §4. None of the four Tier-1 baselines is live-tested or
+threshold-calibrated; where a scenario genuinely maps to this cycle's work, observed behavior cleared
+the 0.80 bar directionally (@security on injection detection, @qa on wire-through/enumeration
+discipline). @architect's baseline is stale relative to the guard/CI-heavy work this project now
+actually assigns it — a baseline-maintenance gap worth a future cycle's attention, separate from
+@architect's own performance this cycle, which found the hardest root cause in the record (the
+ADR-088/090 dual-numbering) that four prior reviews had missed.
+
+**Was the ceremony proportionate?** Both readings in the brief are true, and they are not in tension
+— they describe different halves of the same cycle. The security-critical half (AC-S14/AC-S15: an
+untrusted-input sanitizer sitting in front of a GitHub Actions `::error::` sink) earned every round it
+got — a real injection vector, tested under multiple shells and both `tr` implementations, with a
+negative control that failed to fire twice before someone actually ran it in the right shell. That is
+not ceremony; withholding that scrutiny would have been the mistake. The documentation-reconciliation
+half (AC-B0's ADR numbering, the citation census, the residue arithmetic) is a different story: it
+generated the visible majority of the 29 §0 instances, almost entirely as a self-consuming loop where
+each round's fix became the next round's finding, and it changed nothing about what shipped — 0% of
+the guard code was touched after Phase 4, and every one of the arithmetic/wording corrections landed
+in documentation. Two consecutive adversarial rounds (0.D R1 and R2) plus two more rework rounds (1.1,
+2.1) — four passes total before Phase 3 even opened — is a lot of process for a scope that, by the
+record's own repeated finding, never once needed to change. §10's recommendation is the honest form of
+this judgment: not "the ceremony was wasted" (nothing shipped broken, and that is the actual job), but
+"the marginal round past the first was never tested against a cheaper alternative, so its value is
+asserted, not measured" — which is exactly the standard this cycle's own standing rule holds everyone
+else to.
+
+**Ecosystem impact:** NONE. `scripts/governance/sos-resolve.sh umbrella-of claude-cowork-config`
+returns empty (exit 0, independently re-run this session) — this project resolves to no registered
+System-of-Systems umbrella. No write touched `.claude/projects/ecosystem/*`, and no
+`sos-interfaces.json` `consumers[]` surface is implicated.
+
+**Privacy note:** no personal name, handle, or email appears in this entry beyond the `@agent`
+references already established throughout this project's own retro history and the repository's own
+public PR/release URLs (`jmlozano1990/Cowork-Starter-Kit`), which this entry does not introduce.
+
+**Overall cycle health: good, with one process caveat worth carrying forward, not fixing urgently.**
+Everything real was caught before merge; the shipped artifact is clean (0% post-Phase-4 code rework,
+67/67 non-skipped CI checks, release surface and archive-content assertions both independently
+re-verified this session with matching results — 15 checked/0 failed; DROP=14/KEEP=17 on both
+published archives). The cost of that cleanliness — a process that spent 62% of its wall-clock time
+and generated 29 recursive findings before implementation began, on a scope that never moved — is the
+honest number to sit next to the clean merge, not a separate story from it.
+
+---
+
 ## [v2.19.12] - 2026-08-23 — "S4 report-egress retrofit"
 
 ### 0. Errors caught inside the cycle's own remedies, not in the original code
