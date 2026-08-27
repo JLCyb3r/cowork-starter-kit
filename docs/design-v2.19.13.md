@@ -381,7 +381,39 @@ mints mis-pointer number seven, and B0's census goes stale by construction. Seco
 right *mechanism* — see §B.9. B0 item 3 now carries both a ruling that the **body** numbering is
 authoritative (the same more-specific-artifact rule C6 applied to the push table) and an instruction
 to record the divergence in the amendment. The amendment is an append to `docs/architecture.md`, so
-this costs no new scope and does not edit the index row, which is itself inside an append-only record.
+this costs no new scope.
+
+**Corrected at Phase 2.1 — the clause that used to close this paragraph was false.** It read: *"and
+does not edit the index row, which is itself inside an append-only record."* **The ADR index table is
+not an append-only record, and it never has been.** Measured counterexample, run this session:
+
+```
+git show 39e1df0 -- docs/architecture.md   # "hotfix: rename v1.4.0 -> v1.3.2" (#7)
+  -| ADR-019 | ... (v1.4)   | ACCEPTED |      <- description cell rewritten in place
+  +| ADR-019 | ... (v1.3.2) | ACCEPTED |
+  -| ADR-015 (amendment v1.4)   | ... |       <- ID cell rewritten in place
+  +| ADR-015 (amendment v1.3.2) | ... |
+```
+
+And, on this very row, a second and closer counterexample found the same way — at `9a9961f`
+(v2.19.12) **ADR-088's own `Status` cell** was rewritten in place from
+`**PROPOSED (deferred at v2.19.10 Phase 1.3 …)**` to `**ACCEPTED (v2.19.12 …). AMENDED by the ADR-088
+amendment record appended at v2.19.12 Phase 1 (§Amendment record — ADR-088, below).**` — an in-place
+`Status`-cell edit whose sole purpose was **making an appended amendment reachable from the index
+row**, which is precisely the move this cycle now needs a second time.
+
+**The reachability ground, not merely the permission.** Striking the false premise would only make
+the edit *allowed*; what makes it *owed* is B0 item 1's rule — **a recorded deferral MUST be reachable
+from the occurrence, and silence at the occurrence is not a discharge**. The index row is the
+occurrence that mints the defect. Ruling the body authoritative in an appended amendment that the
+index row does not point to leaves the generator running exactly as the first half of this paragraph
+warns. So B0 gains item 6, and the index row's `Status` cell — **not** its three-decision summary
+text, which stays frozen because it was defensible when written — carries the pointer.
+
+**Why the distinction survives.** The ADR *bodies* remain append-only; a `Status` cell is metadata
+about the record, not the record. That is why B0's `bodies` parenthetical is left byte-identical
+rather than widened, and why §D P-row 11 now names the one in-place edit instead of saying
+"Append-only" flatly.
 
 ### B.9 — Phase 1.1: ruling on @dev FINDING 1 — B0 item 3 wins, AC-CF-B item 3 is corrected
 
@@ -508,9 +540,30 @@ sign in it — the one property it exists to test.
 
 ### C.4 Never glob-and-resolve
 
-`docs/internal/security/security-review-v2.19.11.md` records three historical security-test payloads
-**in the guard-visible citation form**, whose anchors are shell command-substitution and
+`docs/internal/security/security-review-v2.19.11.md` records historical security-test payloads **in
+the guard-visible citation form**, whose anchors are shell interpolation, command-substitution and
 quote-breakout strings. They are legitimate Class-B records and must not be edited.
+
+**The count is FIVE, not three — corrected at Phase 2.1 by extracting them instead of recalling
+them.** `` /usr/bin/grep -noE '`CONTRIBUTING\.md § [^`]+`' `` over that file returns **six**
+occurrences, five hazardous and one benign:
+
+| line | extracted anchor | hazard |
+|---|---|---|
+| `:193` | `${ANCHOR}\` | **shell parameter expansion**, inside a quoted `$( )` — previously uncounted |
+| `:252` | `Worked-example authoring rules, rule 2` | none — an ordinary citation |
+| `:504` | `${ANCHOR}\` | **shell parameter expansion**, inside a quoted `$( )` — previously uncounted |
+| `:512` | `$(touch /tmp/AC3_PWNED)` | command substitution |
+| `:516` | `x"; touch /tmp/AC3_PWNED2; echo "` | quote breakout + command chaining |
+| `:520` | `$(id)` | command substitution |
+
+The earlier "three" counted only the `$( )` and breakout payloads at `:512`, `:516`, `:520`. It
+**missed `:193` and `:504`**, which are recorded quotations of the guard's *own source line*
+(`N_CITES="$(grep -cF "\`CONTRIBUTING.md § ${ANCHOR}\`" "$SCRIPT" || true)"`). Those two are the more
+insidious members of the class: they do not look like attack payloads, they look like documentation —
+yet re-expanding one in a shell context expands `${ANCHOR}` and re-enters `$( )` exactly as the
+overtly hostile three do. **A rule derived from the three would have been sized to payloads that
+announce themselves.**
 
 Consequences: the tuple list is **enumerated, never globbed**; the tripwire **counts only**; and any
 tooling that must handle a discovered anchor passes it as a **quoted argument to a fixed-string
@@ -595,7 +648,7 @@ green.
 | 8 | `tests/fixtures/citation/nc5-prefix-truncated.md` | NEW. Prefix-truncation negative control fixture. | AC-S14 (NC-5) |
 | 9 | `tests/fixtures/citation/s15-injection-control.md` | NEW. Injection-control payload, as a file so no shell `printf` can eat it. | AC-S15 |
 | 10 | `docs/risk-register.md` | Flip `v2.19.11-PULL-ROW-1` to CLOSED, naming model drift and per-slug variance as residuals. Only on AC-S5b's recorded invocation. | AC-S5b |
-| 11 | `docs/architecture.md` | Append the B0 amendment record (role axis, tie-breaker, discharge rule, mechanism naming, 3 superseding cross-references, historical-example note). Append-only. | AC-B0 |
+| 11 | `docs/architecture.md` | Append the B0 amendment record (role axis, tie-breaker, discharge rule, mechanism naming, 3 superseding cross-references, historical-example note). **Append-only WITH EXACTLY ONE IN-PLACE EDIT, named here so this row does not contradict the AC it carries: ADR-088's index-row `Status` cell gains a pointer to the new amendment (AC-B0 item 6), in the same form that cell already carries from `9a9961f`. That is the only byte outside the appended block that changes. ADR bodies and the index row's three-decision summary text are NOT edited.** | AC-B0 |
 | 12 | `docs/design-v2.19.11.md` | Three corrections: RED-d transcript, Leg-2 credential-leak clause, `Decision (3)` mis-pointer. | AC-CF-B |
 | 13 | `CHANGELOG.md` | Release notes for v2.19.13. | release hygiene |
 | 14 | `VERSION` | `2.19.12` to `2.19.13`. | release hygiene |
@@ -631,11 +684,61 @@ scope_allow_delta:
   remove: []
 ```
 
-**This block is a no-op for scope enforcement on this cycle.** `claude-cowork-config` is an external
-registered project; `.claude/agents/dev.md`'s `scope_allow` governs Council-side writes and is not in
-this cycle's scope. The block is recorded because ADR-115 requires its presence (omission is a parse
-error), and every entry carries a non-wildcard prefix — `.github/`, `skills/`, `templates/`, `tests/`,
-`docs/`, or a named root file. No entry is a bare wildcard.
+**This block is a no-op for scope enforcement on this cycle — and the reason recorded here through
+Phase 2 was the wrong one.** It read: *"`claude-cowork-config` is an external registered project;
+`.claude/agents/dev.md`'s `scope_allow` governs Council-side writes and is not in this cycle's
+scope."* That is a claim about *jurisdiction*, and it is not what the guard does. **Corrected at
+Phase 2.1 by reading the guard instead of citing it** — `scripts/guards/scope-check.sh:708-712`,
+verbatim this session:
+
+```
+708  # --- External project: allow all writes within the project root ---
+709  if [ -n "$ACTIVE_PROJECT_PATH" ] && [[ "$FILE" == "$ACTIVE_PROJECT_PATH/"* ]]; then
+710    # External project mode: dev and devops can write freely within the project
+711    # (project's own guards handle finer-grained restrictions)
+712    exit 0
+713  fi
+714  # --- Check scope_allow.standard[] patterns ---
+```
+
+**The derivation:** `:709` returns `exit 0` at `:712` — **before** the `scope_allow.standard[]` loop
+at `:714` is ever entered. `dev.md`'s patterns are therefore not *out of jurisdiction*; they are
+**never reached**. Every path in the block above lies under the project root, so the carve-out fires
+on all 15 and the block cannot bind anything. That is why it is a no-op.
+
+**The precondition, stated because the carve-out is conditional and the condition is not free.**
+`:709` fires only while `ACTIVE_PROJECT_PATH` resolves to this project's root. Two independent
+resolvers can supply it: the session-pin/registry path (`:396`), or the ADR-207 file-location-derived
+fallback (`:412`), which by its own guard `[ -z "$ACTIVE_OVERRIDE" ]` is **skipped whenever a session
+pin is set**. Measured this session, the guard's own stderr:
+
+```
+scope-check: ACTIVE override (source=pin value=claude-cowork-config registry=self agent=architect)
+```
+
+So the pin is currently carrying it and the registry's `active_project` is `self` — the file-derived
+fallback is inert right now *because* the pin is set. Both resolvers point here, so writes land; but
+a pin re-aimed at another slug would take `ACTIVE_PROJECT_PATH` with it, `:709` would stop firing,
+and these 15 paths would fall through to `:714`. **A Phase-4 write refused with a scope error is this
+precondition breaking — it is not a signal that the file plan is wrong.**
+
+**BINDING: do NOT widen The-Council's `.claude/agents/dev.md` to "fix" such a refusal.** The patterns
+at `:714` are matched with `echo "$REL_FILE" | grep -qE "$PATTERN"` — **unanchored substring
+regexes** (`dev.md` today carries bare `'scripts/'`, `'package\.json'`, `'tsconfig'`). Adding this
+cycle's plan files there would not scope a permission to this project; it would grant it
+**repo-wide**. **Four** of the 15 entries name files that exist in The-Council itself — measured this
+session, not assumed: `docs/architecture.md`, `docs/spec.md`, `README.md`, `CHANGELOG.md` present;
+`VERSION` and `docs/risk-register.md` **absent** (a first draft of this paragraph said "six" and
+named those two; the count was corrected by running `ls` against the hub). So the "fix" hands @dev
+write access to the hub's own architecture record, its live spec and its release notes in order to
+satisfy an external project's file plan. **The hazard does not depend on that count** — an unanchored
+pattern also grants every path those files *would* occupy later; the four are simply the ones already
+sitting there today. That is a privilege escalation wearing the costume of a
+scope correction. The correct remedy is always to restore the pin, never to widen the allow-list.
+
+The block is recorded because ADR-115 requires its presence (omission is a parse error), and every
+entry carries a non-wildcard prefix — `.github/`, `skills/`, `templates/`, `tests/`, `docs/`, or a
+named root file. No entry is a bare wildcard.
 
 ---
 
@@ -708,9 +811,10 @@ in this repo. Recorded, not decided.
 | `CF-v2.19.13-DECISION3-RESIDUE` | 3 remaining `Decision (3)` mis-pointer loci (`security-audit-v2.19.11.md` x2, `docs/retro.md` x1). | LOW | Deferred **with a stated inclusion test** so the next auditor can re-derive the set. All export-ignored, all in append-only records. |
 | `S10` | `CONTRIBUTING.md`'s malformed self-citation — no space after the section sign, invisible to the extraction regex by construction. | LOW | Named carry-forward, not scheduled. Maintainer surface (S13). |
 | `A15` | Registry-row-count pin is defeatable by a compensating pair. | LOW | Stays deferred. No row added this cycle (30 = 30, re-confirmed). |
+| `CF-v2.19.13-MEMBERSHIP-NC` | **The tripwire's named-membership assertion (AC-S14 item 5) has no committed negative control.** Its *count* leg fails arithmetically in both directions, but the **distinct diagnostic** — *"the anchor guard's own source file has dropped out of the counted population"* — is never itself exercised, because the only faithful trigger is editing the real guard's citation line. @qa (Phase 2.D) proposed a self-test against a **mocked file list**. | LOW | **Named residual — deliberately NOT this cycle, and the discriminator is stated so the deferral can be audited.** Unlike proof item (c), which admitted a **false GREEN** and was therefore fixed this cycle, this gap admits **no false GREEN at all**: on self-drop-out the count still reads 5 against a pin of 6 and CI still goes RED. What is unproven is only the *quality of the message*, not the firing. Deferring it is an ergonomics debt, not an assurance gap — which is precisely the line that made (c) mandatory and makes this optional. Two further grounds: fixturing it requires **parameterizing the membership predicate to accept an injected file list**, which is ADR-092 §Maturation Path option (a) applied to a second call site — work this cycle explicitly defers; and the injected list would exercise the predicate but **not** the `grep -rl` population-generation that feeds it in production, so the control would be partial even once built. **Revisit trigger:** the first time a self-drop-out actually occurs and is misdiagnosed as an off-by-one, or whenever option (a) is taken up — at which point the predicate is already a function and the control costs one leg. |
 | GNU/BSD | **Corrected at Phase 1.1 — the earlier blanket claim was wrong.** No GNU `grep`, `awk` or `sed` and no container runtime on the authoring host, so matching-mode and extraction-regex results are BSD-only. **But GNU coreutils 9.11 IS present** (`gsort`, `gtr`), covering both binaries the locale hazards live in. | **MEDIUM** until CI (was HIGH) | Items (a)(b)(c)(d)(e)(h) still closed only by `ubuntu-latest` on this cycle's own PR, stated as **untested**. Items (f) and (g) **partially closed locally** under GNU coreutils (§B.7); residual there is glibc-versus-macOS collation tables, not absence of a binary. |
 | Lint surface on `tests/**.md` | The 3 new fixture/record files land inside markdownlint's `**/*.md` glob and lychee's `--offline "**/*.md"`; `tests/` is excluded from neither. | LOW | Named in `docs/spec.md` Technical Constraints §Lint surface, with the active rule set measured (`MD041` is **disabled**; `MD047`/`MD009`/`MD012`/`MD010` are not). Repo's own pre-push CI-pitfall class. |
-| `CONTRIBUTING.md` hardcoding | ADR-092 pins one target document where ADR-090's citation form is generic. Measured latent: all 33 guard-visible occurrences target `CONTRIBUTING.md`, zero target anything else. | LOW (latent) | Named under ADR-092 §Risk knowingly accepted, with a revisit trigger on the first non-`CONTRIBUTING.md` target. Goes live in triplicate — guard, tripwire and census blind at the same instant — so it is stated as a re-runnable measurement, not an assurance. |
+| `CONTRIBUTING.md` hardcoding | ADR-092 pins one target document where ADR-090's citation form is generic. Measured latent, **re-run at Phase 2.1 and restated because the earlier figure conflated two populations**: the repository contains **33 citation openings** (`` git grep -oF '`CONTRIBUTING.md § ' `` → 33), **of which 32 are guard-visible** (`` git grep -oE '`CONTRIBUTING\.md § [^`]+`' `` → 32). All 33 target `CONTRIBUTING.md`; **zero** target anything else. The single non-guard-visible opening is `docs/spec.md:9837`, where the closing backtick wraps to the following line — invisible to line-based extraction by construction, and inside `docs/`, which the tripwire excludes anyway. The row previously read "all 33 guard-visible", which is the 32-count wearing the 33-count's label. **Do not match this pair on the bare digits "32/33"** — `docs/spec.md:7346` carries an unrelated **v2.19.8 job-count** pair (*"`quality.yml` currently has **32** jobs … This job makes **33**"*). That one is **Class B**, was **true when written**, is **correctly frozen**, and must not be "reconciled" with this row. Two different 32→33 pairs, two different populations, one of them historical. | LOW (latent) | Named under ADR-092 §Risk knowingly accepted, with a revisit trigger on the first non-`CONTRIBUTING.md` target. Goes live in triplicate — guard, tripwire and census blind at the same instant — so it is stated as a re-runnable measurement, not an assurance. |
 | `%0A` decoding | GitHub Actions' handling of percent-encoded newlines at error/stdout sinks remains **UNRUN by anyone**. | INFO | Explicitly **not** load-bearing for AC-S15's correctness, and less so after sanitization. Not promoted to fact. |
 | Model drift + per-slug variance | AC-S5b is a one-time invocation, 1 slug of 3. | MEDIUM | Both named in the risk-register CLOSED text. The sha256 gate makes the *text* durable, not a future model's behaviour. |
 | Anchor-guard step responsibility count | The step now carries ~4 responsibilities. | LOW | Accepted; splitting would break the Interference Constraint. Retirement path = ADR-092 option (a). |

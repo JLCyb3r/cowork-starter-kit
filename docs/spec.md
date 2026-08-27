@@ -10322,7 +10322,7 @@ and that is not a choice. It closes for free by implementing every S14/W1/S15 ne
 |---|---|
 | (a) | whole-line match returns exactly 1 for the **h3** anchor `Worked-example authoring rules (S1 security carry-forward)` |
 | (b) | exactly 1 for the **h2** anchor `Placeholder authoring rules` |
-| (c) | it does NOT double-count a deeper heading — assert `N_HEADS == 1`, never `>= 1` |
+| (c) | it does NOT double-count — against a **generated heading-collision fixture** (the anchor text present as a heading **twice**), the resolution primitive returns `N_HEADS == 2`, so `== 1` REDs on input where `>= 1` would GREEN. **A scenario, not a source grep** — see the ruling below. |
 | (d) | the extraction regex's multibyte `§` (U+00A7) behaves identically under the runner's locale |
 | (e) | all four existing AC-8b legs still pass for the 2 original slugs after widening to 5 |
 | **(f)** | **sanitizer RED/GREEN under GNU** — Leg A and Leg B of AC-S15's control |
@@ -10355,6 +10355,50 @@ prefix-shaped — that is (h)'s job alone.
 
 **The mandate is unchanged: 8 proof items, and the checklist reads "All 8".** Only the rationale was
 wrong, and it was wrong in the direction of understating (b).
+
+**RULING — item (c) was a check that could not fail, and it is now a scenario (@qa, Phase 2.D).**
+As specified through Phase 2, (c) said only *"assert `N_HEADS == 1`, never `>= 1`"*. That is a
+**code-shape requirement**, and it is satisfiable by grepping the guard's own source for the literal
+`== 1`. Unlike (h) — which has **NC-5** forcing the `index()`-versus-whole-line divergence to
+actually manifest — **nothing in NC-1…NC-7 makes `== 1` and `>= 1` disagree.** Re-measured at Phase
+2.1: every `N_HEADS`-bearing control in that set (NC-2, NC-3, NC-4, NC-5) targets **`N_HEADS = 0`**,
+and both predicates reject 0 identically. So (c) could go green while the behaviour it names was
+never exercised.
+
+**That is this project's own recurring failure shape — an instrument that cannot fail — sitting
+inside the proof list whose purpose is to close the validation gap.** It is the same class as the
+two pre-existing negative controls that added characters and were blind to prefix-matching for two
+review rounds (ADR-092 §Decision (1)), and the same class as AC-PL-7 row 6's `grep -qF` returning
+GREEN on deletion (ADR-086). Accepting it as-is would commit the cycle's named defect inside the
+remedy for it, for the third time this cycle.
+
+**Resolved by option (A): a generated heading-collision fixture. Not accepted as a static check.**
+
+- **What it is.** A fixture in which the anchor text appears as a heading **twice**. The primitive
+  sums whole-line matches across h1-h6, so it returns **2**, and the two predicates visibly diverge:
+  `== 1` REDs, `>= 1` GREENs. Measured this session with `/usr/bin/grep` before being specified —
+  `## Dup anchor` + `### Dup anchor` → `1 + 1 = 2`. **A same-level duplicate is sufficient and
+  simpler**: two `## Dup anchor` lines return **2** from a single `grep -cxF`. @qa's stated
+  construction (two *different* levels) is sufficient but **not necessary**; either shape proves it.
+- **It costs no scope.** The fixture is **generated at CI runtime, never committed** — the §C.5 W1
+  precedent, already in force in this same workflow at `.github/workflows/quality.yml:738`
+  (`FIX="$(mktemp -d)"`). No new file, no new P-row; it lands inside P-row 1, whose change text
+  already reads *"Add in-workflow proof items (a) through (h)"*. **The 8-item / 15-file scope is
+  untouched.**
+- **It must not be a mock.** The self-test leg MUST invoke the **same** resolution primitive the real
+  assertion invokes — the in-force house pattern at `quality.yml:728-754`, where a single
+  `check_row()` is shared by the live assertion (`:732`) and four self-test legs (`:751-754`) against
+  generated fixtures. ADR-090 records exactly this: *"one step, one parser copy (self-test and
+  assertion sharing a single `check_row()`) … lets the self-test exercise the same code path the
+  assertion runs."* A leg that re-implements the loop is a second parser and is rejected under
+  ADR-086's "one parser, one pin".
+- **This does not require ADR-092 §Maturation Path option (a).** Option (a) promotes the primitive to
+  a shared function across *every* call site in the workflow. Item (c) needs only the assertion and
+  its self-test **inside one step** to share one definition — the scoped form ADR-090 already
+  blesses. Option (a) stays deferred.
+
+**(c) is therefore behaviourally proven, like (h), and its green now means something.** It is no
+longer a statement about the guard's source text.
 
 **(d) does not cover the sanitizer.** `$ANCHOR` never contains `§` (the extraction `sed` strips the
 prefix), so (d) guards the extraction regex — the surface that is probably fine. The locale hazard
