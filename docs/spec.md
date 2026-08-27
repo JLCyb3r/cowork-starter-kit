@@ -9943,8 +9943,19 @@ cells SHALL be edited such that:
   touching the wrong cell. (S11 edits prose only; neither `SKILL.md` pool file is touched, so
   neither hash may move.)
 - the replacement wording names the `pull-updates` backfill exception, mirroring `self-apply`'s own
-  row's scoped-exception shape;
+  row's scoped-exception **shape** — see the note below before going looking for phrasing to copy;
 - the substring `pull-updates` is present in both rewritten cells.
+
+**Note on "mirroring `self-apply`'s shape" (@dev FINDING 3).** Do not hunt for the literal string
+`pull-updates` in `self-apply`'s cell — **it is not there.** Re-measured at Phase 1.1: that cell
+contains `pull-updates` **0 times**; it refers to the same skill generically as *"the updater"*, in
+the sentence *"That list guards this flow, not the whole kit: when a required safety skill is missing
+from your workspace, **the updater** still installs it, as its own clearly labelled step, from bytes
+checked against the published checksum for that skill."* **"Shape" means the rhetorical move** — state
+the guarantee, then name the one scoped exception that qualifies it — not the wording. The two
+requirements are not in tension and no judgement call is owed: this AC's actual test is the bullet
+above (the substring `pull-updates` present in both rewritten cells), it is explicit, and it is
+sufficient. The sibling rows may name the skill more precisely than `self-apply`'s row does.
 
 **Negative control.** Inherited from W1 — post-edit, W1's pipe-injection fixtures for
 `self-archive`/`self-upgrade` still fire RED on a corrupted row and GREEN on the actual rewrite.
@@ -10125,6 +10136,16 @@ scoping follows B0's own role axis rather than cutting across it:
   **live Class-A pointer** would actually appear. That is the event the tripwire exists to detect,
   and it is fully covered.
 
+**The exclusion MUST be written as a ROOTED PATH PREFIX (`./docs/`, `./tests/` from the repo root),
+never as a bare directory-name filter such as `--exclude-dir=docs`.** The two are equivalent on
+today's tree and only by accident: measured at Phase 1.1,
+`find . -path ./.git -prune -o -type d \( -name docs -o -name tests \) -print` returns exactly
+`./tests` and `./docs` — **zero nested** directories of either name. A bare name filter prunes *any*
+directory so named at *any* depth, so the first `examples/*/docs/` or `skills/*/tests/` a later cycle
+adds would silently widen the blind spot with no diagnostic and no pin movement. The pin would keep
+reading 6 while the unguarded surface grew. Anchoring the exclusion to the two real top-level
+directories keeps the scoping decision above meaning what it says.
+
 ### §Never-glob-and-resolve (binding — this is why AC-S14 item 1 enumerates)
 
 A guard that globs files and interpolates each **discovered** anchor into a command is unsafe in this
@@ -10181,6 +10202,37 @@ re-measured at Phase 1 bound the deferral and were not previously stated anywher
    returns **0**. Any future repair must un-wrap it before an anchor guard could ever see it.
 
 Both files are `export-ignore`d — maintainer surface only, the same posture as S13.
+
+### §Lint surface — the 3 new `tests/**.md` files are CI-visible, and no AC said so
+
+**This is the repository's own pre-push CI-pitfall class, and it is named here rather than
+rediscovered at the first red push.** The three files §D adds — `tests/pull-updates-firing-controls.md`,
+`tests/fixtures/citation/nc5-prefix-truncated.md` and `tests/fixtures/citation/s15-injection-control.md`
+— are `.md` files under `tests/`, and **`tests/` is excluded from neither markdown job.** Re-measured
+at Phase 1.1 against `.github/workflows/quality.yml` and `.markdownlintignore`:
+
+| job | scope | `tests/` excluded? |
+|---|---|---|
+| `markdownlint-cli2-action` | globs `**/*.md`, `!docs/**`, `!vendored/agency-agents/**` | **no** |
+| `link-check` (lychee, internal) | `--offline --exclude-path vendored/agency-agents "**/*.md"` | **no** |
+
+Two binding consequences for @dev:
+
+1. **All three files MUST be markdownlint-clean under the repo's own `.markdownlint.jsonc`.**
+   **`MD041` is NOT a hazard here — it is explicitly disabled** in that config (alongside `MD013`,
+   `MD033`, `MD024`, `MD036`, `MD040`, `MD022`, `MD032`, `MD060`), so the reviewer note that named it
+   as a likely tripper is corrected. The rules that remain **active** and that fixtures habitually
+   trip are **`MD047`** (file must end with exactly one newline), `MD009` (trailing spaces),
+   `MD012` (consecutive blank lines) and `MD010` (hard tabs). A deliberately-malformed *citation* is
+   the point of two of these fixtures; deliberately-malformed *markdown* is not, and would redden the
+   `markdownlint` job for a reason unrelated to anything this cycle is testing.
+2. **None of the three may carry a link lychee resolves.** An inline code span — `` `…` `` — is not a
+   link and is safe, which is the form all three need anyway. A markdown link such as
+   `[CONTRIBUTING.md](../../CONTRIBUTING.md)` **is** resolved, offline, from the file's own location,
+   and a fixture two directories deep will get the relative depth wrong on the first try.
+
+The existing `tests/**.md` files pass both jobs today, so the convention is survivable; it simply was
+not written down, and §D added three files to a linted surface without any AC naming the obligation.
 
 ### §Push sequence
 
@@ -10276,15 +10328,22 @@ lands on the **sanitizer**, which is why (g) exists as a separate item.
 ## Acceptance Criteria
 
 - [ ] **AC-B0** — amendment appended; role-axis generalization (not file-axis); ambiguity tie-breaker
-      present; append-only discharge rule present; NO factual occurrence-count claim; all 5 numbered
-      elements present as distinct locatable text; 3 `Decision (3)` loci corrected by superseding
-      cross-reference; stated inclusion test present; 3 deferred loci named.
+      present; append-only discharge rule present, scoped **by reference to ADR-088's Class-B
+      enumeration** (not a fresh narrower list) and carrying the live/closed boundary and the
+      deferral-reachability clause; NO factual occurrence-count claim; all 5 numbered
+      elements present as distinct locatable text; **all 3** `Decision (3)` loci corrected by
+      superseding cross-reference and **none by in-place edit**, `docs/design-v2.19.11.md` included;
+      **ADR-088's index-row/body numbering divergence recorded, and the body ruled authoritative**;
+      stated inclusion test present; 3 deferred loci named, with their reachability excuse stated.
 - [ ] **AC-S14** — 4-tuple enumeration (never a glob); `N_DISTINCT` and `N_CITES` separate per tuple;
       **whole-line equality only** (`grep -cxF` or `awk '$0 == s'`; `index($0,s)==1`, bare `grep -cF`
       and interpolated `grep -cE` all forbidden); both self-integrity assertions (`N_TUPLES == 4`
-      **and** fragment-split once-only), re-run after S15/W1 land; citation-site tripwire pinned at
-      **6** over the non-`docs/`, non-`tests/` population, including `quality.yml` itself, counting
-      files only; `, rule 2` presence-and-placement assertion for both repaired files.
+      **and** fragment-split once-only), re-run after S15/W1 land; **extraction pipeline pins
+      `LC_ALL=C sort -u`**; citation-site tripwire pinned at **6** over the non-`docs/`, non-`tests/`
+      population, counting files only, with the exclusion written as a **rooted path prefix** and a
+      **named-membership assertion that `.github/workflows/quality.yml` is in the matched list**
+      (its own diagnostic, never a bare off-by-one); `, rule 2` presence-and-placement assertion for
+      both repaired files.
 - [ ] **AC-W1** — `GATED_SLUGS` widened to 5; 3 fixtures + 3 legs; **3 new fixtures added to the
       `for f in …` setup-guard list**; `NF==9` and field-8 hex explicitly not relaxed; deletion-leg
       omission rationale stated.
@@ -10301,7 +10360,11 @@ lands on the **sanitizer**, which is why (g) exists as a separate item.
       `ANCHOR_SAFE` as a new variable; fail-fast loop discipline stated; `LC_ALL=C` pinned;
       truncation = 80 chars with an **ASCII-only** lossy marker; control is a **FILE fixture**;
       colon-free marker `INJECTED-MARKER-7f3a`; **both Leg A and Leg B** asserted.
-- [ ] **AC-CF-B** — all 3 corrections verified by re-running the cited commands.
+- [ ] **AC-CF-B** — all 3 corrections verified by re-running the cited commands; **item 3 landed as an
+      appended superseding note, with the cited line's bytes unchanged** (items 1 and 2 remain direct,
+      per the stated rule).
+- [ ] The 3 new `tests/**.md` files are **markdownlint-clean** and carry **no lychee-resolvable link**
+      (§Lint surface).
 - [ ] Negative controls **NC-1 … NC-7** all present, and NC-5 (prefix truncation) demonstrably fires.
 - [ ] Live registry hex-row count remains **30**.
 - [ ] The diff of `scripts/` between base and head is **EMPTY**.
