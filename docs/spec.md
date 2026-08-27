@@ -9587,7 +9587,11 @@ containing all of the following as distinct, locatable text:
      the index row unreconciled fixes the symptom and leaves the generator running: the next reader of
      the index row mints mis-pointer number seven, and the census in this AC becomes stale by
      construction. The amendment is an append to `docs/architecture.md` and is the correct place to
-     record this — **it does not edit the index row**, which is inside an append-only record.
+     record this — **it does not rewrite the index row's three-decision summary text**, which is
+     inside an append-only record and was defensible when written. The index row's **`Status` cell**
+     is a different cell and a different question, and it **IS** edited in place — see item 6, which
+     is what makes this ruling reachable from the occurrence that mints the defect. Do not read this
+     clause as freezing the whole row; it freezes the summary, not the status.
 
    **MECHANISM RULING (settles the B0-item-3 / AC-CF-B-item-3 conflict — @dev FINDING 1).** All three
    in-scope loci are corrected by an **appended superseding cross-reference, never an in-place edit**,
@@ -9634,10 +9638,47 @@ containing all of the following as distinct, locatable text:
    fenced worked-example block in `docs/architecture.md` describes a state that no longer exists in
    `skills/self-apply/SKILL.md`. One sentence noting this, in the same amendment.
 
+6. **Makes the amendment REACHABLE from ADR-088's index row, by an in-place edit to that row's
+   `Status` cell — which is not a body edit.** Item 3(3a) rules the **body** numbering authoritative
+   and 3(3b) records the divergence, but a reader who never opens the amendment is reached by
+   neither. The index row in `docs/architecture.md` is the precise site where mis-pointer number
+   seven is minted, and today it carries **no pointer to the ruling that corrects it**.
+
+   **Ground — this AC's own reachability rule, applied to a superseding ruling rather than a
+   deferral.** Item 1 states *"A recorded deferral MUST be reachable from the occurrence"*, and
+   allows two discharges: (i) a note at or adjacent to the occurrence, or (ii) an explicit statement
+   of why no local note is owed. Neither is satisfied by silence at the index row, and item 1's
+   closing rule is unconditional: **silence at the occurrence is not a discharge.** The rule is
+   worded for deferrals, but its ground is reachability-from-the-occurrence, which a *superseding
+   ruling* needs at least as much — a deferral leaves the reader correct-but-incomplete, whereas an
+   unreconciled index row leaves the reader **confidently wrong**, holding a reading the repository
+   still publishes.
+
+   **The discharge:** ADR-088's index-row `Status` cell gains a pointer to this amendment, in the
+   form that cell already uses. **This is house practice on this exact row — measured, not
+   proposed.** At commit `9a9961f` (v2.19.12) the same `Status` cell was rewritten **in place**, from
+   `**PROPOSED (deferred at v2.19.10 Phase 1.3 — was ACCEPTED at Phase 1.2; …)**` to
+   `**ACCEPTED (v2.19.12 …). AMENDED by the ADR-088 amendment record appended at v2.19.12 Phase 1
+   (§Amendment record — ADR-088, below).**` — an in-place `Status`-cell edit whose entire purpose was
+   to make an appended amendment reachable from the index row. This item asks for that same move a
+   second time, on the same row, for the same reason.
+
+   **The `bodies` parenthetical at the head of this AC is left EXACTLY as written — do NOT
+   "consolidate" the two clauses.** That parenthetical reads *"append-only — ADR-088's and ADR-090's
+   **bodies** are NOT edited in place"*. The word **bodies** is load-bearing and already correct: it
+   constrains the ADR **bodies**, and an index-row `Status` cell is not a body. The two clauses are
+   therefore **already consistent**; the only thing needing a record is the *appearance* of tension.
+   An auditor who "reconciles" them by widening `bodies` to *the file* would forbid the edit this
+   item mandates; one who narrows this item to an append would restore the unreachability the item
+   exists to close. **Both directions are regressions, and both look like tidying.** The clauses are
+   correct precisely because they are scoped to different objects.
+
 **Negative control.** An amendment draft that generalizes the role-axis language but omits item 2's
 substitution-naming, or that enumerates a specific file list instead of a role rule, or that omits
-the tie-breaker or its discharge rule, fails this AC. @qa verifies all 5 numbered elements are
-present as distinct, locatable text.
+the tie-breaker or its discharge rule, fails this AC. An amendment satisfying items 1-5 but leaving
+ADR-088's index-row `Status` cell with no pointer to it **also fails**, by item 6 — it is
+unreachable from the occurrence, the same defect item 1 forbids for deferrals. @qa verifies all 6
+numbered elements are present as distinct, locatable text.
 
 ---
 
