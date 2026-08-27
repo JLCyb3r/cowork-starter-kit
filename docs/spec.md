@@ -9450,3 +9450,846 @@ written to fix.** Generation 7 was two individually correct fixes where one supp
 the other checked for. The AC-5 ↔ AC-7 collision recorded above is the same shape and is invisible to
 any single-AC review.
 
+
+---
+
+# Product Spec — Cowork Starter Kit v2.19.13 "Citation Repair + Registry-Row Integrity" — FINAL
+
+> **Cycle:** v2.19.13 · **Status:** Phase 1 — finalized by @architect from the Phase 0.D Round-2 draft
+> **Classification:** SECURITY-SENSITIVE — Tier A · COMPLIANCE-SENSITIVE = NO
+> **Base:** `9f6ddc2e60e443297b3f1e9bbc7f9e70852b7922`
+> **Supersedes:** the Round-2 draft held in Council scratchpad. Scope unchanged: same 8 items, same
+> dependency order. No scope defect was found in either deliberation round and none is opened here.
+> **Binding input:** the 20 Phase-1 conditions (Round-2 union). Applied per §Condition Ledger below.
+
+**Measurement contract for this document.** Every number was re-run by @architect at Phase 1 against
+the **worktree** at `9f6ddc2` (clean tree), with `/usr/bin/grep` (**BSD grep, GNU compatible,
+2.6.0-FreeBSD**) invoked by absolute path, shell `zsh`, `/bin/bash` cross-checked where shell
+semantics were load-bearing. Numbers inherited from a reviewer were **re-run, not adopted** — the
+standing rule this cycle produced. Four inherited conditions did not survive re-measurement and are
+corrected in-place below, each with the command that falsified it.
+
+---
+
+## Core Features — 8 items, in dependency order
+
+### 0. B0 — S12 settlement (append an amendment record to `docs/architecture.md`)
+
+**AC-B0 (Ubiquitous).** The v2.19.13 tree SHALL contain, appended to `docs/architecture.md`
+(append-only — ADR-088's and ADR-090's bodies are NOT edited in place), an amendment section
+containing all of the following as distinct, locatable text:
+
+1. **The role-axis generalization** (ships-agnostic):
+
+   > An occurrence of the `` `<file> § <heading>` `` citation form that functions as a **quotation or
+   > illustration of the convention itself** — inside a fenced block, or in prose that names it as an
+   > example of the canonical or the broken form — is **Class B** under ADR-088 §Decision (2), and is
+   > outside both ADR-088's freeze and ADR-090's repair obligation, regardless of which file it
+   > appears in and regardless of whether that file ships. An occurrence that functions as a **live
+   > pointer a reader is expected to follow** is **Class A** and is obligated, on the same
+   > file-agnostic and ships-agnostic basis.
+   >
+   > **Ambiguity tie-breaker: where an occurrence's role is genuinely ambiguous, it is Class A.**
+   >
+   > **Discharge rule for append-only records (binding, and part of the tie-breaker, not a
+   > qualification of it).** Class A states an *obligation*, not an *edit method*. Where a Class-A
+   > occurrence sits inside an append-only historical record — `CHANGELOG.md`, `docs/retro.md`, a
+   > `docs/internal/security/security-audit-*.md`, or an already-appended `## Amendment record`
+   > block — the obligation is discharged by a **superseding cross-reference appended below**, or by
+   > an explicitly recorded deferral, and **never by an in-place edit**. Without this rule the
+   > tie-breaker would mandate rewriting the repository's own history, which the append-only
+   > discipline forbids; the tie-breaker fails safe toward *repair*, not toward *rewriting*.
+
+   **Item 1 carries NO factual claim about how many occurrences exist in any file.** (See the
+   Condition Ledger, C4: the Round-2 draft's parenthetical *"verified: 10 lines, none a live
+   Class-A pointer"* was false, and is deleted rather than restated. The tie-breaker above makes it
+   unnecessary — ambiguous occurrences default to obligated instead of needing to be asserted
+   Class B.)
+
+2. **Names the mechanism explicitly:** ADR-090's amendment table reuses ADR-088's Class A / Class B
+   labels under a *substituted test* ("live pointer + ships" vs. "a machine resolves it as a path"),
+   and neither ADR notes the substitution. Naming this is what dissolves the apparent contradiction.
+
+3. **Corrects the `Decision (3)` mis-pointers — 3 loci in scope, 3 explicitly deferred.**
+   In scope, each corrected by a **superseding cross-reference appended below the record**, never an
+   in-place edit (same mechanism as item 4):
+   - `docs/architecture.md` — the amendment-record row reading `| Site | Class (ADR-088 §Decision (3)) | Ships? |`
+   - `docs/architecture.md` — the amendment-record line reading `§Decision (3) above: Class B references are frozen`
+   - `docs/design-v2.19.11.md` — the line reading `Under ADR-088 §Decision (3)'s` (**added to scope
+     at Phase 1 per C9**: CF-B edits this same file in the same push, P4, so the cut previously drawn
+     on AC ownership was arbitrary against cycle scope)
+
+   All three should read `(2)`.
+
+   **Stated inclusion test for the census** (previously missing, which is why it could not be
+   audited): *an occurrence is a mis-pointer iff it uses `§Decision (3)` to denote the **Class A/B
+   reference ruling***. Occurrences citing ADR-088's *actual* Decision (3) (the archive-leak /
+   permitted-path gate), or citing ADR-087's / ADR-089's / ADR-090's own Decision (3), are **not**
+   mis-pointers and are correctly left alone.
+
+   **Deferred by decision — exactly 3 loci, measured (see Condition Ledger C9 for the correction):**
+   `docs/internal/security/security-audit-v2.19.11.md` (2 occurrences) and `docs/retro.md`
+   (1 occurrence). All three are export-ignored (maintainer surface only), and all three sit in
+   append-only records, so item 1's discharge rule applies.
+
+4. **Marks as superseded, by content-anchored forward pointer** (never an edit to a file this
+   amendment does not own): the security-review line *"`CF-v2.19.11-A` / ADR-090 overlap (S12). Not
+   investigated. Unchanged from Phase 0."* in `docs/internal/security/security-review-v2.19.12.md`.
+
+5. **Marks the worked example as historical:** once CF-A lands, the broken form quoted inside the
+   fenced worked-example block in `docs/architecture.md` describes a state that no longer exists in
+   `skills/self-apply/SKILL.md`. One sentence noting this, in the same amendment.
+
+**Negative control.** An amendment draft that generalizes the role-axis language but omits item 2's
+substitution-naming, or that enumerates a specific file list instead of a role rule, or that omits
+the tie-breaker or its discharge rule, fails this AC. @qa verifies all 5 numbered elements are
+present as distinct, locatable text.
+
+---
+
+### 1. S14 — rebuild the anchor guard
+
+**AC-S14 (Ubiquitous).** The citation-anchor-guard step in `.github/workflows/quality.yml` SHALL:
+
+1. **Iterate an explicit enumerated list of exactly 4 tuples** — never a glob, never a repo-wide grep:
+
+   | citing file | doc | expected citations |
+   |---|---|---|
+   | `scripts/canonicalize-scan.sh` | `CONTRIBUTING.md` | 5 |
+   | `skills/self-apply/SKILL.md` | `CONTRIBUTING.md` | 1 |
+   | `PROMOTE.md` | `CONTRIBUTING.md` | 1 |
+   | `templates/skill-template/SKILL.md` | `CONTRIBUTING.md` | 1 |
+
+2. **Keep `N_DISTINCT` and `N_CITES` as two separate per-tuple quantities.** The global
+   `EXPECTED_CITES=5` is replaced by the per-tuple expected-citation column above. `N_DISTINCT` is
+   asserted `== 1` for every tuple; `N_CITES` is asserted against that tuple's own column value.
+   These are **not** the same number: `scripts/canonicalize-scan.sh` carries **5 occurrences of 1
+   distinct anchor** (re-measured at Phase 1: `grep -coE` → 5, `grep -oE | sort -u` → 1 line). A
+   single "per-tuple expected count" collapses them and breaks on precisely the one tuple that has a
+   real count.
+
+3. **Match the heading level-agnostically (h1–h6) using WHOLE-LINE EQUALITY ONLY.**
+   **Exactly two admissible implementations:**
+
+   ```
+   grep -cxF "<prefix><anchor>" "$DOC"
+   awk -v s="<prefix><anchor>" '$0 == s {n++} END{print n+0}' "$DOC"
+   ```
+
+   **`index($0, s) == 1` is FORBIDDEN.** It is a *prefix* test — anchored at the start, unbounded at
+   the end — and it **greens a broken citation** (silent), where the earlier bare `grep -F` defect
+   only reddened a correct one (noisy). Strictly worse. **Bare `grep -cF` remains forbidden**, and
+   `grep -cE` with an interpolated anchor remains forbidden (parentheses in a real anchor become a
+   capture group; it returns 0 on a *correct* file).
+
+   Re-measured at Phase 1 against the real tree, on the anchor a half-done CF-A repair produces:
+
+   ```
+   awk 'index($0,"## Agency-Sync PR Review")==1'  CONTRIBUTING.md  -> 1   (guard PASSES — false green)
+   /usr/bin/grep -cxF "## Agency-Sync PR Review"  CONTRIBUTING.md  -> 0   (guard FAILS — correct)
+   ```
+
+4. **Self-integrity — TWO orthogonal assertions, both required.** They guard different failures and
+   neither substitutes for the other:
+   - **(4a) Population completeness — `N_TUPLES == 4`.** Catches the enumeration silently shrinking.
+     This is the assertion the Round-2 draft dropped when it swapped the counted quantity to `== 1`;
+     it is restored here, because AC-S14's own accepted-risk statement is *enumeration
+     under-coverage*, and this is the only mechanical defense against that risk growing.
+   - **(4b) Non-duplication — the enumeration's core expression appears in
+     `.github/workflows/quality.yml` exactly once**, using the `PARSER_FRAG1`/`PARSER_FRAG2`
+     fragment-split discipline already established in this file, so the assertion's own source line
+     cannot match itself. Catches a copy-paste divergence.
+
+   Both MUST be re-run after S15's and W1's edits land in the same file.
+
+5. **Citation-site-count tripwire (population-growth detector).** Assert that the number of **files**
+   carrying the guard-visible citation form `` `CONTRIBUTING.md § …` ``, **excluding `docs/**` and
+   `tests/**`**, equals a pinned count:
+
+   | | pin | basis |
+   |---|---|---|
+   | before CF-A | 5 | measured at Phase 1 |
+   | after CF-A (the value to pin) | **6** | + `templates/skill-template/SKILL.md`, which enters the guard-visible population only once CF-A backtick-wraps it |
+
+   The 5 measured today are `.github/workflows/quality.yml`, `CHANGELOG.md`, `PROMOTE.md`,
+   `scripts/canonicalize-scan.sh`, `skills/self-apply/SKILL.md`.
+
+   **The population is scoped, and the scoping is load-bearing — see Technical Constraints
+   §Tripwire-population for why a repo-wide pin is not implementable.** Two properties are binding:
+   - **`.github/workflows/quality.yml` is itself in the counted set** (the guard's own source carries
+     the form). The check MUST include it and MUST NOT self-exclude by accident.
+   - **The tripwire COUNTS; it never extracts-and-resolves.** It must not interpolate a discovered
+     anchor into any command. See Technical Constraints §Never-glob-and-resolve.
+
+6. **`, rule 2` presence-and-placement assertion (firing control for the CF-A mandate).** For each of
+   `skills/self-apply/SKILL.md` and `PROMOTE.md`, assert:
+
+   ```
+   grep -cF '(S1 security carry-forward)`, rule 2' "$f"   == 1
+   ```
+
+   This tests both that `, rule 2` was preserved **and** that it sits immediately outside the closing
+   backtick. Re-measured at Phase 1: returns **0** for both files today (pre-repair), so the control
+   genuinely fires and is not vacuous. Without it, a repair that drops `, rule 2` entirely passes the
+   anchor guard, passes both anchor negative controls, and passes the checklist.
+
+**Negative controls (each must fire RED before the corresponding fix and GREEN after):**
+
+- **NC-1 (extraction).** `templates/skill-template/SKILL.md`'s citation in its current unbackticked,
+  no-space, trailing-period form → `"expected 1 distinct cited anchor, found 0"`, exit 1.
+  (Re-verified by byte inspection at Phase 1: the line is `CONTRIBUTING.md §Placeholder authoring
+  rules.` — no backticks, no space after `§`, trailing period. All three defects present.)
+- **NC-2 (level-agnosticism).** Template backtick-wrapped and content-corrected, guard still
+  hardcoded to `### ` → `N_HEADS=0`, exit 1. (The real heading is an **h2**.)
+- **NC-3 (suffix addition — `, rule 2` left inside the backticks).** Anchor becomes
+  `Worked-example authoring rules (S1 security carry-forward), rule 2` → `N_HEADS=0`.
+- **NC-4 (suffix addition — trailing period).** Anchor becomes `Placeholder authoring rules.` →
+  `N_HEADS=0`. One character different from NC-3, same trap.
+- **NC-5 (PREFIX TRUNCATION — the only control that discriminates whole-line equality from prefix
+  matching).** A fixture whose anchor is a real heading **minus its trailing parenthetical** —
+  `Worked-example authoring rules` — MUST return `N_HEADS=0`.
+  **NC-3 and NC-4 cannot see this defect**: both are suffix-*addition* fixtures and both correctly
+  return 0 under *either* matcher. The divergence appears only on suffix **deletion**. Without NC-5
+  the AC has no control that can detect a regression to prefix matching.
+- **NC-6 (self-integrity).** `N_TUPLES != 4`, or the core expression's count `!= 1`, fails with a
+  named error — never a silent pass.
+- **NC-7 (tripwire).** Adding a 7th non-`docs/`, non-`tests/` file carrying the guard form fails the
+  pinned count with a named error.
+
+---
+
+### 2. W1 — widen `GATED_SLUGS` (lands before S5 and S11)
+
+**AC-W1 (Ubiquitous).** `GATED_SLUGS` in `.github/workflows/quality.yml`'s AC-8b/AC-9b per-row
+structural-integrity check (re-measured at Phase 1: `GATED_SLUGS="self-apply prompt-gate"`) SHALL
+include `self-archive`, `self-upgrade`, and `pull-updates` in addition to the existing 2, with:
+
+- one pipe-injection damage fixture per newly-added slug (3 fixtures, mirroring the existing
+  `pipe-sa.md` / `pipe-pg.md` pattern) and one corresponding RED/GREEN self-test leg per slug;
+- **the 3 new fixtures added to the existing no-op setup guard list.** The guard currently reads
+  `for f in reflow pipe-sa pipe-pg deleted`. A new fixture whose field-2 anchor fails to match would
+  otherwise be a **silent no-op with a misleading diagnostic** — it would report GREEN having tested
+  nothing;
+- **`NF==9` and the field-8 hex regex (`/^[0-9a-f]{64}$/`) are NOT relaxed or widened by this
+  change** — stated explicitly, because `docs/risk-register.md`'s `v2.19.11-PULL-ROW-1` row voids its
+  own acceptance basis if either is. W1 only widens the slug list, which is strictly strengthening;
+- **the row-deletion vacuity leg is deliberately NOT duplicated per new slug.** `check_row()` is
+  shared, slug-parametric code, and the existing `self-apply` deletion leg already proves it
+  non-vacuous for every slug that calls it. Stated explicitly rather than left for a reader to
+  reconstruct.
+
+**Why now, not later:** S11 rewrites `self-archive`/`self-upgrade`'s description cells this cycle and
+S5 bumps `pull-updates`'s sha256 cell. Neither is gated today — a stray `|` would be caught only by
+the aggregate hex-row count, which is defeatable by a compensating pair (the deferred `A15` shape).
+
+**POPULATION check.** Invariant = rows this cycle writes to = `{self-apply, pull-updates,
+self-archive, self-upgrade}`. Gated today = `{self-apply}`. Post-W1 = all 4, plus `prompt-gate`
+(untouched this cycle, already gated).
+
+**Negative control.** For each of the 3 newly-gated slugs, a `|`-injection fixture flips
+`check_row()` to fail; a benign whitespace reflow does NOT flip it (reused from `reflow.md`).
+
+---
+
+### 3. CF-v2.19.11-A — repair 3 citations
+
+**AC-CF-A (Ubiquitous).** `skills/self-apply/SKILL.md`, `PROMOTE.md`, and
+`templates/skill-template/SKILL.md` SHALL be edited such that:
+
+1. **`skills/self-apply/SKILL.md` and `PROMOTE.md`** — the anchor text changes from
+   `` `CONTRIBUTING.md § Worked-example authoring rules, rule 2` `` to
+   `` `CONTRIBUTING.md § Worked-example authoring rules (S1 security carry-forward)` ``, matching
+   `CONTRIBUTING.md`'s h3 heading verbatim (re-measured at Phase 1: `grep -nxF` resolves at `:157`).
+   **The `, rule 2` reference MUST be preserved, placed immediately outside the backtick-quoted
+   citation** — e.g. *"…at `CONTRIBUTING.md § Worked-example authoring rules (S1 security
+   carry-forward)`, rule 2"*. **Mandatory, not conditional.** That heading heads three numbered
+   rules, and rule 2 is specifically the forbidden-imperative-token scan both citing sites exist to
+   point at; dropping it is a silent degradation. Enforced by AC-S14 item 6.
+2. **`templates/skill-template/SKILL.md`** — the citation is backtick-wrapped with a space after `§`,
+   content `Placeholder authoring rules`, matching `CONTRIBUTING.md`'s **h2** heading verbatim
+   (re-measured at Phase 1: resolves at `:114`). The trailing period moves outside the backticks or
+   is dropped.
+3. `curated-skills-registry.md`'s `self-apply` sha256 cell (field 8) is bumped **in the same push as**
+   item 1's byte change, regenerated via `scripts/registry-hash.sh self-apply` — never by hand, never
+   from CI error text.
+4. `PROMOTE.md` and `templates/skill-template/SKILL.md` receive no registry-cell edit (neither
+   appears in `curated-skills-registry.md`).
+5. This repair is validated GREEN against S14's rebuilt guard, **in the same PR**.
+   *(The Round-2 draft additionally said "as one combined edit with S14/S15." That is struck: the
+   Interference Constraint binds **S14+S15** only, and the push table puts CF-A in its own commit.
+   @dev was receiving two conflicting instructions from one spec; the push table is authoritative.)*
+
+**Negative controls:** NC-3, NC-4 and **NC-5** in AC-S14 above. NC-5 is the one that covers this AC's
+own most likely half-done repair.
+
+**Post-repair residue — corrected, and the pin option deleted.**
+Re-measured at Phase 1, worktree at `9f6ddc2`, `/usr/bin/grep` 2.6.0-FreeBSD, zsh:
+
+```
+grep -rnF 'CONTRIBUTING.md § Worked-example authoring rules, rule 2' . --exclude-dir=.git | wc -l  -> 15
+grep -rlF  (same)                                                                        | wc -l  -> 11
+```
+
+Per-file: `CHANGELOG.md` 1 · `f2-1` 2 · `f2-2` 2 · `f2-3` 2 · `docs/architecture.md` 1 ·
+`docs/design-v2.19.11.md` 1 · `security-audit-v2.19.10.md` 2 · `security-review-v2.19.11.md` 1 ·
+`docs/retro.md` 1 · `PROMOTE.md` 1 · `skills/self-apply/SKILL.md` 1. **Sum = 15 lines / 11 files.**
+
+**Pre-repair = 11 files / 15 lines. Post-repair = 9 files / 13 lines** (CF-A removes `PROMOTE.md` and
+`skills/self-apply/SKILL.md`, 1 line each).
+
+**Do NOT write a repo-wide "the broken form is gone" check**, and **do NOT pin the residue count.**
+Any Phase-5 verification of this repair MUST scope to the 4-tuple. The pin alternative offered in the
+Round-2 draft is **deleted outright**: B0 item 5 appends a sentence to `docs/architecture.md` about
+the worked example, and describing that example naturally invites quoting the broken form, which
+moves `docs/architecture.md` from 1 to 2 and the residue from 13 to 14. **A pin that fails on a
+correct tree is the same failure class this cycle exists to fix.** The 9 legitimate retentions are
+historical/illustrative quotations; "fixing" the 3 canonicalization fixtures would break their own
+RED legs.
+
+**Constraint (S13, binding, not scheduled):** `CONTRIBUTING.md` is `export-ignore`d — this repair
+improves the maintainer's tree, not a shipped user artifact.
+
+---
+
+### 4. S5 — malformed-registry-row refusal (static half + runtime half)
+
+**AC-S5a (Ubiquitous — static half).** `skills/pull-updates/SKILL.md`'s prose SHALL contain an
+explicit refusal clause for the case where a `curated-skills-registry.md` row for `self-apply`,
+`self-archive`, or `self-upgrade` is NOT well-formed (not exactly 9 pipe-delimited fields with a
+64-character lowercase-hex value in field 8) — symmetric in shape with the existing manifest-refusal
+clause (*"unparseable, truncated, or schema-invalid … REFUSE to offer or apply any update"*).
+
+**AC-S5b (Unwanted-behaviour pattern — the one AC in this spec with a genuine external trigger).**
+IF `pull-updates` is invoked against a workspace copy of `curated-skills-registry.md` whose
+`self-archive` row has been damage-fixtured (pipe-shifted so field 8 reads `mandatory-infrastructure`
+instead of a hash — the same damage shape as W1's fixtures), THEN `pull-updates` SHALL produce an
+observed, explicit refusal message — not silent proceeding, not treating the malformed field as
+verified.
+
+**AC-S5b is a 1-of-3 proxy, and says so.** AC-S5a's clause covers three slugs; AC-S5b exercises
+**one** (`self-archive`). What generalizes the result is that all three are governed by a **single
+shared refusal clause** in one file — the invocation exercises that clause, not that slug. **Per-slug
+model variance is a named residual alongside model drift.** (This is the same discipline AC-W1 was
+required to state for its omitted deletion leg; stating it in one AC and not the neighbouring one was
+the inconsistency worth closing.)
+
+**Deliverables:** the AC-S5a clause; `tests/pull-updates-firing-controls.md`, recording a **real
+invocation** against the damaged fixture, naming the **exact model + version + date** and quoting the
+**verbatim observed refusal output** (not a paraphrase); `pull-updates`'s sha256 cell bumped in the
+same push as the clause's byte change; `docs/risk-register.md`'s `v2.19.11-PULL-ROW-1` row flipped
+OPEN → CLOSED **only by AC-S5b's recorded invocation, never by AC-S5a alone** (the row's own text:
+*"Do NOT close on the CI gate alone"*), with the CLOSED text naming **model drift** and **per-slug
+variance** as the surviving residuals.
+
+**Why a one-time invocation is sufficient (not a repeatable harness):** a repeatable harness would
+require an LLM in CI — a network call and an API key — violating the workflow's zero-dependency /
+no-network constraint and creating a larger security surface than the risk row describes.
+`skills/pull-updates/SKILL.md` is itself hash-gated, so its text cannot drift without a sha256 bump
+CI catches; that is what makes the one-time result durable for the text.
+
+**POPULATION check.** Invariant = 3 backfill targets, acting on **the user's workspace copy at
+runtime**. The CI proxy (AC-8b/AC-9b, i.e. W1) acts on **the repository**, at PR time. **These are
+different objects at different times — the CI proxy's intersection with S5's runtime invariant is
+structurally zero at any slug count.** Raising `GATED_SLUGS` from 2 to 5 is still repository-side
+coverage; it does not touch the workspace-side gap S5 exists to close. **W1 is a mandatory
+precondition for editing these rows safely — it is NOT evidence for closing this risk row.**
+
+**Negative control.** The damaged-row invocation above. RED = the model treats the malformed field 8
+as verified or proceeds silently; GREEN = an observed, explicit refusal message.
+
+---
+
+### 5. S11 — fix 2 sibling registry rows
+
+**AC-S11 (Ubiquitous).** `curated-skills-registry.md`'s `self-archive` and `self-upgrade` description
+cells SHALL be edited such that:
+
+- the over-claim string *"This file can never be changed or moved by this or any other skill — it's
+  on a fixed, protected list that both processes always skip"* — re-measured at Phase 1 as present
+  byte-for-byte in exactly **2** rows — is **replaced by zero occurrences** post-edit;
+- both rows retain exactly 9 pipe-delimited fields;
+- **both rows' field 8 remains byte-identical pre/post-edit** — asserted explicitly with a
+  diff-based check against the base revision, the cheapest possible guard against a prose edit
+  touching the wrong cell. (S11 edits prose only; neither `SKILL.md` pool file is touched, so
+  neither hash may move.)
+- the replacement wording names the `pull-updates` backfill exception, mirroring `self-apply`'s own
+  row's scoped-exception shape;
+- the substring `pull-updates` is present in both rewritten cells.
+
+**Negative control.** Inherited from W1 — post-edit, W1's pipe-injection fixtures for
+`self-archive`/`self-upgrade` still fire RED on a corrupted row and GREEN on the actual rewrite.
+
+---
+
+### 6. S15 — stop echoing untrusted text into the CI log
+
+**AC-S15 (Ubiquitous — worded against the ROLE, not against line numbers).**
+**Every log-visible interpolation of contributor-derived text in the rebuilt anchor-guard step —
+enumerated AFTER S14's rewrite, not before it — SHALL be handled as follows:**
+
+- **Failure/diagnostic sinks** (any sink reachable when an anchor does *not* resolve — the
+  attacker-controlled case): the contributor-derived value SHALL be **sanitized** before
+  interpolation, never dropped. This is the only diagnostic a human gets when the guard fires.
+- **Success sinks** (reachable only when the anchor exactly equals a real heading): the
+  contributor-derived value SHALL be **dropped** entirely; log only safe integer counts
+  (`N_DISTINCT`, `N_CITES`, `N_HEADS`) and the tuple's own hardcoded file path.
+
+**Why role-wording and not the two line numbers the Round-2 draft named.** S14 turns this step into a
+**4-iteration loop** and *creates* S15's population — any per-tuple diagnostic the rebuild adds
+(naming which tuple failed, echoing an extracted citation) is a sink a two-line enumeration does not
+cover. Enumerating pre-rewrite line numbers inside the step being rewritten is the same file-axis /
+role-axis error B0 exists to fix. **Word the AC against the hop, not the field that prompted it.**
+
+**Sanitizer specification** (it is now the load-bearing control for the reachable sink, so it is
+specified completely rather than left for @dev to invent):
+
+1. **A NEW variable, `ANCHOR_SAFE`.** `$ANCHOR` MUST NOT be overwritten in place. S14 makes this a
+   4-iteration loop; overwriting in place poisons the next iteration's match pattern if a future
+   author changes the loop from fail-fast to collect-all.
+2. **The loop's failure discipline is FAIL-FAST** — the first non-resolving tuple prints its
+   sanitized diagnostic and exits 1. Stated explicitly because S14+S15 land as one edit and the
+   choice determines whether (1) is merely hygienic or load-bearing.
+3. **Operation order is binding: strip -> collapse -> truncate -> mark.**
+
+   ```
+   ANCHOR_SAFE="$(printf '%s' "$ANCHOR" | tr -d '%:' | LC_ALL=C tr -cd '[:print:]')"
+   ```
+
+   - `printf '%s'` — never `printf "$ANCHOR"`. The value is contributor-controlled and may contain
+     `%`; passing it as a *format string* is the same class of bug as the Round-1 fixture defect.
+   - **`LC_ALL=C` is pinned explicitly.** `tr -cd '[:print:]'` is locale-dependent — re-measured at
+     Phase 1: `LC_ALL=C` deletes `§` (bytes `302 247` removed), `LC_ALL=en_US.UTF-8` preserves it.
+     Same command, same input, two answers. A security control MUST be deterministic, so the locale
+     is pinned rather than inherited from the runner. The cost — a multibyte character inside an
+     anchor is stripped — is accepted, and made visible by (5).
+4. **Truncation length = 80 characters**, applied AFTER the strip and collapse stages.
+5. **A visible, ASCII-ONLY lossy marker is REQUIRED** whenever `ANCHOR_SAFE` differs from `ANCHOR`:
+   append `...[sanitized]`, or `...[truncated]` when the 80-character limit was hit. **The marker
+   MUST NOT contain a multibyte character** (no `…`): the pipeline in (3) strips multibyte under the
+   pinned `LC_ALL=C`, so an `…`-based marker is itself partially eaten — re-measured at Phase 1,
+   `printf 'abc…[truncated]' | LC_ALL=C tr -cd '[:print:]'` yields `abc[truncated]`. A
+   silently-shortened diagnostic is exactly what this requirement exists to prevent; a marker that
+   can itself be silently damaged does not prevent it.
+
+**Negative control — a FILE fixture, never a shell one-liner.**
+The control payload lives in a fixture **file** under `tests/fixtures/`, so no future shell's
+`printf` can eat it. Re-measured at Phase 1, in both shells:
+
+```
+zsh   printf 'See `...§ Bogus%0A::error::...`'         -> "%0A: invalid directive", rc=1   NO FIRE
+bash  printf 'See `...§ Bogus%0A::error::...`'         -> `...Bogus0X0P+0::error::...`
+                                                           ^ %0A eaten as hex-float %A - NO PERCENT SURVIVES
+both  printf '%s\n' 'See `...§ Bogus%0A::error::...`'  -> `...Bogus%0A::error::...`        CORRECT
+```
+
+`ubuntu-latest` runs **bash**, where the naive form fires carrying a payload with **no percent sign
+in it** — the single property the control exists to exercise. Where a shell must emit the payload at
+all, the form is `printf '%s\n' '<payload>'`.
+
+**Control marker: `INJECTED-MARKER-7f3a`** — deliberately colon-free, so the leg cannot be satisfied
+by colon-stripping alone.
+
+**The assertion has TWO legs, and both are required.** A colon-free marker *survives* sanitization by
+construction (re-measured: `printf '%s' 'Bogus%0A::error::INJECTED-MARKER-7f3a' | tr -d '%:' |
+LC_ALL=C tr -cd '[:print:]'` yields `Bogus0AerrorINJECTED-MARKER-7f3a`), so a single
+"marker is absent" assertion could **never** go GREEN on a correct implementation:
+
+- **Leg A — injection neutralized.** The step's captured stdout MUST NOT contain the literal `%0A`,
+  and MUST NOT contain `::error::INJECTED-MARKER-7f3a`. (The guard's own workflow-generated
+  `::error::` prefix is expected and is not asserted against.)
+- **Leg B — diagnostic preserved.** The step's captured stdout MUST contain `INJECTED-MARKER-7f3a`.
+  This proves the anchor was **sanitized, not dropped**, which is the substantive decision of this
+  AC. A sanitizer that simply deleted `$ANCHOR` would pass Leg A and fail Leg B.
+
+RED (before fix): Leg A fails — the raw payload reaches the log intact.
+GREEN (after fix): Leg A and Leg B both pass.
+
+**Framing constraint, preserved.** GitHub Actions' `%0A` decoding at `::error::`/stdout sinks remains
+**UNVERIFIED** — nobody has run it. **The fix does not depend on the answer either way**; the
+justification is the log-injection *shape* exposure itself, independent of that unproven downstream
+mechanism.
+
+**S14 and S15 are authored, reviewed, and fixture-tested as ONE combined edit.**
+
+---
+
+### 7. CF-v2.19.11-B — doc corrections in `docs/design-v2.19.11.md`
+
+**AC-CF-B (Ubiquitous).** `docs/design-v2.19.11.md` SHALL read, post-correction:
+
+1. **§H.4's RED-d transcript** (content anchor: `RED-d — awk range endpoint renamed (vacuity):`)
+   corrected — the vacuity guard does not fire (0 lines) as currently claimed; it runs unterminated
+   to EOF, and the documented RED comes from an incidental double-match elsewhere in `CHANGELOG.md`.
+   Verified by **actually re-running** both the END-anchor-renamed and START-anchor-renamed `awk`
+   variants against the real file at the cited base.
+2. **The Leg-2 credential-leak note** (content anchor:
+   `Leg 2 — credential-leak assertion (an inspection, not a transform).`) gains one clause stating
+   that the GREEN direction (no userinfo in emitted stderr) reflects **git's own URL-handling
+   behavior**, not code-level redaction by `verify-release-surface.sh`.
+3. **The `Decision (3)` mis-pointer** in this file (content anchor: `Under ADR-088 §Decision (3)'s`)
+   is corrected to `(2)` — folded in here per B0 item 3, because this file is already open in the
+   same push (P4).
+
+**POPULATION check:** trivial by construction — invariant = proxy = these 3 exact passages.
+
+---
+
+## Technical Constraints
+
+- **Ceremony: Tier A.** Worktree branch + PR + one @security Guard Change Summary. Never
+  fast-forward — squash-merge only, after owner approval on the GCS.
+- **The Classification Re-Run subsection is mandatory** in the Phase 1 design doc — required even
+  when the answer is CONFIRMED. Fail closed if absent.
+- **Stay INLINE in `quality.yml`.** S14, S15 and W1 are inline steps. None may become a file under
+  `scripts/` (ADR-090 forbids it, and a `scripts/` edit escalates ceremony further). Verify before
+  merge that the diff of `scripts/` between base and head is **EMPTY**.
+- **Interference constraint.** S14 and S15 are the **same step**, sharing `$ANCHOR` / `$N_HEADS` /
+  control flow, and S14 *creates* S15's population (turning `$ANCHOR` from one `scripts/` file into
+  4, three of them contributor-authored shipping files). **Author, review, and fixture-test S14+S15
+  as ONE combined change, never two independent edits.** S14 x W1 is the verified-safe pair
+  (different jobs — `canonicalize-scan-check` vs. `registry-sha256-check` — no shared shell state).
+  **CF-A is NOT part of the combined edit** — it is a separate commit in the same PR.
+- **`PARSER_COPIES == 2` must not be perturbed.** No S14/S15/W1 edit may introduce a third copy of
+  the row-structure parser's core expression anywhere in `quality.yml`. Standing check, measured
+  not-at-risk from this cycle's specified edits.
+
+### §Tripwire-population — why AC-S14 item 5's pin excludes `docs/**` and `tests/**`
+
+A repo-wide pin **is not implementable on a correct tree**, and pinning one would reproduce, inside
+this cycle's own remedy, the exact defect the residue pin was deleted for.
+
+Measured at Phase 1: the repo-wide guard-visible population is **15 files**. This cycle's own correct
+deliverables add **three more** — `docs/design-v2.19.13.md` (this cycle's design doc, which must
+quote the canonical anchor to specify the repair), the NC-5 prefix-truncation fixture, and the S15
+injection-control fixture (both of which must carry the guard form to function at all). A repo-wide
+pin of 16 therefore goes RED on a **fully correct** v2.19.13 tree, and every subsequent cycle adds at
+least one more design doc.
+
+Scoping the pin to non-`docs/`, non-`tests/` files makes it stable **without weakening it**, and the
+scoping follows B0's own role axis rather than cutting across it:
+
+- `docs/**` occurrences are quotations and illustrations inside historical records — **Class B by
+  B0's role rule**, and a new one is authored every cycle by design.
+- `tests/**` fixtures are **deliberately broken controls**; counting them would mean "fixing" them,
+  which breaks their own RED legs.
+- What remains — workflows, scripts, skills, templates, `PROMOTE.md`, `CHANGELOG.md` — is where a
+  **live Class-A pointer** would actually appear. That is the event the tripwire exists to detect,
+  and it is fully covered.
+
+### §Never-glob-and-resolve (binding — this is why AC-S14 item 1 enumerates)
+
+A guard that globs files and interpolates each **discovered** anchor into a command is unsafe in this
+repository **today, on the current tree**. Measured at Phase 1:
+`docs/internal/security/security-review-v2.19.11.md` records three historical security-test payloads
+**in the guard-visible citation form**, whose anchors are shell command-substitution and
+quote-breakout strings. They are legitimate Class-B records of a past test and MUST NOT be edited.
+
+Two binding consequences:
+
+1. **AC-S14 item 1 enumerates 4 tuples and never globs.** This is the strongest reason for explicit
+   enumeration — stronger than the fixture-RED-leg argument — and it had not been named before
+   Phase 1. (The fixture argument is also weaker than previously stated: the
+   `tests/fixtures/canonicalization/f2-*.md` files carry the broken citation **unbackticked**, so the
+   extraction regex cannot see them at all. A glob would instead sweep `docs/**`, where
+   `docs/architecture.md` alone carries 2 distinct anchors and would fail `N_DISTINCT == 1`.)
+2. **AC-S14 item 5's tripwire COUNTS FILES ONLY.** It must never extract an anchor, never resolve
+   one, and never interpolate a discovered value into a command. A count is safe against those
+   payloads; an extract-and-resolve is not.
+
+Whenever a Phase-4/5 verification command must handle a discovered anchor at all, the value is passed
+as a **quoted argument to a fixed-string matcher** (`grep -cxF -- "$a"` / `awk -v s="$a"`), never
+embedded in a regex and never re-expanded by a shell.
+
+### §Census carry-forward (moved out of AC-S14 — a CI step cannot state a carry-forward)
+
+`CF-v2.19.13-CITATION-CENSUS`. A full population census was considered and judged too heavy for a
+patch cycle. Named and carried rather than silently accepted: **3 shipping files** —
+`docs/architecture.md`, `docs/design-v2.19.10.md`, `docs/design-v2.19.11.md` — carry guard-form
+citations outside the 4-tuple's population today, all Class B under B0's role-axis ruling. A future
+citing file added to any of these, or a new file, is **not** detected by the anchor guard; AC-S14
+item 5's tripwire detects growth only in the non-`docs/`, non-`tests/` population.
+
+### §Known-broken Class-A citations in `.github/` (deferred by decision, named not silent)
+
+B0 mints a **ships-agnostic** role-axis obligation. Two live pointers sit outside every scoped
+inspection this cycle performs and are **broken today**:
+
+| site | cites | real heading | resolves? |
+|---|---|---|---|
+| `.github/CODEOWNERS` | `§Agency-Sync PR Review` | `## Agency-Sync PR Review (v2.0+)` | **no** |
+| `.github/workflows/release-assets.yml` | `§Pre-release checklist` | `### Pre-release checklist (maintainers)` | **no** |
+
+Both are **Class A** under B0's own test and are **deferred by decision**, not by silence. Two facts
+re-measured at Phase 1 bound the deferral and were not previously stated anywhere:
+
+1. **Neither is in the guard-visible form.** Both are **unbackticked** — a count of the guard form
+   returns **0** for each — so both are invisible to the anchor guard's extraction regex by
+   construction, the same posture as `CONTRIBUTING.md`'s malformed self-citation (S10). Widening the
+   tuple list would **not** catch them; they would first have to be backtick-wrapped, exactly as
+   `templates/skill-template/SKILL.md` is being wrapped by CF-A.
+2. **`release-assets.yml`'s anchor does not exist on any single line** — the citation is wrapped
+   across two comment lines, so a whole-file fixed-string search for `§Pre-release checklist`
+   returns **0**. Any future repair must un-wrap it before an anchor guard could ever see it.
+
+Both files are `export-ignore`d — maintainer surface only, the same posture as S13.
+
+### §Push sequence
+
+GitHub Actions evaluates the **push tip**, not each commit (`on: [push, pull_request]`).
+Intermediate commit-level reds are structurally invisible and acceptable; **no push-level red is
+acceptable.**
+
+| Push | Commits | Why green |
+|---|---|---|
+| **P0** (recommended) | S14's rebuilt guard exercising **one tuple — the `scripts/canonicalize-scan.sh` / `CONTRIBUTING.md` pair** — through the new matching machinery | Proves the whole-line matcher is green under **GNU on `ubuntu-latest`** against the file that is already green today, retiring the GNU/BSD gap before anything else is at risk |
+| **P1** | c1: S14 full 4-tuple + S15 (one combined edit) · c2: CF-A's 3 citation repairs · c3: `self-apply` sha256 bump | Push tip carries guard + repaired citations + matching hash |
+| **P2** | c4: W1 (`GATED_SLUGS` + 3 fixtures + 3 legs + setup-guard list) | Independent job; must precede S11/S5 |
+| **P3** | c5: S11 prose rewrite · c6: S5a/S5b clause + firing-controls record + `pull-updates` sha256 bump · c7: risk-register row to CLOSED | W1's fixtures now validate S11's edited rows for real |
+| **P4** | c8: B0 amendment · c9: CF-B doc corrections | Doc-only |
+
+**P0 is ONE tuple, not three of the four.** The Round-2 draft's phrase *"3-tuple subset"* was
+decodable as *the 3-element (script, doc, count) tuple for one file*, but reads naturally as *3 of
+the 4 tuples*. **The misread is not free:** landing `skills/self-apply/SKILL.md` and `PROMOTE.md` in
+P0 — before CF-A repairs them — yields `N_HEADS=0` on both and a **guaranteed push-level RED**,
+violating the constraint this row sits under. Renamed to remove the ambiguity.
+
+### §sha256 plan
+
+**2 rows, 1 event each.** `self-apply` (CF-A) and `pull-updates` (S5), each byte-change paired with
+its cell bump **in the same PUSH** (P1 and P3 respectively). Commit-level pairing is optional;
+push-level pairing is mandatory. Regenerate via `scripts/registry-hash.sh <slug>` — never by hand,
+never from CI error text. `AC_PL_6_EXPECTED_HEX_ROWS` stays at **30** (re-measured at Phase 1: the
+live parser returns **30** and the pin reads `"30"` — 30 = 30, no item adds a row). S11 contributes
+**zero** bumps and must leave both siblings' field 8 byte-identical.
+
+**Ordering caveat:** inside `registry-sha256-check`, W1's step runs before the sha256 drift step — a
+W1 fixture error during P2/P3 aborts the job before the hash diagnostic runs. Expect to fix W1 first
+and re-push to see the hash diagnostic.
+
+### §GNU/BSD — 8 in-workflow proof items
+
+No GNU tooling and no container runtime exist on the authoring host; the gap is unclosable locally
+and that is not a choice. It closes for free by implementing every S14/W1/S15 negative control as an
+**in-workflow self-test**, in the shape `quality.yml` already uses — they then execute on GNU, on
+`ubuntu-latest`, on this cycle's own PR. **Eight things must be proven green in CI before merge:**
+
+| # | Proof |
+|---|---|
+| (a) | whole-line match returns exactly 1 for the **h3** anchor `Worked-example authoring rules (S1 security carry-forward)` |
+| (b) | exactly 1 for the **h2** anchor `Placeholder authoring rules` |
+| (c) | it does NOT double-count a deeper heading — assert `N_HEADS == 1`, never `>= 1` |
+| (d) | the extraction regex's multibyte `§` (U+00A7) behaves identically under the runner's locale |
+| (e) | all four existing AC-8b legs still pass for the 2 original slugs after widening to 5 |
+| **(f)** | **sanitizer RED/GREEN under GNU** — Leg A and Leg B of AC-S15's control |
+| **(g)** | **sanitizer locale behaviour** under the pinned `LC_ALL=C`, including the ASCII-marker requirement |
+| **(h)** | **the NC-5 prefix-truncation fixture** returns `N_HEADS=0` |
+
+**(b) is non-discriminating for matching mode.** On the h2 anchor, `-F` and `-xF` both return 1;
+only h3-and-deeper anchors expose substring containment, because `### X` contains `## X` while
+`## X` contains no shallower prefix. **(a), (c) and (h) carry all the discriminating power for
+matching mode**; (b) tests level-agnosticism, a different property. Do not read (b)'s green as
+evidence about matching mode.
+
+**(d) does not cover the sanitizer.** `$ANCHOR` never contains `§` (the extraction `sed` strips the
+prefix), so (d) guards the extraction regex — the surface that is probably fine. The locale hazard
+lands on the **sanitizer**, which is why (g) exists as a separate item.
+
+### §Citation and measurement discipline
+
+- **Every citation in this spec is content-anchored, never line-pinned.** Line pins have drifted
+  repeatedly inside this cycle's own record, including in two reviewer passes.
+- **Every number carries unit + tree-state + binary**, and — the rule this cycle produced — **a
+  number inherited from a reviewer is not verified until the recipient re-runs it.**
+
+---
+
+## Acceptance Criteria
+
+- [ ] **AC-B0** — amendment appended; role-axis generalization (not file-axis); ambiguity tie-breaker
+      present; append-only discharge rule present; NO factual occurrence-count claim; all 5 numbered
+      elements present as distinct locatable text; 3 `Decision (3)` loci corrected by superseding
+      cross-reference; stated inclusion test present; 3 deferred loci named.
+- [ ] **AC-S14** — 4-tuple enumeration (never a glob); `N_DISTINCT` and `N_CITES` separate per tuple;
+      **whole-line equality only** (`grep -cxF` or `awk '$0 == s'`; `index($0,s)==1`, bare `grep -cF`
+      and interpolated `grep -cE` all forbidden); both self-integrity assertions (`N_TUPLES == 4`
+      **and** fragment-split once-only), re-run after S15/W1 land; citation-site tripwire pinned at
+      **6** over the non-`docs/`, non-`tests/` population, including `quality.yml` itself, counting
+      files only; `, rule 2` presence-and-placement assertion for both repaired files.
+- [ ] **AC-W1** — `GATED_SLUGS` widened to 5; 3 fixtures + 3 legs; **3 new fixtures added to the
+      `for f in …` setup-guard list**; `NF==9` and field-8 hex explicitly not relaxed; deletion-leg
+      omission rationale stated.
+- [ ] **AC-CF-A** — 3 citations repaired; `, rule 2` mandatory and outside the backticks; `self-apply`
+      sha256 bumped in the same push; validated against the rebuilt S14+S15 in the same PR;
+      **NOT** part of the S14+S15 combined edit.
+- [ ] **AC-S5a** — static refusal clause present, symmetric with the manifest clause.
+- [ ] **AC-S5b** — recorded invocation against the damaged fixture; verbatim output + model/version/
+      date; 1-of-3 proxy stated; `pull-updates` sha256 bumped; risk-register row closed **only** by
+      S5b, with model drift and per-slug variance named as residuals.
+- [ ] **AC-S11** — over-claim string 2 → 0; `NF=9` preserved; both field-8 cells byte-identical and
+      asserted; `pull-updates` named in both rewritten cells; W1 fixtures still fire post-edit.
+- [ ] **AC-S15** — role-worded (not line-pinned); failure sinks sanitized, success sinks dropped;
+      `ANCHOR_SAFE` as a new variable; fail-fast loop discipline stated; `LC_ALL=C` pinned;
+      truncation = 80 chars with an **ASCII-only** lossy marker; control is a **FILE fixture**;
+      colon-free marker `INJECTED-MARKER-7f3a`; **both Leg A and Leg B** asserted.
+- [ ] **AC-CF-B** — all 3 corrections verified by re-running the cited commands.
+- [ ] Negative controls **NC-1 … NC-7** all present, and NC-5 (prefix truncation) demonstrably fires.
+- [ ] Live registry hex-row count remains **30**.
+- [ ] The diff of `scripts/` between base and head is **EMPTY**.
+- [ ] Classification Re-Run subsection present in the design doc.
+- [ ] **All 8** in-workflow GNU-proof self-tests (a)–(h) green in CI before merge.
+
+## Edge Cases (4 categories)
+
+1. **Malformed / damaged input** — S5's malformed row; S14's malformed citation forms (unbackticked,
+   no-space, trailing period, truncated anchor, second `§`).
+2. **Structural drift under a single stray character** — W1/S11's shared exposure.
+3. **Interference between neighbouring edits in the same file/step** — S14+S15 combined edit;
+   `PARSER_COPIES` preservation; the setup-guard list.
+4. **Tooling / environment divergence** — GNU vs BSD, and **locale divergence within one binary**
+   (the sanitizer). Resolved via in-workflow self-tests (a)–(h).
+
+## Success Metrics
+
+- **Primary:** a contributor following any of the 3 repaired citations lands on the actual rule on
+  the first try. A user comparing the three sibling registry rows sees one consistent guarantee.
+- **Secondary:** a future contributor corrupting any of the 5 now-gated rows is caught pre-merge; a
+  future `pull-updates` run against a damaged workspace refuses explicitly; a 7th operational
+  citation site cannot appear unnoticed.
+
+## Assumptions [confidence]
+
+- [CONFIRMED] Every file path, quoted string and count in this spec was re-run at Phase 1 against the
+  worktree at `9f6ddc2`, with binary and shell named.
+- [CONFIRMED] `index($0,s)==1` diverges from whole-line equality on truncated anchors — reproduced
+  independently at Phase 1 on a real in-tree pointer.
+- [CONFIRMED] The naive `printf` control does not fire in zsh and loses the percent in bash —
+  reproduced independently at Phase 1 in both shells.
+- [CONFIRMED] `tr -cd '[:print:]'` is locale-dependent — reproduced independently at Phase 1.
+- [CONFIRMED] `docs/architecture.md`, `docs/design-v2.19.10.md`, `docs/design-v2.19.11.md` all ship;
+  `.github/`, `tests/`, `CHANGELOG.md`, `CONTRIBUTING.md`, `docs/retro.md`, `docs/spec.md`,
+  `docs/patterns.md` and `docs/internal/` do not.
+- [CONFIRMED] Live registry hex-row count is 30 against a pin of 30.
+- [UNTESTED] GitHub Actions' `%0A` decoding at `::error::` / stdout sinks — explicitly **not**
+  load-bearing for AC-S15's correctness.
+- [UNTESTED] Which behaviour `pull-updates`' prose produces against S5b's damaged fixture, until the
+  invocation is actually run at Phase 4/5.
+- [UNTESTED] Whether GNU `grep`/`awk`/`tr` on `ubuntu-latest` reproduce any local result. No GNU
+  binary and no container runtime on the authoring host. This is what proof items (a)–(h) exist for,
+  and it is stated as untested rather than as passing.
+
+## Out of Scope — explicit non-goals by id
+
+| id | Disposition | Why it stays out |
+|---|---|---|
+| *"S12 blocks CF-A's ACs"* framing | Delete | Settled in v2.19.12; B0 supersedes |
+| `B6` | Stale | `PROMOTE.md`'s anchor IS backticked |
+| `S7` | Superseded by S15 | — |
+| `S1`, `S2` | Closed | v2.19.11 |
+| `S4` | Closed for `self-apply`'s row | Residue IS S11 |
+| `A11` / `A13` / `A14` | Closed | v2.19.11 |
+| `CF-v2.19.12-C` | Standing DO-NOT | Do not merge the two archive-leak checks |
+| `CF-v2.19.12-E` | Discipline, not a work item | 0 lines, cannot be "done" |
+| `CF-v2.19.12-B` | Discharged | Measurement taken |
+| `CF-v2.19.12-PERMITSHAPE`, `-AC7-CI` | Later cycle | No executable host / would trip its own guard |
+| `S13` | Binding constraint only | Export-ignored; no PR-time detector for either remedy |
+| `A15` | Stays deferred | No row added this cycle (30 = 30, re-confirmed at Phase 1) |
+| `CF-v2.19.12-GATTR`, `-A`, `-D`, release-surface `MISSING-TAG` | Not in queue | Real, not queued |
+| v2.19.11 audit INFO rows `S6`,`S8`,`S9`,`S10`,`S16` | Accepted / standing | No work owed beyond CF-B |
+| Council-side guard bundle | Different repo | Work around, never fix here |
+| `CF-v2.19.13-CITATION-CENSUS` | Named carry-forward, not scheduled | See Technical Constraints §Census carry-forward |
+| `CONTRIBUTING.md`'s malformed self-citation (S10) | Named carry-forward, not scheduled | No space after `§`; invisible to the extraction regex by construction; maintainer surface |
+| **`.github/CODEOWNERS` + `.github/workflows/release-assets.yml` Class-A breakage** | **Deferred by decision, NAMED** | See Technical Constraints §Known-broken Class-A citations. Unbackticked (invisible to the guard) and one is line-wrapped; both export-ignored |
+| **The 3 deferred `Decision (3)` mis-pointers** | Deferred with a stated inclusion test | `security-audit-v2.19.11.md` (2) + `docs/retro.md` (1); all export-ignored, all in append-only records |
+
+**Invariant across all 8 in-scope items: no new row is added to `curated-skills-registry.md`.**
+
+---
+
+## Condition Ledger — all 20 binding conditions, and 4 that did not survive re-measurement
+
+Every number in the conditions file was **re-run at Phase 1, not adopted**. Sixteen conditions
+reproduced exactly and are applied as written. Four did not, and are corrected here with the command
+that falsified each. Applying any of the four as written would have shipped a defect.
+
+| # | Condition | Disposition |
+|---|---|---|
+| **C1** | whole-line equality only; strike `index($0,s)==1` | **APPLIED, reproduced.** AC-S14 item 3. Divergence re-measured independently on a real in-tree pointer. See C1-note below on the two `.github/` examples. |
+| **C2** | prefix-truncation negative control | **APPLIED.** NC-5. Correctly identified as the only control that discriminates equality from prefix matching. |
+| **C3** | replace the injection control; pin it as a FILE | **APPLIED, reproduced in both shells.** AC-S15. |
+| **C4** | B0 must not ship a false measurement | **APPLIED, and strengthened.** Claim deleted outright, tie-breaker added — **plus an append-only discharge rule the tie-breaker requires but did not carry (defect 4 below).** Denominators re-measured: loose form = 10, guard form = 2. |
+| **C5** | restore `== 4` | **APPLIED.** Both assertions specified as orthogonal (item 4a + 4b). |
+| **C6** | strike CF-A from the combined-edit mandate | **APPLIED.** AC-CF-A item 5 + Interference Constraint. |
+| **C7** | residue 9 files / 13 lines; delete the pin | **APPLIED, reproduced exactly.** Pre-repair 11/15, per-file sum 15. Pin deleted. |
+| **C8** | word AC-S15 against the ROLE | **APPLIED.** AC-S15 rewritten against the hop. |
+| **C9** | B0 item 3: 3 loci in; ≥4 deferred | **APPLIED with a corrected count — defect 2 below.** 3 in scope is right. **Deferred is 3, not ≥4.** |
+| **C10** | keep `N_DISTINCT` and `N_CITES` separate | **APPLIED, reproduced** (5 occurrences, 1 distinct anchor). |
+| **C11** | move non-behavioral obligations out of SHALL clauses | **APPLIED.** Census carry-forward and the PR-authoring instruction moved to Technical Constraints. |
+| **C12** | add new fixtures to the no-op setup guard | **APPLIED, reproduced** (`for f in reflow pipe-sa pipe-pg deleted`). |
+| **C13** | pinned citation-site tripwire, pin = 16 | **APPLIED IN PURPOSE, PIN CORRECTED — defect 1 below.** Pin = **6** over a scoped population. A repo-wide 16 goes RED on this cycle's own correct tree. |
+| **C14** | name the two `.github/` Class-A sites | **APPLIED, and completed.** Both named. **Two facts neither reviewer stated** are added: both are unbackticked (invisible to the guard), and one anchor does not exist on any single line. |
+| **C15** | specify the sanitizer | **APPLIED with a corrected marker — defect 3 below.** Length 80, `ANCHOR_SAFE`, fail-fast, `LC_ALL=C` pinned. **The prescribed `…[truncated]` marker is multibyte and is eaten by the prescribed collapse step**; ASCII-only mandated. |
+| **C16** | extend the CI proof list to 8 | **APPLIED.** (f)(g)(h) added; checklist reads "All 8". |
+| **C17** | `, rule 2` firing control | **APPLIED, reproduced.** Returns 0 on both files today, so the control genuinely fires. AC-S14 item 6. |
+| **C18** | state AC-S5b's 1-of-3 proxy | **APPLIED.** |
+| **C19** | disambiguate push row P0 | **APPLIED.** Renamed to "one tuple — the `canonicalize-scan.sh` / `CONTRIBUTING.md` pair". |
+| **C20** | colon-free control marker | **APPLIED IN PURPOSE, ASSERTION REBUILT — defect 3 below.** A colon-free marker *survives* sanitization, so the single "marker absent" assertion could never go GREEN. Rebuilt as two legs. |
+
+### The four conditions that did not survive re-measurement
+
+**Defect 1 — C13's pin of 16 fails on this cycle's own correct tree.**
+Measured: repo-wide guard-visible population = **15 files**. This cycle correctly adds three more
+(`docs/design-v2.19.13.md`, the NC-5 fixture, the S15 fixture), all of which must carry the guard
+form to do their jobs. A pin of 16 therefore RED-s on a fully correct v2.19.13 tree, and drifts again
+every subsequent cycle. **This is the same failure class C7 deleted the residue pin for** — "a pin
+that fails on a correct tree is the same failure class this cycle exists to fix" — reintroduced six
+conditions later, in the same document. The tripwire's security purpose is preserved exactly by
+scoping the population (see Technical Constraints §Tripwire-population); only the denominator changed.
+
+**Defect 2 — C9's "≥4 deferred" is wrong; the measured count is 3.**
+A full census was run at Phase 1 over all `Decision (3)` occurrences repo-wide, with C9's own stated
+inclusion test applied to each. Total mis-pointer loci = **6**. In scope = **3**. Deferred = **3**
+(`security-audit-v2.19.11.md` ×2, `docs/retro.md` ×1). `6 − 3 = 3`, which is also arithmetically
+forced by C9's own two other figures ("census is ≥6", "3 loci in"). The `≥` hedge is legitimate about
+*future* files; it is not legitimate as a lower bound on the current tree, where the set is
+enumerable and was enumerated.
+
+**Defect 3 — C15's and C20's prescribed remedies each break the control they repair.**
+(a) C15 mandates a visible `…[truncated]` marker inside a pipeline C15 itself identifies as
+locale-dependent. Pinned to `LC_ALL=C` — the only deterministic choice — that pipeline **strips
+multibyte**, so the marker is itself damaged: `printf 'abc…[truncated]' | LC_ALL=C tr -cd '[:print:]'`
+yields `abc[truncated]`. A marker that can be silently damaged cannot signal silent damage.
+**ASCII-only marker mandated, and operation order fixed.**
+(b) C20 mandates a colon-free marker so the GREEN leg cannot pass on colon-stripping alone. But a
+colon-free marker **survives sanitization by construction** — measured, the sanitized output still
+contains `INJECTED-MARKER-7f3a` — so the existing single assertion ("marker absent from stdout")
+could **never** go GREEN on a correct implementation. **Rebuilt as two legs**: Leg A asserts the
+injection shape is gone, Leg B asserts the marker IS still present, which is what proves the anchor
+was sanitized rather than dropped — the substantive decision of AC-S15.
+
+**Defect 4 — C4's tie-breaker, applied to a ships-agnostic role rule, mandates rewriting history.**
+"Where an occurrence's role is genuinely ambiguous, it is Class A" is correct and is adopted. But B0's
+role rule is explicitly file-agnostic and ships-agnostic, and the repository is full of append-only
+historical records that quote citations ambiguously — `CHANGELOG.md`'s release note for the
+`self-apply` behaviour is the clearest live example. Read literally, tie-breaker + ships-agnostic rule
+= a standing obligation to **edit** `CHANGELOG.md`, `docs/retro.md` and every historical security
+audit, which the repository's own append-only discipline forbids. **Resolved by adding the discharge
+rule to B0 item 1:** Class A states an obligation, not an edit method; inside an append-only record
+the obligation is discharged by a superseding cross-reference or a recorded deferral, never by an
+in-place edit. This is the mechanism B0 items 3 and 4 already use; the tie-breaker simply had to say so.
+
+**C1-note (accepted, with one clarification that does not weaken it).** C1's two illustrative live
+instances — `.github/CODEOWNERS` and `.github/workflows/release-assets.yml` — are genuine broken
+Class-A pointers, but re-measurement shows **neither is in the guard-visible backticked form**, so
+neither could ever reach the matcher in either implementation. They demonstrate that broken prefix-
+shaped pointers exist in the wild; they are **not** demonstrations of a false-green inside the guard.
+**C1 does not depend on them.** The reachable in-scope case — a @dev who relocates `, rule 2` but
+stops before adding `(S1 security carry-forward)` — was reproduced directly at Phase 1 and is
+sufficient on its own. C1 stands, non-waivable, unchanged.
+
+---
+
+*Phase-1 verification note: every quoted string and count above was re-run against the **worktree** at
+`9f6ddc2` (clean tree) during Phase 1, with `/usr/bin/grep` (BSD grep, GNU compatible, 2.6.0-FreeBSD)
+invoked by absolute path and `/bin/bash` cross-checked where shell semantics mattered. Four inherited
+conditions were falsified by that re-run and are corrected above with the falsifying command. This is
+the cycle's own standing rule applied to the cycle's own conditions file.*
