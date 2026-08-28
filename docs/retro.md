@@ -2,6 +2,164 @@
 
 ---
 
+## [plan-2026-08-27-v3-engine] - 2026-08-28 — "THE ENGINE" (PURE-DOC spawn-only design)
+
+### 0. Errors caught inside the cycle's own remedies, not in the original code
+
+The retro brief handed in by the orchestrator stated "three instances were added after your Phase 5 pass (S14, S15, S16 and the §A census gap)." **That list names four items, not three.** Re-run rather than adopted: `docs/security-review.md:827` (S14), `:879` (S15), `:891` (S16) are three distinct headed Phase-6 findings; the `carry-forwards.md` §A census gap is a fourth, made by @qa at Phase 7. **Four, not three — and the retro brief undercounting its own list by exactly one is, fittingly, the same defect class this entire cycle is about.**
+
+**Full-cycle defect-instance ledger** — re-derived from `docs/qa-report.md`'s Phase-5 table (items 1-16) plus the four post-Phase-5 additions, not restated from any summary:
+
+| # | Defect | Author | Found by | Phase |
+|---|---|---|---|---|
+| 1 | Handoff summary claimed `CF-v2.5-C` "exists in neither series"; false | @pm | orchestrator | 0 |
+| 2 | Option-3 rationale ("security series still load-bearing") falsified — 4/5 architecture items are live v3.0 inputs | @pm | orchestrator | 3 |
+| 3 | Hypothesis "the two regexes admit different things" — wrong; true cause was mention-vs-use | orchestrator | @architect | 1 |
+| 4 | Proposed renumbering form `CF-ARCH-v2.5-1` doesn't match the project's own census regex | orchestrator | @architect | 1 |
+| 5 | ADR-index insertion via shell double-quoting silently stripped backticks | @architect | @architect (self) | 1 |
+| 6 | "61 security-side citation sites" — off by one (62) | orchestrator | orchestrator (self) | 1 |
+| 7 | `SECGATE-B1` "in exactly 3 files" stated with no population/revision scope | @architect | orchestrator | 2 |
+| 8 | @security's own restatement ("4") was stale by the time the review saved | @security | orchestrator | 2 |
+| 9 | Composition leg promised in ADR-095 §Context, dropped from D1.3's Decision list | @architect | @security | 2 |
+| 10 | S1 remedy implied a privacy benefit a public repo cannot deliver | orchestrator | @architect | 2.R1 |
+| 11 | ADR-093 Consequences states strict open count = 33; actual 40 | @architect | @qa | 5 |
+| 12 | HLD amendment states "267 untouched, now 334"; actual 266/336 | @architect | @qa | 5 |
+| 13 | Row `2.R3`'s exposure reasoning examined the wrong project's `pipeline.md` | orchestrator | @qa | 5 |
+| 14 | "Both CRITICALs discharged" overstates S1's residual exposure | @architect (framing inherited) | @qa | 5 |
+| 15 | `2.R2` names only `security-review.md`; `qa-report.md` symmetrically exposed | orchestrator | @qa | 5 |
+| 16 | ADR-095 C1's third privilege axis has no defined extraction procedure | @architect | @qa | 5 |
+| 17 (S14) | C1's superset test is one-directional — cannot catch a **lost** deny-list protection | @architect | @security | 6 |
+| 18 (S15) | `CF-plan-v3-engine-C1-AXIS3`'s own remedy menu offers an option S14 invalidates | @architect | @security | 6 |
+| 19 (S16) | @qa's own prescribed HLD fix ("266/336") was itself stale by the time it was read | **@qa** | @security | 6 |
+| 20 | `carry-forwards.md` §A heading (7) contradicts its own file's newer OPEN-row total (8) | @architect | @qa | 7 |
+
+**20 in-cycle instances, five authors** — @architect 10, orchestrator 6, @pm 2, @security 1, @qa 1. Item 19 is the first time @qa appears as an *author* rather than only a finder. **By catching phase:** 2 at 0/3, 4 at Phase 1, 3 at Phase 2, 1 at 2.R1, **6 at Phase 5**, 3 at Phase 6, 1 at Phase 7. Six of the original sixteen — more than a quarter of the eventual total — sat in artifacts already signed off at Phases 1 and 2 until @qa's Phase 5 pass read the bytes instead of the narrative. Item 19 closes the loop this ledger's existence predicts: the *correction itself* became a defect, found not by the corrector but by the next reviewer down the chain.
+
+### 1. Cycle Summary
+
+**"THE ENGINE"** — merged `5c96bc7`, PR [#118](https://github.com/jmlozano1990/Cowork-Starter-Kit/pull/118), squash-merged 2026-08-28. **6 files, 1652 insertions, 15 deletions — `docs/` only, zero code.** `cycle_type: PURE-DOC` (ADR-121): @dev was never spawned and `/implement` stayed refused for the cycle's life.
+
+Shipped: **ADR-093** (the register is the sole total-bearing surface; everything else cites it), **ADR-094** (origin-pointer citation convention), **ADR-095** (the Staged Spawn Ceremony, resolving `KDQ-SPAWN-SEC` — stage off-live, verify on a provenance leg and a composition leg, one confirmation, one atomic rename); the consolidated register `docs/internal/carry-forwards.md` (**42 strict / 45 broad**, verified twice independently — heading sums and table-row counts both land on 42, and an id-membership `diff` against the risk register's census returns identical sets); the `CF-v2.5-*` renumbering (five architecture-series ids → `CF-v2.5-ARCH-*`, decided by a measured ~10:1 citation-site asymmetry, not preference); and a `risk-register.md` repair (two path corrections plus one newly-accepted risk row; OPEN count 9 → 7 → 8).
+
+### 2. Phase Findings Summary
+
+16 Phase Log rows. This cycle's convention deliberately uses **lettered** sub-phases (`2.R1`, `0.R1`) so that the `orchestrator-guard.sh` decimal-strip defect it found in itself does not fire on its own rows — see §7.
+
+| Phase | Agent(s) | Verdict | Findings this pass |
+|---|---|---|---|
+| 0 | @pm | DONE | 2 errors; carry-forward count established by counting (30/33), not the inherited "~34" |
+| 3 (front-loaded) | Owner | APPROVED | `CF-v2.5-*` ruling; @pm's own option-3 premise falsified inside the ruling |
+| 1 / 1.X | @architect | DONE — 0.D deviation recorded | Orchestrator's 43-vs-39 hypothesis falsified; 8 omitted carry-forwards found; self-caught backtick-stripping write defect |
+| 2 | @security | APPROVE W/ CONDITIONS (2 CRIT · 8 WARN · 3 INFO) | S1 egress regression; S2 spawn-path-only gate; composition leg missing from the Decision list |
+| 2.R1-2.R3 | @architect, orchestrator | DONE / RECORDED | S1 accepted-and-carried; `orchestrator-guard.sh` decimal-strip found; ephemera-vs-egress conflict resolved |
+| 5.B | orchestrator | RECORDED | Three `qa-scope.sh`/Mode-parsing defects block @qa's own scoped write |
+| 5 | @qa | PASS WITH NOTES | 6 fresh defects in already-approved Phase 1/2 artifacts |
+| 5.R1 | @architect | DONE | 2 of 3 prescribed fixes **refused as specified, correctly** — invariant substituted for both |
+| 6 / 6.R1 | @security, @architect | PASS WITH WARNINGS (0 CRIT · 2 WARN · 3 INFO) → DONE | S14 (the cycle's sharpest finding), S15, S16 |
+| 7 | @qa | APPROVED WITH NOTES | §A census gap — routed back as the last pre-commit edit |
+| 7.1 / 7.2 | orchestrator | PR → MERGED | Pre-commit negative control run and passed; post-merge egress re-verified by hand |
+
+**Timestamp anomaly, recorded rather than silently corrected:** `5.R1`'s stated `15:40:00Z` sits *after* both `6` (`15:22:19Z`) and `7` (`15:37:39Z`), yet `6`'s content presupposes `5.R1`'s fixes as applied. The table orders by narrative dependency, not the printed clock.
+
+### 3. Decision-Item Difficulty
+
+| Item | Difficulty | Basis |
+|---|---|---|
+| ADR-095 C1 (composition/privilege check) | HARDEST | Missing from D1.3 entirely at Phase 2; restored at 2.R1; found structurally fail-open on protection-loss at Phase 6 — **three defect generations on the cycle's single load-bearing security control** |
+| S1 (register aggregation egress) | HARD | The orchestrator's own first remedy was insufficient and was caught by @architect on a fact the orchestrator's memory already carried; final disposition required telling two egress mechanisms apart |
+| `CF-v2.5-*` ruling | HARD | @pm's stated ground for its own recommended option was falsified inside the ruling that adopted a different one |
+| HLD append-only invariant | MODERATE | Three measured generations (336→351→360), each stale on arrival; resolved only by recording the invariant |
+| Register total (ADR-093) | MODERATE | Five successive stale values (33→38→40→41→42) inside one cycle |
+| S2 (spawn-path vs v2.16 gate) | MODERATE | One clean asymmetry, accepted on one stated ground, void on first non-additive write |
+| CF-id renumbering | EASY | The only real question — which id form matches the census regex — was settled by testing, not asserted |
+
+### 4. Quality Baseline Comparison
+
+All four Tier-1 `quality-baseline.json` files remain `"live_tested": false` — re-verified, unchanged. **This cycle gives no new evidence to calibrate them and the carry is restated, not newly scored.** The reason is structural: every baseline scenario family is written against a code/schema/migration surface and this cycle has none. Forcing a mapping would fit observed behaviour to categories it never exercised.
+
+Observable outside the baseline's frame: @architect authored half the cycle's defect instances (10/20) while also self-catching the largest share; @qa authored its first tracked defect while being the only role to catch something at Phase 7 nobody else had.
+
+### 5. Metrics
+
+**Rework rate is not computable by commit-diff this cycle, and that is structural, not a gap** — one commit, no Phase 4 baseline SHA to diff against (I-PD1 forbids one existing). The applicable measure is the 20-instance ledger, which is where PURE-DOC discovery migrated.
+
+| Segment | Duration |
+|---|---|
+| Phase 0 | 22m |
+| **Gate wait (Phase 0 done → Owner APPROVED)** | **5h34m** |
+| Phase 1 | 38m |
+| Phase 2 | 18m |
+| 2.R1-2.R3 / 5.B / 4 (skip) | 19m |
+| Phase 5 | 1h9m |
+| Phase 6 / 6.R1 | 38m |
+| Phase 7 | 15m |
+| Phase 7.1-7.2 (PR + merge) | 35m |
+| **Full cycle** | **9h48m** |
+
+`5.R1`'s stated timestamp is omitted from this spine deliberately — including it would either double-count or silently pick a resolution the record does not support.
+
+**Issues prevented.** Formal reports only: 2 CRITICAL, 10 WARNING, 6 INFO. Full-cycle reconstruction, classified by what each would have shipped as: **5 BLOCKER/CRITICAL-tier** (items 10, 14, 15, 17/S14, 20), **11 WARNING-tier**, **4 INFO-tier**.
+
+### 6. What Worked
+
+- **Re-execution beat every inherited claim it was tested against** — @architect's re-derivation of the 43-vs-39 discrepancy, @qa's independent reproduction of the `2.R3` population, and @security's own register re-count are the same discipline applied three ways. None was catchable by reading the artifact and trusting it.
+- **The deletion audit closed the gap re-execution cannot reach.** @security confirmed the risk register's touched ids all survive the citation repair, and that `architecture.md`'s six deletions are a rename rather than a loss — the negative check for "did a repair quietly drop a row", which a positive re-count never runs by construction.
+- **@architect refused two of @qa's prescribed fixes and was right both times** — substituting an invariant for a stale number, and identifying that narrowing C1 to two axes stopped being a valid remedy once S14 existed. **A prescribed correction being wrong, and the implementer catching it rather than applying it, is the cycle's strongest positive signal.**
+- **The pre-commit gating check was negative-controlled before being trusted** — fired against a planted path and confirmed to reject it, closing the exact failure mode this cycle found live in `quality.yml`'s own versioned `CANARY_PATHS`.
+
+### 7. What Didn't
+
+**The defining pattern: numbers went stale between measurement and save, repeatedly, across independent surfaces.** `SECGATE-B1`'s file count moved **3 → 5 → 7** as the cycle's own writes joined the population being counted. The HLD's line count grew **336 → 351 → 360**, and inside a single rework pass the recorded hunk size went **70 → 85 → 88 → 94** — each freshly-corrected figure stale by the time it saved, *because recording the measurement is itself an append*. ADR-093's register total moved **33 → 38 → 40 → 41 → 42** across five individually-correct counts. The §A census gap is the same shape at its most self-referential: the one document built to be the cycle's single source of truth was carrying a stale total as it was about to ship.
+
+**The resolution that emerged, and held up under repeated attack: record the invariant, not the measurement**, wherever a figure is invalidated by the act of recording it. `docs/hld.md`'s amendment now states `deletions == 0`, a single hunk anchored at `-266,0`, and byte-prefix equality — never a line count — and absorbed two further growth steps with zero edits.
+
+**@architect's distinction is the portable result: a section-heading count is a checksum, not a claim.** It sits directly above the rows it counts, so a disagreement is visible in place — which is literally how the §A gap surfaced. **A total restated in a *second* document is a claim: it goes stale silently and still reads authoritative**, and that shape bit three separate times. This is not a restatement of `Ambiguous-unit numeric claim` (about an unstated *unit*); this is about *where* a number lives relative to what it counts.
+
+**Denominator disagreements — six, every one resolving to a population difference rather than an error:** (1) the orchestrator's 43 (working tree) vs @pm's 39/40 (base) — mention versus use; (2) `SECGATE-B1`'s missing population statement; (3) 2 stale refs (all of `docs/`) vs zero (scoped to `architecture.md`); (4) @qa's "zero vulnerable rows" (excluding `4.5`/`3.0`) vs the orchestrator's 11 (including them); (5) @security's first pattern counting 46 against the register's 41; (6) one surviving "41/44" at `security-review.md:976` — a dated record, not a live claim. **Six in one cycle is a lot, but every instance cost a check, not a fix.** Read as healthy verification culture in execution — nobody adopted an unreconciled number — and as a design signal in parallel. The two readings are not in tension: **the culture is what makes six safe; the signal is what would make six unnecessary.**
+
+**The 0.D experiment: zero rounds ran, not one, and it produced no usable evidence.** The independent variable was set to 0 rather than 1, and @security's Phase 2 became the *first* adversarial reading of a design the cycle's own header calls the kit's largest-ever blast radius — arriving after the owner had approved Phase 0. A valid run still requires all four conditions stated at Phase 5, none waivable. Still owed.
+
+**Four process defects found in-flight, all out of scope, all carried:** (1) `qa-scope.sh`'s Phase-4 gate has no PURE-DOC exit and its `SKIPPED` path only recognises `MODE = audit`; (2) `Mode:` is read via `tail -1` over a newest-first file, selecting the **oldest** cycle's mode — 63 `Mode:` lines, this block reads `full`, the guard computes `quick`; (3) `orchestrator-guard.sh` strips the decimal, so `| 3.0 User Gate | PENDING |` yields 30 and takes the ALLOW-ALL path while the gate reads PENDING — no live exposure, all nine `3.0` rows read APPROVED; (4) the orchestrator delivered the Phase-7 merge gate as prose, **third recorded instance** against a memory that predicted the mechanism verbatim.
+
+### 8. Pattern candidates
+
+**`Denominator drift` — PROMOTED TO BINDING (3rd instance).** v2.19.12 (1st), v2.19.13 (2nd, recorded in that retro at §8), this cycle (3rd, six instances in one cycle). **A gap found while checking: `docs/patterns.md` still read `WATCH 1/3` — v2.19.13's retro advanced it to 2/3 and the promotion was never propagated to the ledger that owns it.** That is itself the cycle's defining pattern — a claim recorded in one document and never reaching the register of record.
+
+**New candidate, WATCH 1/3: "The invariant survives; the number restated in a second document does not."** Record the invariant, not the measurement; prefer a section-heading checksum over a cross-document claim. Distinct from `Denominator drift` (about *what population* two counts cover) and from `Ambiguous-unit numeric claim` (about an unstated *unit*) — this is about *where* a total lives relative to the rows it describes. Three clean instances this cycle plus the self-referential §A gap. A future retro makes the merge/split call against `Denominator drift` once a second independent cycle produces an instance; overfitting on one cycle's data would be premature.
+
+**`Inherited-unread ledger`** — checked, not clearly instanced. The closest candidate (@pm's 8-item omission) is a population miss, not an already-answered-elsewhere miss. Stays at 2/3.
+
+### 9. Carry-forwards
+
+| ID | Status | Note |
+|---|---|---|
+| `CF-plan-v3-engine-C1-AXIS3` | OPEN, two legs, option (b) struck | Build cycle's Phase 1: separate capability-tested-for-increase from protection-tested-for-decrease, or the deny-list-loss regression is invisible to the check that exists to catch it |
+| `plan-v3-engine-REGISTER-AGGREGATION` | ACCEPTED, carried | Readable in a public clone regardless of `export-ignore`. Real closing conditions: private repo, un-tracking `docs/internal/`, or gutting §G |
+| `orchestrator-guard.sh` decimal-strip | OPEN, Tier A, `self` | Parse the integer part before the decimal; **any fix must be proven against a fixture whose gate is PENDING and whose newest row is `2.1`** |
+| `qa-scope.sh` / `Mode:` parsing | OPEN, Tier A, `self` | **Any fix must be proven against a PURE-DOC fixture with no Phase-4 row AND a fixture whose newest `Mode:` differs from its oldest** |
+| Visual merge-gate standardization | OPEN, Rule-of-Three met, `self` | Scope widened by the owner to every merge path, not one command file |
+| `Denominator drift` propagation | Fixed this cycle | The 2/3 advancement that never reached `patterns.md` — check the next promotion actually lands in the ledger |
+| §A census heading vs rows | Fixed at commit | Re-check at the next cycle touching `risk-register.md`; this is the surface that just drifted |
+| `5.R1` timestamp anomaly | Recorded, not resolved | No commit exists to cross-check against |
+
+### 10. Next-cycle recommendation
+
+**The single highest-leverage fix is the guard change that lets a PURE-DOC cycle run Phase 1 → 2 → 3 rather than 0 → 3 → 1 → 2.** Add `docs/hld.md`, `docs/roadmap.md`, `docs/risk-register.md` and `docs/carry-forwards.md` to the Phase≤2 write-allow-list in `bash-write-detector.sh` and `orchestrator-guard.sh`. This is the root cause of §11's central trade — **not** a mandate for more 0.D rounds, which this cycle's evidence does not support as the missing ingredient. It would let the adversarial reading happen *before* the owner approves anything, which is the property every other cycle type in this project already has and which this cycle gave up for guard-mechanical reasons alone.
+
+### 11. Retrospective Verdict
+
+**Was the front-loaded gate right?** Given the guards as they exist, yes — the alternative was either no gate before Phase 1 wrote the cycle's entire product, or the gate not firing at all. But the trade must be named: the owner approved Phase 0 and unlocked Phase 1 **before a single adversarial security reading existed** for a design this cycle calls the largest blast radius the kit has shipped. It worked out — Phase 2's CRITICALs were real, found, and resolved before merge — but *"it worked out"* is not *"it was safe by design"*. It was safe this time because the design work had not yet produced anything a late review could have missed. §10's fix converts the first into the second.
+
+**Good cycle or expensive one? The v2.19.13 comparison is not valid apples-to-apples, and using it directly would mislead in this cycle's favour.** v2.19.13 was a code-patch cycle running full ceremony — two 0.D rounds, two rework passes, a Phase 4, CI. This cycle ran zero 0.D rounds and has no Phase 4; its Phase 0 was 22 minutes, not 62% of wall-clock, and the dominant cost was 5h34m of owner gate-latency, a different kind of time. Comparing 20 instances against 29, or 9h48m against 17h36m, measures two structurally different shapes and would read as "more efficient" when it actually skipped the one ceremony the other ran twice. On the dimension that *is* comparable — severity density — this cycle is not obviously cheaper: five BLOCKER/CRITICAL-tier catches in 20 (25%) against roughly nine in 29 (~31%), on less than half the deliberation.
+
+**Verdict: a good cycle in outcome — nothing shipped broken, `KDQ-SPAWN-SEC` got a real resolved design, the register's arithmetic holds under independent re-derivation — bought at a ceremony discount whose cost is not visible in this cycle's own numbers, because the instrument that would have measured it never ran.** The honest number to sit beside the clean merge is not "9h48m, faster than v2.19.13". It is **"zero adversarial rounds before the gate, on the cycle's own largest-ever design, with the first review landing after approval."**
+
+**Ecosystem impact: NONE.** `sos-resolve.sh umbrella-of claude-cowork-config` returns empty — this project resolves to no registered SoS umbrella. Diff is `docs/`-only; zero `.claude/agents/` or `.claude/skills/` files touched.
+
+**Overall cycle health: good, with the ceremony-discount caveat carried forward, not resolved.** Everything real was caught before merge — including the one finding that survived two formal review gates and would have shipped inside the artifact whose entire purpose was to be the one place a reader could trust. The cost of that cleanliness was not measured, because the instrument built to measure it never ran. That is the number to carry forward, not a separate story from the clean PR.
+
+---
+
 ## [v2.19.13] - 2026-08-27 — "Citation Repair + Registry-Row Integrity"
 
 ### 0. Errors caught inside the cycle's own remedies, not in the original code
