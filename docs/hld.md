@@ -264,3 +264,97 @@ An engine that upgrades its **own machinery** is the **highest-blast-radius capa
 - **KDQ-UPGRADE.** *What exactly does the confirm-first, non-destructive kit-version migration mechanism look like, and how is a walked-forward engine verified before it becomes the live machinery the user trusts?* **Resolves at the v2.19 `/spec`; must reuse and not relax the Loop 1 confirm → apply → verify → rollback gate.** (Also listed in the §12 "Still open" table.)
 
 *Per §14, this revise authors **no ADR**. The real ADR — the upgrade-mechanism decision, its verifier, and its threat model — is written at the v2.19 `/spec`, where KDQ-UPGRADE resolves.*
+
+---
+
+## Proposed Amendments — 2026-08-28T12:39:25Z
+
+*Appended per `/plan --revise` discipline (cycle `plan-2026-08-27-v3-engine`, base `ff0c44c`, VERSION `2.19.13`). It does not rewrite §8 or §8a in place. Unlike the 2026-07-22 amendment, this revise **does** author ADRs — **ADR-093, ADR-094, ADR-095** — because unlike that one it resolves a Key Design Question rather than deferring it. §14's "no ADR" convention applies to a revise that defers; this one decides.*
+
+> **Append-only, stated as a re-runnable check rather than a narrative claim — and deliberately carrying no
+> absolute line count.**
+> *Base revision: `ff0c44c`. Verified at Phase 5 close, 2026-08-28T14:56:31Z.*
+>
+> ```
+> git show ff0c44c:docs/hld.md | wc -l          # 266 — fixed, it names a frozen revision
+> git diff --numstat docs/hld.md                # deletions column MUST read 0
+> git diff -U0 docs/hld.md | grep '^@@'         # MUST be a single hunk, starting @@ -266,0
+> ```
+>
+> **The invariant is `deletions == 0`, a single hunk anchored at `-266,0`, and the base file being a
+> byte-exact prefix of this one.** All three survive any future append. The *current* total and the *hunk
+> size* do not, so neither is recorded here.
+>
+> **Why this block states no total, when stating one is the obvious thing to do.** It was drafted with the
+> totals in it, and they went stale **twice inside their own edit** — writing the measurement down is itself
+> an append, so the hunk went 70 → 85 → 88 and each freshly-corrected figure was wrong by the time it was
+> saved. An earlier statement of this same measurement, made in a Phase-1 hand-off rather than in this file,
+> had reported "267 untouched, now 334": 267 was an off-by-one from counting a trailing-newline artifact as
+> a line, and 334 was accurate when taken and stale when saved. Three generations of the same defect, the
+> last two self-inflicted by the correction itself. Same shape as the `SECGATE-B1` count corrected in
+> ADR-095 D9 — and the sharper lesson: when a figure is invalidated by the act of recording it, the remedy
+> is not a better as-of stamp, it is **recording the invariant instead of the measurement.**
+
+### A. `KDQ-SPAWN-SEC` is RESOLVED — the Staged Spawn Ceremony
+
+§8's open question ("what gate stronger than Loop 1's apply governs writing an entire new instruction tree, and how is a generated tree verified before it becomes a live space the user trusts?") is answered in full by **ADR-095**. The consolidated open-questions table in §12 should now be read with `KDQ-SPAWN-SEC` marked **RESOLVED (ADR-095, 2026-08-28)**.
+
+**The shape, in one pass:** *stage → verify on two legs → one confirmation → one atomic rename.*
+
+1. The generated tree is written to a **staging path**. No byte reaches the live sibling path before the gate passes.
+2. **Provenance leg** — every pooled file is byte-verified against the v2.18 lock and curated-registry `sha256`. This is **reuse, not new mechanism**: the same machinery `pull-updates` already proves (AC-PULL-6/7), pointed at a staged tree.
+3. **Composition leg** — a tree-level verifier over the *assembled* tree, scoped to exactly what provenance cannot answer. **Five checks, specified in ADR-095 D1.3 with a decision procedure and a failure criterion each:** **C1** the privilege-differential check across the parent→child trust boundary (the load-bearing security check — spawn is the first operation in the kit where a skill's *trust context* changes without its *bytes* changing, and provenance is structurally incapable of noticing that); **C2-C4** manifest completeness, dangling references, frontmatter validity (*labelled lint, because that is what they are* — they are C1's preconditions, not its peers); **C5** duplicate-directive detection over an enumerated key set, plus marker integrity against this kit's proven marker-breakout history (QA-1/v2.12.0). **C5 does not attempt general semantic contradiction** — that is an unbounded natural-language problem, and claiming it as a security control would promise a guarantee no implementation could honour. The gap is declared, owned, and targeted (v3.1, against the v2.20 LLM-judge) rather than implied away. This is the only genuinely new security mechanism v3.0 introduces, and the "cannot answer" test is what keeps it small.
+4. **One itemized confirmation** — what will be created, where, from which pool versions.
+5. **One atomic rename** to go live. There is no interval during which a partially-verified tree is live.
+
+### B. Why a per-file confirmation loop was rejected — the argument, not the verdict
+
+The obvious reading of §8's *"reuse and exceed Loop 1's confirm → apply → verify gate"* is to run the existing single-file gate once per generated file. **That was considered first and rejected on principle.**
+
+**Loop 1's verifier is diff-shaped.** It validates a proposed change against an existing referent — it answers "is this change to *this known file* safe?" A generated tree **has no referent**: there is no prior state to diff against. Running a diff-shaped check once per file across a tree of files that have no prior state is *N executions of a check whose precondition is unmet.*
+
+It **looks** like N times more gate and is materially less. It produces N confirmations a user cannot meaningfully evaluate — about files they have never seen, in a space that does not exist yet. That is **confirmation theater**: it satisfies "exceed the apply gate" in letter while inverting it in substance. A gate the user clicks through without reading is weaker than one gate they actually read.
+
+**This is also why the ceremony's lower confirmation count is not a relaxation.** The measure of a gate is containment, not click-count:
+
+| Property | v2.16 apply (Loop 1) | v3.0 Staged Spawn Ceremony |
+|---|---|---|
+| Gate position | *Between* a live file and its replacement | *Ahead of* any live byte |
+| Partially-live state | Reachable between files in a multi-file change | **Structurally unreachable** — one rename |
+| Verifier input | One file, diffed against its predecessor | The **assembled tree**, checked as a unit |
+| Failure result | Rollback from a pre-image | **True no-op** — nothing was ever live |
+| **Informed consent (SSC LOSES)** | A diff of a file the user already knows | A manifest of paths and versions — never the instruction text |
+
+**The last row is the axis the ceremony loses, and it is listed because a table a proposal wins outright invites the question of which rows were omitted.** On *comprehension of what is being authorised* SSC is weaker than the gate it replaces. It is adopted because containment can be structurally guaranteed and comprehension of a 40-file generated tree cannot be delivered by any gate design — the per-file alternative does not deliver it either, it only appears to. The composition leg's C1 and C5 checks exist *because* the user cannot be the one reading the tree. That is a mitigation, not a substitute, and nothing in this amendment closes the gap.
+
+**And it is not `KDQ-BATCH`.** That deferral (`docs/roadmap.md:58`) stands untouched. Batching collapses **N independent decisions** into one prompt. A spawn **is one decision** — the user asked for one thing. The ceremony recognizes the operation's true arity; it does not collapse several. Batching two *spawns* into one confirmation would be `KDQ-BATCH`, and remains out of bounds.
+
+### C. §8's forward-compat obligation, made buildable — and one correction to it
+
+§8 requires spawn to seed each sibling under a shared parent directory and give it a status-card write. Measured at this cycle's base: `status-card` and `shared-parent-dir` occur **zero times** outside `docs/`. **The obligation has existed only as prose.** ADR-095 D7 makes it concrete — `cowork.space-card.json` (named for the existing `cowork.install.json` / `cowork.lock.json` family), a stated minimum schema, and `templates/cowork.space-card.template.json` as the artifact whose existence is `test -f`-checkable.
+
+**The correction — §8 and §8a assume the hub discovers siblings *by co-location*, and that assumption cannot hold for a space that already exists.** Moving a user's existing space to sit under a new shared root is a *relocation*, and the v2.19 contract forbids the migration from being destructive. So the amendment inverts the mechanism:
+
+> **Cards are the registry. Co-location is an additional property of newly-spawned siblings, not the discovery mechanism.**
+
+Each card carries an absolute `space_path`; the hub reads the card set and follows the paths. A pre-existing space becomes hub-visible by **gaining a card, with nothing moved**. This is what actually delivers §8a's own promise — that a v3.x hub does not require re-spawning every existing space — which the co-location framing could not have delivered for any space born before v3.0.
+
+### D. The migration v3.0 owes the v2.19 upgrade contract
+
+Per §5's amendment and `docs/roadmap.md:37`, each rung authors its own migration; nobody pre-authors a path to a version not yet designed. v3.0's walk-forward reads what the prior rung left on disk (`cowork.install.json`'s `kit_version`), is confirm-first and non-destructive, and does three things under **one** itemized confirmation: **(a)** stamps `kit_version` to the v3.0 value; **(b)** writes a space card for the **existing** space — the retrofit that makes §C real; **(c)** installs the spawn capability. It never relocates, never deletes, and never silently replaces running machinery.
+
+**The migration is governed by the v2.16 apply gate, NOT by the ceremony above — stated plainly rather than left to inference (ADR-095 D8a).** v3.0 therefore ships **two** self-modifying write paths with **different gate strengths**, and item (c) — installing the spawn capability — is delivered into a live space by the weaker of the two. That asymmetry is accepted on one ground only: the migration is **additive-only** (it stamps a field, writes a new file, installs a capability; it relocates nothing, deletes nothing, overwrites no user content), and the v2.16 gate is diff-shaped, so unlike a spawn the migration's writes *have referents to diff against*. Item (c)'s bytes are additionally byte-verified against the lock and registry before install. **If a future cycle gives the migration a write that modifies or removes existing user content, that ground is void** and the ceremony must be extended to cover the upgrade path first.
+
+**This migration is also the project's first real forward-walk target**, which matters beyond v3.0: `self-upgrade` has shipped installed and deny-listed with **zero live invocation targets**, so `AC-UPGRADE-4`'s behavioral leg (a) — the Loop 1 negative controls re-firing through the *second* entry point — has never had anything to fire against. The shipped v2.19.0 record passes leg (b)'s structural grep alone. **The gate v3.0 is required to exceed has therefore never been demonstrated firing through a second entry point at all**, and v3.0 is the cycle that can finally demonstrate it.
+
+### E. §12's open-questions table — what this amendment changes
+
+- **`KDQ-SPAWN-SEC`** — **RESOLVED** (ADR-095). No longer "belongs to v3.0's dedicated design cycle"; that cycle has now run.
+- **`KDQ-BATCH`** — **unchanged and still deferred.** §B records why the ceremony does not touch it.
+- **`KDQ-HUB`** — unchanged (settled by the completed spike), but §C changes *how* its local-filesystem design discovers siblings.
+
+### F. What this amendment deliberately does not do
+
+- It does not design the **hub view**. That stays decoupled to v3.x, per §8's own reasoning, and v3.0's only obligation to it is §C's seam.
+- It does not fold in **community intake** (v2.20), which remains demand-gated.
+- It does not claim the ceremony is proven. **It is specified, not demonstrated** — this is a PURE-DOC cycle and nothing here has been executed. The firing negative controls that convert §A and §B's claims into evidence are owed by the v3.0 build cycle, and ADR-095's §Maturation Path records that as a knowingly accepted risk rather than an oversight.
