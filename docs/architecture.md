@@ -113,6 +113,9 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-090 | **Citations are anchored to headings, written in a backtick-delimited form, and the anchor is CI-enforced by derivation from the citing file** (v2.19.11 AC-2 + AC-3) — the repo-wide convention minted to close the `CONTRIBUTING.md:129` class, where a 33-line insertion silently broke 53 line-pinned citations and 31 green CI jobs saw none of it. Four decisions: **(1)** a citation is `` `<file> § <unique heading text>` ``, and **the backticks are load-bearing, not cosmetic** — they terminate the anchor so the guard's `` [^`]+ `` extraction cannot run greedily to end-of-line (the un-delimited form yielded `N_DISTINCT=5` and red-lined CI on a *correctly executed* de-pin). **(2)** the CI guard **derives** the expected anchor from the citing file and never hardcodes it in the workflow — the hardcoded form lets an author drop a qualifier from one citation while both "zero stale pins" and "heading is unique" stay GREEN and the citation resolves to nothing. **(3)** the guard is an **inline step**, never a file under `scripts/` (TIER-4), and asserts three things: exactly 1 distinct cited anchor, cited exactly `EXPECTED_CITES` times, resolving to exactly 1 heading. **(4)** every pipeline feeding an assertion carries `\|\| true`, because `grep` exits 1 on zero matches and an unguarded assignment under `set -euo pipefail` aborts the step **undiagnosably** — the ADR-089 defect class, found inside this guard's own first draft. Companion: the AC-8b/AC-9b per-row registry gate ships as **one step, one parser copy** (self-test and assertion sharing a single `check_row()`), which owes no `PARSER_COPIES`-style pin and lets the self-test exercise the same code path the assertion runs. `Reusability: candidate-constituent` | ACCEPTED (v2.19.11) |
 | ADR-091 | **The reference-freeze control derives its population by rename-pairing, not pathspec exclusion** (v2.19.12 AC-7) — excluding a rename's *destination* with `:(exclude)` does not hide the pair, it **prevents the pairing**, so every movee renders as a whole-file deletion while the addition half is hidden. Executed against a real simulated end-state tree, the pathspec form returned **35 violations on a completely correct cycle** and was simultaneously **blind** to a citation removal inside `docs/internal/` (diff byte-identical in size with and without it) — both halves of the symmetric difference non-empty, found only when the partition was finally run after four review rounds. Five decisions: **(1)** exclude pairs by `--find-renames=100%` over the whole repo with **no `:(exclude)`** (diff shrinks sharply — magnitude deliberately unpinned, three measurers got three pairs; `docs/internal/**` stays in population); **(2)** partition **statefully**, taking `^-` attribution from `--- SRCX/` and `^+` from `+++ DSTX/` — a control that strips headers then rules on "which file" is not computable, and one that reads both sides off `+++` reports every deletion against `/dev/null`; **(3)** permit additions from a **finite set derived from `CYCLE_VERSION`** (four append-only surfaces, `verify-ledger-annotations.sh`, and the cycle's own `design-v<CV>.md` / `qa-report-v<CV>.md` / `security-review-v<CV>.md` / `security-audit-v<CV>.md`) — **corrected at Phase 2.1 from an earlier `--- /dev/null` form that permitted additions in ANY new file, which passed a public `docs/report-index.md` republishing all 14 pre-move paths**; drift now fails CLOSED and loud instead of open and silent; **(4)** the `verify-ledger-annotations.sh` carve-out is safe **only because AC-5 asserts that file positionally** — the dependency is part of the decision and no leg may be dropped; **(5)** clean → 0 (safety), violation → 1, broken inventory → 3 (diagnosis). Verified both directions: 35 → **0** false violations, and four half-B constructions **all caught** (public index file, removal inside `docs/internal/`, new `tests/fixtures/` file, modified movee); two negative controls fire and all three exit codes were observed. Introduces a real coupling — the control now shares AC-6's dependence on rename detection, so `diff.renameLimit` exhaustion degrades **both** at once. `Reusability: candidate-constituent` | ACCEPTED (v2.19.12) |
 | ADR-092 | **A citation resolves by whole-line equality, and the guard that proves it counts an enumerated, scoped population it never re-expands** (v2.19.13 S14/S15 + B0) — closes a four-generation defect chain in which each prescription was authored by whoever had just corrected the previous one. Six decisions: **(1)** a citation resolves iff `level-prefix + anchor` equals a heading line **in full** (`grep -cxF` or `awk '$0 == s'`); `index($0,s)==1` (prefix test — **greens a rotted citation, silently**), bare `grep -cF` (substring — **reddens a correct file**) and interpolated `grep -cE` (parentheses become a capture group — **returns 0 on a correct file**) are all forbidden, and **a control that discriminates equality from prefix matching must DELETE a suffix, not add one** — both pre-existing negative controls added characters and were blind to the defect for two review rounds. **(2)** the population is an explicit enumeration, **never a glob**, because this repo records historical security-test payloads *in the citation form* whose anchors are command-substitution strings — **never glob-and-resolve**; a discovered anchor is only ever a quoted argument to a fixed-string matcher. **(3)** the growth tripwire pins a **count of files** over a population **scoped to exclude `docs/` and `tests/`** — a pin whose population includes artifacts the cycle itself creates is **not a control, it is a scheduled false alarm**. **(4)** Class A/B is a **role** test, file- and ships-agnostic; ambiguity resolves to **Class A**; and Class A is an **obligation, not an edit method** — inside an append-only record it is discharged by a superseding cross-reference, never an in-place edit, or the tie-breaker silently mandates rewriting history. **(5)** contributor-derived text is **sanitized at failure sinks, dropped at success sinks**, with a new variable, fail-fast loop discipline, an **explicitly pinned `LC_ALL=C`** (the collapse is locale-dependent — same input, two answers) and an **ASCII-only** lossy marker, because **a marker that can be silently damaged cannot signal silent damage**. **(6)** its control needs **two legs** — injection-shape absent *and* marker still present — since a colon-free marker survives sanitization by construction and a single absence assertion could never go GREEN. `Reusability: candidate-constituent` | ACCEPTED (v2.19.13) |
+| ADR-093 | **The carry-forward ledger is one visible register, and a status column that contradicts its own file is a defect, not a convention** (`plan-2026-08-27-v3-engine`) — deferred work was tracked across seven surfaces with no aggregate, so a whole family sat unowned for 30+ releases and a stated escalation date passed **51 days** unnoticed. Four decisions: **(1)** `docs/internal/carry-forwards.md` is a **derived, regenerable view, never a second authority** — where it disagrees with a source surface, **the source wins and the register is regenerated**, because a second authority would reproduce the very defect it exists to close. **(2)** it **states its own population definition in its own header** — a count without a stated population is not a measurement. **(3)** a status cell that contradicts a closure recorded elsewhere in the same file is a **defect repaired in place**: the append-only convention protects an accepted-risk row's *descriptive prose*, it does **not** require the verdict token to stay wrong — proven field-by-field, only the Status cell of 2 rows changed and the `OPEN` count now reads **7**, not 9. **(4)** an id cited only in **elided** form (`-AC7-CI`, prefix omitted) is **invisible to every census by construction**, and that is a finding about the citation, not the census. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`) |
+| ADR-094 | **A carry-forward id is scoped to its origin document, and the series that gets renumbered is the one with the smaller citation surface** (`plan-2026-08-27-v3-engine`) — five ids (`CF-v2.5-A`..`-E`) each named **two unrelated work items** across 36 tagged releases, with no cross-reference either way. Four decisions: **(1)** renumber the **architecture** series to `CF-v2.5-ARCH-A`..`-E` (**6 sites in 1 file**) and leave the security/QA series **byte-unchanged** at **61 sites across 6 files**, two of them append-only records; the ~10:1 ratio decided the direction, and a **negative-controlled** filter (the same filter returns 3 against the origin file) proved `docs/retro.md` cites the renumbered series **zero** times, so the two series cannot corrupt each other. **(2)** the form was chosen **by measurement, not taste** — the natural-looking `CF-ARCH-v2.5-1` does **not match this project's own id-sweep regex**, so adopting it would have made the renumbered ids unfindable by the very census they feed. **(3)** STANDING FORWARD-ONLY RULE: a `CF-` id is **always cited with its origin document** and never elided — recorded in this file because ADR-090 and ADR-092 already make it the home of citation conventions, and splitting form from scope would recreate the seam-with-no-owner failure ADR-093 documents. **(4)** a migration note at the renumbering site keeps the old ids findable. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`) |
+| ADR-095 | **The spawn gate is staged-then-atomic, because a per-file confirmation loop on a generated tree is a relaxation disguised as repetition** (v3.0 — **resolves `KDQ-SPAWN-SEC`**, carried undesigned across 8 forward-references in 4 files since the HLD). Nine decisions. The gate is the **Staged Spawn Ceremony**: stage the whole tree **off-live**, verify on a **provenance leg** (pure reuse of the v2.18/v2.19 lock + registry `sha256` machinery) and a **composition leg** (the only genuinely new mechanism, scoped to exactly what provenance *cannot* answer — manifest completeness, dangling references, frontmatter, instruction collisions), take **one** confirmation, then **one atomic rename** to go live. Per-file confirmation is **rejected on principle, not cost**: Loop 1's verifier is **diff-shaped** and a generated tree **has no referent**, so N repetitions of a check whose precondition is unmet is **confirmation theater** — it satisfies the letter of "exceed the apply gate" while breaking its intent. It **exceeds** v2.16 because the gate sits **ahead of any live byte** and a partially-live tree is **structurally unreachable**; failure is a **true no-op**, and the rejected tree is **quarantined, never deleted**, since rollback-by-deletion of a *creation* would itself be destructive. **`SF-2`**'s ordering becomes **structural rather than procedural** (a rename cannot interleave); **`AC-FWDCOMPAT`** lands as a buildable `cowork.space-card.json` + `templates/cowork.space-card.template.json`, and **corrects the HLD's co-location assumption** so a migrated space becomes hub-visible by **gaining a card, with nothing moved**; **`AC-UPGRADE-4` leg (a)** is worded against the **obligation**, not the `SECGATE-B1` string that revealed it — and carries a **binding predicate**: leg (a) has never fired **once**, through either entry point (MF-2 control (b) has no `RAN` entry against 13 that do), so v3.0 must establish a first-entry-point baseline before it can demonstrate a second. **Phase 2 additions (S1-S13):** **D8a** states that the migration path is governed by the **v2.16 gate, not the ceremony** — v3.0 ships **two self-modifying write paths with different gate strengths**, and the weaker one installs the spawn capability; accepted **solely** because the migration is additive-only and therefore has referents to diff against, void the moment it modifies existing user content. **D1a** specifies the staging and quarantine paths (outside every space's write scope, same filesystem, unpredictable suffix, target-collision pre-check, verify→rename immutability, quarantine invalidates the card). **D1.3** restores the dropped **privilege-differential check (C1)** as the leg's one security control and renames the undefined "instruction-collision" to **C5 duplicate-directive detection** with a decision procedure and a fail-closed criterion, declaring the semantic-contradiction residue as an owned gap. **D7a** gives cards a flat enumerable registry and constrains `space_path`. **D3** gains the axis SSC **loses** — informed consent. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`) |
 
 ---
 
@@ -6061,11 +6064,48 @@ No other divergences. All 33 spec ACs are achievable as-written.
 
 ### v2.5 Carry-Forwards (generated by this design)
 
-- **CF-v2.5-A:** Backfill script `scripts/backfill-content-sha256.sh` is NOT shipped to users; lives in PR description / commit message only. If a future cycle (v2.6+) adds content via a path other than `sync-agency.yml` (e.g., a manual hotfix entry), that cycle MUST run the backfill script logic locally before commit. Document in CONTRIBUTING.md? — backlog, not v2.5 scope.
-- **CF-v2.5-B:** v3.0 `tools:` routing implementation. v3.0 spec author reads ADR-029 forward-binding statement: declarative not imperative; filter/weight/warn but never auto-translate.
-- **CF-v2.5-C:** v3.0 multi-tool skill authoring. v2.5 ships all 20 skills with `tools: [claude-code]`. v3.0 may widen individual skills to multi-tool — but ONLY after explicit validation per tool. Validation methodology TBD in v3.0 spec.
-- **CF-v2.5-D:** F3 PR outcome evaluation. v3.0 gate review reads PR acknowledgment outcome (60-day window). Independent of v2.5 acceptance.
-- **CF-v2.5-E:** `upstream-contribution/` directory governance. If future cycles add more outbound contributions, this directory grows. CONTRIBUTING.md may document the directory's purpose. Backlog.
+> **MIGRATION NOTE — id renumbering, `plan-2026-08-27-v3-engine` Phase 1 (2026-08-28), per ADR-094.**
+> The five ids in this section were originally issued in the bare form `CF-v2.5-A` through `CF-v2.5-E`.
+> Those five strings **collided** with an unrelated, contemporaneous series of the same names issued by
+> `@security` at v2.5 Phase 6 (`docs/internal/security/security-audit-v2.5.md`) and cross-carried into
+> `docs/internal/qa/qa-report-v2.5.md`. Two different work items shared each of the five labels, across
+> 36 tagged releases, with no cross-reference in either direction — so anyone closing "`CF-v2.5-D`" by
+> reading one series could close the wrong item.
+>
+> **This series — and only this series — was renumbered.** The security/QA series is left byte-unchanged
+> at all 61 of its citation sites across 6 files, because those include append-only records
+> (`docs/retro.md`, `docs/internal/`). The measured asymmetry that decided the direction: this series has
+> **6 citation sites in 1 file**; the other has **61 across 6 files**; and `docs/retro.md` cites this
+> series **zero** times. Both figures were re-verified at Phase 1 before the edit.
+>
+> **Old → new mapping (the old ids remain findable via this note):**
+>
+> | Old id (this series) | New id | Same-named id of the *other* series — resolve it at its origin |
+> |---|---|---|
+> | `CF-v2.5-A` | `CF-v2.5-ARCH-A` | `CF-v2.5-A` (`docs/internal/security/security-audit-v2.5.md`) |
+> | `CF-v2.5-B` | `CF-v2.5-ARCH-B` | `CF-v2.5-B` (`docs/internal/security/security-audit-v2.5.md`) |
+> | `CF-v2.5-C` | `CF-v2.5-ARCH-C` | `CF-v2.5-C` (`docs/internal/qa/qa-report-v2.5.md` only — absent from the audit) |
+> | `CF-v2.5-D` | `CF-v2.5-ARCH-D` | `CF-v2.5-D` (`docs/internal/security/security-audit-v2.5.md`) |
+> | `CF-v2.5-E` | `CF-v2.5-ARCH-E` | `CF-v2.5-E` (`docs/internal/security/security-audit-v2.5.md`) |
+> 
+> *The third column carries **origin-document pointers, not finding descriptions** — Phase 2 finding S9.*
+> *This file ships in the release archive; the audit it points to does not. A pointer disambiguates the id,
+> *which is all ADR-094 §Decision (4) needs, and is exactly what §Decision (3)'s forward-only rule asks for.*
+>
+> A bare `CF-v2.5-A`..`-E` citation written **before 2026-08-28** may mean either series; resolve it by
+> its origin document. A citation written **after** that date must name its origin document explicitly
+> (ADR-094 §Decision (3), the standing forward-only rule).
+>
+> **Status of these five at renumbering time (re-verified, not inherited):** `ARCH-A`, `ARCH-B`, `ARCH-C`
+> and `ARCH-D` are all live inputs to the v3.0 design cycle; `ARCH-A` and `ARCH-C` were hard-verified
+> still-unfixed at `ff0c44c` (`scripts/backfill-content-sha256.sh` is not on disk; all shipped skills are
+> still `tools: [claude-code]`). This series is **not** history.
+
+- **CF-v2.5-ARCH-A:** Backfill script `scripts/backfill-content-sha256.sh` is NOT shipped to users; lives in PR description / commit message only. If a future cycle (v2.6+) adds content via a path other than `sync-agency.yml` (e.g., a manual hotfix entry), that cycle MUST run the backfill script logic locally before commit. Document in CONTRIBUTING.md? — backlog, not v2.5 scope.
+- **CF-v2.5-ARCH-B:** v3.0 `tools:` routing implementation. v3.0 spec author reads ADR-029 forward-binding statement: declarative not imperative; filter/weight/warn but never auto-translate.
+- **CF-v2.5-ARCH-C:** v3.0 multi-tool skill authoring. v2.5 ships all 20 skills with `tools: [claude-code]`. v3.0 may widen individual skills to multi-tool — but ONLY after explicit validation per tool. Validation methodology TBD in v3.0 spec.
+- **CF-v2.5-ARCH-D:** F3 PR outcome evaluation. v3.0 gate review reads PR acknowledgment outcome (60-day window). Independent of v2.5 acceptance.
+- **CF-v2.5-ARCH-E:** `upstream-contribution/` directory governance. If future cycles add more outbound contributions, this directory grows. CONTRIBUTING.md may document the directory's purpose. Backlog.
 
 ---
 
@@ -6150,7 +6190,7 @@ I anticipate the following deliberation surfaces; addressing pre-emptively so @s
 - [x] Migration plan documented (zero user-workspace impact).
 - [x] Phase 2 security review surface enumerated (10 items).
 - [x] Spec divergences captured (1 minor mechanism amendment on AC-F1-5).
-- [x] v2.5 carry-forwards generated (CF-v2.5-A through CF-v2.5-E).
+- [x] v2.5 carry-forwards generated (CF-v2.5-ARCH-A through CF-v2.5-ARCH-E; renumbered from the bare `CF-v2.5-A`..`-E` form at `plan-2026-08-27-v3-engine` Phase 1 — see ADR-094 and the migration note in `### v2.5 Carry-Forwards (generated by this design)`).
 - [x] Pre-empted deliberation findings recorded.
 - [x] Anti-pattern scan (next subsection).
 
@@ -15352,3 +15392,713 @@ number reserved and carried forward, cf. ADR-028). AMENDED by the ADR-088 amendm
 at v2.19.12 Phase 1 (§Amendment record — ADR-088, below). FURTHER AMENDED by the role-axis
 generalization and `Decision (3)` mis-pointer correction appended at v2.19.13 Phase 4 (§Amendment
 record — ADR-088 §Decision (2)/(3), below).`
+
+---
+
+## ADR-093: The carry-forward ledger is one visible register, and a status column that contradicts its own file is a defect, not a convention (plan-2026-08-27-v3-engine)
+
+**Status:** ACCEPTED (`plan-2026-08-27-v3-engine`, 2026-08-28T12:39:25Z) · **Reusability:** candidate-constituent
+
+### Context
+
+This project tracks deferred work in at least seven places: `docs/risk-register.md`, `docs/owner-tasks.md`,
+`docs/next-steps.md`, per-cycle carry-forward sections in `docs/retro.md`, "Out of Scope" tables in
+`docs/spec.md`, `docs/patterns.md`, and the `docs/internal/qa/` + `docs/internal/security/` report families.
+No surface aggregates them. The consequence is measurable, and three independent measurements taken this
+cycle establish it:
+
+**(1) The register contradicted itself.** `docs/risk-register.md` printed **9** rows with an OPEN status
+cell, but two of those nine — `AC-PUB-10` (`:12`) and `CF-v2.19.6-A` (`:15`) — are declared CLOSED later in
+the same file, in its own additive "Closed at v2.19.8" section (`:38-44`, `:60-68`). A reader taking the
+column at face value over-counted open risk by 29%. Re-verified independently at Phase 1 before the repair;
+both the line numbers and the closure text reproduced exactly.
+
+**(2) Whole families went silently unowned for 30+ releases.** The `CF-v2.5-*` security/QA family
+(`A`, `B`, `D`, `E`, `F`, `G`) was last dispositioned in `docs/internal/qa/qa-report-v2.6.0.md:270`
+(*"none applicable to v2.6.0 scope"*, 2026-05-11) and named by **no closure surface since**. A repo-wide
+sweep of `scripts/`, `.github/`, `skills/` and `templates/` for any of the six returns **zero** hits —
+nothing outside the paper trail shows any of them was ever addressed. One of them, `CF-v2.5-F`, carries a
+**stated escalation date of 2026-07-08** (`docs/internal/security/security-audit-v2.5.md:40,58,177,282`),
+which was **51 days** past due at this cycle's base — computed, not estimated. The same shape recurred at
+`CF-v2.19.12-*` thirty releases later, which is what finally made it visible.
+
+**(3) The count itself was not knowable without building the register.** Three good-faith counts produced
+"~34" (inherited, unverified), **30/33** (Phase 0) and **43** (orchestrator sweep). All three were produced
+honestly. See ADR-094 §Context for why the 43/39 pair reconciles exactly, and §Decision (4) below for what
+the population definition must therefore pin.
+
+**The generative fault is that no surface answers "what is open?" in one read.** Every individual document
+is locally consistent; the *portfolio* of documents is not, and nothing was responsible for the seam.
+
+### Decision
+
+**(1) `docs/internal/carry-forwards.md` is created as the single visible register**, built by counting from source
+surfaces, never from `handoff-note.md`. It carries one row per item: id, one-line description, origin,
+current recorded location, status, and disposition. It is a **derived, re-runnable view**, not a new
+authority: each row cites the surface that owns it, and where the register and its source disagree, **the
+source wins and the register is regenerated**. This is deliberate — a second authority would reproduce the
+very defect this ADR exists to close.
+
+**One narrow exception, added at Phase 2 (finding S10) — "the source wins" must not propagate a provably-dead
+citation.** `docs/risk-register.md` carried 5 citations to report paths that have not existed since v2.19.12,
+while the register cited the same sources at their true `docs/internal/` locations. Applied literally, the
+authority rule would have overwritten the register's **correct** path with the source's **dead** one on every
+regeneration — the rule propagating the error in the direction of the error. The exception is deliberately
+mechanical rather than a judgment call, so it cannot be stretched into a general licence to disagree with a
+source: **where a source's citation names a path that does not resolve (`test -e` fails), the register keeps
+the resolving path and the discrepancy is a repair owed at the source, not a disagreement about substance.**
+It covers *location* only. It never covers status, description, or disposition — for those, the source always
+wins. The 5 citations were repaired at the source this cycle, so the rule and the register now agree and the
+exception is currently dormant, which is the state it should be kept in.
+
+**Placement (Phase 2 finding S1, CRITICAL — the register lives under `docs/internal/`).** The register
+aggregates rows sourced from the export-ignored report families, and an aggregate is not the sum of its
+sources: it distils scattered reports into a single ranked list of what is still broken and unowned. It
+therefore inherits the **directory-prefix** `export-ignore` on `docs/internal/` — the layer demonstrably
+working (`git archive HEAD | tar -tf -`: 419 entries, **0** under `docs/internal/`, against 19 shipping
+top-level `docs/*.md`), rather than an individually-named `.gitattributes` rule, which finding S4 shows is
+the layer that rots. **Verify placement with `git archive`, never `git check-attr`** — the latter reports
+`unspecified` under a directory-prefix rule and reads as an all-clear. **Stated so it is not over-read:** this
+repository is public, so `export-ignore` withholds the file from the *release archive*, not from `clone` or
+the web UI. Relocation restores parity with the 14 reports already handled this way; it does not create
+secrecy, and the aggregation itself is reduced separately by carrying origin-document pointers instead of
+reproduced finding detail.
+
+**(2) The register states its own population definition in its own header**, and the definition is part of
+the artifact rather than tribal knowledge. A count without a stated population is not a measurement (see
+ADR-092 §Decision (3), and this repository's own `Ambiguous-unit numeric claim` pattern, which has now
+fired in four cycles).
+
+**(3) A status cell that contradicts a closure recorded elsewhere in the same file is a defect and is
+repaired in place.** `docs/risk-register.md`'s append-only philosophy (stated at its own `:38`) protects the
+**descriptive prose** of an accepted-risk row — the historical record of what was accepted and why. It does
+**not** require the *Status* cell to stay wrong. The repair applied this cycle changed exactly two cells and
+nothing else: verified field-by-field, the Description, Accepted-condition and Source cells of both rows are
+**byte-identical** to the pre-cycle state.
+
+**The property this repair establishes is an invariant, not a count — and it is stated that way deliberately.**
+The invariant is: **no row printing the OPEN marker is contradicted by a CLOSED declaration elsewhere in the
+same file.** That is what was broken (2 of the then-9 OPEN rows were declared CLOSED at `:38-44` and `:60-68`)
+and it is what the repair restored. **The absolute count is not the invariant and is not recorded here.** It
+read 7 immediately after the repair and reads 8 once a genuinely-new accepted risk is added later in the same
+cycle — a legitimate increase that would make a pinned "7" look like a regression it is not. Pinning a total
+into a second document is the same self-invalidating figure that had to be corrected twice elsewhere in this
+cycle (`SECGATE-B1` in ADR-095 D9; the HLD's append-only line count, which ended up recording its invariant
+instead). **Re-derive the invariant, do not compare the digit.**
+Both cells retain their original status text verbatim under an explicit *"Original status text, retained
+verbatim:"* label, so the repair adds a record rather than erasing one.
+
+**A second, disjoint repair was applied to the same file at Phase 2 (finding S10): 5 dead report citations,
+Source cell only.** Rows `:8-11` and one closure-section line cited `docs/security-audit-v2.19.0.md` and
+`docs/security-review-v2.19.5.md`, neither of which has existed since v2.19.12's report relocation; all five
+now cite `docs/internal/security/`. **The two repairs are provably disjoint, verified field-by-field:** the
+status repair touched **field 3 on rows `:12` and `:15` only**; the citation repair touched **field 4 on rows
+`:8-11` only**. No row had both cells changed, and **fields 1 and 2 — Description and Accepted-condition —
+are byte-identical to the pre-cycle state on every row in the file.** That is what lets the append-only
+convention and the repair coexist without either being argued away.
+
+**(4) An id that is only ever cited in elided form does not exist to any census, and that is a finding about
+the citation, not the census.** `CF-v2.19.12-AC7-CI` is written at `docs/spec.md:10534` as
+`` `CF-v2.19.12-PERMITSHAPE`, `-AC7-CI` `` — the prefix is elided. The full string appears **nowhere** in the
+corpus, so no `CF-`-anchored sweep can ever see it, and it was missed by every count taken this cycle. It is
+deferred ("Later cycle") without ever having been defined anywhere. This is the mechanism ADR-094
+§Decision (3)'s forward-only citation rule exists to prevent.
+
+### Consequences
+
+- The register is a **new surface that can itself go stale.** That is accepted knowingly and bounded by
+  Decision (1): it is derived and regenerable, it cites its sources per row, and it has no authority to
+  contradict them. The failure mode of a stale derived view is a wrong summary; the failure mode of a
+  second authority is a wrong decision. Only the first is accepted.
+- The OPEN column of `docs/risk-register.md` is now a **directly countable** signal for the first time.
+  Any future ledger-truth repair should use the same shape: change the verdict token, retain the original
+  text verbatim under a label, leave every other cell byte-identical, and prove it field-by-field rather
+  than narrating it.
+- Three items that no prior surface counted are now on the register: `CF-v2.4-D`, `CF-v2.4-E` (both
+  re-deferred or backlogged at v2.5 and never closed) and `CF-v2.19.12-AC7-CI` — three classes of omission,
+  not disagreement, against the 30 reported at Phase 0.
+- **The register's own total is deliberately NOT restated here.** An earlier draft of this bullet asserted a
+  strict count inline; it was correct when written and wrong within the same cycle, twice — Phase 2 review
+  and Phase 5 QA each opened further items, taking the total from 33 to 38 to 40 to 41. A count duplicated
+  into a second document is a count that will disagree with its source, which is the precise defect
+  §Decision (1) makes the register a *derived view* to avoid, and this ADR was reproducing it in its own
+  Consequences. **The register is the single place the total is stated**, with its population definition
+  beside it. *As of `plan-2026-08-27-v3-engine` Phase 7 close it stands at 42 strict / 45 broad — re-derived
+  by summing the ten lettered subsections independently (8+6+3+2+5+2+6+5+2+3 = 42) and cross-checked against
+  those sections' own declared heading counts, which sum to the same 42; not carried from any report.*
+- **The register's section headings are a checksum and must be reconciled, never dropped.** This is a
+  narrower rule than "do not pin a total", and the difference is load-bearing: a total *restated as a claim in
+  a second document* goes stale silently and still reads as authoritative, whereas a per-section count sits
+  directly above the rows it counts, so a disagreement is visible to anyone reading the section. Phase 7
+  proved the value — §A's heading read `(7)` against a source carrying 8 `OPEN` rows, and that visible
+  mismatch is what surfaced a census row that existed in no table at all.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) generate `docs/internal/carry-forwards.md` mechanically from a CI script that sweeps
+  the source surfaces, making the register and its population definition the same object and dissolving
+  staleness entirely — the same move ADR-092 §Maturation Path option (b) proposes for citation populations,
+  and the strongest option; (b) add a CI assertion that no OPEN row in `docs/risk-register.md` shares an
+  id with a CLOSED declaration elsewhere in the same file — narrow, cheap, and catches exactly the defect
+  repaired here; (c) require every `CF-` id to be *defined* at its first occurrence with a one-line
+  description, so an id can never be deferred before it is written down (Decision (4)'s defect); (d) fold
+  `docs/owner-tasks.md`'s Ledger into the register outright, retiring one of the seven surfaces; (e) leave
+  the register hand-maintained and accept that it is re-derived each planning cycle.
+- **Concrete revisit triggers:** the register disagrees with a source surface in any cycle (take (a));
+  a second OPEN/CLOSED self-contradiction appears in any ledger file (take (b) immediately — the pattern
+  has now fired twice, and a third instance makes it BINDING under this project's own promotion rule); any
+  future count of `CF-` ids disagrees with the register's stated population by more than the elision class
+  named in Decision (4) (take (c)); `docs/owner-tasks.md` and the register disagree about an `OT-` row's
+  status (take (d)).
+- **Risk knowingly accepted:** a hand-maintained derived register can drift from its sources between
+  planning cycles, and a reader who trusts it without following its per-row citations can act on a stale
+  status. This is accepted for exactly one reason: the alternative available *this* cycle was continuing
+  with **no** aggregate surface at all, which is the state that let a family sit unowned for 30+ releases
+  and an escalation date pass by 51 days unnoticed. A view that can go stale is strictly better than no
+  view, and Decision (1)'s "source wins" rule bounds the damage to a wrong summary rather than a wrong
+  decision. Option (a) retires this risk and is the named exit.
+
+---
+
+## ADR-094: A carry-forward id is scoped to its origin document, and the series that gets renumbered is the one with the smaller citation surface (plan-2026-08-27-v3-engine)
+
+**Status:** ACCEPTED (`plan-2026-08-27-v3-engine`, 2026-08-28T12:39:25Z) · **Reusability:** candidate-constituent
+
+### Context
+
+Five ids — `CF-v2.5-A` through `-E` — each named **two unrelated work items** across two independent series
+issued in the same cycle by different agents:
+
+- **Series 1 (architecture):** the v2.5 Phase-1 carry-forwards, in this file's
+  `### v2.5 Carry-Forwards (generated by this design)` section.
+- **Series 2 (security/QA):** the v2.5 Phase-6 INFO items in
+  `docs/internal/security/security-audit-v2.5.md`, cross-carried into `docs/internal/qa/qa-report-v2.5.md`
+  (which adds a third meaning for `C` of its own).
+
+Neither series cross-references the other. The collision has stood across 36 tagged releases. Anyone closing
+"`CF-v2.5-D`" by reading one series and not the other closes the wrong item — the two are unrelated in
+subject, owner and closure condition. (The specific contents are deliberately not restated here: this file
+ships in the release archive and the security/QA audit it would be quoting does not — Phase 2 finding S9.
+Resolve either id at its origin document.)
+
+**Two measurements decided the direction, and both were re-verified at Phase 1 before any edit was made.**
+
+**(a) The citation surface is roughly ten to one.** Series 1: **6 sites in 1 file** (`:6064-6068`
+contiguous, plus the checklist line `:6153`). Series 2: **61 sites across 6 files**, including
+`docs/retro.md` (26) and `docs/internal/security/security-audit-v2.5.md` (22) — both **append-only**
+records. Renumbering series 2 would mean editing append-only history at 61 sites to fix an ambiguity that
+exists at 6.
+
+**(b) The two series do not mix outside their origins.** `docs/retro.md` cites series 1 **zero** times —
+established by filtering its 26 `CF-v2.5` hits for the series-1 items' distinguishing content
+(backfill / multi-tool / upstream-contribution / tools-routing): **0 matches**. The check was
+negative-controlled before it was trusted: the identical filter run against this file's `CF-v2.5` lines
+returns **3**, so the filter is capable of matching and its zero is a real zero rather than a broken
+pattern.
+
+**A premise offered for the opposite direction was falsified rather than argued away.** The Phase-0 option
+set justified making series 2 canonical on the grounds that it "is the one still carrying open,
+load-bearing items." In fact **four of series 1's five items are live inputs to the v3.0 design cycle**, two
+of them hard-verified still-unfixed at `ff0c44c`: `scripts/backfill-content-sha256.sh` is not on disk, and
+all shipped skills remain `tools: [claude-code]` — exactly the state `C` describes, with its stated
+resolution venue being the v3.0 spec. **Both series are live. Neither is history.**
+
+**A third fact, found while building the register (ADR-093 §Context (3)):** the orchestrator's sweep
+returned **43** distinct ids where Phase 0 reported **39**, and the working hypothesis was that the two
+regexes admitted different things. **That hypothesis is wrong.** Running Phase 0's *own* regex reproduces
+**43** in the working tree and **40** at the cycle base; the delta is three strings — `CF-v2.5-ARCH-1`,
+`CF-v2.5-SEC-1` and `CF-v2.5-H` — introduced by the Phase-0 document itself, as *illustrations inside its
+own proposal text*, at `docs/spec.md:10843-10844`. Both numbers were correct; they measured the same
+population at different times, and the difference is **mention versus use**, not regex scope.
+
+### Decision
+
+**(1) Series 1 is renumbered to `CF-v2.5-ARCH-A` … `CF-v2.5-ARCH-E`. Series 2 is left byte-unchanged at
+all 61 sites across all 6 files.** Six edit sites, one file. Verified after the edit: series 2 still
+measures 61 sites, and the cycle's file-level change summary names no file under `docs/internal/` and does
+not name `docs/retro.md`.
+
+**(2) The new form is `CF-v<version>-ARCH-<letter>`, and the shape was chosen by measurement, not taste.**
+The natural-looking alternative `CF-ARCH-v2.5-1` was **rejected because it is invisible to this project's
+own id sweep**: the census regex anchors on `CF-v` followed by digits, so `CF-ARCH-v2.5-1` does not match
+it — verified by running the regex against all three candidate forms. Adopting it would have made the
+renumbered ids unfindable by the very census `docs/internal/carry-forwards.md` is built from. The chosen form keeps
+the established `CF-v<version>-<suffix>` shape, matches the existing regex, and **preserves the original
+letters** so the old-to-new mapping is 1:1 and needs no lookup.
+
+**(3) STANDING FORWARD-ONLY RULE — a `CF-` id must be cited with its origin document.** From 2026-08-28
+forward, any citation of a `CF-vX.Y-Z` id in this repository names the document that issued it —
+`` `CF-v2.5-D` (`docs/internal/security/security-audit-v2.5.md`) `` — and an id is never written in elided
+or prefix-shortened form (ADR-093 §Decision (4)). This is **forward-only**: no existing citation is
+rewritten, and a bare pre-2026-08-28 citation is resolved by its origin document via the migration note.
+
+**Where this rule lives, and why.** It is recorded here, in `docs/architecture.md`, because **this is
+already where this repository keeps its citation-authoring conventions** — ADR-090 mints the
+heading-anchored, backtick-delimited citation form, and ADR-092 settles how a citation resolves. This rule
+is the third member of that family and belongs beside them rather than in a new home. `CONTRIBUTING.md` was
+considered and rejected on two independent grounds: it sits at the repository root, outside this cycle's
+`docs/`-only write surface; and splitting the citation rules across two files would put the *form* rule and
+the *scope* rule in different places, which is the same seam-with-no-owner failure ADR-093 documents.
+
+**(4) A migration note is left at the renumbering site**, carrying the full old-to-new mapping and the
+unchanged series-2 meanings side by side, so the old ids remain findable by grep and a reader landing on
+either series can disambiguate without this ADR in hand.
+
+### Consequences
+
+- `docs/architecture.md` is append-only by convention and this edits five id labels **in place**. That
+  tradeoff was taken explicitly, in the same shape as ADR-093 §Decision (3)'s status-cell repair: touch the
+  minimum, leave surrounding prose byte-unchanged, and pair the edit with a retained record of the prior
+  state. The migration note *is* that record.
+- The literal strings `CF-v2.5-A`..`-E` still appear in this file, inside the migration note's mapping
+  table. That is intentional — it is what keeps old citations findable — but it means a naive fixed-string
+  count of `CF-v2.5-` against this file now returns **more**, not fewer, hits. Any future census must read
+  the note rather than the raw count.
+- Series 2's internal inconsistency is **not** repaired by this ADR: `C` exists in
+  `docs/internal/qa/qa-report-v2.5.md` but not in `docs/internal/security/security-audit-v2.5.md`, so
+  series 2 is not self-consistent even after series 1 is disambiguated. It is recorded on the register as an
+  open item rather than silently fixed inside an append-only report.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) extend ADR-092's citation guard to assert the origin-document rule
+  mechanically on changed lines only, making Decision (3) enforced rather than declared — the strongest
+  option and the one that matches how ADR-090/092 already work; (b) add a CI check that no `CF-` id string
+  is defined in two documents without a cross-reference, which would have caught this collision in 2026-05
+  instead of 2026-08; (c) issue future carry-forward ids with an agent-scoped infix by default
+  (`-ARCH-`, `-SEC-`, `-QA-`) so collisions are structurally impossible rather than detected after the
+  fact; (d) retire the bare-letter suffix entirely in favour of descriptive suffixes, which the project has
+  already drifted toward (`-GATTR`, `-CITATION-CENSUS`, `-PERMITSHAPE`); (e) leave the rule declarative and
+  accept that it binds only authors who read this ADR.
+- **Concrete revisit triggers:** any new `CF-` id collides across two documents (take (c) immediately —
+  this is the second collision family found, after `CF-v2.5-*` and the `CF-v2.19.12-*` elision); a bare
+  `CF-` citation is written after 2026-08-28 and causes a mis-close (take (a)); the citation guard of
+  ADR-092 is next extended for any reason (fold (a) in at that point, since the marginal cost is near zero
+  once the guard is being touched); a fourth cycle in a row mints letter-suffix ids (take (d)).
+- **Risk knowingly accepted:** Decision (3) is a **declarative rule with no executable enforcement**, in a
+  repository whose own history shows that unenforced conventions decay — this exact family of citation
+  rules needed CI enforcement twice (ADR-090, ADR-092) before it held. It is accepted here because the
+  alternative was a Tier-A change: enforcing it requires editing `.github/workflows/` and `scripts/`, which
+  are explicitly outside this PURE-DOC cycle's write surface, and smuggling a guard change into a planning
+  cycle to avoid a follow-up is precisely the escalation this project's classification rules exist to
+  prevent. Option (a) is the named exit and should be folded into the next cycle that touches the ADR-092
+  guard for any other reason.
+
+---
+
+## ADR-095: The spawn gate is staged-then-atomic, because a per-file confirmation loop on a generated tree is a relaxation disguised as repetition (v3.0, resolves KDQ-SPAWN-SEC)
+
+**Status:** ACCEPTED (`plan-2026-08-27-v3-engine`, 2026-08-28T12:39:25Z) · **Reusability:** candidate-constituent
+
+### Context
+
+**KDQ-SPAWN-SEC has been carried, undesigned, since the HLD was written.** Verified at this cycle's base:
+the token occurs **8 times across exactly 4 files at `ff0c44c`** (`docs/architecture.md` x2, `docs/hld.md`
+x2, `docs/roadmap.md` x1, `docs/spec.md` x3) and **zero times** under `skills/`, `scripts/`, `tests/` or
+`templates/`. Every occurrence is a forward-reference. This ADR is the first design against it.
+
+The question, stated exactly (`docs/hld.md:208`): *what gate — stronger than Loop 1's apply — governs
+writing an entire new instruction tree, and how is a generated tree verified before it becomes a live space
+the user trusts?*
+
+**The binding constraint is asymmetric.** `docs/hld.md:208` requires the spawn gate to *"exceed, never
+relax, the apply gate."* `docs/roadmap.md:20` classes spawn as the **largest blast radius in the kit's
+history**. Every prior self-modifying rung — Loop 1's apply (v2.16), the self-upgrade path (v2.19) — writes
+into an *existing* space the user already trusts, one vetted change at a time. Spawn writes an entire tree
+from nothing, and the user's first act is to trust it.
+
+**Three risks, not one, and they are answered by different mechanisms:**
+
+| Risk | Question | Answered by |
+|---|---|---|
+| **Content integrity** | Is each file what the pool says it is? | Provenance — the v2.18 lock plus curated-registry `sha256` |
+| **Composition** | Does the assembled whole do something nobody intended? | A tree-level verifier — colliding `CLAUDE.md` instructions, dangling references, a skill mis-scoped once given more trust in a new space than it had in the parent |
+| **Trust transfer** | Why should the user trust a tree with no track record? | The ceremony's shape — what is live when, and what a failure leaves behind |
+
+Provenance alone answers only the first. This is why the cheapest option was not taken whole.
+
+### Decision
+
+**D1 — The gate is the STAGED SPAWN CEREMONY (SSC): stage, verify on two legs, one confirmation, atomic
+go-live.**
+
+1. **Stage.** Spawn writes the entire generated tree to a staging path. **No byte is ever written to the
+   live sibling path before the gate passes.**
+2. **Provenance leg.** Every file drawn from the pool is byte-verified against its `cowork.lock.json` and
+   curated-registry `sha256`. This is **reuse, not new mechanism** — it is the v2.18/v2.19 machinery
+   already proven by `pull-updates` (AC-PULL-6/7), invoked against a staged tree instead of a live space.
+3. **Composition leg.** A tree-level verifier runs against the **assembled staged tree** and is scoped to
+   exactly what provenance cannot answer. This is the only genuinely new security mechanism in v3.0.
+   **Five checks — C1-C5. C1 is the security check; C2-C4 are structural (lint) and are named as such;
+   C5 is bounded deliberately and its residue is a declared gap, not a silent one.**
+
+   **C1 — Privilege-differential check (parent→child trust boundary). THE load-bearing security check.**
+   Restored to this enumeration at Phase 2 (finding S3) after an earlier draft named it in §Context and
+   dropped it from the Decision — it was the *only* security property in either list, and it went missing
+   in transit. **Decision procedure:** for each skill in the staged tree, compute its *effective privilege*
+   in the child space — the union of (i) its declared `tools:` set, (ii) its deny-list membership, and
+   (iii) the write scope the seeded `CLAUDE.md` grants it — and compare against the same computation for
+   that skill in the **parent** space. **Failure criterion, fail-closed:** if the child's effective
+   privilege is a **strict superset** of the parent's for any skill, the leg FAILS and the tree does not go
+   live. Equal or narrower passes. A skill absent from the parent is evaluated against the pool's declared
+   default, never against "no constraint" — *absent must not read as unconstrained*, which is the specific
+   way this check would otherwise fail open.
+   **Why it is the one that matters:** spawn is the first operation in the kit's history where a skill's
+   trust context *changes* without its bytes changing. The provenance leg confirms the bytes are what the
+   pool says; it is structurally incapable of noticing that the same bytes now run with more authority.
+   OWASP **LLM02 (Insecure Output Handling)** — generated instruction content crossing a trust boundary
+   into a context that grants it more than the context it was authored for.
+
+   **C2 — Manifest completeness. C3 — No dangling cross-references between generated files. C4 — Valid
+   frontmatter on every generated file.** *These three are lint, and are labelled lint rather than
+   presented as security controls.* They belong to the leg because an incomplete or malformed tree cannot
+   be reasoned about by C1 or C5 — they are C1's preconditions, not peers of it.
+
+   **C5 — Duplicate-directive detection over an enumerated key set** (renamed at Phase 2 from
+   "instruction-collision detection", which was a name with no decision procedure and no failure
+   criterion — and *undefined is not fail-closed*, this repository's own phrase from
+   `v2.19.11-PULL-ROW-1` about exactly this shape). **Decision procedure:** over an enumerated,
+   version-pinned key set of directive types (at minimum: write-scope grants, deny-list entries, tool
+   permissions, and auto-run/proactive-surfacing triggers), extract every directive the seeded `CLAUDE.md`
+   and each activated skill assert, and compare within each key. **Failure criterion:** two directives
+   under the same key with contradictory values, or any directive asserted outside the enumerated key set,
+   FAILS. Unknown-key handling is fail-closed **by construction** — an unrecognised directive is a failure,
+   not a pass, so the key set's incompleteness produces false positives rather than false negatives.
+   **Second leg — marker integrity.** Generated `CLAUDE.md` blocks are delimited by markers, and this kit
+   has a **proven marker-breakout history in model-authored instruction text** (QA-1, v2.12.0, still cited
+   as live grounds in the `v2.19.9-SKILLSTUDIO-TARGET` risk-register row). C5 therefore also asserts that
+   no generated content closes or forges a block marker. v3.0 generalises exactly the surface QA-1 caught
+   — from one written block to an entire generated tree — so the check that caught it must generalise too.
+
+   **The declared gap, named rather than implied.** C5 does **not** attempt general semantic contradiction
+   between instructions. That is an unbounded natural-language problem, and introducing it as a security
+   control on the highest-blast-radius surface in the kit would be claiming a guarantee no implementation
+   could honour. **Owner: the v3.0 build cycle's `@security` Phase-2 review. Target rung: v3.1, evaluated
+   against the v2.20 LLM-judge**, which is the first mechanism in the roadmap capable of a semantic
+   judgement and is already scheduled for intake. Until then the composition leg's honest claim is
+   *structural and privilege-differential, not semantic* — and the ADR says so rather than letting the
+   word "collision" imply more.
+4. **One confirmation**, itemized — what will be created, where, from which pool versions.
+5. **Atomic go-live.** A single rename moves the verified tree into place. There is no interval in which a
+   partially-verified tree is live. **The assumptions this rests on are stated in D1a, not left implied.**
+
+**D1a — The staging and quarantine paths, and what "atomic" actually requires (Phase 2 findings S5 and S8).**
+
+An earlier draft named a "staging path" and a "quarantine path" and never located them. Since the whole
+ceremony's value is that the gate sits *outside* the live tree, an unspecified staging location makes the
+central claim unverifiable — Phase 2 found that 2 of its 4 attempted bypasses were open and a 3rd
+unassessable, **all three for that single reason**. Specified now:
+
+- **Location.** Staging lives under the **space root**, in a dedicated `.cowork-staging/` directory that is a
+  *sibling of the spaces, not a child of any of them*. This placement is chosen to satisfy two constraints
+  that pull in opposite directions and would otherwise be resolved by accident:
+  - **Outside every space's write scope (S5.1).** If staging sat inside the parent space, any skill with
+    write scope there — **including Loop 1's own apply** — could modify the tree between the composition leg
+    passing and the rename. Staging inside the live tree re-admits exactly what staging exists to exclude.
+  - **On the same filesystem as the live parent (S8.1).** `rename(2)` is atomic only within one filesystem.
+    A `/tmp`-style staging path is the natural implementation and is **forbidden here**: across a filesystem
+    boundary the move degrades to copy-then-unlink, and the partially-live window D3 calls structurally
+    unreachable becomes fully reachable. **The build must assert same-filesystem, not assume it** — a
+    same-device check before staging begins, failing closed.
+- **Naming (S5.2).** The staged directory carries a **fresh unpredictable suffix per ceremony**, and is
+  created with restrictive permissions by the spawning process. A predictable path is a plant target: write
+  content there before the ceremony and it inherits the confirmation the user gives.
+- **Target-collision pre-check (S8.2).** A directory rename onto an existing non-empty directory fails
+  `ENOTEMPTY`. Spawn-fails-rather-than-clobbers is the **right** behaviour, but in the earlier draft it was
+  *accidental* — an errno surfaced from a syscall. A slug collision with an existing space is reachable and
+  user-triggerable, so it is an **explicit pre-check with a stated message**, run before staging, and the
+  syscall behaviour is the backstop rather than the mechanism.
+- **The verify→rename window (S8.3).** The staged tree MUST be immutable between the composition leg passing
+  and the rename completing. Without this the ceremony is a TOCTOU: verify the tree, modify the tree, rename
+  the modified tree. The location and permission rules above are what make this enforceable rather than
+  hoped for; **the guarantee is only as strong as that window is closed**, and a build that cannot close it
+  must say so rather than inherit D3's claims.
+- **Quarantine strips the space card (S5.3).** D5 retains a failed tree. If that tree keeps a valid
+  `cowork.space-card.json`, and D7 makes cards the discovery mechanism, **a REJECTED tree stays discoverable
+  by the hub**. Quarantine therefore invalidates the card as part of the move to quarantine — not as a
+  cleanup step that might be skipped. This defect was found *between two decisions of this ADR*, reachable
+  from neither in isolation, which is precisely the class of thing the composition leg exists to catch and a
+  fair demonstration that cross-decision interactions need their own review pass.
+
+**On interrupted staging — the strongest property this design has, stated rather than implied.** If staging
+is interrupted at any point, an incomplete tree is left in staging, **the rename never runs, and nothing is
+live.** D5's quarantine retains the fragment for inspection. There is no partial-spawn state to recover from,
+no half-configured space, and no cleanup the user must be trusted to perform. This is a true no-op, and it is
+the clearest single answer to *"what does failure leave behind?"*
+
+**D2 — A per-file confirmation loop is REJECTED, and the reason is not cost.** Loop 1's verifier is
+**diff-shaped**: it validates a proposed change against an existing referent. A generated tree **has no
+referent** — there is no prior state to diff against. Running a diff-shaped verifier once per file across
+a tree of files that have no prior state is *N executions of a check whose precondition is unmet*. It
+**looks** like N times more gate and is in fact less: it produces N confirmations the user cannot
+meaningfully evaluate, about files they have never seen, in a space that does not exist yet. That is
+**confirmation theater** — a relaxation disguised as repetition — and it would satisfy the letter of
+"exceed the apply gate" while breaking its intent.
+
+**The stronger form of this argument, added at Phase 2 after review attacked it and it held.** The
+objection above is about the *confirmation*. There is a second, independent objection about the *application*,
+and it is the more serious of the two: **applying a generated tree file-by-file necessarily writes those files
+one at a time into the live path.** That is not an incidental cost of option A — it is what option A *is*. So
+a per-file loop does not merely fail to eliminate the partially-live window; it **manufactures** the window,
+one file at a time, for the entire duration of the spawn. Between file *k* and file *k+1* there exists a
+real, live, half-configured space with a partial instruction tree, which the user has been told is being
+created and which any concurrently-running process can read.
+
+**Option A is therefore not "the safe conservative choice that costs more."** It is strictly worse than the
+ceremony on the one property the ceremony exists to provide, and it is worse *because* of the repetition that
+makes it look more careful. The intuition that repeating a gate N times must be at least as safe as running a
+different gate once is the thing this decision has to overturn, and the reason it is wrong is that the gate
+being repeated was designed for a **modification** and is being applied to a **creation** — where "roll back
+to the pre-image" has no meaning, because there is no pre-image.
+
+**D3 — Why SSC genuinely exceeds the v2.16 gate, stated as a comparison rather than asserted.**
+
+| Property | v2.16 apply (Loop 1) | v3.0 SSC |
+|---|---|---|
+| Gate position | *Between* a live file and its replacement | *Ahead of* any live byte |
+| Partially-live state | Reachable between files in a multi-file change | **Structurally unreachable** — one rename |
+| Verifier input | One file, diffed against its predecessor | The **assembled tree**, checked as a unit |
+| Failure result | Rollback from a pre-image | **True no-op** — nothing was ever live |
+| Rollback of the go-live | Per-file pre-image restore | A single rename back |
+| **Informed consent (SSC LOSES)** | User sees a **diff of a file they already know** | User sees a **manifest of paths and versions** — never the instruction text |
+
+The confirmation *count* goes down (1, not N). The *gate strength* goes up, because the unit of atomicity
+becomes the tree. Containment, not click-count, is the measure.
+
+**The last row is the axis SSC loses, and it is listed because a table on which a proposal wins every row
+invites the reader to ask which rows were left out (Phase 2 finding S11).** v2.16's user is shown a change to
+a file they have seen before, in a space they have been using; they can judge it. The spawn user is shown a
+manifest — paths, slugs, pool versions — and confirms the creation of an instruction tree **whose actual text
+they never read**, which then becomes their agent's operating instructions. On comprehension of what is being
+authorised, SSC is **weaker** than the gate it replaces, and no amount of containment fixes that.
+
+**The honest net claim, stated so it cannot be over-read:** SSC is *strictly stronger on containment* — where
+the gate sits, what can be partially live, what a failure leaves behind — and *weaker on comprehension*. It is
+adopted because containment is the property that can be **structurally guaranteed**, while comprehension of a
+40-file generated tree cannot be delivered by any gate design: the per-file alternative does not deliver it
+either (D2 — the user cannot meaningfully evaluate files they have never seen), it merely *appears* to.
+**Nothing in this ADR closes the comprehension gap**, and the composition leg's C1/C5 checks (D1.3) exist
+precisely because the user cannot be the one reading the tree. That is a mitigation, not a substitute, and
+§Maturation Path does not currently carry an option that would close it — a genuine open weakness, recorded
+as one.
+
+**D4 — This is not KDQ-BATCH, and the distinction is load-bearing.** `docs/roadmap.md:58` defers
+confirmation *batching* until "the confirmation surface's integrity over time is worked out," and that
+deferral stands untouched. Batching means collapsing **N independent decisions** into one prompt. A spawn
+is **one decision** — the user asked for one thing ("a space for my finances") — and SSC recognizes the
+operation's true arity rather than collapsing several. A future change that batched two *spawns* into one
+confirmation would be KDQ-BATCH and is out of bounds under its existing deferral.
+
+**D5 — Failure retains, never deletes.** A tree that fails either leg is moved to a quarantine path and
+**retained**, not auto-deleted. Two reasons: a deleted failure is uninspectable, and — decisively —
+rollback-by-deletion of a *creation* is a destructive operation, which would break the confirm-first,
+non-destructive posture every prior rung inherits. Quarantine cleanup is an explicit, separately-confirmed
+user action.
+
+**D6 — SF-2's execution ordering becomes STRUCTURAL rather than procedural.** `docs/risk-register.md`'s
+`SF-2` row asks whether a Class-2 self-integrity check runs before an ordinary Class-1 engine-file write
+when both could apply to the same target. It was accepted as INFO at v2.19.0 *because `self-upgrade` had no
+live invocation target*. **v3.0 is the cycle that gives it one**, so the question becomes binding here.
+SSC answers it by construction: the staged tree contains the three mandatory safety skills (`self-*`), and
+**every Class-2 check runs against the staging area before the atomic move**. The move *is* the Class-1
+write, it is a single rename, and a rename cannot interleave with anything. The ordering guarantee is
+therefore a property of the ceremony's shape, not a rule an implementer must remember to honor.
+
+**D7 — Forward-compat (AC-FWDCOMPAT) is specified as buildable, and the co-location assumption in the HLD
+is corrected.** Two concrete artifacts, each checkable by `test -f` and a `jq` field assertion:
+
+- **Space root.** New siblings are created under a single shared parent directory, one child directory per
+  space, named by slug.
+- **Space card.** Each space has `cowork.space-card.json`, named to match the existing
+  `cowork.install.json` and `cowork.lock.json` family. Minimum schema: `schema_version`, `slug`,
+  `display_name`, `space_path` (absolute), `kit_version`, `spawned_at` (ISO-8601-Z), `spawned_from`
+  (parent slug, `null` for a migrated space), `skills[]` (slug plus version plus `sha256`),
+  `last_card_write` (ISO-8601-Z).
+- **The template that must exist**, mirroring `templates/cowork.install.template.json`:
+  `templates/cowork.space-card.template.json`.
+
+**The correction:** `docs/hld.md` section 8 assumes the hub discovers siblings *by co-location*. That
+cannot hold for a space that already exists — relocating a user's existing space to sit under a new root
+would be destructive, which the migration is forbidden to be. So **cards are the registry, and co-location
+is an additional property of newly-spawned spaces, not the discovery mechanism.** The card carries an
+absolute `space_path`; the hub reads the card set and follows the paths. A migrated space becomes
+hub-visible by **gaining a card**, with nothing moved. This is what makes the roadmap's own promise real —
+that a v3.x hub does not require re-spawning every existing space.
+
+**D7a — WHERE the card set lives, and what constrains `space_path` (Phase 2 finding S6).**
+
+An earlier draft said cards live *inside* spaces and the hub *reads the card set*. Those two statements are
+**circular**: to read a space's card the hub must already know where that space is. For newly-spawned
+siblings co-location silently rescues it; for **migrated** spaces — the exact case D7 exists to serve — there
+was no enumeration mechanism at all, so *"visible by gaining a card"* did not follow. A card at an arbitrary
+absolute path makes a space visible to nobody. Resolved:
+
+- **The card set is a flat directory at the space root: `.cowork-spaces/`, one `SLUG.json` per space.** The
+  hub enumerates it with a plain directory glob and needs no prior knowledge of any space's location. The
+  authoritative copy of a space's own card may also live inside the space; **the registry copy at the space
+  root is what discovery reads.** This is what makes D7's promise real for a migrated space: the migration
+  drops a card into `.cowork-spaces/` and moves nothing.
+
+- **`space_path` is constrained, because the hub is instructed to follow it.** Left unconstrained — as the
+  earlier draft left it — `AC-FWDCOMPAT` was satisfiable in full by a schema-valid card pointing anywhere on
+  the filesystem, which makes a hostile or corrupted card an **arbitrary-path-read primitive at the hub
+  boundary**. Four constraints, all checkable at card-read time:
+  1. **Canonicalised** — resolved through `realpath`, with `..` traversal and symlinks eliminated before
+     any use. The stored value is the canonical form, not the form as written.
+  2. **Must resolve** — a card whose path does not exist is invalid, not merely stale.
+  3. **Must contain a matching space** — the target must hold a `cowork.install.json` whose slug equals the
+     card's `slug`. A path that resolves to *something else* is a mismatch and is refused. This is the
+     constraint that turns "follow the path" from a read primitive into a verified lookup.
+  4. **Root membership is explicit, not assumed.** A spawned sibling's `space_path` MUST be under the space
+     root. A **migrated** space's may be outside it — that is the entire point of not relocating — so the
+     card carries an explicit `outside_root: true` flag, set only at migration time with the user's
+     acknowledgement. The hub can then treat the two classes differently instead of being unable to tell
+     them apart. **Silence is not permission:** a card lacking the flag and pointing outside the root is
+     invalid.
+
+**Why the schema constraint ships in v3.0 even though the hub is v3.x.** The hub is out of scope, but the
+**card schema is not** — it ships here. A schema that cannot express these constraints later is a much harder
+problem to unwind than a schema that carries them from the start, because by then cards exist in the field.
+
+**D8 — The migration v3.0 owes the v2.19 contract.** v2.19 shipped a *contract*, not a path
+(`docs/roadmap.md:35,37`); each rung authors its own. v3.0's walk-forward, confirm-first and
+non-destructive, reads what the prior rung left on disk (`cowork.install.json`'s `kit_version`) and:
+(a) stamps `kit_version` to the v3.0 value; (b) **writes a space card for the existing space** — the
+retrofit that makes D7 real; (c) installs the spawn capability. It never relocates, never deletes, and
+never silently replaces running machinery. One itemized confirmation covers all three.
+
+**D8a — WHICH GATE GOVERNS D8, stated rather than left to inference (Phase 2 finding S2, CRITICAL).**
+
+The obligation this rung carries is that the spawn gate must *exceed, never relax*, the v2.16 apply gate.
+D1-D3 discharge that **for the spawn path**. D8 is a **second write path in the same rung**, and the earlier
+draft left its gate unstated — which, on a rung whose entire subject is gate strength, is the omission that
+matters most. Stated now, plainly:
+
+**D8's three writes are governed by the v2.16 apply gate — the very gate v3.0 was required to exceed — and
+NOT by the Staged Spawn Ceremony.** That asymmetry is real, it is not hidden behind a claim of equivalence,
+and it is the single largest knowingly-accepted risk in this ADR.
+
+**Why it cannot be waved through as "the migration is small":** D8's item (c) **installs the spawn capability
+itself**. The machinery this entire ADR exists to gate is delivered into a live, user-trusted space by the
+weaker of the two gates the rung ships. A reviewer who reads only D1-D3 would reasonably conclude v3.0 has one
+gate and it is the stronger one. It has two, and the one that installs the other is the weaker.
+
+**Three constraints are therefore binding on D8 for v3.0, and they are the price of the asymmetry:**
+
+1. **D8 is confirm-first, non-destructive, and additive-only.** It stamps a version field, writes a new file,
+   and installs a capability. It relocates nothing, deletes nothing, and overwrites no existing user content.
+   This is what makes the v2.16 gate *adequate* for D8 while being *inadequate* for spawn: the v2.16 gate is
+   diff-shaped, and D8's writes have referents to diff against. **Spawn's writes do not** — which is D2's
+   whole argument, and it cuts in D8's favour here for exactly the same reason it cuts against a per-file
+   spawn loop.
+2. **Item (c) is gated on the provenance leg even though the rest of D8 is not.** Installing the spawn
+   capability is the one D8 write whose failure mode is unbounded, so its bytes are byte-verified against the
+   lock and curated registry before install — reusing the same leg D1.2 already specifies. This is cheap
+   (the machinery exists) and it closes the specific hole S2 names.
+3. **`SF-2`'s ordering guarantee must hold on the D8 path independently of staging** — see the re-worded
+   `AC-SF2` below, because D6's structural answer does not reach here.
+
+**Recorded as a knowingly accepted risk, with its exit named:** §Maturation Path option (d) — extending SSC
+to cover the upgrade path — is the correct end state and is **not** pulled into v3.0's scope. The grounds are
+that staging an *engine replacement in place* is a materially different problem from staging a *creation*
+(there is a live referent, a running process, and a rollback target), and designing it inside the cycle that
+first ships spawn would couple two hard problems whose failure modes are unrelated. **One rung shipping two
+self-modifying write paths with different gate strengths is accepted here on the strength of constraint (1) —
+that the weaker-gated path is additive-only — and on nothing else.** If a future cycle gives D8 a write that
+modifies or removes existing user content, constraint (1) is void and option (d) becomes mandatory before
+that cycle ships.
+
+**D6 is hereby scoped honestly: it answers `SF-2` for the spawn path only.** The staging argument — Class-2
+checks run before an atomic rename that cannot interleave — is structurally unavailable on the D8 path,
+because D8 has no staging area. D6 was correct and load-bearing; it was simply doing less work than the
+earlier draft implied.
+
+**D9 — AC-UPGRADE-4 leg (a) is discharged by this migration, worded against the obligation.** Leg (a)
+requires the Loop 1 firing negative controls to **re-fire when exercised through the `self-upgrade` entry
+point**, not only through `self-apply`.
+
+**Measurement, stated with its population and its as-of revision — the form this claim should have taken from
+the start (Phase 2 finding S7).** *Population: all tracked files, `.git` excluded. As of revision `ff0c44c`
+(this cycle's base):* the literal control id `SECGATE-B1` appears in **3 files** — `docs/architecture.md`,
+`docs/internal/qa/qa-report-v2.16.0.md`, `docs/spec.md` — and in **0 files under `tests/`**. Its only QA home
+is the v2.16.0 report, which exercises the **first** entry point.
+
+**That number is revision-scoped for a reason, and the reason is not pedantry.** An earlier draft of this ADR
+asserted "exactly 3 files repo-wide" with no as-of clause. It was true at `ff0c44c` and false by the time the
+file was saved, because this cycle's own Phase 1 wrote the string into `docs/roadmap.md`; Phase 2's review
+then made it 5 in the working tree while reporting 4. **Three successive counts were each correct when taken
+and stale when read** — which is this repository's BINDING `Ambiguous-unit numeric claim` pattern firing
+inside the very cycle whose ADR-093 is about measurement discipline. The defect was never the digit; it was
+the missing population. **Any future reader re-running this should expect a different number and should not
+treat the difference as a correction** — re-run it against `ff0c44c` to compare like with like. The sharper statement, found by reading the test surface rather than only
+grepping for the id: `tests/self-upgrade-firing-controls.md:86` *does* reference the `SECGATE` family — but
+inside a **structural string-count**, which is leg (b). That file's own scope note names the live-routing
+halves as **"not yet exercised by an actual agent session."** So the gate v3.0 must exceed **has never been
+demonstrated firing through a second entry point**, and the obligation — not the string — is what the AC
+binds. D8's migration is the first real forward-walk target in the project's history, which is what makes
+leg (a) exercisable at all.
+
+**THE UNSTATED PREDICATE, surfaced at Phase 2 (finding S7) and now stated: leg (a) has never fired ONCE, not
+merely never through a second entry point.** Reading `tests/self-upgrade-firing-controls.md:97-108` directly
+rather than grepping it for the control id: MF-2 **control (b)** — *"new machinery fails verification under
+the OLD gate → no swap"* — is labelled *"Honestly un-exercisable pre-implementation"* and bound as *"a Phase-5
+`@qa` re-verify item, not assumed proven."* **It carries no `RAN` entry.** Verified by counting: the file
+records **13** `RAN` entries, and control (b) is the only control in its section without one — it sits between
+a RAN-stamped structural control at `:90` and a RAN-stamped control (c) at `:117`. The obligation was
+recorded, deferred to Phase 5, and never discharged.
+
+**You cannot re-fire what never fired.** `AC-UPGRADE-4-LEGA` therefore carries a **predicate that must be
+satisfied first**: the Loop 1 behavioral controls must exist in re-runnable, `RAN`-stamped form through the
+**first** entry point (`self-apply`) before "re-fire through the second" is even a meaningful test. An AC that
+binds only the second half is satisfiable-looking right up to the point a builder discovers mid-cycle that
+there is no baseline to compare against. **Both halves are now bound explicitly** — see the AC text in
+`docs/roadmap.md`'s v3.0 rung note.
+
+### Consequences
+
+- **The composition-leg verifier is new attack surface**, on the highest-blast-radius rung. It is bounded
+  by D1's "what provenance cannot answer" test specifically to keep it small, and it is mandatory
+  Phase-2 `@security` review at build.
+- **Staging transiently doubles disk footprint** for the generated tree. Accepted: a generated instruction
+  tree is text, and the alternative is a partially-live tree.
+- **The ADR-034 clone-once template interaction must be verified at build, not assumed.** Staging changes
+  *where* instantiation writes; whether clone-once's own idempotence assumptions survive a staged and then
+  renamed target is an open build-time check, recorded here as a check rather than an assurance.
+- **D7 deviates from `docs/hld.md` section 8's co-location framing.** The deviation is deliberate, is
+  recorded in the HLD amendment appended this cycle, and makes the non-destructive migration possible.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) generalize the composition-leg verifier into a reusable tree-verifier that
+  Loop 1's multi-file applies also call, so the two ceremonies share one implementation instead of
+  diverging — the strongest option, and the one that would retire the "new mechanism" risk by making it the
+  common path rather than the exceptional one; (b) add a content-provenance attestation to the space card,
+  so a hub can verify a sibling's integrity without re-reading its whole tree, which is `SF-3`'s standing
+  drift-re-check need arriving at the hub boundary; (c) hash-chain the space card's write history, which
+  is exactly `SF-4`'s tamper-evidence item and whose first real consumer is the v3.x hub; (d) extend SSC to
+  cover the v2.19 upgrade path itself, so engine replacement also becomes staged-then-atomic rather than
+  in-place; (e) leave SSC scoped to spawn alone and accept that two self-modifying ceremonies coexist with
+  different shapes.
+- **Concrete revisit triggers:** the composition leg's enumerated check list grows **beyond the five checks
+  C1-C5 named in D1.3** — counted as checks, which is the unit D1.3 actually enumerates (take (a); the
+  "what provenance cannot answer" scope test has failed). **The Phase-2 restoration of C1 and the renaming
+  of C5 do not count toward this trigger** — they corrected a drafting omission and an underspecified name
+  against the §Context list that was always intended, and an earlier wording of this trigger ("a third
+  responsibility beyond the four checks") was both uncountable and would have fired on its own fix,
+  mandating a full generalisation as the price of correcting an omission (Phase 2 finding S13);
+  the v3.x hub is scheduled (take (b) and (c)
+  together, since both are hub-boundary items already sitting open as `SF-3` and `SF-4`); any future rung
+  writes more than one engine file in a single operation (take (d)); a spawn failure is reported that
+  quarantine retention did not make diagnosable (revisit D5's retention policy); `AC-UPGRADE-4` leg (a)
+  fails to fire against D8's migration target (the reuse-not-relax premise is void and SSC's provenance leg
+  must be re-derived rather than inherited).
+- **Risk knowingly accepted:** SSC's composition leg is **specified but unproven** — it is a new verifier
+  class on the largest blast-radius surface the kit will ever have, and this is a PURE-DOC cycle, so
+  nothing here has been executed. The design is deliberately shaped to bound that risk (reuse for
+  provenance, new code only for what reuse cannot cover, staging so failure is a no-op), but a specified
+  gate is not a demonstrated gate, and this ADR does not claim otherwise. The v3.0 build cycle owes the
+  firing negative controls that convert every claim in D1 through D3 into evidence, in the per-skill
+  firing-controls form under `tests/` this project already uses; until those exist and are recorded with a
+  dated RAN entry, v3.0's claim to "exceed the v2.16 gate" is a design intention, not a proven property.
+
+---

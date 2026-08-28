@@ -10649,3 +10649,419 @@ sufficient on its own. C1 stands, non-waivable, unchanged.
 invoked by absolute path and `/bin/bash` cross-checked where shell semantics mattered. Four inherited
 conditions were falsified by that re-run and are corrected above with the falsifying command. This is
 the cycle's own standing rule applied to the cycle's own conditions file.*
+
+---
+
+# Product Spec — Cowork Starter Kit v3.0 "THE ENGINE" (spawn-only) — PLANNING BRIEF
+
+> **Cycle:** `plan-2026-08-27-v3-engine` · **Status:** Phase 0 — Requirements (drafted by @pm, read-only
+> against the tree). **Phase 3 user gate is front-loaded and runs immediately after this document**,
+> before @architect is spawned — `docs/hld.md`, `docs/roadmap.md`, `docs/risk-register.md`, and the new
+> `docs/carry-forwards.md` are off both guard allow-lists until APPROVED (see `pipeline.md`'s `3. User
+> Gate` row for the mechanism).
+> **Date:** 2026-08-28T06:37:25Z (`date -u`) · **Base:** `ff0c44c81be2315979af17f931de3dae3b3cf51a`,
+> `main` == `origin/main` == GitHub API, VERSION `2.19.13`, 0 open PRs, 0 open issues.
+> **Classification:** SECURITY-SENSITIVE — PROVISIONAL (Tier A/B unsettled, re-derived at Phase 0.D).
+> **Invocation:** `/plan --revise --lite`, `cycle_type: PURE-DOC`. @dev is never spawned this cycle;
+> no code, no `VERSION` bump. This document is the entire Phase-0 product.
+> **Scope brief:** `.claude/projects/claude-cowork-config/next-cycle-prompt-post-v2.19.13.md`, read as
+> input and independently re-verified below, never adopted on trust.
+
+**Measurement contract for this document.** Every count below was produced by direct inspection of the
+worktree at `ff0c44c`, using `/usr/bin/grep` (BSD grep, GNU-compatible, invoked by absolute path — the
+project's own `grep` resolves to a ugrep shim that honours `.gitignore` and under-counts) and `sed -n`
+for ranged reads. Every number carries its own source citation. Five figures from the scope brief were
+explicitly flagged by the orchestrator's pre-flight as **carried unverified** — the "~34 open
+carry-forwards," "opened 38 / closed 17 / net +21," "84% process artifacts / ~56 user-facing lines,"
+"29 defect generations across 5 authors," and "every `BLOCKS` claim collapsed." None of the five is
+adopted as fact anywhere below. Where this document's own re-derivation disagrees with a brief figure,
+the disagreement is stated, not silently resolved in either direction.
+
+---
+
+## 1. The v3.0 planning brief
+
+### 1.1 What "spawn-only" means, concretely
+
+From a live space, a request shaped like *"now help me manage finances"* generates a **new, fully
+capable, isolated sibling space**, drawn from the local pool, carrying the **latest installed skills**
+(not a stale snapshot of whatever the parent space happened to have at its own birth). "Isolated" is
+load-bearing: the roadmap's own feasibility spike found **no native cross-project capability** — Cowork
+Projects are hard-isolated from one another — which is precisely why the *hub view* (a pane that sees
+across spawned siblings) had to be re-scoped to a local-filesystem design and pushed to v3.x
+(`docs/roadmap.md:5`). v3.0 is scoped to the spawn ACT alone: write a new instruction tree to disk,
+under confirm-first, non-destructive terms consistent with every prior self-modifying rung. It is
+explicitly **not** the pane that watches the siblings it creates — that is v3.x's job, and v3.0's only
+obligation to v3.x is the forward-compat seam in §1.3.
+
+`docs/roadmap.md`'s ladder row (`:20`) states the classification plainly: **"largest blast radius in
+the kit's history."** Every prior self-modifying rung (Loop 1's apply, the v2.19 upgrade path) writes
+into an *existing* space the user already trusts, one already-vetted change at a time. Spawn writes an
+**entire new instruction tree from nothing**, and the first thing the user does with it is trust it —
+there is no accumulated track record for a brand-new sibling the way there is for a space that has
+survived N Loop-1 cycles.
+
+### 1.2 `KDQ-SPAWN-SEC` — the open question that stays with v3.0
+
+**Verified, not inherited.** `KDQ-SPAWN-SEC` occurs **8 times across exactly 4 files, all under
+`docs/`** (`architecture.md` ×2, `hld.md` ×2, `roadmap.md` ×1, `spec.md` ×3), and **zero times** under
+`skills/`, `scripts/`, `tests/`, or `templates/` — re-run this session with
+`/usr/bin/grep -rc KDQ-SPAWN-SEC docs/*.md` plus a negative-result sweep of the four build directories.
+Every occurrence is a forward-reference. **This question has never been designed against; it is
+entirely v3.0's to answer, at Phase 1.**
+
+**The question, stated exactly:** what gate — stronger than Loop 1's single-file confirm→apply→verify→
+rollback — governs the act of writing an *entire new instruction tree*, and how is a generated tree
+verified before it becomes a live space the user places trust in?
+
+**Candidate answers, laid out for @architect — none selected here.**
+
+| Option | Mechanism | What it reuses | Genuine cost / risk |
+|---|---|---|---|
+| **A — Loop-1-per-file** | Apply the existing single-file SECGATE/verifier/rollback primitives once per file in the generated tree | 100% reuse of AC-UPGRADE-4's own "reuse-not-relax" precedent; smallest new-design surface | Loop 1's verifier is diff-shaped — it checks a proposed change against an *existing* referent. A brand-new tree has no prior state to diff against. Confirming per-file across a multi-file spawn also re-opens the exact fatigue problem `KDQ-BATCH` already named and deliberately deferred (`docs/roadmap.md:58`) — batching was ruled out until "the confirmation surface's integrity over time is worked out," and a naive per-file loop reintroduces the surface that ruling was protecting. |
+| **B — Tree-level gate** | One confirmation for the whole spawn, backed by a new class of verifier that validates the assembled tree as a unit (schema/manifest completeness, no dangling references, valid frontmatter across every generated file, no injected content) before any file goes live | Matches the "generates ... an instruction tree" framing literally — a tree-shaped operation gets a tree-shaped gate | This is a genuinely **new** security mechanism, not a reuse — it needs its own design, its own security review, and it is exactly the surface the roadmap already flags as highest blast radius. Most build cost of the four options. |
+| **C — Staged / quarantine** | Write the generated tree to a non-live staging location first; run the tree-level verifier against the full staged tree; only a single explicit user confirmation performs an atomic move into place | User never sees or trusts a half-verified tree; failure is a true no-op — nothing was ever live | Needs a defined staging convention and a cleanup-on-reject discipline (delete the rejected tree? retain it for debugging?); doubles disk footprint transiently; interacts with the clone-once template (ADR-034) dependency in a way @architect must verify rather than assume compatible. |
+| **D — Provenance-scoped trust** | Since spawn draws from the already-vetted local pool (not arbitrary generated content), scope the gate to verifying every file's provenance — a known `sha256` against the v2.18 lock/registry — rather than re-verifying content from scratch | Cheapest; reuses the v2.18/v2.19 lock and pull machinery wholesale; matches "carrying the latest installed skills" in the spec's own spawn definition | Doesn't address the roadmap's stated risk as squarely. The risk in "largest blast radius" language reads as **composition** risk (individually-safe pieces assembled into something unsafe as a whole — colliding `CLAUDE.md` instructions, a skill mis-scoped once given more trust in a new space than it had in the parent) as much as **content-corruption** risk. Provenance alone answers "is each file what the pool says it is," not "does the assembled whole do something nobody intended." |
+
+These are not mutually exclusive — a real design plausibly combines B or C's tree-level gate with D's
+provenance check as one leg of it. The point of presenting them separately is that Phase 1 owns the
+trade-off, not this document.
+
+### 1.3 The forward-compat obligation to v3.x
+
+**Verified, not inherited.** `status-card` occurs 12 times, `shared-parent-dir` once — both **entirely
+inside `docs/`** (`architecture.md`, `hld.md` ×6, `roadmap.md` ×4/1, `spec.md`), **zero occurrences**
+under `skills/`, `scripts/`, `tests/`, or `templates/` (`/usr/bin/grep -rl` against all four,
+re-run this session, empty result each time). **The obligation exists only as prose. It has never been
+built.**
+
+The obligation itself, per `docs/roadmap.md:20,22,38`: spawn must (a) seed each sibling under a
+**shared parent directory**, and (b) give each sibling a **status-card write**, so that the future
+v3.x local-filesystem hub — which the completed feasibility spike settled as "read sibling folders on
+disk + a registry/status-card pattern," since no native cross-project capability exists — can discover
+it later without needing every already-spawned space to be re-spawned to become visible.
+
+**Acceptance criterion carried forward (see §4): this obligation must land as something buildable in
+this cycle's design** — a concrete directory-layout convention and a concrete status-card schema/write
+call, checkable by a `grep`/`test -f` the way every other AC in this project's spec history is
+checkable — not a fourth sentence in a fourth design document that repeats the same prose without
+adding an artifact.
+
+### 1.4 The v2.19 upgrade contract v3.0 inherits
+
+v2.19 shipped a **contract**, not a pre-built path (`docs/roadmap.md:35`): (1) a `kit_version` seam
+stamped in the v2.18 `cowork.install.json` manifest that a space reads to know what it is running; (2)
+a clean, documented migration seam for a future rung to write against; (3) a confirm-first,
+non-destructive self-update mechanism (`self-upgrade`) that never silently replaces running machinery.
+**The binding discipline, stated explicitly in the roadmap and repeated at `:37`: each future rung —
+v3.0 included — authors its own migration honoring this contract; nobody can pre-author a migration to
+a version that was not designed yet.** v3.0 therefore owes a migration that walks an "upgrade-ready"
+space (one born at v2.19 or later) forward to the engine, confirm-first and non-destructive — the same
+posture as every prior rung, inherited rather than invented.
+
+**`AC-UPGRADE-4` leg (a) has never been demonstrated, and this is the cycle that must demonstrate it.**
+`AC-UPGRADE-4` (`docs/spec.md:4818`) has two independent verify legs: (a) a **behavioral** leg — the
+Loop 1 firing negative controls (`SECGATE-B1`/`B2`, verifier friction + non-regression, rollback
+pre-image) must **re-fire identically** when exercised through the `self-upgrade` entry point, not
+only through `self-apply`; (b) a **structural** leg — `self-upgrade/SKILL.md` must *reference* the
+Loop 1 primitives by path rather than re-declare their logic inline, checkable by grep. Re-verified
+this session: `SECGATE-B1` appears in exactly 3 files repo-wide (`architecture.md`,
+`qa-report-v2.16.0.md`, `spec.md`) and **zero files under `tests/`** — its only QA home is
+`qa-report-v2.16.0.md`, which tests the **first** entry point (`self-apply`), never the second
+(`self-upgrade`). The shipped v2.19.0 record passes leg (b) alone. `self-upgrade` ships installed and
+deny-listed with **zero live invocation targets** — nothing has ever walked forward through it, so leg
+(a) has literally never had anything to fire against. **v3.0 is the first cycle that gives
+`self-upgrade` a real forward-walk target, which makes leg (a) exercisable for the first time** — see
+the AC in §5, worded against the obligation (the control must actually re-fire through the entry
+point) rather than against the one string (`SECGATE-B1`) that revealed the gap.
+
+### 1.5 Three named dependencies, and their state on disk
+
+`docs/roadmap.md:20` names v3.0's dependencies explicitly. Verified present on disk this session
+(`ls -la`, re-run):
+
+| Dependency | Roadmap justification | On-disk artifact | State |
+|---|---|---|---|
+| v2.16 gate | "spawn must exceed it" — the confirm→apply→verifier-gate→rollback machinery spawn's own gate (§1.2) has to be stronger than | `skills/self-apply/SKILL.md` | Present, 24,313 bytes |
+| v2.19 pull | "for 'latest skills'" — spawn must carry the latest installed skills into the sibling, which is exactly what the pull mechanism resolves | `skills/pull-updates/SKILL.md` | Present, 13,883 bytes |
+| Clone-once template | ADR-034 — the non-destructive, confirm-first template-instantiation pattern spawn extends from single-space setup to sibling-space creation | `templates/` (`cowork.install.template.json`, `preset-template/`, `skill-template/`, `workspace-claude-md-template.md`, others) | Present, populated |
+
+All three are real, on-disk, and load-bearing — none is a stub. This matches the pre-flight's own
+finding and is independently re-confirmed here, not copied from it.
+
+### 1.6 Explicitly out of scope for v3.0
+
+- **The hub view** (a pane over all of a user's spawned spaces) is **decoupled to v3.x**
+  (`docs/roadmap.md:22`), unscheduled, design settled by the completed feasibility spike
+  (no native cross-project capability; local-filesystem design instead). v3.0's only obligation to it
+  is the forward-compat seam in §1.3.
+- **Community intake** (v2.20) is **demand-gated**, not calendar-gated (`docs/roadmap.md:5,21`) — it
+  ships when real contributors ask for it. It is not a v3.0 dependency and not folded into this cycle.
+
+### 1.7 A stale roadmap header, noted but not repaired here
+
+`docs/roadmap.md:5` currently reads *"mid-Q3 2026, at v2.19.7"* against the actual `VERSION` at this
+cycle's base, `2.19.13` — six patch releases stale. This is a Phase-1 repair (the roadmap is a file
+this cycle rewrites anyway for the v3.0 rung), noted here so it is not lost, not fixed in this
+document.
+
+---
+
+## 2. The `CF-v2.5-*` ID collision — enumerated, not ruled
+
+**Five ids — `A`, `B`, `C`, `D`, `E` — each name two unrelated items across two document series,
+carried across 36 tagged releases strictly after `v2.5.0` (`git tag --contains` count, re-verified
+this session), with no cross-reference anywhere in either series pointing at the other. Anyone closing
+`CF-v2.5-D` by reading one series and not the other closes the wrong item.**
+
+**Series 1** — `docs/architecture.md:6064-6068`, @architect's v2.5 Phase-1 carry-forwards (a section
+titled "v2.5 Carry-Forwards (generated by this design)").
+**Series 2** — `docs/internal/security/security-audit-v2.5.md` (I1–I4 plus its summary/closing
+tables, `:36-39,50-56,269,278-283,293`) **and** `docs/internal/qa/qa-report-v2.5.md` (`:222-226,245,
+273`), @security's Phase-6 INFO items, cross-carried into the QA report the same cycle.
+
+### 2.1 Side-by-side — what each id means in each series
+
+| Id | Series 1 (`architecture.md`, @architect Phase 1) | Series 2 (`security-audit-v2.5.md` + `qa-report-v2.5.md`, @security Phase 6 / @qa) |
+|---|---|---|
+| **A** | Backfill script (`scripts/backfill-content-sha256.sh`) is **not shipped to users** — lives in the PR description only. A future cycle adding content via a path other than `sync-agency.yml` must run the backfill logic locally first. | **MF-S1 diagnostic-message imprecision.** Multi-line YAML `tools:` form is rejected via ALLOWED-token fallthrough rather than an explicit empty-`TOKENS` guard. Security property preserved (`BAD=1` still fires); the user-visible error text is wrong ("invalid token 'tools:'" vs. "multi-line form not supported"). |
+| **B** | **v3.0 `tools:` routing implementation.** v3.0's spec author must read ADR-029's forward-binding statement: declarative not imperative — filter/weight/warn, never auto-translate. | `scripts/install-pre-commit.sh` **has no Cowork-checkout identity guard** — a contributor could run it inside an unrelated git repo and install the markdownlint hook there. Judged an acceptable opt-in trust model. |
+| **C** | **v3.0 multi-tool skill authoring.** v2.5 ships all 20 skills `tools:[claude-code]` only; v3.0 may widen individual skills to multi-tool, but only after explicit per-tool validation (methodology TBD in the v3.0 spec — i.e., **this cycle**). | **Does not exist in `security-audit-v2.5.md` at all** — no `CF-v2.5-C` anywhere in that file (re-verified: zero matches). A **third, distinct meaning exists only in `qa-report-v2.5.md:224`**: a CI commit-topology observation (9 commits landed vs. a 6-commit binding topology), consistent with a recurring `CI-Fix-Topology-Pattern` the project already tracks separately in `docs/patterns.md`. |
+| **D** | **F3 PR outcome evaluation.** v3.0's gate review reads the upstream PR's acknowledgement outcome inside a 60-day window, independent of v2.5's own acceptance. | **GitHub 2FA** recommended on the contributor account (`jmlozano1990`) that submitted upstream PR #521. Out-of-band hardening carry, external to any code fix. |
+| **E** | `upstream-contribution/` **directory governance** — if future cycles add more outbound contributions, this directory grows; `CONTRIBUTING.md` may eventually document its purpose. | **markdownlint MD035 sentinel** recommended so a future SKILL.md body-level `---` can't confuse the frontmatter-counting `awk` walk. Verified empirically at the time: zero body-level `---` lines across 21+21 SKILL.md files. |
+
+**Two further ids exist only in series 2 and do not collide** — `F` (the F3 60-day acknowledgement
+window itself, escalation date 2026-07-08 — see §3, this one is materially overdue) and `G` (MF-3
+`ALLOWED`-list governance for v3.0's own tool vocabulary, which is directly relevant to this very
+design cycle). Series 1 has no `F` or `G`.
+
+### 2.2 Resolution options — real trade-offs, no favorite
+
+| # | Option | Mechanism | Cost / blast radius |
+|---|---|---|---|
+| 1 | **Renumber one series** | Give one series a distinct prefix (e.g., security's becomes `CF-SEC-v2.5-*`) and leave a one-line redirect at each old citation site | MEDIUM — mechanical, no semantic content changes, but touches every citation site found across at least 6 files (`architecture.md`, `security-audit-v2.5.md`, `qa-report-v2.5.md`, `qa-report-v2.5.1.md`, `qa-report-v2.6.0.md`, `retro.md`, plus one informal `docs/research/` note). Risk: a missed site keeps the ambiguity latent at exactly that spot. |
+| 2 | **Retire and reissue both** | Both series get fresh, distinct ids (e.g., `CF-v2.5-ARCH-1..5` / `CF-v2.5-SEC-1..7`); a one-time old→new migration table lives in both origin docs | HIGHEST, but one-time — same citation-site count as option 1, plus every future reader/agent must learn the new ids. Cleanest end state: no ambiguous legacy form survives. |
+| 3 | **Adopt one series as canonical, annotate the other** | Pick the series still carrying open, load-bearing items (series 2 — 4 of its 6 ids are still open per §3, one materially overdue) as canonical; annotate series 1's citations in place ("this id is @architect's Phase-1 carry-forward, not @security's Phase-6 item of the same name") without renumbering | LOWEST of the renumbering options — roughly 11 annotation sites, no id churn. Leaves the underlying ambiguity in the id-space permanently latent: nothing stops a future `CF-v2.5-H` appearing in either series independently. |
+| 4 | **Leave both series as-is; add a forward-only citation rule** | No touches to any existing file. Add one standing rule to an authoring/style doc: a `CF-vX.Y-Z` id must always be cited with its origin document | LOWEST cost of all, but resolves nothing for anyone reading a historical citation without this brief in hand — prevents recurrence only, does not repair the current ambiguity. |
+
+This needs an owner ruling. No option is recommended above the others here.
+
+---
+
+## 3. The carry-forward register — built by counting, not inherited
+
+**The brief's "~34" is explicitly not adopted.** Built instead from a direct sweep of
+`docs/risk-register.md`, `docs/owner-tasks.md`, `docs/next-steps.md`, `docs/retro.md`'s per-cycle
+carry-forward sections, `docs/patterns.md`, `docs/internal/qa/`, `docs/internal/security/`, and the
+prior-cycle `next-cycle-*.md` files under `.claude/projects/claude-cowork-config/`, plus a repo-wide
+`/usr/bin/grep -rohE 'CF-v[0-9]+\.[0-9]+(\.[0-9]+)?-[A-Za-z0-9]+(-[A-Za-z0-9]+)*' docs/ | sort -u`
+sweep that returned **40 distinct `CF-vX.Y-Z` strings** (one of which, `CF-v2.5-N`, is a template
+placeholder inside `patterns.md`'s own section heading, not a real id — 39 real ids). Each of the 39
+was traced to its most recent disposition across the corpus.
+
+### 3.1 De-duplication method
+
+An item is counted **once**, at its most specific/canonical id, even when it appears on multiple
+surfaces (e.g., `CF-v2.19.13-DECISION3-RESIDUE` is defined in `docs/design-v2.19.13.md`, restated in
+`docs/retro.md`'s per-cycle ledger, **and** promoted into a full `docs/risk-register.md` row — these
+are the same item on three surfaces, counted once). An id is excluded once any surface records an
+explicit closure (`CLOSED`, `RESOLVED`, `retired as fixed-in-cycle`, or equivalent) that no later
+surface contradicts. Two ids that collide in the id-space (§2) but name genuinely different work are
+counted as two separate items, keyed by series.
+
+### 3.2 The count
+
+**30 genuinely open items**, strict/actionable definition (excludes `docs/patterns.md` process-pattern
+WATCH rows — a different ledger with different semantics, see §3.4 — and excludes non-actionable
+"tracked, no action forced" candidates, counted separately in §3.3):
+
+| Category | Count | Ids |
+|---|---|---|
+| `docs/risk-register.md` open rows (post-reconciliation, see §4) | 7 | `v2.20-CARRY-1`, `SF-2`, `SF-3`, `SF-4`, `v2.19.5-CODEOWNERS-1`, `v2.19.9-SKILLSTUDIO-TARGET`, `CF-v2.19.13-DECISION3-RESIDUE` |
+| `docs/owner-tasks.md` open ledger rows | 6 | `OT-1`, `OT-3`, `OT-4`, `OT-6`, `OT-7`, `OT-8` |
+| `CF-v2.19.13-*` family, open, not yet in risk-register.md | 3 | `CF-v2.19.13-CITATION-CENSUS`, `CF-v2.19.13-MEMBERSHIP-NC`, `CF-v2.19.13-GITHUB-CLASSA` (`docs/retro.md:292-294`) |
+| Pre-existing residuals, unscheduled | 2 | `S10` (no standing CI control, `security-audit-v2.19.11.md:30`), `A15` (registry-row-count pin defeatable by a compensating pair, `docs/retro.md:299`) |
+| `CF-v2.19.12-*` family, real but unqueued | 4 | `CF-v2.19.12-A`, `-D`, `-GATTR`, `-PERMITSHAPE` — `docs/spec.md:10537` labels these "Not in queue — Real, not queued" or "Later cycle," i.e. recovered at v2.19.13 Phase 0 and dropped again with no owning cycle (see §3.5) |
+| `CF-v2.19.8-A` | 1 | `requires_review` zero-reader false-safety claim — fixing it is a structural edit that would flip the cycle's tier; deferred every cycle since v2.19.8 |
+| `CF-v2.19.5-A`, orphaned | 1 | `files[].sha256` zero readers — last mentioned `docs/retro.md:2238` (v2.19.5 retro), never closed, never re-mentioned in any surface since |
+| `CF-v2.5-*` series 2, orphaned since v2.6.0 | 6 | `CF-v2.5-A`, `-B`, `-D`, `-E`, `-F`, `-G` — see §3.6 |
+| **Total** | **30** | |
+
+**Excluded as CLOSED, verified rather than assumed:** `CF-v2.19-A/B` (v2.19.2), `CF-v2.3.1-A` (v2.4),
+`CF-v2.19.3-A` (v2.19.6/7), `CF-v2.19.5-B/C/D/E` (v2.19.5/v2.19.8), `CF-v2.19.5-F` (v2.19.6,
+MISDIAGNOSED-not-fixed disposition), `CF-v2.19.6-A` (v2.19.8 — see §4, this is one of the two
+contradicted risk-register rows), `AC-PUB-10` (v2.19.8 — the other contradicted row), `CF-v2.19.8-A`
+is **open** (listed above; do not confuse with the closed `CF-v2.19.5`/`v2.19.3` items),
+`CF-v2.19.11-A/B` (landed in v2.19.13 itself, per `docs/retro.md:1051` and
+`docs/architecture.md:15304`), `CF-v2.19.12-B` (discharged — measurement taken),
+`CF-v2.19.12-C` (a standing DO-NOT, not a work item), `CF-v2.19.12-E` (a discipline statement, "0
+lines, cannot be done" — `docs/spec.md:10532-10533`), `v2.19.11-PULL-ROW-1` (risk-register.md marks
+this **CLOSED (v2.19.13)** with two named residuals — see the note in §3.5).
+
+### 3.3 A broader count, and why it lands near "~34"
+
+Three further items carry an explicit `status: OPEN` tag in `docs/owner-tasks.md`'s own **"Tracked
+candidates (no action forced yet)"** section — `NAMING`, `AGENCY-AGENTS PERSONA CONVERSION` (also
+cross-listed, same item, in `docs/roadmap.md`'s `## Later` section — **not** double-counted), and
+`ONESKILL KIT-VS-SKILL FIT`. The file's own design deliberately separates these from the actionable
+`Ledger` table above them — they are open ideas, not deferred obligations. Including them anyway:
+**30 + 3 = 33**, one short of the brief's inherited "~34."
+
+**This is a finding, not a coincidence to wave away, and it is not adopted as confirmation of the
+brief's figure.** It suggests the inherited "~34" plausibly came from a count that did not distinguish
+"actionable carry-forward" from "tracked-but-inactive candidate" the way `docs/owner-tasks.md`'s own
+schema does — or that it double-counted the `AGENCY-AGENTS PERSONA CONVERSION` item across
+`owner-tasks.md` and `roadmap.md` before landing near the same number this document's de-duplicated
+count also lands near from a different direction. Both are plausible; neither is provable from the
+record available to this Phase 0. The honest statement is: **two independently-run counts, using
+different inclusion criteria, land at 30 and 33 — not "~34" confirmed, and not "~34" refuted.**
+
+### 3.4 Why `docs/patterns.md` is excluded from this count
+
+`docs/patterns.md` currently carries 58 rows (`58 total table rows`, re-counted this session), of
+which **8 are BINDING** and **8 sit at WATCH 2/3** — one recurrence from mandatory promotion, and **5
+of the 8 BINDING patterns were promoted during the v2.19.x patch series alone.** These are process
+*findings about recurring failure shapes* (e.g., "denominator drift," "the cycle's own mandated fix was
+the next defect vector"), read by @dev for preservation and @security for elevated attention. They are
+a structurally different ledger from a carry-forward: nobody "closes" a pattern by shipping a fix the
+way an owner task or a `CF-` id closes. Merging the two ledgers into one count would conflate "a
+specific deferred work item" with "a recurring failure mode the project watches for" — different
+semantics, different closure conditions. Excluded from §3.2/§3.3 on that basis, not overlooked.
+
+### 3.5 The `CF-v2.19.12-*` family — verified, not restated
+
+The brief states this family was "dropped at the handoff hop, recovered by v2.19.13's Phase 0, and
+dropped again." Independently traced through the primary sources rather than repeated on trust:
+
+1. **Dropped at handoff.** `docs/retro.md:270` (the v2.19.13 retro's own `Inherited-unread ledger`
+   pattern entry, WATCH 1/3 → 2/3): *"three carry-forwards (`CF-v2.19.12-A`, `-B`, `-D`) dropped at
+   the retro-to-handoff hop between v2.19.12 closing and v2.19.13 opening, recovered only because the
+   orchestrator read `docs/retro.md` directly rather than trusting the handoff note."*
+2. **Recovered at v2.19.13 Phase 0.** The full six-member family (`A`, `B`, `C`, `D`, `E`, `GATTR`,
+   `PERMITSHAPE` — seven, not six; `docs/retro.md:576` names them together) is enumerated in
+   `docs/spec.md`'s "Out of Scope — explicit non-goals by id" table (`:10521-10537`), each with an
+   explicit disposition: `-C` standing DO-NOT, `-E` a discipline not a work item, `-B` discharged,
+   `-A`/`-D`/`-GATTR` **"Not in queue — Real, not queued,"** `-PERMITSHAPE` **"Later cycle — No
+   executable host / would trip its own guard."**
+3. **Dropped again.** None of `-A`, `-D`, `-GATTR`, `-PERMITSHAPE` was assigned an owning cycle by
+   that table — "Not in queue" and "Later cycle" both name the disposition without naming a target.
+   Nothing since `docs/spec.md`'s v2.19.13 section carries them forward again; they do not appear in
+   `handoff-note.md`'s own 8-item list. **This is the third drop**, and it is silent in exactly the
+   same way the first one was — the difference is this document is the first surface to say so
+   explicitly since v2.19.13's own spec table did.
+
+Separately, `v2.19.11-PULL-ROW-1` shows the mirror failure in the other direction:
+`docs/risk-register.md` marks it **`CLOSED (v2.19.13)`** with two explicitly named, un-closed
+residuals (model drift, per-slug variance — the row's own text), while `handoff-note.md`'s "Open
+carry-forwards" table still lists it as `S3` with a description implying it remains live. Both
+documents are internally consistent about the *substance* (the row is closed; two residuals remain
+named but not tracked as their own items); they disagree about which table the item belongs in. Not
+counted twice in §3.2 — held to `risk-register.md`'s authoritative `CLOSED` status, residuals noted
+here for completeness, not counted as a 31st item.
+
+### 3.6 The `CF-v2.5-*` series-2 orphans — six items, one materially overdue
+
+Traced forward from v2.5 through every later cycle that could plausibly have picked them up:
+`qa-report-v2.5.1.md:160` — "all DEFERRED to v2.6 docket"; `qa-report-v2.6.0.md:270` — "none
+applicable to v2.6.0 scope (CI/scripts/external surfaces; this cycle addressed preset schema only)."
+**No surface after v2.6.0 (2026-05-11) mentions any of `CF-v2.5-A/B/D/E/F/G` again**, with one
+exception: an informal `docs/research/v2.7-usercase-test-and-improvement-research.md:95` note, dated
+around the v2.7 era, records *"CF-v2.5-F escalation was due 2026-07-08"* — past tense, as an
+observation, not a closure. A repo-wide sweep of `scripts/`, `.github/`, `skills/`, and `templates/`
+for any of the six ids returns **zero hits** — nothing in code, CI, or skill content shows any of them
+was ever addressed outside the paper trail. **`CF-v2.5-F` (the F3 60-day PR-acknowledgement watch) is
+therefore both open and roughly seven weeks past its own stated escalation date as of this cycle's
+base (2026-08-28 vs. 2026-07-08).** `CF-v2.5-G` (MF-3 `ALLOWED`-list governance for v3.0's tool
+vocabulary) is directly load-bearing on this very design cycle and should not ship v3.0 without being
+addressed. These six items appear to have been silently abandoned across roughly 30+ point releases,
+the same failure shape as §3.5's `CF-v2.19.12` family, just older and larger.
+
+### 3.7 Draft content for the future `docs/carry-forwards.md`
+
+Phase 1 creates the file; this is the content to seed it with, in the register's own de-duplicated
+form — the 30-item table in §3.2, plus the six-item series-2 orphan detail in §3.6 and the
+`CF-v2.19.12` detail in §3.5, each row carrying: id, one-line description, where raised, where
+currently recorded, status, and whether genuinely open (all already stated above; not repeated a
+third time here).
+
+---
+
+## 4. The risk-register reconciliation
+
+**Re-derived directly against `docs/risk-register.md`, not copied from the brief's 9/7 figures** —
+`/usr/bin/grep -n '\*\*OPEN\*\*' docs/risk-register.md` returns **9 lines**, each the Status cell of
+one table row:
+
+`v2.20-CARRY-1` (`:7`), `SF-2` (`:8`), `SF-3` (`:9`), `SF-4` (`:10`), `v2.19.5-CODEOWNERS-1` (`:11`),
+`AC-PUB-10` (`:12`), `v2.19.9-SKILLSTUDIO-TARGET` (`:14`), `CF-v2.19.6-A` (`:15`),
+`CF-v2.19.13-DECISION3-RESIDUE` (`:17`).
+
+**Two of those nine are declared `CLOSED` later in the same file**, in its own additive
+"Closed at v2.19.8" section:
+
+- **`CF-v2.19.6-A`** — row `:15` reads `**OPEN**`. `docs/risk-register.md:40-44` — *"`CF-v2.19.6-A` —
+  CLOSED. The row above (`403 Resource not accessible by integration` on the update path) is
+  superseded: v2.19.7's recommended fix ... shipped and is live-verified. `gh release view v2.19.7
+  --json assets` returns exactly 2 assets ... re-run this session [at v2.19.8]."*
+- **`AC-PUB-10`** — row `:12` reads `**OPEN**`. `docs/risk-register.md:60-68` — *"`AC-PUB-10` — CLOSED
+  (disposition recorded, v2.19.8). The row above's two CHANGELOG citations ... were stale;
+  re-verified this session at content-anchored positions..."*
+
+**True count of genuinely open rows: 9 − 2 = 7** — `v2.20-CARRY-1`, `SF-2`, `SF-3`, `SF-4`,
+`v2.19.5-CODEOWNERS-1`, `v2.19.9-SKILLSTUDIO-TARGET`, `CF-v2.19.13-DECISION3-RESIDUE`. Independently
+re-derived here by the same method the brief used, not adopted from its stated "7."
+
+### 4.1 The exact repair Phase 1 should apply
+
+The file states its own append-only philosophy at `:38`: *"the OPEN rows above are left byte-unchanged;
+this section is the ledger-truth-repair record."* That philosophy protects the **descriptive prose** of
+an accepted-risk row (the historical record of what was accepted and why) — it does not require the
+**Status cell** to stay wrong. The repair is narrowly scoped to exactly two cells:
+
+- Row `:12` (`AC-PUB-10`): change the Status cell from `**OPEN** — documentation-only carry, no
+  target rung.` to `**CLOSED (v2.19.8)** — see "Closed at v2.19.8" section below; documentation-only
+  carry, no target rung, disposition recorded.` Leave the row's Description and Accepted-condition
+  cells byte-unchanged.
+- Row `:15` (`CF-v2.19.6-A`): change the Status cell from `**OPEN** — blocking AC-PUB-3 and
+  AC-PUB-15; ...` to `**CLOSED (v2.19.8)** — see "Closed at v2.19.8" section below; superseded by
+  v2.19.7's asset-upload fix, live-verified.` Leave the row's Description and Accepted-condition cells
+  byte-unchanged.
+
+After this repair, `/usr/bin/grep -c '\*\*OPEN\*\*' docs/risk-register.md` returns **7**, matching the
+file's own additive section without requiring a reader to cross-reference two places to get a correct
+column count — the property the brief asked Phase 1 to restore.
+
+---
+
+## 5. Acceptance criteria carried into the v3.0 design
+
+- **`AC-SPAWN-SEC` — `KDQ-SPAWN-SEC` resolved.** Phase 1 selects (or synthesizes) a gate design for
+  writing a new instruction tree from among §1.2's options (or a documented combination), with a
+  stated rationale distinct from "reuse Loop 1 unmodified" if that option is not the one chosen —
+  the reuse-not-relax precedent (`AC-UPGRADE-4`) is a strong prior, not an automatic default, given
+  §1.2's Option A cost. *Verify:* `docs/architecture.md`'s v3.0 ADR names the selected mechanism and
+  states, for each Loop-1 primitive it reuses vs. replaces, which.
+- **`AC-FWDCOMPAT` — the forward-compat obligation ships as something buildable.** Not a fifth
+  design-doc sentence. *Verify:* a concrete shared-parent-directory convention and a concrete
+  status-card write call/schema exist in the design, each independently `grep`/`test`-checkable, and
+  at least one of `status-card` or `shared-parent-dir` (or their concrete implementation names) appears
+  outside `docs/` for the first time — in `skills/`, `templates/`, or `tests/`.
+- **`AC-UPGRADE-4-LEGA` — the v2.16 gate demonstrated firing through the `self-upgrade` entry point.**
+  Not worded against the one string (`SECGATE-B1`) that revealed the gap — worded against the
+  obligation: the Loop 1 firing negative controls re-fire, verifiably, when exercised through
+  `self-upgrade` against a real forward-walk target (this cycle's own migration, per §1.4). *Verify:*
+  a test or design-stage proof exists showing `SECGATE-B1`/`B2` (or their v3.0-era equivalents),
+  verifier friction + non-regression, and rollback pre-image all trip identically via the upgrade
+  path, not only via `self-apply`.
+- **`AC-SF2` — `SF-2` matures from INFO to a binding check.** `docs/risk-register.md:8` accepted
+  `SF-2` (the Class-2-before-Class-1 execution-ordering question — does a higher-ceremony
+  self-integrity check run before an ordinary engine-file write, when both could apply to the same
+  target) as INFO specifically because `self-upgrade` had no live invocation target at v2.19. v3.0
+  gives it one. *Verify:* the v3.0 design states, and a test exercises, the actual ordering guarantee
+  when a spawn-time write and a self-integrity check could both apply to the same target file.
+
+---
+
+*Independently re-derived where the brief's own figures could be checked; carried unverified and
+flagged as such where they could not. Sources cited inline throughout — every count above resolves to
+a named file and, where load-bearing, a line range, re-runnable against `ff0c44c`.*
