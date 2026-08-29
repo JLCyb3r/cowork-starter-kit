@@ -11065,3 +11065,538 @@ column count — the property the brief asked Phase 1 to restore.
 *Independently re-derived where the brief's own figures could be checked; carried unverified and
 flagged as such where they could not. Sources cited inline throughout — every count above resolves to
 a named file and, where load-bearing, a line range, re-runnable against `ff0c44c`.*
+
+---
+
+# Product Spec — Cowork Starter Kit v2.19.14 "The Parser and the Premise"
+
+> **Cycle:** v2.19.14 · **Status:** Phase 0 — Requirements (drafted by @pm)
+> **Classification:** SECURITY-SENSITIVE — Tier A (touches `.github/workflows/quality.yml`) ·
+> COMPLIANCE-SENSITIVE = NO
+> **Base:** `a546292` on `release/v2.19.14-ci-parser-and-premise`, cut from `main`
+> **Measurement contract.** Every number below was re-run by @pm at Phase 0 against the worktree at
+> `a546292`, with `/usr/bin/grep` (BSD grep, GNU compatible, 2.6.0-FreeBSD, invoked by absolute
+> path — this repo's plain `grep` is a `.gitignore`-honoring shim and under-counts), shell `zsh`.
+> Every number in the cycle brief was **re-run, not adopted**, per this repo's own binding rule
+> (`docs/spec.md` v2.19.13: *"a number inherited from a reviewer is not verified until the
+> recipient re-runs it"*). One re-run (Item 4) surfaced **three additional sites** the brief did not
+> name — reported inline and in the return summary, not silently folded in.
+
+## One idea
+
+Two independent CI/tooling parsers silently mis-handle valid input (a two-item `tools:` array; a
+`.markdownlint.jsonc` config file), and a chain of documents — an ADR, a carry-forward register, an
+owner-task ledger — assert things about the past that a direct re-check falsifies. None of the five
+is cosmetic: three are latent defects that will fire the moment a normal, foreseeable input occurs
+(a second tool, a real installer run, a fourth patch tag), and two are load-bearing "what happened"
+claims other documents, and a future v3.0 gate, will be built on top of.
+
+**Not guaranteed, and stated so it is not over-read:** this cycle does not perform the MF-2 "first
+fire" self-upgrade demonstration v3.0 still owes, does not disposition the other five
+`CF-v2.5-*` ids, does not touch `docs/risk-register.md`, and does not change branch protection. All
+four are explicitly out of scope — see below.
+
+## Core Features — 5 items, no dependency ordering between them
+
+### 1. `AC-PARSE` — the `tools:` list parser cannot express a two-item list
+
+**Location:** `.github/workflows/quality.yml`, step `MF-3 — skills/*/SKILL.md tools: vocabulary
+gate`. `ALLOWED` at `:1167`; the parser line at `:1178`; the rejection site at `:1188`; the MF-S1
+multi-line guard at `:1180-1183`.
+
+**Re-run, confirmed exactly as briefed.** The pipeline is:
+
+```
+TOKENS=$(echo "$TOOLS_LINE" | sed -E 's/^tools:[[:space:]]*\[//; s/\][[:space:]]*$//; s/,/ /g' | tr -d ' ' | tr ',' ' ')
+```
+
+`s/,/ /g` turns commas into spaces; `tr -d ' '` then deletes **every** space, including the ones the
+previous substitution just inserted between tokens — concatenating them. Reproduced live:
+
+| Input | `TOKENS` | Consequence |
+|---|---|---|
+| `tools: [claude-code]` | `claude-code` | Correct — single-item lists have no comma to collapse |
+| `tools: [claude-code, copilot]` | `claude-codecopilot` | One malformed token, rejected at `:1188` (`invalid token 'claude-codecopilot'`) — a **valid 2-item list is refused** |
+| `tools: [claude-code, copilot, cursor]` | `claude-codecopilotcursor` | Same failure, N=3 |
+| `tools:` (the line `awk` captures for the multi-line YAML form, no bracket on that line) | `tools:` (literal, non-empty) | `[ -z "$TOKENS" ]` at `:1181` is **false**, so the explicit MF-S1 guard at `:1180-1183` never fires; the for-loop iterates once with `token="tools:"`, fails the `ALLOWED` check, and emits `invalid token 'tools:'` from the `:1188` fallthrough — the **wrong** error message. This is `CF-v2.5-A`'s residue, still live. |
+| `tools: []` (empty array) | `` (empty) | `[ -z "$TOKENS" ]` is **true** here, so this case is misdiagnosed as the multi-line form too — a distinct, unbriefed edge case, noted under Edge Cases, not gated behind this AC |
+
+**Why latent:** `/usr/bin/grep -h "^tools:" skills/*/SKILL.md | sort | uniq -c` → all **29** skills
+declare exactly `tools: [claude-code]`. Zero live skills exercise the 2+-token path today.
+
+**AC-PARSE-1 (Ubiquitous).** The `MF-3` tool-list parser SHALL tokenize a single-line `tools: [...]`
+value into its correct N members for any N ≥ 1, without concatenating adjacent tokens, and every
+member SHALL be validated independently against `ALLOWED`.
+- **Firing negative control (already reproduced above, not hypothetical):** a fixture
+  `tools: [claude-code, copilot]` run through the **current, unfixed** pipeline yields
+  `claude-codecopilot` and REDs (`invalid token`); the same fixture run through the fixed parser
+  MUST yield exactly 2 tokens (`claude-code`, `copilot`), both individually checked, and GREEN. A
+  3-token fixture (`claude-code, copilot, cursor`) MUST also GREEN — a fix that special-cases N=2
+  (e.g. a single extra split on `, `) without generalizing to N would pass the 2-item fixture and
+  still fail this one; both fixtures are required evidence, not one.
+- **@qa MUST record this the same way `tests/self-upgrade-firing-controls.md` records its
+  controls** — pre-fix RED reproduced and dated, post-fix GREEN reproduced and dated, both real
+  invocations, per this repo's binding *check-that-cannot-fail* discipline.
+
+**AC-PARSE-2 (Ubiquitous).** The multi-line YAML form of `tools:` (i.e. `tools:` with list items on
+following lines, which the existing `awk` frontmatter scanner captures as the bare string `tools:`)
+SHALL continue to be rejected, and SHALL be rejected with the **MF-S1 message**
+(`"tools: present but unparsed (multi-line form not supported at v2.5)"`), never with the generic
+`invalid token '...'` fallthrough.
+- **Firing negative control:** reproduced above — the **current** code emits `invalid token
+  'tools:'` for this exact input (`TOKENS="tools:"`, non-empty, so the `:1180` guard's `-z
+  "$TOKENS"` never trips). Post-fix, the same fixture MUST emit the MF-S1 string and MUST NOT emit
+  an `invalid token` line naming `tools:` as the token. Because the current behavior is
+  demonstrably the wrong message (not merely "no message"), a check asserting *which* message
+  appears is real: it distinguishes two states that both currently occur in this codebase for
+  different inputs, not a tautology.
+- **Do not fix this by widening `ALLOWED`** to tolerate a `tools:` token — that would make a
+  genuinely malformed frontmatter field pass silently instead of failing loudly with the right
+  message, trading this defect for the one MF-S1 was written to prevent in the first place.
+
+**Edge case, not gated behind either AC above but MUST be specified by @architect at Phase 1:**
+`tools: []` (empty array, valid YAML) currently collapses to empty `TOKENS` and is indistinguishable
+from the multi-line-form case, so it also gets the MF-S1 message today. Whether an empty declared
+tool list should get its own message ("no tools declared") or is acceptably covered by MF-S1's
+wording is a genuine design decision, not a re-derivation of the briefed defect — flagged so it is
+decided rather than inherited by accident from whatever the N≥1 fix happens to do to N=0.
+
+---
+
+### 2. `AC-HOOK` — `install-pre-commit.sh` looks for a config file the repo does not ship
+
+**Location:** `scripts/install-pre-commit.sh`.
+
+**Re-run, confirmed exactly as briefed — 5 sites, not estimated:**
+
+```
+/usr/bin/grep -c '\.markdownlint\.json\b' scripts/install-pre-commit.sh   -> 5   (lines 21, 24, 25, 59, 71)
+```
+
+**Negative control on the extractor itself** (proves the word-boundary discriminates the real
+`.json` file from the shipped `.jsonc` one, rather than the 5 being an artifact of a loose pattern):
+
+```
+echo ".markdownlint.jsonc" | /usr/bin/grep -c '\.markdownlint\.json\b'   -> 0
+echo ".markdownlint.json"  | /usr/bin/grep -c '\.markdownlint\.json\b'   -> 1
+```
+
+**The shipped file:** `ls .markdownlint*` → `.markdownlint.jsonc` and `.markdownlintignore` only.
+No `.markdownlint.json` exists anywhere in the repo. The installed hook's own logic
+(`scripts/install-pre-commit.sh:59-64`) is `CONFIG="${REPO_ROOT}/.markdownlint.json"`, then
+`if [ -f "${CONFIG}" ]; then --config "${CONFIG}" ... else <no config, tool defaults> fi` — since
+`CONFIG` never resolves, the installed hook **silently runs with markdownlint's built-in defaults**,
+contradicting the script's own header comment (`"This hook runs the same markdownlint ruleset as
+the CI markdown-lint step"`, line 4) and its own inline comment (`"Ruleset: .markdownlint.json at
+repo root (same file CI uses)"`, line 24) — CI does not use that file either; it does not exist.
+
+**Open question, genuinely load-bearing, NOT resolved at Phase 0 — flagged for @architect/@dev at
+Phase 1.** `.markdownlint.jsonc` contains real `//` line comments (confirmed by reading the file —
+11 comment lines out of 22). `scripts/install-pre-commit.sh` installs the classic `markdownlint-cli`
+(v1, per its own header: `npm install -g markdownlint-cli`), a **different tool** from CI's
+`markdownlint-cli2-action` (`.github/workflows/quality.yml:11`). Whether `markdownlint-cli`'s
+`--config` flag parses JSONC comment syntax, or errors on it, was not verified this session (the
+tool is not installed on the authoring host and installing it was out of scope for a Phase 0 read).
+**If `--config` cannot parse comments, simply repointing the 5 sites at `.markdownlint.jsonc`
+trades a silent wrong-ruleset bug for a loud crash on every commit** — still a defect, but a
+different one, and the AC below is worded to require verifying this before deciding the fix's exact
+shape, not to assume the straightforward rename is sufficient.
+
+**AC-HOOK-1 (Ubiquitous).** `scripts/install-pre-commit.sh` SHALL reference the config file the
+repo actually ships (`.markdownlint.jsonc`) at all 5 sites (comments and code alike), and the
+installed hook, run against a real markdownlint violation in this repo, SHALL apply the project's
+own disabled-rule set (e.g. MD013, MD033 — both explicitly `false` in `.markdownlint.jsonc`), not
+the tool's built-in defaults.
+- **Firing negative control:** `/usr/bin/grep -c '\.markdownlint\.json\b'
+  scripts/install-pre-commit.sh` → **5** pre-fix (reproduced above), MUST be **0** post-fix, with a
+  companion assertion that `/usr/bin/grep -c '\.markdownlint\.jsonc'
+  scripts/install-pre-commit.sh` is **≥ 1** post-fix — proving the string was corrected to the real
+  filename, not merely deleted. A behavioral check (install the hook in a scratch clone, commit a
+  file that trips an MD013-violating long line, confirm the hook does **not** flag it because
+  MD013 is disabled in the shipped config) is the stronger form and should be preferred if
+  `markdownlint-cli` is actually exercised at Phase 4/5.
+- **@architect MUST record, at Phase 1, whether `markdownlint-cli`'s `--config` flag parses the
+  shipped file's comment syntax** — a real invocation against the real file, not an assumption —
+  and adjust the fix (e.g. a comment-stripped generated config, or confirming JSONC "just works")
+  accordingly. This sub-item is **inspection-class**: whether a third-party CLI parses a comment
+  syntax is a fact to be looked up/tested once, not a property with a meaningful negative control
+  of its own.
+
+---
+
+### 3. `AC-ADR095` — ADR-095 D9's "leg (a) never fired once" rests on an incomplete search
+
+**Re-run, confirmed exactly as briefed, at all 4 cited sites, byte-identical at HEAD (`a546292`) and
+at `ff0c44c`:**
+
+- `docs/internal/qa/qa-report-v2.19.0.md:46` — section heading `## 2. Live-invocation — MF-2(b) and
+  AC-UPGRADE-3(c) (the two items @dev flagged, honestly un-exercisable pre-implementation)`
+- `docs/internal/qa/qa-report-v2.19.0.md:55` — Scenario 4: *"MF-2(b), the harder one: new machinery
+  FAILS verification under the OLD gate... the swap does not occur... **Verified via filesystem,
+  not narrated.**"*
+- `docs/internal/qa/qa-report-v2.19.0.md:70` — summary row: *"MF-2 (3 firing controls) | PASS — see
+  §2. (a)/(c) mechanically classifiable; **(b) live-invoked.**"*
+- `tests/self-upgrade-firing-controls.md` — confirmed control (b) (the same MF-2(b)) carries **no**
+  `[x] RAN` stamp (13 `RAN` entries counted in the file, all for other controls); its own text reads
+  *"Honestly un-exercisable pre-implementation... bound here as a Phase-5 `@qa` re-verify item, not
+  assumed proven."*
+
+**The gap, stated precisely.** `qa-report-v2.19.0.md` documents that MF-2 control (b) — new
+machinery fails verification under the old gate, no swap occurs — **was actually exercised**, live,
+by @qa at Phase 5, with a filesystem MD5 before/after as evidence (Scenario 4). Nothing in
+`tests/self-upgrade-firing-controls.md` was ever updated to reflect that; the control-tracking file
+still shows no `RAN` entry for control (b). ADR-095 D9 (`docs/architecture.md`, index row ~`:118`
+and body ~`:16041-16050`) reasons **from the absence of a `RAN` stamp in the control file alone** to
+*"leg (a) has never fired once, through either entry point"* — without checking the qa-report, which
+is a different, and in this repo's own convention an equally authoritative, record of the same
+fact. **The stamp is absent; the fire is recorded** — just not in the file that stamps.
+
+**The conclusion survives; only the evidence is wrong.** v3.0 must still demonstrate the controls
+firing through the **second** entry point (`self-upgrade`, not `self-apply`) — that requirement does
+not depend on whether the first entry point ever fired. What is false is the stronger claim that
+*no* entry point has ever fired.
+
+**Propagation, re-run — 3 additional sites beyond the 2 the cycle brief cited by number, all
+confirmed:**
+
+| Site | Confirmed text |
+|---|---|
+| `docs/roadmap.md:44` | *"BINDING PREDICATE... leg (a) has never fired ONCE, not merely never through a second entry point. MF-2 control (b) carries no `RAN` entry..."* |
+| `docs/internal/security/security-review-plan-v3-engine.md`, finding **S7** (body at `:390-430`) | @security **independently re-derived the same "never fired once" claim** from `tests/self-upgrade-firing-controls.md` alone (*"Reading MF-2 control (b) directly... it carries no RAN entry, unlike every neighbouring control... You cannot re-fire what never fired once"*) — S7's own re-verification repeats the same incomplete search, without cross-checking the qa-report. (S7's *other* finding — that `SECGATE-B1`'s file-count claim of "exactly 3 files" is stale by one, `docs/roadmap.md` itself being the 4th — is correct and is **not** disputed here; it is a separate, already-resolved defect in the same ADR.) |
+| `docs/internal/qa/qa-report-plan-v3-engine.md:124` | *"'Leg (a) never fired once': confirmed by the same evidence"* — same re-derivation, same gap |
+
+**Not in the brief, found this session:** the same "leg (a) never fired once" framing is also baked
+into **`docs/architecture.md` itself, inside ADR-093** (a *different* ADR, minted in the same
+`plan-2026-08-27-v3-engine` cycle) — this is a distinct falsified-premise chain from CF-v2.5-F's,
+addressed under Item 4 below, not this item; noted here only because both chains happen to touch
+the phrase "past due" independently and should not be conflated.
+
+**Mechanism, per house convention (B0, `docs/spec.md` v2.19.13 — already established, not invented
+here).** `docs/architecture.md` is append-only once its cycle has shipped; `plan-2026-08-27-v3-engine`
+shipped (Phase 8 retro closed, commits `fe66cd8`/`a546292`). The correction is a **new ADR (or an
+appended amendment section) superseding D9's evidence clause**, reachable from ADR-095's own index
+row per B0's reachability rule (*"silence at the occurrence is not a discharge"*) — never an in-place
+edit of D9's body or the index row's summary text.
+
+**AC-ADR095-1 (Ubiquitous).** `docs/architecture.md` SHALL gain an appended amendment (new ADR or
+amendment section) that:
+1. Cites `qa-report-v2.19.0.md:46/55/70` (Scenario 4) as evidence that MF-2 control (b) **was**
+   live-invoked, distinguishing "no `RAN` stamp in `tests/self-upgrade-firing-controls.md`" from
+   "never fired."
+2. **Explicitly preserves the unchanged obligation** — v3.0 must still demonstrate the controls
+   firing through the second entry point (`self-upgrade`) in re-runnable, `RAN`-stamped form. This
+   amendment corrects a citation, not the underlying design requirement.
+3. Does not edit ADR-095's D9 body or index-row summary bytes; is reachable from the index row (a
+   `Status`-cell pointer, the same mechanism ADR-088/090's amendment used at v2.19.12/.13).
+- **Inspection-class for the "is it reachable" sub-clause** — reachability is a placement judgment
+  (does a reader at the index row find the correction), not a property with an independent negative
+  control; verified by a human/reviewer read, stated as such rather than dressed as executable.
+- **Firing negative control for sub-clause 1:** grep `docs/architecture.md` for
+  `qa-report-v2.19.0.md` inside the ADR-095 region pre-fix → **0** hits (the citation genuinely does
+  not exist yet); post-fix MUST be ≥ 1. A check that currently returns 0 and is required to return
+  non-zero is real, not vacuous.
+
+**AC-ADR095-2 (Ubiquitous).** `docs/roadmap.md:44` (a **living**, explicitly re-derived-each-cycle
+document per its own header — *"Re-derive it from `VERSION` and the tag list at every planning
+cycle rather than editing the sentence around it"* — and therefore **not** subject to the
+append-only constraint that binds `docs/architecture.md`) SHALL be corrected in place to match the
+amended premise.
+- Whether `docs/internal/security/security-review-plan-v3-engine.md` (S7) and
+  `docs/internal/qa/qa-report-plan-v3-engine.md:124` are annotated with a forward pointer to the new
+  amendment, or left standing as historical Phase-2/Phase-5 records with the amendment as the
+  authoritative correction, is **@architect's Phase-1 call — this AC requires a decision be made
+  and recorded, and does not prescribe which.**
+
+---
+
+### 4. `CF-v2.5-F` — the carry-forward register asserts a breach that a 34-day-earlier external event closed
+
+**Re-run, confirmed exactly as briefed, plus verified independently against the live GitHub API
+(not merely repo text):**
+
+```
+gh pr view 521 --repo msitarzewski/agency-agents --json state,mergedAt
+  -> {"state":"MERGED","mergedAt":"2026-06-04T00:27:27Z", ...}
+```
+
+- **Source states only a conditional.** `docs/internal/security/security-audit-v2.5.md:40` (I5):
+  *"60-day acknowledgement window watch carry — if PR #521 has no maintainer response by
+  2026-07-08, escalate to @pm for follow-up cycle."* Repeated at `:58`, `:173`, `:282`. No
+  unconditional obligation, no "51 days," no "never performed" anywhere in the source.
+- **The condition never fired.** PR #521 merged **2026-06-04**, **34 days before** the 2026-07-08
+  trigger date (60-day window opened at the PR's 2026-05-09 filing; merge landed 26 days into it).
+  There was nothing to escalate.
+- **The register asserts the opposite, unsourced.** `docs/internal/carry-forwards.md:223`: *"Stated
+  escalation date 2026-07-08; **51 days past due** at this cycle's base (computed, not estimated).
+  **The escalation it specifies has never been performed.** This is the single most actionable row
+  in the register."* Propagated at `:238`.
+
+**Not in the brief, found this session — the same claim is baked into `docs/architecture.md`
+itself, in ADR-093, at 3 more sites, not 2:**
+
+```
+/usr/bin/grep -n "51.*days\|days.*51" docs/architecture.md
+  116:   | ADR-093 | ... "a stated escalation date passed **51 days** unnoticed" ...
+  15422: "which was **51 days** past due at this cycle's base — computed, not estimated."
+  15557: "...and an escalation date pass by 51 days unnoticed..."
+```
+
+ADR-093 is the register's own stated **Authority** (`docs/internal/carry-forwards.md:3`) and is
+itself append-only (shipped with the same `plan-2026-08-27-v3-engine` cycle, Phase 8 closed) — so
+this defect is not confined to a regenerable derived view; it is embedded in the historical decision
+record the register claims as its source. **This changes the shape of the fix for these 3 sites
+specifically:** they cannot be edited in place (append-only), and they are not "the register" that
+ADR-093 §Decision (1)'s "source wins, register regenerated" rule was written to police — they are
+upstream of it. A correction here is unambiguously an **appended amendment**, the same mechanism as
+Item 3, and could plausibly be the *same* amendment document, since both corrections touch
+`docs/architecture.md` for the same underlying cause (measurement claims from this planning cycle
+that were not independently re-verified before being written into an ADR). @architect decides
+whether to combine them.
+
+**Legality of correcting the 2 register sites (`:223`, `:238`) is genuinely UNSETTLED — read
+ADR-093 §Decision (3) before ruling, it is close but not on point.** ADR-093 (`docs/architecture.md`
+`:15472-15477`) already establishes a precedent that sounds adjacent: *"A status cell that
+contradicts a closure recorded elsewhere in the same file is a defect and is repaired in place...
+the append-only convention protects an accepted-risk row's descriptive prose, it does not require
+the verdict token to stay wrong."* **That precedent does not transfer cleanly:** it was written for
+an internal self-contradiction (an OPEN cell contradicted by a CLOSED declaration **elsewhere in the
+same file**, `docs/risk-register.md`). CF-v2.5-F's defect is a different shape — a factual claim
+falsified by an **external** event (a GitHub PR's real merge date) that is recorded **nowhere** in
+this repo's own documents, not even in the security-audit source the row cites. `docs/spec.md:4-7`
+(ADR-093's own header) states *"the source wins and this file is regenerated"* — but there is no
+source stating "51 days past due, never performed" to defer to; the source states only the
+conditional. So the register's own governing rule may not even apply here (a row cannot defer to a
+source for a claim the source never made), which is the argument for treating this as a permitted
+direct repair rather than a forbidden status edit. **`@architect` settles this at Phase 1** — the AC
+below is written so the finding survives regardless of which way the ruling goes.
+
+**AC-CF25F-1 (Ubiquitous).** All 5 confirmed sites (`docs/internal/carry-forwards.md:223,238` and
+`docs/architecture.md:116,15422,15557`) SHALL, after this cycle, state the facts as sourced: the
+obligation was conditional; the condition (PR #521 unmerged by 2026-07-08) never occurred because
+the PR merged 2026-06-04; therefore no escalation was owed and none was missed. No site may retain
+language implying an unconditional, breached, or overdue obligation.
+- **Firing negative control:** `/usr/bin/grep -rn "51 days\|51-day" docs/ --include='*.md'` →
+  **5** hits pre-fix (reproduced above, all 5 named); MUST be **0** post-fix (or, if the phrase is
+  retained purely as a corrected historical quotation inside an appended amendment explaining what
+  was wrong, it MUST appear only inside quotation/correction framing, never as an assertion in the
+  amendment's own voice — @qa verifies by reading, not by a bare grep-to-zero, since a naive
+  grep-to-zero could be satisfied by deleting the phrase while leaving the underlying false
+  implication ["never performed," "OVERDUE"] intact under different words).
+- **The `docs/architecture.md` sites are appended-amendment-only** (see mechanism above); the
+  `docs/internal/carry-forwards.md` sites' mechanism (in-place repair vs. regenerate-from-corrected-
+  source) is exactly the open question AC-CF25F-2 requires a ruling on.
+
+**AC-CF25F-2 (Inspection-class — no executable negative control; a governance/authority ruling,
+not a mechanical property).** @architect SHALL rule, at Phase 1, and record the ruling with its
+reasoning, on whether correcting `docs/internal/carry-forwards.md:223,238` directly is: (a)
+permitted, on the grounds that ADR-093's "source wins" rule presupposes a source claim to defer to,
+and none exists for "51 days past due / never performed" — so this is not a status edit against a
+source, it is removing an assertion the register itself introduced without one; or (b) forbidden
+without first repairing `security-audit-v2.5.md` (which does not actually contain the false claim,
+only the true conditional) or `docs/architecture.md`'s ADR-093 (which does), and re-deriving the
+register rows from the corrected source. Either ruling is acceptable; an unrecorded ruling is not.
+
+**AC-CF25F-3 (Ubiquitous).** If AC-CF25F-2 rules that a direct repair of `:223`/`:238` is not
+permitted this cycle, the finding SHALL still be recorded (a `CF-` id or an equivalent named note)
+and the row bytes SHALL be left unchanged. Silent inaction and silent editing are both forbidden
+outcomes; only "corrected" or "correctly deferred and named" are.
+
+---
+
+### 5. `docs/owner-tasks.md` — three status cells are stale at the source, and this file ships in every release
+
+**Re-run, confirmed:** `git archive HEAD | tar -tf - | /usr/bin/grep -x "docs/owner-tasks.md"` →
+matches (ships). Negative control: the same command for `docs/spec.md` (which `.gitattributes`
+`export-ignore`s) → no match, exit 1 — proving the archive-membership check discriminates rather
+than matching everything.
+
+**OT-4** (`docs/owner-tasks.md:20`) — status reads *"OPEN — dormant until Rung 1 ships."* Rung 1 is
+v2.19.5 (confirmed: `docs/spec.md:5820` — *"Version: v2.19.5 (PATCH) — pre-assigned by the v2.19.4
+cycle's own collision resolution"*), tagged `v2.19.5` at **2026-08-04** (`git log -1 --format=%ai
+v2.19.5`). **The trigger has fired.** The row's own text names the next event: `sync-agency.yml`'s
+cron re-fires **2026-09-01** (`docs/spec.md:5819`). The status should read armed / awaiting the
+2026-09-01 run, not dormant.
+
+**OT-6** (`docs/owner-tasks.md:22`) — deferred to *"DEFERRED-UNTIL-v2.21-Phase-0."* Confirmed:
+`/usr/bin/grep -c "v2.21" docs/roadmap.md` → **0**. No v2.21 rung exists anywhere in the roadmap
+this deferral could ever come due against. **Negative control on the extractor:**
+`/usr/bin/grep -c "v3.0" docs/roadmap.md` → **13** (a real, in-file milestone, proving the grep
+finds real content and the 0 above is not a broken pattern). The deferral target is dangling.
+Re-anchoring it (to v3.x, to a different rung, or to an explicit "no target yet") is a decision, not
+a mechanical edit — this AC requires the row stop silently pointing nowhere, not a specific new
+target.
+
+**OT-8** (`docs/owner-tasks.md:24`) — status reads *"OPEN"*, framed as a pending to-do: confirm the
+offline-smoke-test scorecard is current before Scope A's three tag pushes (`v2.19.4`, `v2.19.5`,
+`v2.19.6`). Re-run:
+
+| Event | Date |
+|---|---|
+| Last recorded `tests/offline-smoke-test.md` scorecard run | **2026-07-18** (v2.8.0 WS4 — `/usr/bin/grep -n "Run date" tests/offline-smoke-test.md`, one match, no later entry exists) |
+| `v2.19.4` tagged | 2026-08-03 |
+| `v2.19.5` tagged | 2026-08-04 |
+| `v2.19.6` tagged | 2026-08-07 |
+
+All three tags post-date the last scorecard run by 16-20 days, with **no** intervening run recorded.
+The row's own text states the obligation fires **once per tag, three times for this batch**. Framed
+as plain "OPEN," the row reads as a to-do still pending; the dates show it is a **breach that
+already happened three times** — a past fact, not an open task.
+
+**AC-OT4-1 (Ubiquitous, re-worded at Phase 2 gate fold-in, S6).** OT-4's status cell SHALL be
+corrected to reflect that Rung 1 has shipped (tag `v2.19.5`, 2026-08-04) and state that the row is
+ARMED, firing on the next scheduled `sync-agency.yml` cron run — worded against the **condition**,
+not a specific calendar date, so the row does not go stale before it is next reviewed (this repo's
+BINDING *Ambiguous-unit numeric claim* pattern) — replacing "dormant until Rung 1 ships."
+- **Firing negative control, re-anchored to OT-4's own row (Phase 2 finding S6): the original
+  file-wide `grep -c "dormant"` control is unsound.** `docs/owner-tasks.md` contains "dormant" on
+  **two** lines, not one: OT-4 (`:20`, in scope) and OT-7 (`:23`, explicitly out of scope — a
+  different, correct use of the word describing the `sync-agency` ingestion path's own history). A
+  file-wide count would either mandate editing OT-7 (out of scope) or could never reach 0. **Scoped
+  check:** isolate the OT-4 row (`/usr/bin/grep -n '| OT-4 |' docs/owner-tasks.md`), then assert on
+  that line alone. Pre-fix, the isolated OT-4 line contains "dormant" (**1** occurrence on that
+  line); MUST be **0** on that line post-fix. **Companion assertion, proving the fix is row-scoped
+  rather than a blind file-wide deletion:** the isolated OT-7 line's own "dormant" occurrence MUST
+  be unaffected (**1**, unchanged). @qa verifies by reading the corrected sentence against the real
+  tag date, not by either grep alone.
+
+**AC-OT6-1 (Ubiquitous).** OT-6's deferral target SHALL no longer silently name a milestone
+(`v2.21`) absent from `docs/roadmap.md`. Either re-anchor to a real, present milestone, or state
+explicitly that no target milestone currently exists and the row needs re-anchoring at the next
+planning cycle.
+- **Firing negative control:** `/usr/bin/grep -c "v2.21" docs/roadmap.md` → **0** (reproduced
+  above; the deferral names a milestone that isn't in the roadmap it depends on). Post-fix, either
+  the named target IS present in `docs/roadmap.md` (grep for it returns ≥ 1), or the row explicitly
+  states it has no target — one of the two, never silence.
+
+**AC-OT8-1 (Ubiquitous).** OT-8's status cell SHALL be corrected from a pending-to-do framing to a
+past-breach framing: the scorecard obligation fired 3 times (once per tag: `v2.19.4`, `v2.19.5`,
+`v2.19.6`) and was discharged 0 times, evidenced by the last recorded run (2026-07-18) pre-dating
+all three tags with no intervening entry. This AC is about **status accuracy only** — it does not
+require a new smoke-test run be performed as part of this cycle (that is a separate remedy, out of
+scope here — see below).
+- **Firing negative control:** `/usr/bin/grep -n "Run date" tests/offline-smoke-test.md` → 1 entry,
+  2026-07-18, reproduced above; cross-checked against the 3 tag dates (2026-08-03/04/07), all later
+  with no entry between them. A future correct state would show either a new dated entry after
+  2026-08-07 (discharged) or explicit language naming the 3 misses (undischarged, recorded
+  honestly) — the current plain "OPEN" text does neither.
+
+---
+
+## Technical Constraints
+
+- **Ceremony: Tier A** (this repo's own convention — `.github/workflows/quality.yml` is touched).
+  Worktree branch (already cut: `release/v2.19.14-ci-parser-and-premise`) + PR + one @security Guard
+  Change Summary for the CI-parser change specifically (Item 1). Never fast-forward — squash-merge
+  only, after owner approval on the GCS.
+- **`docs/architecture.md` is append-only.** Items 3 and 4 both require new, appended content
+  (amendment section(s) or a new ADR) — never an in-place edit of ADR-093's or ADR-095's body or
+  index-row summary text. Only an index-row `Status` cell may be edited in place, to add a
+  reachability pointer (B0/v2.19.13 precedent).
+- **`docs/roadmap.md` is explicitly a living document**, self-declared as re-derived every planning
+  cycle (its own header, `docs/roadmap.md:5`) — unlike `docs/architecture.md`, its stale claim
+  (Item 3, AC-ADR095-2) is corrected in place, not appended.
+- **`docs/internal/carry-forwards.md`'s correction mechanism is the open question AC-CF25F-2
+  binds** — do not let @dev pick a mechanism at Phase 4 that Phase 1 didn't rule on.
+- **Stay INLINE in `quality.yml`** for the Item 1 fix — do not extract the tool-list parser into a
+  file under `scripts/`. (This repo's own ADR-090 forbids new guard logic living under `scripts/`;
+  this AC's fix is a small in-place pipeline correction, not new guard machinery, but the
+  inline-only constraint applies regardless.)
+- **Item 2's fix touches `scripts/install-pre-commit.sh`**, which IS an existing file under
+  `scripts/` (not new guard logic) — editing it in place is unaffected by the inline-only rule
+  above.
+- **`docs/owner-tasks.md` ships in the release archive** (verified, not `export-ignore`d) — Item 5's
+  corrections are user-visible, not maintainer-only.
+
+## Acceptance Criteria
+
+- [ ] **AC-PARSE-1** — 2-item and 3-item `tools:` fixtures both tokenize correctly and validate
+      independently; pre-fix RED and post-fix GREEN both reproduced and recorded by @qa.
+- [ ] **AC-PARSE-2** — multi-line `tools:` form still rejected, with the MF-S1 message specifically,
+      never the generic `invalid token` fallthrough naming `tools:`.
+- [ ] **AC-HOOK-1** — all 5 sites in `scripts/install-pre-commit.sh` reference `.markdownlint.jsonc`;
+      the installed hook applies the shipped ruleset (MD013/MD033 disabled), not tool defaults;
+      `markdownlint-cli`'s JSONC-parsing behavior verified by @architect/@dev before the fix ships.
+- [ ] **AC-ADR095-1** — `docs/architecture.md` gains an appended amendment citing
+      `qa-report-v2.19.0.md` Scenario 4; preserves the still-binding second-entry-point obligation;
+      no in-place edit to ADR-095's body; reachable from the index row.
+- [ ] **AC-ADR095-2** — `docs/roadmap.md:44` corrected in place; disposition of the 2
+      `docs/internal/` reports (S7, qa-report-plan-v3-engine.md:124) decided and recorded by
+      @architect.
+- [ ] **AC-CF25F-1** — all 5 confirmed "51 days past due / never performed" sites (2 in
+      `carry-forwards.md`, 3 in `docs/architecture.md`'s ADR-093) no longer assert an unconditional,
+      breached obligation.
+- [ ] **AC-CF25F-2** (inspection-class) — @architect's Phase-1 ruling on the legality of a direct
+      register repair is recorded, with reasoning.
+- [ ] **AC-CF25F-3** — if the direct-repair argument fails, the finding is recorded and
+      `carry-forwards.md:223,238` are left byte-unchanged.
+- [ ] **AC-OT4-1** — OT-4 no longer states Rung 1 is undelivered; row is worded ARMED, firing on
+      the next scheduled `sync-agency.yml` cron run (condition-worded, not a hardcoded date).
+- [ ] **AC-OT6-1** — OT-6's deferral target either resolves in `docs/roadmap.md` or is explicitly
+      flagged as unanchored.
+- [ ] **AC-OT8-1** — OT-8 states the 3-tag scorecard breach as a past fact, not a pending to-do; no
+      new smoke-test run is required by this AC.
+
+## Edge Cases (4 categories)
+
+1. **Boundary/count variance in generalized fixes** — AC-PARSE-1's requirement to prove both N=2
+   and N=3, specifically to catch a fix that special-cases the briefed 2-item example without
+   generalizing; the unbriefed `tools: []` (N=0) case, flagged for Phase-1 scoping rather than
+   silently inherited.
+2. **Tool/version divergence between two parsers of the "same" file family** —
+   `markdownlint-cli` (installed hook) vs. `markdownlint-cli2` (CI) reading the same `.jsonc`
+   config; unverified whether both actually parse it the same way.
+3. **Append-only vs. living-document mismatch across a single defect chain** — Items 3 and 4 both
+   touch `docs/architecture.md` (append-only, amendment-only) and, respectively, `docs/roadmap.md`
+   (living, in-place) and `docs/internal/carry-forwards.md` (mechanism unsettled) — the same class
+   of "past due" claim gets three different legitimate repair mechanisms depending on which file
+   it sits in, and conflating them is the failure mode this spec is written to prevent.
+4. **A record with no RAN stamp vs. a record that never fired** — Item 3's core distinction; also
+   latent in Item 5/OT-8 (a status column reading "OPEN" is structurally unable to distinguish
+   "not yet done" from "done and missed 3 times" without a date comparison, which is exactly why
+   OT-8's fix requires the dates be stated, not merely the token changed).
+
+## Success Metrics
+
+- **Primary:** a contributor authoring a second-tool skill (`tools: [claude-code, copilot]`) is
+  accepted by CI on a truly valid declaration, and a contributor running the installed pre-commit
+  hook gets the same lint ruleset CI enforces, not silent defaults.
+- **Secondary:** a future reader of ADR-095 or the carry-forward register acts on what actually
+  happened (evidence checked, conditions correctly evaluated) rather than re-propagating an
+  incomplete search a fourth and fifth time; an owner scanning `docs/owner-tasks.md` sees which
+  rows are armed, breached, or dangling without cross-referencing tag dates themselves.
+
+## Assumptions [confidence]
+
+- [CONFIRMED] All five items' core facts, re-run this session against `a546292` /usr/bin/grep BSD
+  2.6.0-FreeBSD, `zsh`, plus one live `gh pr view` call against GitHub for PR #521's real merge
+  date.
+- [CONFIRMED] All 29 shipped skills currently declare a single-token `tools: [claude-code]` — Item
+  1's defect is real but has never fired in production.
+- [CONFIRMED] `docs/owner-tasks.md` ships in the release archive (git-archive-verified, with a
+  negative control against an `export-ignore`d file).
+- [UNTESTED] Whether `markdownlint-cli` (classic, v1) correctly parses `.markdownlint.jsonc`'s
+  comment syntax via `--config` — not installed on the authoring host this session; binding open
+  question for AC-HOOK-1.
+- [UNTESTED] Whether combining Items 3 and 4's `docs/architecture.md` amendments into one document
+  is preferable to two separate ones — a Phase-1 authoring choice, not a requirements question.
+- [CONFIRMED] The falsified-premise chains in Items 3 and 4 are independent of each other (different
+  source facts, different files of origin) despite both landing in `docs/architecture.md` and both
+  involving a "something never happened" claim — verified by reading both in full rather than
+  assuming shared root cause from surface similarity.
+
+## Out of Scope (v2.19.14)
+
+- **MF-2 "first fire" through `self-upgrade`, or any new `RAN` stamp** — explicitly deferred to
+  v3.0 per the cycle brief; this cycle corrects the *evidence chain*, not the underlying gap.
+- **The other five `CF-v2.5-*` ids** (`A`, `B`, `D`, `E`, `G`) — this cycle's carve-out is scoped to
+  `CF-v2.5-F` only, per the brief.
+- **`docs/risk-register.md`** — nothing here is promoted into it.
+- **Branch protection / repo-settings changes** — owner-only, per standing policy; not touched even
+  though OT-7 (already OPEN, unrelated) sits adjacent to this cycle's OT-4/6/8 edits in the same
+  file.
+- **Actually running a new `tests/offline-smoke-test.md` scorecard pass** — OT-8's fix here is
+  status-accuracy only; performing the missed test is a separate, likely owner-timed, action.
+- **Re-anchoring OT-6 to a specific new milestone** — this cycle requires the dangling reference be
+  named, not resolved to a specific target.
+- **`docs/architecture.md`'s existing, already-correct S7 finding** about `SECGATE-B1`'s file count
+  (3 vs. 4, `docs/roadmap.md` being the 4th) — that repair already shipped; not reopened here.

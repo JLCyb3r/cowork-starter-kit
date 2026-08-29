@@ -113,9 +113,12 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-090 | **Citations are anchored to headings, written in a backtick-delimited form, and the anchor is CI-enforced by derivation from the citing file** (v2.19.11 AC-2 + AC-3) — the repo-wide convention minted to close the `CONTRIBUTING.md:129` class, where a 33-line insertion silently broke 53 line-pinned citations and 31 green CI jobs saw none of it. Four decisions: **(1)** a citation is `` `<file> § <unique heading text>` ``, and **the backticks are load-bearing, not cosmetic** — they terminate the anchor so the guard's `` [^`]+ `` extraction cannot run greedily to end-of-line (the un-delimited form yielded `N_DISTINCT=5` and red-lined CI on a *correctly executed* de-pin). **(2)** the CI guard **derives** the expected anchor from the citing file and never hardcodes it in the workflow — the hardcoded form lets an author drop a qualifier from one citation while both "zero stale pins" and "heading is unique" stay GREEN and the citation resolves to nothing. **(3)** the guard is an **inline step**, never a file under `scripts/` (TIER-4), and asserts three things: exactly 1 distinct cited anchor, cited exactly `EXPECTED_CITES` times, resolving to exactly 1 heading. **(4)** every pipeline feeding an assertion carries `\|\| true`, because `grep` exits 1 on zero matches and an unguarded assignment under `set -euo pipefail` aborts the step **undiagnosably** — the ADR-089 defect class, found inside this guard's own first draft. Companion: the AC-8b/AC-9b per-row registry gate ships as **one step, one parser copy** (self-test and assertion sharing a single `check_row()`), which owes no `PARSER_COPIES`-style pin and lets the self-test exercise the same code path the assertion runs. `Reusability: candidate-constituent` | ACCEPTED (v2.19.11) |
 | ADR-091 | **The reference-freeze control derives its population by rename-pairing, not pathspec exclusion** (v2.19.12 AC-7) — excluding a rename's *destination* with `:(exclude)` does not hide the pair, it **prevents the pairing**, so every movee renders as a whole-file deletion while the addition half is hidden. Executed against a real simulated end-state tree, the pathspec form returned **35 violations on a completely correct cycle** and was simultaneously **blind** to a citation removal inside `docs/internal/` (diff byte-identical in size with and without it) — both halves of the symmetric difference non-empty, found only when the partition was finally run after four review rounds. Five decisions: **(1)** exclude pairs by `--find-renames=100%` over the whole repo with **no `:(exclude)`** (diff shrinks sharply — magnitude deliberately unpinned, three measurers got three pairs; `docs/internal/**` stays in population); **(2)** partition **statefully**, taking `^-` attribution from `--- SRCX/` and `^+` from `+++ DSTX/` — a control that strips headers then rules on "which file" is not computable, and one that reads both sides off `+++` reports every deletion against `/dev/null`; **(3)** permit additions from a **finite set derived from `CYCLE_VERSION`** (four append-only surfaces, `verify-ledger-annotations.sh`, and the cycle's own `design-v<CV>.md` / `qa-report-v<CV>.md` / `security-review-v<CV>.md` / `security-audit-v<CV>.md`) — **corrected at Phase 2.1 from an earlier `--- /dev/null` form that permitted additions in ANY new file, which passed a public `docs/report-index.md` republishing all 14 pre-move paths**; drift now fails CLOSED and loud instead of open and silent; **(4)** the `verify-ledger-annotations.sh` carve-out is safe **only because AC-5 asserts that file positionally** — the dependency is part of the decision and no leg may be dropped; **(5)** clean → 0 (safety), violation → 1, broken inventory → 3 (diagnosis). Verified both directions: 35 → **0** false violations, and four half-B constructions **all caught** (public index file, removal inside `docs/internal/`, new `tests/fixtures/` file, modified movee); two negative controls fire and all three exit codes were observed. Introduces a real coupling — the control now shares AC-6's dependence on rename detection, so `diff.renameLimit` exhaustion degrades **both** at once. `Reusability: candidate-constituent` | ACCEPTED (v2.19.12) |
 | ADR-092 | **A citation resolves by whole-line equality, and the guard that proves it counts an enumerated, scoped population it never re-expands** (v2.19.13 S14/S15 + B0) — closes a four-generation defect chain in which each prescription was authored by whoever had just corrected the previous one. Six decisions: **(1)** a citation resolves iff `level-prefix + anchor` equals a heading line **in full** (`grep -cxF` or `awk '$0 == s'`); `index($0,s)==1` (prefix test — **greens a rotted citation, silently**), bare `grep -cF` (substring — **reddens a correct file**) and interpolated `grep -cE` (parentheses become a capture group — **returns 0 on a correct file**) are all forbidden, and **a control that discriminates equality from prefix matching must DELETE a suffix, not add one** — both pre-existing negative controls added characters and were blind to the defect for two review rounds. **(2)** the population is an explicit enumeration, **never a glob**, because this repo records historical security-test payloads *in the citation form* whose anchors are command-substitution strings — **never glob-and-resolve**; a discovered anchor is only ever a quoted argument to a fixed-string matcher. **(3)** the growth tripwire pins a **count of files** over a population **scoped to exclude `docs/` and `tests/`** — a pin whose population includes artifacts the cycle itself creates is **not a control, it is a scheduled false alarm**. **(4)** Class A/B is a **role** test, file- and ships-agnostic; ambiguity resolves to **Class A**; and Class A is an **obligation, not an edit method** — inside an append-only record it is discharged by a superseding cross-reference, never an in-place edit, or the tie-breaker silently mandates rewriting history. **(5)** contributor-derived text is **sanitized at failure sinks, dropped at success sinks**, with a new variable, fail-fast loop discipline, an **explicitly pinned `LC_ALL=C`** (the collapse is locale-dependent — same input, two answers) and an **ASCII-only** lossy marker, because **a marker that can be silently damaged cannot signal silent damage**. **(6)** its control needs **two legs** — injection-shape absent *and* marker still present — since a colon-free marker survives sanitization by construction and a single absence assertion could never go GREEN. `Reusability: candidate-constituent` | ACCEPTED (v2.19.13) |
-| ADR-093 | **The carry-forward ledger is one visible register, and a status column that contradicts its own file is a defect, not a convention** (`plan-2026-08-27-v3-engine`) — deferred work was tracked across seven surfaces with no aggregate, so a whole family sat unowned for 30+ releases and a stated escalation date passed **51 days** unnoticed. Four decisions: **(1)** `docs/internal/carry-forwards.md` is a **derived, regenerable view, never a second authority** — where it disagrees with a source surface, **the source wins and the register is regenerated**, because a second authority would reproduce the very defect it exists to close. **(2)** it **states its own population definition in its own header** — a count without a stated population is not a measurement. **(3)** a status cell that contradicts a closure recorded elsewhere in the same file is a **defect repaired in place**: the append-only convention protects an accepted-risk row's *descriptive prose*, it does **not** require the verdict token to stay wrong — proven field-by-field, only the Status cell of 2 rows changed and the `OPEN` count now reads **7**, not 9. **(4)** an id cited only in **elided** form (`-AC7-CI`, prefix omitted) is **invisible to every census by construction**, and that is a finding about the citation, not the census. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`) |
+| ADR-093 | **The carry-forward ledger is one visible register, and a status column that contradicts its own file is a defect, not a convention** (`plan-2026-08-27-v3-engine`) — deferred work was tracked across seven surfaces with no aggregate, so a whole family sat unowned for 30+ releases and a stated escalation date passed **51 days** unnoticed. Four decisions: **(1)** `docs/internal/carry-forwards.md` is a **derived, regenerable view, never a second authority** — where it disagrees with a source surface, **the source wins and the register is regenerated**, because a second authority would reproduce the very defect it exists to close. **(2)** it **states its own population definition in its own header** — a count without a stated population is not a measurement. **(3)** a status cell that contradicts a closure recorded elsewhere in the same file is a **defect repaired in place**: the append-only convention protects an accepted-risk row's *descriptive prose*, it does **not** require the verdict token to stay wrong — proven field-by-field, only the Status cell of 2 rows changed and the `OPEN` count now reads **7**, not 9. **(4)** an id cited only in **elided** form (`-AC7-CI`, prefix omitted) is **invisible to every census by construction**, and that is a finding about the citation, not the census. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`). **§Context AMENDED by ADR-097 (v2.19.14) — two figures in this row's summary and in §Context are falsified: the "51 days past due" premise (the obligation was CONDITIONAL and the condition never fired — PR #521 merged 2026-06-04, 34 days before the trigger) and the "2026-05-11" disposition date (0 occurrences in the cited file). This summary text is FROZEN and is knowingly left uncorrected per the house index-row rule; read ADR-097. All four Decisions stand unchanged.** |
 | ADR-094 | **A carry-forward id is scoped to its origin document, and the series that gets renumbered is the one with the smaller citation surface** (`plan-2026-08-27-v3-engine`) — five ids (`CF-v2.5-A`..`-E`) each named **two unrelated work items** across 36 tagged releases, with no cross-reference either way. Four decisions: **(1)** renumber the **architecture** series to `CF-v2.5-ARCH-A`..`-E` (**6 sites in 1 file**) and leave the security/QA series **byte-unchanged** at **61 sites across 6 files**, two of them append-only records; the ~10:1 ratio decided the direction, and a **negative-controlled** filter (the same filter returns 3 against the origin file) proved `docs/retro.md` cites the renumbered series **zero** times, so the two series cannot corrupt each other. **(2)** the form was chosen **by measurement, not taste** — the natural-looking `CF-ARCH-v2.5-1` does **not match this project's own id-sweep regex**, so adopting it would have made the renumbered ids unfindable by the very census they feed. **(3)** STANDING FORWARD-ONLY RULE: a `CF-` id is **always cited with its origin document** and never elided — recorded in this file because ADR-090 and ADR-092 already make it the home of citation conventions, and splitting form from scope would recreate the seam-with-no-owner failure ADR-093 documents. **(4)** a migration note at the renumbering site keeps the old ids findable. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`) |
-| ADR-095 | **The spawn gate is staged-then-atomic, because a per-file confirmation loop on a generated tree is a relaxation disguised as repetition** (v3.0 — **resolves `KDQ-SPAWN-SEC`**, carried undesigned across 8 forward-references in 4 files since the HLD). Nine decisions. The gate is the **Staged Spawn Ceremony**: stage the whole tree **off-live**, verify on a **provenance leg** (pure reuse of the v2.18/v2.19 lock + registry `sha256` machinery) and a **composition leg** (the only genuinely new mechanism, scoped to exactly what provenance *cannot* answer — manifest completeness, dangling references, frontmatter, instruction collisions), take **one** confirmation, then **one atomic rename** to go live. Per-file confirmation is **rejected on principle, not cost**: Loop 1's verifier is **diff-shaped** and a generated tree **has no referent**, so N repetitions of a check whose precondition is unmet is **confirmation theater** — it satisfies the letter of "exceed the apply gate" while breaking its intent. It **exceeds** v2.16 because the gate sits **ahead of any live byte** and a partially-live tree is **structurally unreachable**; failure is a **true no-op**, and the rejected tree is **quarantined, never deleted**, since rollback-by-deletion of a *creation* would itself be destructive. **`SF-2`**'s ordering becomes **structural rather than procedural** (a rename cannot interleave); **`AC-FWDCOMPAT`** lands as a buildable `cowork.space-card.json` + `templates/cowork.space-card.template.json`, and **corrects the HLD's co-location assumption** so a migrated space becomes hub-visible by **gaining a card, with nothing moved**; **`AC-UPGRADE-4` leg (a)** is worded against the **obligation**, not the `SECGATE-B1` string that revealed it — and carries a **binding predicate**: leg (a) has never fired **once**, through either entry point (MF-2 control (b) has no `RAN` entry against 13 that do), so v3.0 must establish a first-entry-point baseline before it can demonstrate a second. **Phase 2 additions (S1-S13):** **D8a** states that the migration path is governed by the **v2.16 gate, not the ceremony** — v3.0 ships **two self-modifying write paths with different gate strengths**, and the weaker one installs the spawn capability; accepted **solely** because the migration is additive-only and therefore has referents to diff against, void the moment it modifies existing user content. **D1a** specifies the staging and quarantine paths (outside every space's write scope, same filesystem, unpredictable suffix, target-collision pre-check, verify→rename immutability, quarantine invalidates the card). **D1.3** restores the dropped **privilege-differential check (C1)** as the leg's one security control and renames the undefined "instruction-collision" to **C5 duplicate-directive detection** with a decision procedure and a fail-closed criterion, declaring the semantic-contradiction residue as an owned gap. **D7a** gives cards a flat enumerable registry and constrains `space_path`. **D3** gains the axis SSC **loses** — informed consent. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`) |
+| ADR-095 | **The spawn gate is staged-then-atomic, because a per-file confirmation loop on a generated tree is a relaxation disguised as repetition** (v3.0 — **resolves `KDQ-SPAWN-SEC`**, carried undesigned across 8 forward-references in 4 files since the HLD). Nine decisions. The gate is the **Staged Spawn Ceremony**: stage the whole tree **off-live**, verify on a **provenance leg** (pure reuse of the v2.18/v2.19 lock + registry `sha256` machinery) and a **composition leg** (the only genuinely new mechanism, scoped to exactly what provenance *cannot* answer — manifest completeness, dangling references, frontmatter, instruction collisions), take **one** confirmation, then **one atomic rename** to go live. Per-file confirmation is **rejected on principle, not cost**: Loop 1's verifier is **diff-shaped** and a generated tree **has no referent**, so N repetitions of a check whose precondition is unmet is **confirmation theater** — it satisfies the letter of "exceed the apply gate" while breaking its intent. It **exceeds** v2.16 because the gate sits **ahead of any live byte** and a partially-live tree is **structurally unreachable**; failure is a **true no-op**, and the rejected tree is **quarantined, never deleted**, since rollback-by-deletion of a *creation* would itself be destructive. **`SF-2`**'s ordering becomes **structural rather than procedural** (a rename cannot interleave); **`AC-FWDCOMPAT`** lands as a buildable `cowork.space-card.json` + `templates/cowork.space-card.template.json`, and **corrects the HLD's co-location assumption** so a migrated space becomes hub-visible by **gaining a card, with nothing moved**; **`AC-UPGRADE-4` leg (a)** is worded against the **obligation**, not the `SECGATE-B1` string that revealed it — and carries a **binding predicate**: leg (a) has never fired **once**, through either entry point (MF-2 control (b) has no `RAN` entry against 13 that do), so v3.0 must establish a first-entry-point baseline before it can demonstrate a second. **Phase 2 additions (S1-S13):** **D8a** states that the migration path is governed by the **v2.16 gate, not the ceremony** — v3.0 ships **two self-modifying write paths with different gate strengths**, and the weaker one installs the spawn capability; accepted **solely** because the migration is additive-only and therefore has referents to diff against, void the moment it modifies existing user content. **D1a** specifies the staging and quarantine paths (outside every space's write scope, same filesystem, unpredictable suffix, target-collision pre-check, verify→rename immutability, quarantine invalidates the card). **D1.3** restores the dropped **privilege-differential check (C1)** as the leg's one security control and renames the undefined "instruction-collision" to **C5 duplicate-directive detection** with a decision procedure and a fail-closed criterion, declaring the semantic-contradiction residue as an owned gap. **D7a** gives cards a flat enumerable registry and constrains `space_path`. **D3** gains the axis SSC **loses** — informed consent. `Reusability: candidate-constituent` | ACCEPTED (`plan-2026-08-27-v3-engine`). **D9's EVIDENCE CLAUSE AMENDED by ADR-096 (v2.19.14) — "leg (a) has never fired ONCE, through either entry point" is FALSIFIED: the fire is recorded at `docs/internal/qa/qa-report-v2.19.0.md:46/55/70` (Scenario 4, filesystem/MD5-verified), it is only the `RAN` stamp that is missing. D9's CONCLUSION IS UNCHANGED AND STILL BINDING — v3.0 must still demonstrate the controls firing through the SECOND entry point in re-runnable, `RAN`-stamped form. This summary text is FROZEN; read ADR-096.** |
+| ADR-096 | **A re-run in the same population is not an independent check** (v2.19.14) — **amends ADR-095 D9's EVIDENCE CLAUSE only; D9's conclusion is unchanged and still binding.** D9 inferred *"leg (a) has never fired ONCE, through either entry point"* from MF-2 control (b) carrying no `RAN` stamp. The stamp is genuinely absent — **the fire is recorded elsewhere**, at `docs/internal/qa/qa-report-v2.19.0.md:46/55/70` (Scenario 4, filesystem/MD5-verified). **Three authors reproduced the error**, the last under a heading titled *"Re-Run, Not Trusted"*, because all three re-ran the same query over the same corpus: the file that **stamps** controls, never the family that **reports** outcomes — and the inference silently crossed a label boundary (MF-2 control (b) → `AC-UPGRADE-4` leg (a)) that the search population did not cross with it. Replaces D9's two-state premise with **three** states — *never fired* / **fired, unstamped (the actual state)** / *fired and stamped* — so v3.0's leg-(a) work changes in kind from **ESTABLISH to STAMP-AND-ADJUDICATE**, a reduction in work and none in obligation. **Deliberately refuses to adjudicate** whether Scenario 4 discharges control (b) as written (control (b) names `self-upgrade`; Scenario 4 drove `self-apply`) — settling it here would substitute a fresh unverified judgment for the one being corrected. Neither `docs/internal/` report is annotated: they are closed-cycle records whose truth-value is indexed to their own date, and *the remedy for propagation is not more propagation*. `docs/roadmap.md:44` is corrected **in place** on document-class grounds (0 occurrences of `append-only` in that file; it is a forward-binding instruction, not a record of a past moment) — explicitly **not** on the header's re-derive instruction, which is scoped to the version line and names `VERSION` + the tag list as its source. `Reusability: candidate-constituent` | **ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1)** |
+| ADR-097 | **A register cannot repair a claim it authored without a source — the source is created first, then the row is re-derived** (v2.19.14) — **amends ADR-093 §Context; none of its four Decisions is disturbed.** Two figures are false: the *"51 days past due"* premise (`CF-v2.5-F`'s obligation was **conditional** — *"escalate if PR #521 unmerged by 2026-07-08"* — and PR #521 **merged 2026-06-04**, 34 days before the trigger, 26 days into a 60-day window, so **nothing was ever owed**; the arithmetic is correct and irrelevant) and the *"2026-05-11"* disposition date (**0** occurrences in the cited `qa-report-v2.6.0.md`; control `2026-05-10` → 14). Rules on `AC-CF25F-2`: **a direct repair of the register is FORBIDDEN** — the *"source is silent, so the source-wins rule does not fire"* argument **proves too much**, since it would license the register to author and amend freely, which is the *second authority* ADR-093 §Decision (1) exists to forbid; and ADR-093 §Decision (3) does **not** transfer, its predicate being an **intra-file** contradiction where this is external falsification. **A re-derivation is REQUIRED instead**, and the **ordering is the ruling**: this ADR is created as the missing source, and only then are `carry-forwards.md:223`/`:238` re-derived from it — with §Decision (3)'s *"Original status text, retained verbatim"* mechanism adopted even though its authorization is not. **`CF-v2.5-ARCH-D` is NOT discharged** (its venue is the v3.0 gate); only its falsified rationale is re-derived, its input recorded — the contributed file survives upstream **renamed** to `project-management/project-management-meeting-notes-specialist.md`. `Reusability: candidate-constituent` | **ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1; §Decision (2)'s re-derivation ordering is now satisfied — this ADR is ACCEPTED before `carry-forwards.md:223`/`:238` are re-derived from it, per Phase 4)** |
+| ADR-098 | **A vocabulary gate authorizes by fixed-string membership, never by regex match — and the change that widens a gate must harden it in the same commit** (v2.19.14, **Tier A**) — the buildable design for cycle Items 1, 2 and 5, minted at Phase-1 rework after finding **S1 (CRITICAL)** established that these rulings existed only in a chat return and **the merge-gate change had nothing reviewable**. `MF-3` carries **three** defects, not one: the briefed tokenizer collapse (`tools: [a, b]` → `ab`), plus **two live authorization bypasses** — `grep -qw "$token"` treats the token as a **BRE** and bounds the *match* rather than the list entry (`code`, `claude`, `claude.code`, `.*`, `cursor*` all **ACCEPT**; `emacs` and Cyrillic `сursor` reject), and unquoted `for token in $TOKENS` performs **pathname expansion** (`c?p?l?t` → **ACCEPT** once a file named `copilot` exists — **in `bash`, which CI runs; it does NOT reproduce in `zsh`**). Both are latent only because 29/29 skills declare one token, and **`AC-PARSE-1` is precisely what makes them reachable**. **@security's proposed `grep -qxF --` is REFUTED**: against the space-separated `ALLOWED` it rejects *every* legitimate token and would have red-lined CI repo-wide; a POSIX **`case` membership test** is adopted instead (no change to `ALLOWED`, no subprocess, no regex/locale surface, and the quoted token is **not re-globbed** — proven with three inputs that pass iff it were). `set -f` is scoped to the **token loop only**, since the enclosing `skills/*/SKILL.md` glob is required and disabling it step-wide would make MF-3 **pass vacuously**. Validated 13-row current-vs-candidate matrix with both directions of negative control, and **29/29 production skills PASS**. Also: `markdownlint-cli`'s `.jsonc` auto-discovery is **version-conditional** (0.27.1/0.31.1 → defaults; 0.32.2/0.45.0/0.49.1 → applied), correcting an unconditional Phase-1 claim; and **`AC-CF25F-1`'s control is falsified and non-discriminating** (5→0 is 23 at branch tip, names no base, and goes GREEN on a cosmetic edit that leaves *"ORPHANED — OVERDUE … never been performed"* standing) — replaced by a four-assertion control proven to go RED on that same edit. `Reusability: candidate-constituent` | **ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1 rework; Tier A, Guard Change Summary owed alongside the PR)** |
 
 ---
 
@@ -16100,5 +16103,815 @@ there is no baseline to compare against. **Both halves are now bound explicitly*
   firing negative controls that convert every claim in D1 through D3 into evidence, in the per-skill
   firing-controls form under `tests/` this project already uses; until those exist and are recorded with a
   dated RAN entry, v3.0's claim to "exceed the v2.16 gate" is a design intention, not a proven property.
+
+---
+
+## ADR-096: A re-run in the same population is not an independent check — ADR-095 D9's evidence clause is corrected, its obligation is not (v2.19.14)
+
+**Status:** ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1, 2026-08-29T07:34:00Z; Phase 1's value corrected −4h from a local-time reading mislabelled `Z` in the original, per Phase 6 audit finding A7 — this host's real UTC offset is UTC+4, verified via `date`/`date -u` at correction time, not the audit's own stated CEST/UTC+2) · **Reusability:** candidate-constituent
+**Amends:** ADR-095 §Decision D9 — **evidence clause only.** ADR-095's own text is NOT rewritten.
+
+> **Gate history (was PROPOSED — NOT IN FORCE at Phase 1; owner-APPROVED at the Phase 3 gate,
+> 2026-08-29, per `docs/internal/security/security-review-v2.19.14.md`'s Gate disposition — this
+> banner is retained, unedited, as the record of why the ADR shipped PROPOSED across the gate.)**
+>
+> **Why PROPOSED rather than ACCEPTED.** This record corrects a clause inside an ACCEPTED ADR and
+> changes what v3.0 owes about `AC-UPGRADE-4` leg (a). Recording that as in-force before the owner
+> gate would place a correction in the index carrying the same unreviewed authority as the claim it
+> corrects — the error this ADR diagnoses, repeated one level up. **House precedent: ADR-088**, minted
+> ACCEPTED and downgraded to PROPOSED rather than left asserting something not yet true; and ADR-028,
+> minted PROPOSED in v2.3.0 and flipped in v2.5.
+>
+> **What is NOT suspended by this status.** The evidence in §Context — the four quoted sites in
+> `qa-report-v2.19.0.md` and `tests/self-upgrade-firing-controls.md` — is measurement, not decision,
+> and reproduces at `a546292` whatever this ADR's status. **ADR-095 D9's conclusion remains in force
+> throughout:** v3.0 must still demonstrate the controls firing through the second entry point. Only
+> this ADR's own rulings await the gate.
+
+### Context
+
+ADR-095 D9 states, as a **BINDING PREDICATE** on `AC-UPGRADE-4-LEGA`, that *"leg (a) has never fired
+ONCE, not merely never through a second entry point."* The evidence offered is a single observation:
+MF-2 **control (b)** in `tests/self-upgrade-firing-controls.md` carries **no `RAN` entry**, against 13
+that do.
+
+**The stamp is genuinely absent. The fire is recorded elsewhere.** Re-run this cycle against
+`a546292`, `/usr/bin/grep` (BSD grep 2.6.0-FreeBSD, absolute path — this repo's plain `grep` is a
+ugrep 7.8.4 shim that under-counts), shell `zsh`:
+
+| Site | Text, quoted as found |
+|---|---|
+| `docs/internal/qa/qa-report-v2.19.0.md:46` | section heading *"Live-invocation — MF-2(b) and AC-UPGRADE-3(c) (the two items @dev flagged, honestly un-exercisable pre-implementation)"* |
+| `docs/internal/qa/qa-report-v2.19.0.md:55` | Scenario 4 — *"MF-2(b), the harder one: new machinery FAILS verification under the OLD gate… the swap does not occur; old machinery (MD5 unchanged…) stays live. **Verified via filesystem**, not narrated."* |
+| `docs/internal/qa/qa-report-v2.19.0.md:70` | summary row — *"MF-2 (3 firing controls) \| PASS — see §2. (a)/(c) mechanically classifiable; **(b) live-invoked.**"* |
+| `tests/self-upgrade-firing-controls.md:97-108` | control (b), no `RAN` entry — **re-confirmed, not disputed** (13 `RAN` in file; negative control on the extractor: `DIDNOTRUN` → 0) |
+
+All four reproduce at HEAD and at `ff0c44c`, the base the authors were reading.
+
+**Three independent authors reached the same false conclusion**, each having applied this repository's
+own re-verification discipline by name: `@architect` (ADR-095 D9), `@security`
+(`docs/internal/security/security-review-plan-v3-engine.md:658-659`, offered as *"one strengthening"*),
+and `@qa` (`docs/internal/qa/qa-report-plan-v3-engine.md:124`) — the last under a heading titled
+**"Re-Run, Not Trusted."**
+
+**The generative fault is a population fault, not a measurement fault.** Every one of the three re-ran
+the measurement *correctly*. What none re-derived was the **population**: all three searched
+`tests/self-upgrade-firing-controls.md`, the file that **stamps** MF-2 controls, and none searched the
+`docs/internal/qa/` report family, the file that **reports** `AC-UPGRADE-4` leg (a) outcomes. The
+inference also silently **crossed a label boundary** — from *MF-2 control (b)* (a control id) to
+*`AC-UPGRADE-4` leg (a)* (an AC id) — and the search population did not cross with it. A re-run that
+re-executes the same query over the same corpus reproduces the corpus's blind spots with full
+confidence, three times in a row.
+
+This sits directly alongside ADR-093 §Decision (2) (*a count without a stated population is not a
+measurement*) and this repository's BINDING *check-that-cannot-fail* pattern. It is the third member
+of that family and the one neither of the first two covers: those govern the **instrument**; this one
+governs the **corpus the instrument is pointed at**.
+
+### Decision
+
+**(1) D9's evidence clause is superseded. Its conclusion is not, and is restated here unchanged.**
+It remains binding that **v3.0 must demonstrate the Loop 1 behavioral controls firing through the
+SECOND entry point (`self-upgrade`), in re-runnable, `RAN`-stamped form.** Nothing in this ADR
+discharges, weakens, defers, or narrows that obligation. This ADR corrects a citation. It does not
+touch a design requirement.
+
+**(2) The two-state premise is replaced by a THREE-state one, because the missing third state is the
+actual state.** D9 reasons over `{never fired, fired}` and, finding no stamp, selects *never fired*.
+The reachable states are:
+
+| State | Meaning | Evidence status at `a546292` |
+|---|---|---|
+| (i) **never fired** | no invocation, anywhere | **FALSIFIED** for the first entry point |
+| (ii) **fired, unstamped** | invoked and recorded, but not in the file that stamps | **THIS IS THE ACTUAL STATE** — `qa-report-v2.19.0.md:46/55/70` |
+| (iii) **fired and stamped** | invoked, recorded, re-runnable, `RAN`-dated | **not reached** for either entry point |
+
+**(3) What v3.0 owes about leg (a) therefore changes in KIND, from ESTABLISH to STAMP-AND-ADJUDICATE
+— and this is a reduction in work, not in obligation.** v3.0 does **not** need to manufacture a
+first-entry-point baseline from nothing; one exists and is filesystem/MD5-evidenced. It needs to
+adjudicate whether that recorded fire discharges control (b) **as control (b) is written**, and then
+stamp it or state why it does not. See Decision (4) — that adjudication is deliberately left open.
+
+**(4) This ADR records the evidence and REFUSES to adjudicate the discharge, and the refusal is the
+point.** Control (b)'s own text (`tests/self-upgrade-firing-controls.md:97-108`) directs *"@qa should
+invoke **`self-upgrade`** against a synthetic fixture asserting a newer `kit_version`…"*.
+`qa-report-v2.19.0.md` Scenario 4 exercised the same **semantic** — new machinery fails verification
+under the OLD gate, no swap, MD5 unchanged — but drove it against a QA-authored
+**`self-apply/SKILL.md`** candidate. @qa labelled it MF-2(b) and reported *"(b) live-invoked."*
+**Whether that discharges (b) as written is a genuine open question, and this ADR does not settle it.**
+Settling it here would be the same error at one remove: substituting a fresh unverified judgment for
+the unverified judgment being corrected. It is bound as an explicit v3.0 gate item, not left implicit.
+
+**(5) Disposition of the two `docs/internal/` reports: NEITHER is annotated in place; this ADR is the
+forward pointer — under a condition that is part of the decision, not a caveat to it.** Both reports
+are closed-cycle records of what a reviewer saw on a date, and the v2.19.13 amendment record's own
+role test (*"a record is append-only when it functions as a record of what was true or decided at a
+past moment: its truth-value is indexed to its own date"*) puts them squarely inside the append-only
+class. Rewriting a Phase-2 review to know a fact discovered afterwards destroys the evidence of what
+the reviewer actually searched — which, in this case, **is the finding**.
+
+The same amendment record binds *"**Silence at the occurrence is not a discharge**"* and permits the
+no-local-note route only where *"the deferral record states explicitly why no local note is owed."*
+The condition this ADR must therefore satisfy is discharged as follows, and **is binding**:
+
+- this ADR names both sites by full path —
+  `docs/internal/security/security-review-plan-v3-engine.md:658-659` and
+  `docs/internal/qa/qa-report-plan-v3-engine.md:124`; and
+- the correction carries a **named id reachable from `docs/internal/carry-forwards.md`**, the single
+  visible register ADR-093 minted for exactly this purpose.
+
+**Appending a note to each report would also be legal** (append, not rewrite) and is rejected on
+grounds worth stating, because they are the cycle's own subject matter: it would create the **fourth
+and fifth** copies of a correction whose root defect is one claim propagating into five places. The
+remedy for propagation is not more propagation.
+
+**One leg of this decision is WITHDRAWN, and the withdrawal is recorded rather than quietly dropped
+(Phase 2 finding S11).** An earlier draft of this clause also rested on the two reports being
+`export-ignore`d — `git archive` → 0 entries for both, against 419 total. **That measurement is
+correct and the inference from it was not.** This repository is **public**, and ADR-093 says so in
+its own voice: *"`export-ignore` withholds the file from the release archive, not from `clone` or the
+web UI… it does not create secrecy."* `export-ignore` was therefore never a confidentiality boundary
+here, and it cannot carry weight in a decision about where a correction is legible to a reader. The
+inconsistency was visible in this very ADR: it declines to annotate two files partly because they do
+not ship, while **quoting them by path and line into `docs/architecture.md`, which does ship**
+(`git archive` → 1; control `docs/spec.md` → 0). Nothing is newly disclosed by that — the reports are
+already public via `clone` — which is exactly why the leg was doing no work.
+
+**The decision stands on its two sound legs:** the **append-only role test** above, and *the remedy
+for propagation is not more propagation.* Recorded forward-only so that no future reader re-derives
+`export-ignore` as a confidentiality control from this ADR's silence.
+
+**(6) `docs/roadmap.md:44` is corrected IN PLACE, on document-class grounds — explicitly NOT on the
+grounds first offered.** The argument that `docs/roadmap.md`'s header licenses this is **rejected as
+stated**: the *"re-derive it… rather than editing the sentence around it"* instruction at `:5` is
+scoped to the **"Where we are:" version header** and names `VERSION` **and the tag list** as its
+re-derivation source — neither of which is the source of `:44`'s claim. The right conclusion was
+reached from evidence that does not carry it. The grounds that do carry it are two:
+
+- **Measured:** `/usr/bin/grep -c 'append-only' docs/roadmap.md` → **0**. The roadmap declares no
+  append-only convention anywhere. Controls in the same run: `docs/architecture.md` → **57**
+  (the pattern finds real content); `append-onlyXYZ` in `docs/roadmap.md` → **0** (the pattern is not
+  matching everything).
+- **Document class, by the house role test:** `:44` sits inside the v3.0 rung's *"What v3.0 must
+  ship"* list. It is a **forward-binding instruction to the next builder**, whose truth-value is
+  indexed to the **future**, not to its own date. It fails the append-only role test, so it is
+  repaired in place. The reachability rule cuts the same way: a builder reads the rung, not an
+  appendix, so an appended correction to a live obligation list is precisely the failure mode
+  *"silence at the occurrence is not a discharge"* exists to prevent.
+
+**(7) ADR-095's index row (`:118`) has its `Status` cell — and only its `Status` cell — edited to point
+here.** The row's summary text, which contains the falsified clause, is **frozen**. This is the one
+in-place edit the house permits (ADR-037/ADR-088 precedent at `:58`, `:111`).
+
+### Consequences
+
+- **v3.0's leg-(a) work gets cheaper and its leg-(b) work does not move.** A cycle planning against
+  D9 as written would have budgeted for establishing a first-entry-point baseline. That budget is
+  freed; the second-entry-point demonstration is untouched.
+- **A new failure class is named and is not yet guarded.** "Re-run in the same population" has now
+  produced one defect across three authors. There is **no control anywhere in this repo** that would
+  have caught it, and this ADR adds none — see §Maturation Path.
+- **`AC-CF25F-1` as written is internally contradictory and cannot be satisfied as specified.** It
+  requires `docs/architecture.md:116` to *"no longer assert an unconditional, breached obligation"*
+  while the same spec's Technical Constraints forbid *"an in-place edit of… index-row summary text."*
+  `:116` **is** index-row summary text. Resolution, binding for Phase 4: `:116`'s summary is frozen
+  and its `Status` cell gains the forward pointer to ADR-097. Recorded here rather than left for
+  @dev to discover mid-implementation.
+- **This ADR is `PROPOSED`, not `ACCEPTED`.** D9's correction is presented for the owner gate before
+  it binds, per ADR-088's precedent of carrying a PROPOSED status across a gate.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) a **population-declaration convention** for evidentiary claims — any
+  ADR clause asserting *"X never happened"* states the corpus searched, so a later reader can falsify
+  the corpus rather than only re-running the query (cheapest, documentary, and directly addresses the
+  fault); (b) a **cross-family search rule** for `RAN`-stamp claims specifically — before asserting a
+  control never fired, the `docs/internal/qa/` and `docs/internal/security/` report families are
+  searched for the control id and its AC id, both labels, recorded as a two-leg check; (c) a
+  mechanical control that, for every control in `tests/self-upgrade-firing-controls.md` lacking a
+  `RAN` stamp, greps the report families for that control's id and **fails loudly on a hit** — this
+  is the only option that could have caught the present defect without a human remembering to look,
+  and it is genuinely buildable because both the id vocabulary and the file families are enumerable;
+  (d) retire the split entirely by requiring that any live invocation recorded in a qa-report **also**
+  writes its `RAN` stamp in the same commit, making the two surfaces incapable of disagreeing.
+- **Concrete revisit triggers:** a fourth author re-derives a falsified "never happened" claim in any
+  cycle (take (c) immediately — the pattern has now fired three times and a fourth makes it BINDING
+  under this project's own promotion rule); any ADR asserts a negative existential without a stated
+  corpus (take (a)); a qa-report records a live invocation of a control that has no `RAN` entry
+  (take (d) — this is the exact present state and it will recur the moment v3.0 exercises leg (a));
+  `tests/self-upgrade-firing-controls.md` and any `docs/internal/qa/` report disagree about whether a
+  named control ran (take (c)).
+- **Risk knowingly accepted:** this ADR **names** the population fault and **guards nothing**. Options
+  (a) through (d) are all deferred, so the next author who asserts a negative existential from a
+  single-corpus search will do so unimpeded, exactly as three authors already have. This is accepted
+  for one reason and it is a scope reason, not a design one: the cycle's own classification is Tier A
+  on `.github/workflows/quality.yml`, and adding option (c) would put a second, unrelated new control
+  into the same CI surface in the same PR — enlarging the blast radius of a Guard Change Summary the
+  owner must review in plain language, to close a defect whose cost is documentary rather than
+  behavioural. The residual is bounded by the fact that the falsified claim is corrected at every
+  live site this cycle, so the *specific* error cannot propagate further; what remains unguarded is
+  the *class*. Option (c) is the named exit and trigger four is its alarm.
+
+---
+
+## ADR-097: A register cannot repair a claim it authored without a source — the source is created first, then the row is re-derived (v2.19.14)
+
+**Status:** ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1, 2026-08-29T07:34:00Z; Phase 1's value corrected −4h from a local-time reading mislabelled `Z` in the original, per Phase 6 audit finding A7 — this host's real UTC offset is UTC+4, verified via `date`/`date -u` at correction time, not the audit's own stated CEST/UTC+2) · **Reusability:** candidate-constituent
+**Amends:** ADR-093 — two falsified figures in its §Context. ADR-093's own text is NOT rewritten, and
+**none of its four Decisions is disturbed.**
+
+> **Gate history (was PROPOSED — NOT IN FORCE at Phase 1; owner-APPROVED at the Phase 3 gate,
+> 2026-08-29, per `docs/internal/security/security-review-v2.19.14.md`'s Gate disposition — this
+> banner is retained, unedited, as the record of why the ADR shipped PROPOSED across the gate, and
+> because §Decision (2)'s ordering rule below is the mechanism this cycle's Phase 4 actually
+> follows: this ADR is ACCEPTED first, and only then are `carry-forwards.md:223`/`:238` re-derived
+> from it.)**
+>
+> **Why PROPOSED rather than ACCEPTED.** §Decision (1) rules *against* a repair mechanism the cycle's
+> own `AC-CF25F-2` framed as an acceptable option, and §Decision (2) makes this record the **source**
+> two register rows are re-derived from. Both are owner-gate matters.
+>
+> **This status CHANGES THE ORDERING in §Decision (2), and the change is not a technicality.**
+> §Decision (2) requires `docs/internal/carry-forwards.md:223`/`:238` to be re-derived **from this
+> ADR as their source**. **A record that is not in force is not a source.** Re-deriving from a
+> PROPOSED ADR would be re-deriving from a non-source — precisely the defect §Decision (1) forbids,
+> reappearing one level up. The corrected sequence is therefore: **(1)** the Phase 3 gate flips this
+> ADR to ACCEPTED; **(2)** *only then* are the two rows re-derived and made to cite it. If the gate
+> does not flip it, `AC-CF25F-3` governs — the finding is recorded and **the row bytes are left
+> unchanged**. Silent inaction and silent editing both remain forbidden.
+>
+> **What is NOT suspended by this status.** PR #521's merge date (`2026-06-04`, verified live via
+> `gh`) and the `2026-05-11` count of **0** are measurements, not decisions, and reproduce whatever
+> this ADR's status.
+
+### Context
+
+**Two figures in ADR-093's §Context are false, and one of them is load-bearing three times over.**
+Re-run this cycle against `a546292` with `/usr/bin/grep` (absolute path, BSD grep 2.6.0-FreeBSD):
+
+**(1) The "51 days past due" premise.** `CF-v2.5-F`'s obligation was **conditional**, and the source
+says so and only so: *"if PR #521 has no maintainer response by 2026-07-08, escalate to @pm"*
+(`docs/internal/security/security-audit-v2.5.md:40`, repeated `:58`; the `:282` docket row words the
+same condition as *"escalate to @pm if PR #521 unmerged by 2026-07-08"*).
+
+**The condition never fired, under either wording.** Verified live this session, not from repo text:
+
+```
+gh pr view 521 --repo msitarzewski/agency-agents --json state,mergedAt,createdAt
+  -> {"createdAt":"2026-05-09T15:31:53Z","mergedAt":"2026-06-04T00:27:27Z","state":"MERGED"}
+```
+
+PR #521 merged **2026-06-04** — **34 days before** the 2026-07-08 trigger, **26 days** into a 60-day
+window. Nothing was ever owed; no escalation was missed. **The arithmetic "51 days" is correct and
+irrelevant** — the register computed days-past-a-date meticulously without ever evaluating the
+condition that made the date moot.
+
+**(2) The disposition date.** ADR-093 §Context states the `CF-v2.5-*` family was last dispositioned in
+`docs/internal/qa/qa-report-v2.6.0.md:270` *"(2026-05-11)"*. That date appears **0** times in the cited
+file. Control on the same extractor in the same run: `2026-05-10` appears **14** times, and is the only
+date the file contains.
+
+**Site count — corrected on re-run, and the correction is itself an instance of the cycle's subject.**
+An orchestrator re-run searching the literal string `51 days past due` found **one** site and reported
+that `docs/architecture.md` carries the claim as a single passage. Re-run here with the pattern actually
+required, `/usr/bin/grep -n '51 days' docs/architecture.md`, the claim resolves to **three distinct
+sites**, because the narrower literal cannot match across the markdown emphasis markers in
+`**51 days** past due`:
+
+| Site | Role | Legal mechanism |
+|---|---|---|
+| `docs/architecture.md:116` | ADR-093 **index-row summary text** | **FROZEN** — `Status` cell pointer only |
+| `docs/architecture.md:15425` (was `:15422` — corrected at Phase 6 audit finding A5, shifted 3 lines by this ADR's own index-row insertion) | ADR-093 §Context body | append-only — superseded by this ADR |
+| `docs/architecture.md:15560` (was `:15557` — same correction) | ADR-093 §Maturation Path, *"Risk knowingly accepted"* — the clause justifying the accepted risk | append-only — superseded by this ADR |
+| `docs/internal/carry-forwards.md:223` | `CF-v2.5-F` row, Status + Disposition | re-derivation — see Decision (2) |
+| `docs/internal/carry-forwards.md:238` | `CF-v2.5-ARCH-D` row, Disposition only | re-derivation — see Decision (4) |
+
+Negative control on the extractor: `34 days` → **0** in the same file; positive control: `ADR-093` →
+**8**. The pattern discriminates.
+
+### Decision
+
+**(1) A DIRECT REPAIR of `docs/internal/carry-forwards.md:223`/`:238`, as an independent editorial act,
+is FORBIDDEN — and the argument offered for permitting it is rejected because it proves too much.**
+
+The argument was: ADR-093 §Decision (1) says *"where this register and its source surface disagree, the
+source wins"*; here the source is **silent** (it states only the conditional, never *"51 days past due"*
+or *"never performed"*); silence is not disagreement; therefore the rule does not fire and the register
+may repair itself. The premise is sound — the source genuinely makes no such claim — but the inference
+is not. **If an unsourced claim may be freely amended by the register, the register may freely author
+and freely amend, which is precisely the "second authority" ADR-093 §Decision (1) exists to forbid.**
+The absence of a source is not a licence to edit. It is the defect itself.
+
+**@pm's reading of the adjacent precedent is VERIFIED CORRECT and is not the escape hatch either.**
+ADR-093 §Decision (3) (`docs/architecture.md:15472-15477`) reads: *"A status cell that contradicts a
+closure recorded elsewhere **in the same file** is a defect and is repaired in place."* Its predicate is
+an **intra-file** contradiction. `CF-v2.5-F`'s row is contradicted by nothing in
+`docs/internal/carry-forwards.md`; it is falsified by an **external** event recorded in no document of
+this repository. Decision (3) does not transfer, and stretching it would convert a deliberately narrow,
+mechanical exception into a general licence — the exact failure ADR-093 §Decision (1) warns against
+when it calls its own §K exception *"deliberately mechanical so it cannot be stretched."*
+
+**(2) A RE-DERIVATION of those rows is REQUIRED, and the ordering is the whole ruling.** ADR-093
+§Decision (1) closes with the operative instruction: *"Do not close an item here; close it at its
+source and re-derive."* That instruction is not an obstacle here — **it is the legal path**, and it has
+been unavailable only because the required source did not exist. The missing artefact is a **recorded
+disposition of `CF-v2.5-F`'s condition**, which no surface anywhere in this repository carries. The
+register invented one because none existed.
+
+**This ADR is that source.** The sequence is binding and its order is load-bearing:
+
+1. **ADR-097 lands first**, recording as an architectural decision of record: the obligation was
+   conditional; the condition (PR #521 unmerged / unacknowledged by 2026-07-08) never occurred,
+   because the PR merged 2026-06-04; therefore **no escalation was owed and none was missed.**
+2. **Then** `:223` and `:238` are re-derived from ADR-097 and cite it in the row's own citation slot.
+
+Bytes at `:223`/`:238` change. **The operation is a regeneration of a derived view from a newly
+created source — not an edit against a source — and the register's authority posture is untouched.**
+Reversing the order would make step 2 exactly the forbidden act of Decision (1); performing step 2
+without step 1 at all is what the register did in the first place.
+
+**(3) Decision (3)'s MECHANISM is adopted even though its AUTHORIZATION is not.** ADR-093's own repair
+*"retain[ed] their original status text verbatim under an explicit 'Original status text, retained
+verbatim:' label, so the repair adds a record rather than erasing one."* Both re-derived rows carry the
+superseded text under that same label. This has a consequence Phase 5 must be told about in advance,
+because otherwise it reads as a failure: **the string "51 days" will still be present in
+`docs/internal/carry-forwards.md` after the fix, inside retained-verbatim quotation framing.**
+`AC-CF25F-1`'s negative control anticipates exactly this and permits it on condition the phrase
+*"appear[s] only inside quotation/correction framing, never as an assertion in the [document's] own
+voice."* **This design takes that branch deliberately.** A bare `grep`-to-zero is therefore the WRONG
+check and must not be used alone — it would be satisfied by deleting the phrase while leaving
+*"ORPHANED — OVERDUE"* and *"never performed"* standing, which is the failure the AC itself names.
+
+**(4) `CF-v2.5-ARCH-D` is NOT discharged this cycle. Its input is recorded; its evaluation is not
+performed.** `:238`'s row is *"F3 PR outcome evaluation — **the v3.0 gate review** reads the upstream
+PR's acknowledgement outcome."* **This cycle is not the v3.0 gate.** Only the falsified rationale in
+its Disposition cell (*"which is 51 days overdue — the same upstream PR"*) is re-derived; the row's
+`Status` stays **OPEN** and its evaluation venue is unchanged.
+
+**The outcome ARCH-D must evaluate is now knowable, and is recorded here as its input** — measured
+live this session, so a future gate reviewer does not have to re-derive it: the contributed file
+survives upstream **renamed** to `project-management/project-management-meeting-notes-specialist.md`
+and is still present in `msitarzewski/agency-agents` (verified via
+`gh api repos/msitarzewski/agency-agents/contents/project-management`). This is the **modify / rename /
+remove** case the v2.5 audit anticipated at `:40`/`:58` — the *rename* branch, specifically.
+**Recording a measured input is not performing the evaluation**, and the distinction is kept
+deliberately: judging whether a rename satisfies Cowork's governance posture under ADR-030 is the
+gate's job, and doing it here would widen this cycle past its stated scope.
+
+**(5) `docs/architecture.md:15425` and `:15560` are superseded by this ADR, never edited.** (Corrected
+from `:15422`/`:15557` at Phase 6 audit finding A5 — this ADR's own index-row insertion, in this same
+commit, moved both citations by 3 lines; a citation that does not resolve in the file it ships in is
+this cycle's own subject matter, so it is fixed rather than left standing.) `:15560` is
+the more consequential of the two: it sits inside ADR-093's *"Risk knowingly accepted"* clause, where
+the 51-day claim serves as the **justification** for accepting a hand-maintained register. **That
+justification survives the correction, and this ADR states so explicitly so the correction is not
+over-read:** the register's actual value was demonstrated by the *other* two measurements in ADR-093
+§Context — the 9-vs-7 intra-file contradiction and the 30+-release unowned family — both of which
+re-verify and neither of which depends on `CF-v2.5-F` being overdue. **The example was wrong; the
+decision it illustrated was not.**
+
+**(6) ADR-093's index row (`:116`) has its `Status` cell — and only its `Status` cell — edited to point
+here.** The summary text is frozen. See ADR-096 §Consequences for why `AC-CF25F-1` cannot be satisfied
+any other way.
+
+### Consequences
+
+- **`CF-v2.5-F` ceases to be "the single most actionable row in the register" and becomes a closed,
+  never-owed item.** The register's ranked list changes shape; the row is not deleted.
+- **A general rule is now available and is deliberately NOT minted as a standalone convention:** *a
+  register row asserting a verdict its cited source does not contain is not a status defect, it is a
+  **missing source** — and the remedy is to create the source, not to edit the row.* It is stated
+  inside this ADR rather than promoted, because it has fired exactly once.
+- **The ordering in Decision (2) is a real Phase-4 constraint, not a formality.** If @dev writes the
+  register rows before this ADR is committed, the rows cite a heading that does not resolve, and the
+  repair becomes the forbidden act it was designed to avoid. Phase 5 can check this cheaply by
+  whole-line-equality resolution of the rows' citation (ADR-092 §Decision (1)).
+- **This ADR is `PROPOSED`.** Decision (1) rules against a mechanism the spec's own `AC-CF25F-2`
+  framed as an acceptable option, so the owner sees the ruling before it binds.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) a **sourcing assertion per register row** — every Status/Disposition
+  cell either quotes its source or is explicitly marked `REGISTER-AUTHORED`, making an unsourced
+  verdict visible at a glance instead of indistinguishable from a derived one (cheapest, and it
+  addresses the generative fault rather than this instance); (b) a **conditional-carry schema** — a
+  carry-forward whose obligation is conditional records the *condition* and its *evaluation state*
+  as separate fields, so "date passed" can never be rendered as "obligation breached" by a reader or
+  a regeneration; (c) a mechanical check that every register row's Disposition cell contains a
+  substring resolving in its cited source, failing on register-authored prose — buildable, but it
+  would need a prose-similarity test that this repo has no precedent for and that could not go red
+  reliably; (d) retire the free-text Disposition cell in favour of an enumerated status vocabulary,
+  which makes unsourced narrative impossible by construction and is the strongest option.
+- **Concrete revisit triggers:** any register row is found asserting a verdict absent from its cited
+  source (take (a) immediately — a second instance makes this a pattern, not an incident); any
+  carry-forward with a conditional obligation is rendered as unconditionally breached anywhere
+  (take (b) — the present defect, and `CF-v2.5-*` contains further calendar carries that could
+  repeat it); the register is regenerated and a row's Disposition text changes without its source
+  having changed (take (c) or (d) — that is proof the cell is not derived); a future cycle needs to
+  re-derive a register row and cannot locate a source for it (take (d)).
+- **Risk knowingly accepted:** this correction is **hand-applied and hand-verified**, and it leaves
+  the register exactly as capable of authoring an unsourced verdict tomorrow as it was yesterday —
+  options (a) through (d) are all deferred. Accepted because the alternative available *this* cycle
+  is worse in a specific, non-hypothetical way: the register has been live for one cycle and carries
+  a single demonstrated instance of the fault, so any schema imposed now would be designed against
+  n=1 and would very likely need re-cutting the moment a second shape appears — and re-cutting a
+  schema across a register whose rows are cited by six files is materially more expensive than
+  applying option (a) later to a register that has told us what its real failure modes are. The
+  residual is bounded on one side by ADR-093 §Decision (1), which already makes any register/source
+  disagreement resolvable in the source's favour, and is *unbounded* on the side this ADR just
+  surfaced — the source that is silent rather than contradictory. Option (a) is the named exit and
+  trigger one is its alarm.
+
+---
+
+## ADR-098: A vocabulary gate authorizes by fixed-string membership, never by regex match — and the change that widens a gate must harden it in the same commit (v2.19.14)
+
+**Status:** ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1 rework `1.R1`, 2026-08-29T05:05:19Z; Phase 1's value corrected −4h from a local-time reading mislabelled `Z` in the original, same defect class as audit finding A7 — not itself named by A7 (this ordering happened not to look impossible unconverted), corrected here for consistency) · **Reusability:** candidate-constituent
+**Scope:** the buildable design for cycle Items **1** (`MF-3` tool-list gate), **2**
+(`scripts/install-pre-commit.sh`) and **5** (`docs/owner-tasks.md`), plus the corrected verification
+for `AC-CF25F-1`. **Tier A** — `.github/workflows/quality.yml` is the merge gate.
+
+> **Gate history (was PROPOSED — NOT IN FORCE at Phase 1 rework; owner-APPROVED at the Phase 3**
+> **gate, 2026-08-29, per `docs/internal/security/security-review-v2.19.14.md`'s Gate disposition —**
+> **"Gate disposition (owner, 2026-08-29): APPROVED with S6, S17 and S19 folded into Phase 4."**
+> **This banner is retained, unedited, below, as the record of why a Tier A merge-gate change had**
+> **to exist as its own ADR before it could be reviewed at all.)**
+>
+> **Why this record exists at all is itself a finding.** Phase 1 produced these rulings **in a return
+> message and nowhere else.** Phase 2 finding **S1 (CRITICAL)** caught it, and it reproduces:
+> `git diff -- docs/architecture.md | grep -cE 'AC-PARSE|tools: \[\]|MF-S1'` → **0**;
+> `… | grep -cE 'markdownlint|install-pre-commit|AC-HOOK'` → **0**; positive control
+> `… | grep -c 'ADR-097'` → **5**. **A Tier A change to the merge gate had nothing reviewable.** A
+> design that exists only in a chat return is not a design; it is a claim that one was done.
+>
+> **Intended home, and why it is here instead.** The house artifact would be `docs/design-v2.19.14.md`
+> (8 such files exist; all 8 ship). Creating it was **blocked by `orchestrator-guard.sh`** — Phase 3
+> has no recorded status, and the guard refuses new project files pre-gate. The block was **not
+> worked around.** This content is an ADR on its own merits: §Decision (1) settles the gate's
+> **authorization mechanism**, which is an architectural decision with security consequences, not a
+> build detail. If the gate opens and a design doc is later wanted, this ADR is its source.
+
+### Context
+
+> *ISO 15288 — System Requirements Definition Process.*
+
+**Measurement contract.** Run this session against `a546292`. `/usr/bin/grep` by absolute path (BSD
+grep 2.6.0-FreeBSD) — this repo's bare `grep` is a **ugrep 7.8.4** shim that under-counts. **Shell
+probes ran under `/bin/bash`, not `zsh`** — see below, where that distinction is the difference
+between finding a live bypass and declaring it absent. Every zero carries a negative control. No
+repository file was mutated: adversarial inputs ran against transcribed copies outside the repo, and
+one falsification was produced by a read-only `sed` **stream** that wrote nothing.
+
+**The briefed defect is a tokenizer bug. Two further defects in the same 14 lines are authorization
+bugs, and they are why this item is Tier A rather than cosmetic.**
+
+| # | Defect | Site | Reachable today? |
+|---|---|---|---|
+| **D-1** | a two-item list collapses into one malformed token | `:1178` | No — 29/29 skills declare one token |
+| **D-2** | `grep -qw "$token"` treats the token as a **BRE**, and `-w` bounds the **match**, not the list entry | `:1188` | **Yes, on any 2+-token list** |
+| **D-3** | `for token in $TOKENS` unquoted → **pathname expansion** | `:1186` | **Yes, on any 2+-token list** |
+
+**D-1, against the shipped pipeline.** `s/,/ /g` inserts spaces; `tr -d ' '` then deletes *every*
+space, including the ones just inserted:
+
+| Input | `TOKENS` | Result |
+|---|---|---|
+| `tools: [claude-code]` | `claude-code` | accepted (no comma to collapse) |
+| `tools: [claude-code, copilot]` | `claude-codecopilot` | **a valid 2-item list is REFUSED** |
+| `tools: [claude-code, copilot, cursor]` | `claude-codecopilotcursor` | same at N=3 |
+| `tools:` (multi-line form) | `tools:` — **non-empty** (`od -c` → `t o o l s : \n`) | the MF-S1 guard at `:1180-1183` never fires; emits the **wrong** message, `invalid token 'tools:'` |
+| `tools: []` | *(empty)* | misdiagnosed as the multi-line form |
+
+**D-2, reproduced under `/usr/bin/grep` — so it is not a ugrep-shim artifact:**
+
+```
+ALLOWED='claude-code copilot cursor windsurf'
+code -> ACCEPT   claude -> ACCEPT   claude.code -> ACCEPT   .* -> ACCEPT   cursor* -> ACCEPT
+emacs -> reject                     сursor (Cyrillic с) -> reject          <- negative controls fire
+```
+
+`-w` requires the **match** to be bounded by non-word characters, and `-` is not a word constituent,
+so `code` inside `claude-code` satisfies it. Independently the token is a **BRE**: `.*` matches
+anything; `cursor*` is `curso` followed by zero-or-more `r`.
+
+**D-3, and the shell is load-bearing:**
+
+```
+/bin/bash, empty dir:             c?p?l?t -> reject
+/bin/bash, after `touch copilot`: copilot -> ACCEPT     <- the token became a filename
+/bin/zsh,  same dir:              c?p?l?t -> reject     <- DOES NOT REPRODUCE
+```
+
+`quality.yml` declares `runs-on: ubuntu-latest` with **no `shell:` and no `defaults:`** (verified),
+so Actions runs `bash -e`. **A `zsh` test would have declared this defect absent.** Recorded because
+the next person to check it will be on a mac.
+
+**Why all three must ship together.** D-2 and D-3 are latent *only* because 29/29 skills declare a
+single token. **`AC-PARSE-1` is the exact change that makes them reachable.** Widening the gate
+without hardening it converts a dormant authorization bug into a live one — which is the generalized
+decision below.
+
+### Decision
+
+**(1) A closed-vocabulary gate authorizes by FIXED-STRING MEMBERSHIP, never by regex match.** The
+generative fault in D-2 is not `-w`; it is that an authorization decision was delegated to a
+**pattern matcher** whose input is attacker-controlled. Any regex-family test — `grep -w`, `grep -E`,
+`[[ =~ ]]`, an unquoted `case` — makes the untrusted token part of the *matcher*, so the vocabulary
+stops being closed. **Adopted mechanism: a POSIX `case` membership test.**
+
+```bash
+case " $ALLOWED " in
+  *" $token "*) : ;;      # member
+  *) reject ;;
+esac
+```
+
+**@security's proposed `grep -qxF --` is REFUTED as stated, and adopting it verbatim would have
+red-lined CI for the entire repository.** `ALLOWED` ships as a **single space-separated line**, and
+`-x` demands whole-**line** equality:
+
+```
+echo 'claude-code copilot cursor windsurf' | /usr/bin/grep -qxF -- claude-code  -> reject
+echo 'claude-code copilot cursor windsurf' | /usr/bin/grep -qxF -- copilot      -> reject
+```
+
+Every legitimate token refused; all 29 skills would fail the gate. It is sound **only** after
+`ALLOWED` is converted to newline-delimited — a change to `:1167` the constraint did not name:
+
+```
+printf 'claude-code\ncopilot\ncursor\nwindsurf' | /usr/bin/grep -qxF -- claude-code -> ACCEPT
+                                                                    -- code        -> reject
+```
+
+`case` is preferred over that repair on four grounds: **no change to `ALLOWED`'s shipped shape**; **no
+subprocess per token**; **no regex, locale or encoding surface**; and the quoted `" $token "` in a
+`case` pattern is **not re-globbed**. That last property is load-bearing, so it is proven, not
+asserted — these inputs accept **if and only if** the pattern re-globs, and all three reject:
+
+```
+tools: [?laude-code] -> BAD:?laude-code     tools: [claude-cod?] -> BAD:claude-cod?     tools: [*] -> BAD:*
+```
+
+**(2) `set -f` is scoped to the TOKEN loop, never to the step.** The enclosing
+`for skill_md in skills/*/SKILL.md` **requires** globbing; disabling it at step scope would make MF-3
+iterate a literal path that does not exist and **pass vacuously** — a check that cannot fail, which
+is the failure mode this whole cycle exists to prevent. `IFS` is saved and restored for the same
+reason. Accepting @security's constraint without this correction would have traded a live bypass for
+a silent no-op gate.
+
+**(3) The list shape is validated by an anchored whole-line precheck that excludes nested brackets**
+— `^tools:[[:space:]]*\[[^][]*\][[:space:]]*$`. The regex is **fixed** and applied **to** untrusted
+data, never built **from** it. This is what routes bare `tools:` to MF-S1 correctly, and it rejects
+bracket-injection at the shape gate before tokenization ever runs: `tools: [[c]laude-code]` → MF-S1.
+
+**(4) The empty-array guard is a SHELL test on the bracket interior, not a grep on `TOKENS`** —
+`[ -z "$(printf '%s' "$INNER" | tr -d '[:space:]')" ]`. This is what makes `tools: []`
+distinguishable from bare `tools:` at all, and therefore what makes (5) implementable.
+
+**(5) `tools: []` gets its OWN message — "declares no tools (empty array)" — not MF-S1's.** MF-S1
+reads *"multi-line form not supported at v2.5"*, which for an empty inline array is **actively
+false**. This cycle exists because a wrong message was mistaken for a missing one; shipping a second
+wrong message would be the same defect in new clothes.
+
+**The validated candidate, inline in `quality.yml` (nothing extracted to `scripts/`, per ADR-090):**
+
+```bash
+ALLOWED='claude-code copilot cursor windsurf'
+if ! printf '%s\n' "$TOOLS_LINE" | grep -qE '^tools:[[:space:]]*\[[^][]*\][[:space:]]*$'; then
+  echo "::error::${skill_md} tools: present but unparsed (multi-line form not supported at v2.5)"
+  BAD_FILES="${BAD_FILES} ${skill_md}"; continue
+fi
+INNER=$(printf '%s\n' "$TOOLS_LINE" | sed -E 's/^tools:[[:space:]]*\[//; s/\][[:space:]]*$//')
+if [ -z "$(printf '%s' "$INNER" | tr -d '[:space:]')" ]; then
+  echo "::error::${skill_md} tools: declares no tools (empty array)"
+  BAD_FILES="${BAD_FILES} ${skill_md}"; continue
+fi
+_oldifs=$IFS; set -f; IFS=','
+for raw in $INNER; do
+  token=$(printf '%s' "$raw" | tr -d '[:space:]')
+  if [ -z "$token" ]; then
+    echo "::error::${skill_md} tools: empty list element"
+    BAD_FILES="${BAD_FILES} ${skill_md}"; continue
+  fi
+  case " $ALLOWED " in
+    *" $token "*) : ;;
+    *) echo "::error::${skill_md} tools: contains invalid token '${token}' (allowed: ${ALLOWED})"
+       BAD_FILES="${BAD_FILES} ${skill_md}" ;;
+  esac
+done
+IFS=$_oldifs; set +f
+```
+
+**Measured, current vs candidate, executed in a directory where a file named `copilot` exists** so the
+glob vector is live rather than hypothetical:
+
+| Input | CURRENT | CANDIDATE |
+|---|---|---|
+| `tools: [claude-code]` | `OK:claude-code` | `OK:claude-code` |
+| `tools: [claude-code, copilot]` | `BAD:claude-codecopilot` | `OK:claude-code,copilot` |
+| `tools: [claude-code, copilot, cursor]` | `BAD:claude-codecopilotcursor` | `OK:claude-code,copilot,cursor` |
+| `tools: [ claude-code ,copilot ]` | `BAD:claude-codecopilot` | `OK:claude-code,copilot` |
+| `tools:` | `BAD:tools:` | `MFS1` |
+| `tools: []` | `MFS1` | `NOTOOLS` |
+| `tools: [code]` | **`OK:code`** | `BAD:code` |
+| `tools: [claude]` | **`OK:claude`** | `BAD:claude` |
+| `tools: [claude.code]` | **`OK:claude.code`** | `BAD:claude.code` |
+| `tools: [.*]` | **`OK:.*`** | `BAD:.*` |
+| `tools: [cursor*]` | **`OK:cursor*`** | `BAD:cursor*` |
+| `tools: [c?p?l?t]` | **`OK:copilot`** | `BAD:c?p?l?t` |
+| `tools: [emacs]` | `BAD:emacs` | `BAD:emacs` |
+
+**The last two rows are what make this a check rather than a demonstration.** `emacs` is identical in
+both columns, so the candidate is not "reject everything" — which is precisely what the refuted
+`grep -qxF` would have produced, and a table without this row could not have told the difference.
+`tools: [claude-code]` is identical in both, so it is not "accept everything."
+
+**Production validation — 29/29 real skills PASS**, extracted with the workflow's own `awk`:
+`for f in skills/*/SKILL.md; do … done | sort | uniq -c` → `29 OK:claude-code`.
+
+**(6) Item 2 — the config repoint is sufficient and version-robust; my Phase-1 rationale for saying so
+was wrong, and the correction matters in the opposite direction to the one I claimed.** Phase 1
+asserted **unconditionally** that the installed hook already applies the shipped ruleset via
+auto-discovery, and that the spec's *"silently runs with built-in defaults"* premise was false.
+**Phase 2 finding S10 is upheld on my own re-run: the behaviour is version-conditional.**
+
+| `markdownlint-cli` | `--config <file>.jsonc` | auto-discovery of `.markdownlint.jsonc` |
+|---|---|---|
+| 0.27.1 | **GREEN** — comments parse | **NO — built-in defaults (RED)** |
+| 0.31.1 | **GREEN** | **NO — built-in defaults (RED)** |
+| 0.32.2 | — | **YES (GREEN)** |
+| 0.45.0 | **GREEN** | **YES** |
+| 0.49.1 (latest) | **GREEN** | **YES** |
+
+Negative controls at 0.31.1 / 0.45.0 / 0.49.1: a partial config disabling **only** MD013 leaves MD033
+firing (exit 1), proving per-rule contents are applied rather than the config being blanket-honoured.
+Auto-discovery negative control: the same invocation with the config parked → RED, exit 1.
+`--config` at a missing path → **loud error, exit 4** — never silent.
+
+Three consequences: **(a)** repointing the 5 sites is sufficient and needs no comment-stripped
+generated config, because `--config` parses JSONC on **every** version tested; **(b)** the fix is
+**more** necessary than my Phase-1 return implied — on 0.27.1/0.31.1 the hook really does run
+defaults, exactly as the spec said, and the script pins **no** version (`npm install -g
+markdownlint-cli`, `:16`/`:41`; there is no `markdownlint-cli` v1 — versions are `0.x`, latest
+`0.49.1`); **(c)** the spec's prescribed behavioral check — *install the hook, commit a long line,
+confirm it is not flagged* — **passes on the unfixed repo** wherever auto-discovery is active, so it
+is a check that cannot fail and is replaced by a **branch-discrimination** check, which is
+version-independent because it tests which code path ran rather than what the tool happened to do.
+
+**One of my own probes was invalid, and it is disclosed rather than quietly re-run.** The first
+0.27.1 auto-discovery test ran against a directory whose config I had parked during an earlier
+negative control and never restored; it "confirmed" the finding against an empty fixture. Restored
+and re-run, the result stands — but it stood by luck, and it was the setup check, not the result,
+that caught it.
+
+**(7) `AC-CF25F-1`'s control is falsified and non-discriminating; it is replaced (Phase 2 finding
+S4).** The AC's control is `"51 days\|51-day"` under `docs/` → **5 → 0**. It names **no base
+revision**, and at branch tip it is already **23** (`docs/architecture.md` 12 — seven of them
+ADR-096/097 quoting the claim in correction framing — `carry-forwards.md` 2, `docs/spec.md` 9).
+Worse, it does not discriminate: deleting only the two "51 days" phrases takes it GREEN while `:223`
+still reads *"**ORPHANED — OVERDUE** … The escalation it specifies has never been performed. This is
+the single most actionable row in the register."* Demonstrated by a read-only `sed` **stream**;
+nothing was written. **Replacement — four assertions on `docs/internal/carry-forwards.md`:**
+
+| Assertion | Pre | Required post |
+|---|---|---|
+| `2026-06-04` — the merge date that falsifies the premise | **0** | **≥ 1** |
+| `OVERDUE` | **1** | **0** |
+| `never been performed` | **1** | **0** |
+| `ADR-097` — the source the row must cite | **0** | **≥ 1** |
+
+**Proven discriminating:** applied to the cosmetic-fix stream, `OVERDUE` still returns **1** against a
+required **0** → **RED**. It fails exactly where the old control passes. **Do not add a bare
+`grep '51 days'` → 0 check**: ADR-097 §Decision (3) deliberately retains the superseded row text under
+an *"Original status text, retained verbatim:"* label, so the string **will still be present** after a
+correct fix, inside quotation framing. A grep-to-zero would red a correct fix and green a cosmetic
+one — wrong in both directions.
+
+**(8) Item 5 — `docs/owner-tasks.md` ships** (`git archive` → matches; control `docs/spec.md` → no
+match, exit 1), so these edits are user-visible. **`AC-OT4-1` is re-worded, and the re-wording is the
+decision.** The spec asks OT-4 to state the next trigger as **2026-09-01**. Authored 2026-08-29, that
+claim expires in **3 days**, inside the PR review window, in a shipping file — this repository's
+BINDING *Ambiguous-unit numeric claim* pattern, which has now fired in four cycles and fired again
+inside the cycle whose ADR-093 is about measurement discipline. **Bind the condition, not the date:**
+*"Rung 1 shipped at tag `v2.19.5`, 2026-08-04; row is ARMED — fires on the next scheduled
+`sync-agency.yml` cron run."* `AC-OT6-1` (`v2.21` → **0** in `docs/roadmap.md`; control `v3.0` → **13**)
+and `AC-OT8-1` (last scorecard 2026-07-18 vs tags 2026-08-03/04/07 — fired 3×, discharged 0×) are
+unchanged from spec.
+
+### Consequences
+
+- **The merge gate becomes strictly stricter for adversarial input and strictly more permissive for
+  valid input.** Both directions are evidenced in the same table, and neither was true before.
+- **`AC-PARSE-3` and `AC-PARSE-4` are new ACs the spec did not contain.** They exist because the fix
+  the spec *did* ask for is what makes D-2 and D-3 reachable. A Phase 4 that implements AC-PARSE-1
+  alone ships a live authorization bypass.
+- **`AC-PARSE-4` is inadmissible under `zsh`.** It cannot fail there. The test must declare its shell.
+- **A generalized rule is available and is deliberately NOT promoted:** *the commit that widens a
+  gate's accepted input must harden its authorization in the same commit, because widening is what
+  makes the authorization reachable.* It has fired once; it is stated here rather than minted.
+- **This ADR is `PROPOSED`.** It carries a Tier A change to the merge gate and a Guard Change Summary
+  is owed before it binds.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) move `ALLOWED` to a **newline-delimited** declaration and use
+  `grep -qxF --`, which is marginally more idiomatic than `case` and would let the vocabulary be read
+  from a file rather than a literal — the natural step once the list outgrows four entries; (b) hoist
+  the vocabulary into a **single declared source of truth** (`ADR-029`'s closed list) that both MF-3
+  and any future per-tool validator read, so the gate and the router cannot drift; (c) add a
+  **meta-control** that feeds each of the six known bypass strings through the live gate in CI and
+  fails if any is accepted — the only option that would catch a regression of D-2/D-3 without a human
+  remembering they existed, and cheap because the strings are already enumerated in §Decision (1);
+  (d) replace the hand-rolled frontmatter scan with a real YAML parser, which retires the whole
+  tokenizer class including the multi-line form MF-S1 exists to refuse.
+- **Concrete revisit triggers:** the approved vocabulary gains a fifth token (take (a) and (b) — the
+  literal stops being readable and the drift risk becomes real); any skill ships declaring 2+ tools
+  (take (c) immediately — that is the moment D-2/D-3's blast radius stops being theoretical); a
+  second gate anywhere in `quality.yml` is found authorizing by regex match against untrusted input
+  (take (c), and promote §Decision (1) from an ADR clause to a stated convention); MF-S1's multi-line
+  refusal blocks a contributor with a legitimate multi-line list (take (d)); `markdownlint-cli`'s
+  auto-discovery behaviour changes again in either direction (re-run the §Decision (6) matrix — it is
+  version-scoped and says so).
+- **Risk knowingly accepted:** three, named rather than bundled. **(i)** The gate is still a
+  hand-written shell tokenizer parsing YAML by regex, and §Decision (3)'s precheck bounds the shapes
+  it accepts without making it a parser — a sufficiently odd but legal YAML inline array (quoted
+  members, a trailing comma, an embedded `#`) is refused rather than understood, and refusal is the
+  safe direction but it is still wrong. Accepted because option (d) is a rewrite of a CI step on the
+  Tier A surface, which is not proportionate to a defect no contributor has hit. **(ii)** The six
+  bypass strings are verified **once, now, by hand**; nothing prevents a future edit from
+  reintroducing D-2 or D-3, and the evidence in this ADR would then be a record of a property the
+  code no longer has. Option (c) is the exit and trigger two is its alarm — deferred solely because
+  adding a second new control to `.github/workflows/quality.yml` in the same PR enlarges the Guard
+  Change Summary the owner must review in plain language, and this cycle already asks them to approve
+  a rewrite of the gate's authorization mechanism. **(iii)** Item 2's correctness depends on a tool
+  the script installs **unpinned**, so a future `markdownlint-cli` release could reopen the gap from
+  the other side; §Decision (6)'s matrix is version-scoped and dated precisely so that a later reader
+  re-runs it instead of inheriting it, and pinning is explicitly out of scope this cycle rather than
+  overlooked.
+
+### §Phase 6 correction (`6.R1`, 2026-08-29 — append-only: corrects reasoning, edits no original prose)
+
+Two claims already written above in this ADR, and the same claim restated in this ADR's own
+index-row summary (`docs/architecture.md`, the `| ADR-098 |` row), are **FALSE**, per Phase 6 audit
+finding **A4** — re-derived independently this session, not inherited: mutation **M4** (`set -f`
+hoisted from the token loop to step scope) was executed against both `bash -e` (CI's actual mode)
+and plain `bash`, and in **both** cases the step **fails loudly**, `rc=2` under `errexit` (`awk:
+can't open file skills/*/SKILL.md`) or `exit 1` without it (`::error::skills/*/SKILL.md missing
+tools:` frontmatter field) — **it never passes.** The false claim, verbatim as it stands uncorrected above and in
+the index row: step-scoped `set -f` would make MF-3 *"pass vacuously"* / *"iterate a literal path
+that does not exist and pass vacuously — a check that cannot fail."*
+
+**The SCOPING DECISION is unaffected and remains correct: `set -f` stays scoped to the token loop
+only, never hoisted to step scope.** Only the *reason given* was wrong. The true mechanism: the
+enclosing `for skill_md in skills/*/SKILL.md` glob is evaluated once, before the loop body runs: if
+`set -f` were active at that point, the glob would not expand, `skill_md` would iterate the single
+literal string `skills/*/SKILL.md`, `awk` would fail to open a file by that literal name, `TOOLS_LINE`
+would come back empty, the **`missing tools: frontmatter field`** branch would fire, `BAD_FILES`
+would be populated, and the step exits non-zero — a **permanent false RED on every run**, not a
+silent, vacuous GREEN. This is the opposite failure direction from what was claimed, and it still
+correctly motivates the same scoping choice (a step that always fails loudly is exactly as useless
+as one that always passes silently — neither is a check — so scoping `set -f` to the token loop is
+still the right call, for the right reason now stated correctly).
+
+`.github/workflows/quality.yml`'s inline comment carried the same false reasoning and has been
+corrected directly (that file is this cycle's own new code, not append-only content).
+
+**Separately, §Decision (1)'s "Measured, current vs candidate" table's `tools: [.*]` row is also
+wrong in its `CURRENT` column** (states `OK:.*`; the real pre-fix behavior is `BAD:.*`), per audit
+finding **A9**. This was already caught and corrected THIS cycle, in
+`tests/mf3-tools-vocabulary-gate-firing-controls.md`'s "Falsification note" (§E) — but that file is
+`export-ignore`d (0 release-archive entries) while this document ships in every release, so the
+wrong measurement shipped with no pointer to its own correction. Restated here so it ships where the
+claim does: in every real directory (including any CI checkout, which always contains `.` and `..`),
+bash's unquoted `for token in $TOKENS` glob-expands the literal token `.*` against those two
+always-present entries before `grep -qw` ever sees it, and both resulting pseudo-tokens are
+independently rejected — so the pre-fix parser actually **refuses** `tools: [.*]`, not accepts it.
+This does not change the vulnerability finding (D-2's `grep -qw` bypass is independently proven by
+`code`, `claude`, `claude.code`, `cursor*`, none of which depend on this interaction) or the
+candidate's correctness (the post-fix parser also correctly rejects `.*`, for the right reason —
+literal `case` membership, not an accident of two colliding shell bugs).
+
+**§Maturation Path addendum — A2 (new gap found at Phase 6 audit; recorded here, deliberately NOT
+fixed this cycle).** `token=$(printf '%s' "$raw" | tr -d '[:space:]')` deletes whitespace **inside**
+an element, not only around it, before the `case` membership test runs. Independently re-verified
+this session, real invocation: `tools: [claude -code]` (a literal space between `claude` and
+`-code`) normalises to `claude-code` and **ACCEPTS**; the `emacs` negative control, run in the same
+pass, still correctly **REJECTS** — the vocabulary stays closed, this admits a malformed *spelling*
+of an already-approved tool, never an unapproved one. Not fixed here: changing the parser after a
+completed Phase 6 audit would put the merge outside what was audited.
+
+- **Future-state option (the exit named by this addendum):** normalise whitespace *before* the
+  `-ne 1` and shape-precheck gates run, or reject any element containing internal whitespace
+  outright (a token is a single YAML scalar; an internal space is not legal `tools:` syntax to begin
+  with) — the second is stricter and simpler, and does not require deciding what a "normalized"
+  spelling should collapse to.
+- **Concrete revisit trigger:** the moment any consumer starts reading `tools:` to make a routing or
+  authorization decision (named in this ADR's own §Decision (1) as the reason the gate exists ahead
+  of v3.0) — `docs/spec.md:219` states routing is v3.0 scope and `tools:` is informational-only at
+  v2.5, which is why this is accepted as a WARNING, not a blocker, today.
+- **Risk knowingly accepted:** a skill's declared tool name can silently carry hidden internal
+  whitespace between now and whenever that trigger fires, and nothing before v3.0 will complain.
+  Bounded because whitespace-mashed spellings still resolve only to one of the four approved names —
+  no new name enters the vocabulary, only a malformed rendering of one that was already in it.
 
 ---
