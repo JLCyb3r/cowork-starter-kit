@@ -18,11 +18,11 @@
 #   3. Create .git/hooks/pre-commit with this content:
 #      #!/usr/bin/env bash
 #      set -euo pipefail
-#      markdownlint --config .markdownlint.json '**/*.md' --ignore node_modules
+#      markdownlint --config .markdownlint.jsonc '**/*.md' --ignore node_modules
 #   4. Make it executable:        chmod +x .git/hooks/pre-commit
 #
-# Ruleset: .markdownlint.json at repo root (same file CI uses).
-# If .markdownlint.json does not exist, markdownlint uses its defaults.
+# Ruleset: .markdownlint.jsonc at repo root (same file CI uses).
+# If .markdownlint.jsonc does not exist, markdownlint uses its defaults.
 
 set -euo pipefail
 
@@ -56,7 +56,7 @@ cat >"${HOOK_PATH}" <<'HOOK'
 set -euo pipefail
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
-CONFIG="${REPO_ROOT}/.markdownlint.json"
+CONFIG="${REPO_ROOT}/.markdownlint.jsonc"
 
 if [ -f "${CONFIG}" ]; then
   markdownlint --config "${CONFIG}" "${REPO_ROOT}/**/*.md" --ignore "${REPO_ROOT}/node_modules"
@@ -68,7 +68,7 @@ HOOK
 chmod +x "${HOOK_PATH}"
 
 echo "pre-commit hook installed at ${HOOK_PATH}"
-echo "Ruleset: ${REPO_ROOT}/.markdownlint.json (if present, else markdownlint defaults)"
+echo "Ruleset: ${REPO_ROOT}/.markdownlint.jsonc (passed via --config; markdownlint-cli >=0.32.0 also auto-discovers this file)"
 echo "To uninstall: rm ${HOOK_PATH}"
 if [ -f "${BACKUP_PATH}" ]; then
   echo "Previous hook backed up at ${BACKUP_PATH}"

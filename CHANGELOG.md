@@ -19,6 +19,52 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.14] - 2026-08-29
+
+**"The Parser and the Premise."** The `tools:` vocabulary gate (`MF-3`) authorized by
+pattern-matching an untrusted token, which both rejected legitimate two-and-more-tool lists and let
+five wrong tool names through; it now authorizes by fixed-string membership, closing both live
+authorization bypasses in the same change that widens the gate. A chain of five `docs/` claims —
+an ADR, a carry-forward register, an owner-task ledger — asserting things about the past that a
+direct re-check falsified were also corrected.
+
+- **`MF-3`'s tokenizer and authorization mechanism were rewritten.** A two-or-more-item `tools:`
+  list (`tools: [claude-code, copilot]`) previously collapsed into one malformed token and was
+  wrongly refused; it now tokenizes any N≥1 correctly. Independently, `grep -qw "$token"` treated
+  the untrusted token as a regex and bounded only the *match*, not the list entry — `code`,
+  `claude`, `claude.code`, `.*`, and `cursor*` all silently ACCEPTed; the unquoted token loop also
+  performed pathname expansion, so `c?p?l?t` ACCEPTed whenever a same-named file existed on disk.
+  Both are closed by a POSIX `case " $ALLOWED " in *" $token "*)` membership test, loop-scoped
+  `set -f`, an anchored single-line shape precheck (rejecting nested-bracket injection), and an
+  explicit empty-array message distinct from the multi-line-form refusal. A duplicated `tools:` key
+  in one file's frontmatter, which previously slipped past on unquoted newline word-splitting, is
+  now explicitly rejected. Verified with a real, dated, RED-then-GREEN invocation against 58
+  adversarial fixtures and the real 29-skill corpus, under two bash versions and two locales,
+  independently re-run at Phase 6 audit — ten previously-accepted bypass inputs are now refused,
+  zero previously-refused inputs are now accepted except the legitimate N≥2 lists.
+- **`scripts/install-pre-commit.sh` and `CONTRIBUTING.md` now point at the config file the repo
+  actually ships** (`.markdownlint.jsonc`, not the non-existent `.markdownlint.json`) — the
+  installed pre-commit hook and CONTRIBUTING's manual-hook instructions previously silently ran
+  markdownlint's built-in defaults instead of this repo's own ruleset.
+- **Two falsified evidentiary claims were corrected via appended ADR, never by rewriting the
+  originals.** `ADR-095` D9's claim that a Loop 1 behavioral control "has never fired ONCE" rested
+  on a search of the wrong file family; the fire is recorded elsewhere, and the still-binding
+  obligation (demonstrate it through the second entry point) is unchanged. `ADR-093`'s "51 days
+  past due" carry-forward register entry rested on treating a conditional escalation as
+  unconditional; the triggering condition never occurred, so nothing was ever owed. Both
+  corrections are appended new ADRs (`ADR-096`, `ADR-097`), never in-place edits to the originals.
+- **Three `docs/owner-tasks.md` rows and one `docs/roadmap.md` predicate, all of which ship in the
+  release archive, were corrected to match the facts**, worded against the underlying condition
+  rather than a specific calendar date wherever possible so the text does not go stale.
+- **Phase 6 audit (`6.R1`) landed four further text-only corrections**, none touching the gate
+  logic already certified: three local-time timestamps mislabelled UTC (`Z`) were corrected to
+  real UTC; a false rationale claiming a scoping decision would make the check "pass vacuously"
+  (it fails loudly instead) was corrected via appended note; a required retained-verbatim label
+  was restored to a carry-forward register row; and two remaining `.markdownlint.json` references
+  in `CONTRIBUTING.md` were repointed for consistency with the rest of the rename.
+
+---
+
 ## [2.19.13] - 2026-08-27
 
 **"Citation Repair + Registry-Row Integrity."** The anchor-resolution guard minted at v2.19.11 had

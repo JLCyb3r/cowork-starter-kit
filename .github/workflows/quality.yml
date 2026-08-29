@@ -1163,34 +1163,78 @@ jobs:
           # Allowed tokens: claude-code copilot cursor windsurf (no others at v2.5).
           # Runs on skills/*/SKILL.md only; upstream-contribution/ excluded by path-glob shape.
           # MF-S1 (security MUST-FIX): multi-line YAML form rejected explicitly.
+          # ADR-098 (v2.19.14): authorization is FIXED-STRING MEMBERSHIP via a POSIX `case`,
+          # never a regex/glob match against the untrusted token (closes D-2/D-3 — `grep -qw`
+          # bounded the MATCH, not the list entry, and the unquoted token loop performed
+          # pathname expansion). `set -f` is scoped to the token loop ONLY, below — the
+          # `skills/*/SKILL.md` glob on the next line requires expansion. Disabling `set -f`
+          # at step scope does NOT make this check pass vacuously (corrected at Phase 6 audit
+          # finding A4, mutation M4: hoisting it there makes the glob fail to expand, so this
+          # step FAILS LOUDLY on every run instead — rc=2 under errexit, exit 1 without — a
+          # permanent false RED, not a silent green). The scoping below is still correct; only
+          # this stated reason was wrong until now.
           set -o pipefail
           ALLOWED='claude-code copilot cursor windsurf'
           BAD_FILES=""
           for skill_md in skills/*/SKILL.md; do
-            # Extract YAML frontmatter (between first two ---) and find tools: line
+            # Extract YAML frontmatter (between first two ---) and find tools: line(s)
             TOOLS_LINE=$(awk '/^---$/{c++; next} c==1 && /^tools:/' "$skill_md")
             if [ -z "$TOOLS_LINE" ]; then
               echo "::error::${skill_md} missing tools: frontmatter field"
               BAD_FILES="${BAD_FILES} ${skill_md}"
               continue
             fi
-            # Parse list: tools: [claude-code, copilot] -> claude-code copilot
-            TOKENS=$(echo "$TOOLS_LINE" | sed -E 's/^tools:[[:space:]]*\[//; s/\][[:space:]]*$//; s/,/ /g' | tr -d ' ' | tr ',' ' ')
-            # MF-S1: Reject multi-line YAML form — tools: present but unparseable as inline array
-            if [ -z "$TOKENS" ] && [ -n "$TOOLS_LINE" ]; then
+            # S17: the shape precheck below is line-anchored (^...$) but a multi-line subject
+            # matches if ANY line matches — a file with a duplicated `tools:` key would pass
+            # silently if either occurrence happened to be well-formed on its own. Assert
+            # exactly one match before shape-checking it.
+            TOOLS_LINE_COUNT=$(printf '%s\n' "$TOOLS_LINE" | wc -l | tr -d ' ')
+            if [ "$TOOLS_LINE_COUNT" -ne 1 ]; then
+              echo "::error::${skill_md} tools: frontmatter field declared ${TOOLS_LINE_COUNT} times (duplicate key)"
+              BAD_FILES="${BAD_FILES} ${skill_md}"
+              continue
+            fi
+            # Shape precheck: anchored whole-line match on a single-line inline array. The
+            # character class excludes nested brackets, so a bracket-injection attempt (e.g.
+            # `tools: [[c]laude-code]`) fails this precheck and routes to the MF-S1 message
+            # below rather than reaching the tokenizer.
+            if ! printf '%s\n' "$TOOLS_LINE" | grep -qE '^tools:[[:space:]]*\[[^][]*\][[:space:]]*$'; then
               echo "::error::${skill_md} tools: present but unparsed (multi-line form not supported at v2.5)"
               BAD_FILES="${BAD_FILES} ${skill_md}"
               continue
             fi
-            for token in $TOKENS; do
-              # Strip any remaining whitespace
-              token=$(echo "$token" | tr -d '[:space:]')
-              if [ -z "$token" ]; then continue; fi
-              if ! echo "$ALLOWED" | grep -qw "$token"; then
-                echo "::error::${skill_md} tools: contains invalid token '${token}' (allowed: ${ALLOWED})"
+            INNER=$(printf '%s\n' "$TOOLS_LINE" | sed -E 's/^tools:[[:space:]]*\[//; s/\][[:space:]]*$//')
+            if [ -z "$(printf '%s' "$INNER" | tr -d '[:space:]')" ]; then
+              echo "::error::${skill_md} tools: declares no tools (empty array)"
+              BAD_FILES="${BAD_FILES} ${skill_md}"
+              continue
+            fi
+            # Token loop: `set -f` disables pathname expansion ONLY for this loop (restored
+            # immediately after) so an unquoted `for raw in $INNER` cannot resolve a token
+            # like `c?p?l?t` against a same-named file on disk (D-3). It does NOT protect the
+            # `case` membership test below — S19: that test's safety rests ENTIRELY on
+            # `" $token "` and `" $ALLOWED "` being double-quoted inside the case subject. An
+            # unquoted `case $token in` would let a token containing `*` or `?` re-glob as a
+            # CASE PATTERN, which `set -f` has no effect on (it governs the shell's pathname
+            # expansion, not case pattern matching). Do not remove the quotes.
+            _oldifs=$IFS
+            set -f
+            IFS=','
+            for raw in $INNER; do
+              token=$(printf '%s' "$raw" | tr -d '[:space:]')
+              if [ -z "$token" ]; then
+                echo "::error::${skill_md} tools: empty list element"
                 BAD_FILES="${BAD_FILES} ${skill_md}"
+                continue
               fi
+              case " $ALLOWED " in
+                *" $token "*) : ;;
+                *) echo "::error::${skill_md} tools: contains invalid token '${token}' (allowed: ${ALLOWED})"
+                   BAD_FILES="${BAD_FILES} ${skill_md}" ;;
+              esac
             done
+            IFS=$_oldifs
+            set +f
           done
           if [ -n "$BAD_FILES" ]; then
             echo "::error::MF-3 vocabulary gate failed on:${BAD_FILES}"

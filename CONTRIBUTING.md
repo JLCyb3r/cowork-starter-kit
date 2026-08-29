@@ -223,7 +223,7 @@ bash scripts/install-pre-commit.sh
 
 **Requirements:** Node.js + `markdownlint-cli` (`npm install -g markdownlint-cli`).
 
-The hook runs the same ruleset as the CI `markdown-lint` step (`.markdownlint.json` at repo root). If `.markdownlint.json` is absent, markdownlint defaults apply.
+The hook runs the same ruleset as the CI `markdown-lint` step (`.markdownlint.jsonc` at repo root). If `.markdownlint.jsonc` is absent, markdownlint defaults apply.
 
 **Manual procedure** (if you prefer not to use the script):
 
@@ -236,7 +236,7 @@ cat > .git/hooks/pre-commit <<'HOOK'
 #!/usr/bin/env bash
 set -euo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel)
-markdownlint --config "${REPO_ROOT}/.markdownlint.json" "${REPO_ROOT}/**/*.md" --ignore "${REPO_ROOT}/node_modules"
+markdownlint --config "${REPO_ROOT}/.markdownlint.jsonc" "${REPO_ROOT}/**/*.md" --ignore "${REPO_ROOT}/node_modules"
 HOOK
 
 # 3. Make it executable
