@@ -2,7 +2,215 @@
 
 ---
 
-## [plan-2026-08-27-v3-engine] - 2026-08-28 — "THE ENGINE" (PURE-DOC spawn-only design)
+## [v2.19.14] - 2026-08-29 — "The Parser and the Premise"
+
+### 0. Merge facts — re-verified live, not adopted
+
+`gh pr view 121` → MERGED, `mergedAt: 2026-08-29T12:39:42Z`, `mergeCommit: 2bdd0506bf3d99d54dce8066828c8d2e4f1a17cf`
+(matches `main` HEAD). `gh pr checks 121 --json name,state,bucket` → 70 total, `{'pass': 67, 'skipping': 3}`,
+0 fail. `gh pr list --state open` / `gh issue list --state open` → both `[]`. `gh api .../branches/release/v2.19.14-ci-parser-and-premise`
+→ 404 (deleted). `gh release list` → newest is `v2.19.13`; no v2.19.14 release. `git status --short` on
+`main` → clean. All six of the coordinator's claimed facts reproduce exactly.
+
+### 1. The defect ledger — re-derived from the committed record, not the summary
+
+Built from `docs/internal/security/security-review-v2.19.14.md` (S1-S21), `security-audit-v2.19.14.md`
+(A1-A16), `docs/internal/qa/qa-report-v2.19.14.md` (F-1/F-2/F-3, P7-1/P7-2), `tests/mf3-tools-vocabulary-gate-firing-controls.md`,
+and the ADRs' own `§Phase 6 correction` / `§Context` amendment text. Where "found by" for the orchestrator's
+seven self-reported items isn't independently re-derivable from a committed artifact (nobody logs who
+caught an orchestrator error mid-conversation), that's stated rather than guessed.
+
+| # | Defect | Author | Found by | Phase |
+|---|---|---|---|---|
+| 1 | D-1: 2+-item `tools:` lists collapse into one malformed token (the briefed defect) | v2.5-original code | @pm (spec) | 0 |
+| 2 | D-2: `grep -qw` treats the token as a BRE/substring match, not list-entry equality — `code`, `claude`, `claude.code`, `cursor*` all silently ACCEPT | v2.5-original code | @architect (rework, forced by S1) | 1.R1 |
+| 3 | D-3: unquoted `for token in $TOKENS` performs pathname expansion — `c?p?l?t` ACCEPTs when a file named `copilot` exists | v2.5-original code | @architect (rework) | 1.R1 |
+| 4 | S1 CRITICAL: Items 1/2/5 rulings existed only in a chat return; nothing reviewable for the Tier A gate change | orchestrator (relayed design prose as a committed artifact) | @security | 2 |
+| 5 | Literal-pattern `"51 days past due"` search undercounts — cannot match `**51 days** past due` across markdown emphasis; missed 3 real sites in `architecture.md` (re-verified live: 0 vs `a546292`, correct pattern → 3) | orchestrator | @architect (ADR-097 §Context) | 1 |
+| 6 | Cited spec heading `## v2.19.14`, which returns 0 (`grep -c '^## v2.19.14' docs/spec.md` → 0; the real heading is `# Product Spec — Cowork Starter Kit v2.19.14 "..."`) | orchestrator | not independently attributable — self-reported | unclear |
+| 7 | Told the owner, in a gate widget, that `tools: [.*]` is accepted pre-fix — an isolated `grep -qw` probe, false end-to-end (the unquoted loop glob-expands `.*` to `.`/`..`, both individually rejected) | @architect (ADR-098 §Context/§Decision "Measured" table) | @dev | 4 |
+| 8 | Hand-wrote phase timestamps as local UTC+4 labelled `Z`, inverting Phase 1/3 and the Phase-2-review date | orchestrator | @security (audit A7) | 6 |
+| 9 | Hypothesised the wrong guard (`orchestrator-guard.sh`, `bash-write-detector.sh`, directory/size) for @security's lost Phase-2 write; refuted on all three grounds live | orchestrator | orchestrator (self, same session) | 2 |
+| 10 | `NOT IN FORCE` used as a pass/fail pattern at the final pre-merge check — matches legitimate past-tense "Gate history" lines too, not only a live violation | orchestrator | not independently attributable — self-reported | 7 |
+| 11 | `set -f` step-scope rationale ("would pass vacuously") is false — it fails loudly (`rc=2` under `errexit`); 3 sites (code comment, ADR-098 body, ADR-098 index row) | @architect | @security (audit A4) | 6, fixed 6.R1 |
+| 12 | ADR-097 §Decision(5)'s own line citations (`:15422`/`:15557`) go stale the moment written — the same commit's own 3 new index rows shift them to `:15425`/`:15560` | @architect | @security (audit A5) | 6, fixed 6.R1 |
+| 12b | The identical citation defect's *second* instance, in §Context's own site-count table — not named by A5's quote, fixed anyway | @architect | @dev (self, beyond the literal finding) | 6.R1 |
+| 13 | `carry-forwards.md:238` missing the `Original status text, retained verbatim:` label ADR-097 §Decision(3) mandates for **both** re-derived rows | @dev | @qa (F-2) | 5, re-confirmed @security (audit A6) at 6, fixed 6.R1 |
+| 14 | `CONTRIBUTING.md:226,239` still name `.markdownlint.json` (doesn't exist) — sites 6/7 of the same rename @dev's Item 2 performed at the other 5 | pre-cycle (v2.6.1-era drift) | @qa (F-3, scoped "out of cycle" — audit A8 overruled that scoping) | 5, escalated 6, fixed 6.R1 |
+| 15 | ADR-098's own Phase-1-rework timestamp (`05:05:19Z`, "corrected -4h for consistency") is chronologically **earlier** than ADR-096/097's Phase-1 timestamp (`07:34:00Z`) — a rework preceding the pass it reworks and the finding that triggered it | @dev (6.R1's own extension of the A7 fix) | @qa (P7-1) | 7 |
+| 16 | ADR-098's new A2 Maturation-Path addendum uses paraphrased headers ("Future-state option...", "Concrete revisit trigger...") instead of the house's exact plural forms | @dev (6.R1) | @qa (P7-2) | 7 |
+| 17 | A2: the `case`-membership test runs on a whitespace-**stripped** token — `tools: [claude -code]` normalises to `claude-code` and ACCEPTs | @architect (design) / @dev (implementation) | @security (audit A2 — genuinely new, not reproduced from any prior pass) | 6 |
+| 18 | A3: the success message's `find`-based count is recursive; the per-file loop is one-level — a nested `skills/x/y/SKILL.md` is validated by no job at all while still being counted | v2.5-original code (identical at `a546292`) | @security (audit A3 — genuinely new) | 6 |
+| 19 | S17: the shape precheck is `grep -q` (any-line, not whole-subject) — a duplicated `tools:` key smuggles two individually-valid lines past the gate | @architect (design) | @security (Phase 2, S17) | 2, gate-folded, fixed 4 |
+| 20 | S19: `case` safety rests entirely on `" $token "` quoting; `set -f` provides no protection against an unquoted regression | @architect (design) | @security (Phase 2, S19) | 2, gate-folded, mitigated via permanent fixture 4 |
+| 21 | S6: spec's `AC-OT4-1` control was a file-wide `grep -c "dormant"` → 0, which would require editing out-of-scope OT-7 (`dormant` also appears there, correctly) | @pm (spec wording) | @security (Phase 2, S6) | 2, gate-folded, fixed 4 |
+| 22 | My own Phase 5 report stated `"v3.0" → 13` as a confirmed count without flagging that `grep -c` counts matching **lines**, not occurrences (true: 22, independently reproduced this session) | @qa (Phase 5) | @security (audit A10) | 5, found 6 |
+| 23 | **New, found this retro:** `security-review-v2.19.14.md`'s own header states "0 blocking, 6 warnings, 4 info"; the 20-row Findings Summary table it heads actually contains 8 WARNING and 3 INFO (re-counted directly: S6,S7,S8,S9,S12,S17,S20,S21 = 8; S16,S18,S19 = 3) — the header disagrees with its own table on both axes | @security (Phase 2) | @qa (this retro) | 2, found 8 |
+
+**Totals.** 23 distinct instances (24 rows; #12/#12b are one defect caught in two passes). **By author** (who
+introduced the defect, not who is blamed for missing it): orchestrator 7 (#4-#10), @architect 8 (#2,#3,#7,#11,#12,#17-partial,#19,#20),
+v2.5-original/pre-cycle code 3 (#1,#14,#18), @dev 3 (#13,#15,#16), @security 1 (#23, self), @pm 1 (#21, `AC-OT4-1`'s
+spec wording — note #5 is the orchestrator's own error *about* @pm's citation count, not a defect @pm introduced),
+@qa 1 (#22, self). **By catching phase:** Phase 0-1: 3, Phase 2: 4, Phase 4: 1, Phase 5: 2, Phase 6: 6, Phase 6.R1/7: 3,
+Phase 8 (this retro): 1, unclear/unattributable: 2. **Every phase of the pipeline caught at least one real defect
+that the phase before it shipped or missed — including this retro, which found a new one (#23) in a document three
+phases old.**
+
+**Where this count differs from the coordinator's own framing:** the coordinator listed 7 self-authored defects;
+all 7 are included above (#4-#10), and re-run rather than adopted where a command exists to check them (#5, #6
+independently re-verified; #9's three-way refutation independently re-read from the review file; #8's UTC+4 basis
+independently re-verified live via `date`/`date -u`). Two (#6, #10) have no committed-artifact trail showing who
+caught them, so "found by" is left honestly unattributable rather than guessed. One genuinely new instance (#23)
+was not in the coordinator's list and was not previously recorded anywhere in this cycle's committed record.
+
+### 2. The cycle's defining pattern — instance count against `docs/patterns.md`'s own threshold
+
+**`Denominator drift`** (`docs/patterns.md` — *"two populations compared without pinning what each side actually
+counts"*) is already **BINDING**, promoted at its 3rd instance in the immediately-prior cycle (`plan-2026-08-27-v3-engine`,
+2026-08-28). Its own row already documents a **propagation gap**: v2.19.13 advanced it 1/3→2/3 in `docs/retro.md`
+but that advancement never reached this file — so before adding anything new, that gap is itself evidence for
+this cycle's theme (a correction, recorded in one document, not propagated to the register that owns it).
+
+**Classifying this cycle's instances against the row's own definition** (a comparison whose two sides were never
+pinned to the same population) rather than the looser "rhymes with it" test:
+
+- **Clean fits (population/pattern-shape mismatch):** #5 (pattern narrower than the markdown it searches),
+  #6 (a heading form that was never the file's convention), #7/#11 in spirit — testing an isolated construct
+  (`grep -qw "$token"` fed a plain string) instead of the real pipeline (`for token in $TOKENS`, which
+  glob-expands first) is a population substitution, not a miscount, but the *mechanism* is identical: the
+  measurement's scope silently differs from the scope the conclusion is about. #23 (a header's own tally
+  vs. its table's actual rows — the header counted a population it never re-derived from the rows below it).
+- **Adjacent, not this row:** #22 (`grep -c` vs `grep -o`) is `Ambiguous-unit numeric claim`, explicitly
+  named as **distinct** in Denominator drift's own text ("a cited number restated with an unstated unit"
+  vs. "what population each side counts") — same for @architect's A10 finding about this. #8 (timestamps)
+  is a units/label defect (local time labelled `Z`), not a population comparison. #9 (wrong-guard hypothesis)
+  is a root-cause misattribution, a different shape entirely — refuted by testing, not by re-scoping a count.
+- **The `leg (a) never fired` saga** (three authors — @architect via ADR-095 D9, @security, @qa — concluding
+  the same false negative from searching `tests/self-upgrade-firing-controls.md` alone when the fire was
+  recorded in the `docs/internal/qa/` report family) is the clearest textbook instance of this row's exact
+  definition. **It is not a v2.19.14 instance** — the three authorings all happened in the prior cycle
+  (`plan-2026-08-27-v3-engine`); v2.19.14 only produced the *catch* (ADR-096). Checked against
+  `docs/patterns.md` directly (`grep -n "leg (a)\|RAN stamp\|self-upgrade" docs/patterns.md` → 0 hits): **this
+  instance was never tallied anywhere.** It belongs to `plan-2026-08-27-v3-engine`'s own count, which already
+  lists 6 separate occurrences for that cycle — none of which is this one. That cycle's tally is therefore
+  **undercounted by at least 1**, discovered here because ADR-096 didn't exist when that retro was written.
+
+**Verdict: this is not a new pattern, and it is not merged into the row on rhyme alone — it is 4 additional,
+individually-checked instances of an already-BINDING pattern (#5, #6, #7/#11, #23), plus one backfilled
+instance belonging to the prior cycle's already-BINDING count.** `docs/patterns.md` is updated below with a
+`v2.19.14 (4th cycle)` entry and a backfill note on the `plan-2026-08-27-v3-engine` entry — not a new row,
+because the threshold was already met and minting a second row for the same shape would itself be the
+"pattern narrower than the data" defect this section is about.
+
+### 3. Rework rate — not directly comparable to v2.19.13, and here is why
+
+v2.19.13's methodology is `git diff --shortstat <phase4-end-sha> <phase6.1-end-sha>` as a fraction of
+`git diff --shortstat <base-sha> <phase4-end-sha>` — both terms are immutable, independently re-runnable
+git objects. **v2.19.14 has no equivalent commits to diff between.** Every phase (0 through 7, both rework
+loops) landed in one continuous, uncommitted working tree; the entire cycle became git history in a single
+squash-merge (`2bdd050`). There is no `<phase4-end-sha>` to diff against — re-deriving v2.19.13's number
+requires two SHAs that do not exist here. **This is the incomparability the coordinator asked to be stated
+plainly, and it is stated: the two cycles used different commit topologies (per-phase commits vs. one
+squash-merge), not different content types (both shipped code) — the prior retro's own comparability
+concern about PURE-DOC vs. shipped-code cycles does not apply here; a different, un-named incomparability
+does.**
+
+**What can be measured, labelled as a proxy, not a replacement:** `@qa`'s own `git diff --stat` snapshots
+taken live at Phase 5 (7 files, 1345(+)/24(-) = 1369 lines from base) and at Phase 7 (11 files, 1466(+)/28(-)
+= 1494 lines from base) are re-derivable from this retro's own text but not from git alone — no commit
+marks the Phase-5 boundary. Delta: 125 lines. Of those, 71 (quality.yml comment +3, architecture.md +68) are
+defect-driven rework (items #11-#16 above); 54 (`CHANGELOG.md`+`README.md`+`VERSION`) are the version-bump
+ship-step, which v2.19.13 likely performed *during* Phase 4 itself (its own rework total contains no such
+files) rather than after — for v2.19.14 it genuinely landed post-Phase-4, but conflating it with
+defect-fix rework would overstate the defect-repair number.
+
+- **All post-Phase-4 changes:** 125/1369 ≈ **9.1%**
+- **Defect-driven rework only** (excluding the version-bump ship-step): 71/1369 ≈ **5.2%**
+- **v2.19.13's own figure:** 2.0% (git-SHA-derived, fully re-runnable)
+
+Neither v2.19.14 figure should be read against v2.19.13's 2.0% as an apples-to-apples trend — they are
+proxies from conversational snapshots, not from git history, and both are already roughly 2.5-4.5x higher
+even on the narrower defect-only definition. Whether that means "this cycle needed more rework" or "this
+cycle's uncommitted-working-tree topology makes rework more visible because there's nothing hiding it inside
+a Phase-4 commit's own diff" cannot be determined from this data alone.
+
+### 4. What the process caught that nothing else would have — specific, and "less than it looks" where true
+
+- **Two live authorization bypasses in shipped, public, template-pool code** (D-2, D-3) — real: 29/29
+  shipped skills use one token today, so neither bypass is exercised by any current file, but the pool is
+  a template others copy from, and both bypasses were reachable the moment a second token was declared,
+  which `AC-PARSE-1` (the *briefed* fix) itself was about to make routine. **This is the strongest "caught
+  something real" claim** — verified independently at Phase 5 and again at Phase 7 against the actual shipped
+  step and the actual 29-skill corpus, not a fixture.
+- **A remedy that would have red-lined CI for all 29 skills** (@security's own `grep -qxF --` proposal,
+  tested by @architect against the *unconverted* space-separated `ALLOWED` — every legitimate token rejected).
+  Real, but **less than it looks**: this was caught at design time (Phase 1), before any code shipped, by
+  the same author-adjacent review that proposed it — a near-miss inside deliberation, not a near-miss inside
+  production.
+- **A design that existed only in a chat return** (S1) — real, and structurally interesting: it shows the
+  gate-widget/orchestrator layer can silently lose a Tier A design between "the agent said it's done" and
+  "the artifact exists," which is the same failure class as this cycle's own unexplained lost Phase-2 write
+  (S21) and the Phase-5 `docs/internal/qa/qa-report-v2.19.14.md` unwritability. Caught by @security noticing
+  an absence, not by any positive control — worth naming as a structural risk, not just an instance.
+- **A proposed negative control reproduced GREEN against a deliberately broken file** — this is `AC-CF25F-1`'s
+  original bare `grep '51 days' → 0` check (S4/ADR-098 §Decision(7)): applied to a cosmetic-only edit that
+  left `"ORPHANED — OVERDUE"` and `"never been performed"` standing, it would have passed. Independently
+  re-constructed and confirmed at Phase 5 (§(d) of that report) on a copy outside the repo — genuinely real,
+  not narrated.
+- **Less than it looks:** the `.*` bypass, the version-consistency gap, and A2/A3 (intra-token whitespace,
+  nested-skill blind spot) all share a property worth stating plainly — **none of them is reachable by any
+  file that exists in this repo today.** The process caught latent defects in a gate that nothing currently
+  routes through (see §6). "Caught" here means "found and closed before it could ever have mattered," which
+  is real value, but it is not the same claim as "prevented an incident."
+
+### 5. Carry-forwards
+
+| Id | Description | Home |
+|---|---|---|
+| P7-1 | ADR-098's own rework timestamp resolves to a causally impossible order vs. ADR-096/097's Phase 1 | Next `docs/architecture.md` touch — needs a citation or a further correction |
+| P7-2 | A2 addendum's Maturation-Path headers are paraphrased, not the exact canonical plural form | Next `docs/architecture.md` touch — mechanical re-label |
+| A2 | Intra-token whitespace normalises to an approved spelling (`claude -code` → ACCEPTs) | v3.0 gate — ADR-098's own Maturation Path names "the moment any consumer starts reading `tools:` to route" as the trigger |
+| A1 | No CI check is required to merge `main` — 0 required reviews, 0 rulesets, `required_status_checks` not enabled (re-verified live this session) | **Advisory only, per the coordinator's framing — but see §6: this is the strongest candidate for the next hardening cycle** |
+| A3 | Success message counts a population (`find`, recursive) the per-file loop (one-level) doesn't check | Backlog — pre-existing at `a546292`, unreachable today (29/29 skills at depth 1) |
+| S7 | `awk` frontmatter scan fails open for a file with no frontmatter | `CF-v2.5-E` territory, named as such in the review itself |
+| S8 | `CF-v2.5-A` silently discharged — the spec called the MF-S1 defect "`CF-v2.5-A`'s residue" while listing `A` out of scope | Needs a disposition, not a re-open — @pm to reconcile at next `CF-v2.5-A` touch |
+| S9 | `AC-PARSE-1` unlocks multi-tool declarations while `CF-v2.5-ARCH-C`/`-G` (multi-tool governance) remain OPEN/ORPHANED | v3.0 — same venue `CF-v2.5-ARCH-C`/`-G` already have |
+| S12 | `install-pre-commit.sh`'s "same ruleset as CI" claim is false on a second axis (CI globs exclude `docs/**`) — outside the 5-site rename population, survives the fix | Backlog — cosmetic, not a Tier A surface |
+| F-3 residue | Not a technical defect — `@qa`'s own Phase 5 scope call ("pre-existing, out of cycle") was overruled by the audit (A8: the cycle's scope is *"repoint the sites naming X"*, not *"repoint one script"*). Process lesson for future `@qa` scope calls: check whether an "out of scope" item shares the same rename/fix population as something already in scope before calling it adjacent. | `@qa`'s own judgment calibration — no file owns this |
+| CF-v2.5-A/B/D/E | 4 of the 6-item security/QA carry-forward series remain ORPHANED, unowned since v2.6.0 | Needs an owner assigned — none currently named anywhere in the repo |
+| CF-v2.5-F | **Closed this cycle** (ADR-097) — not a carry-forward | — |
+| CF-v2.5-G | Tool-vocabulary allow-list governance — "directly load-bearing on v3.0" per the register's own words | v3.0 gate, paired with `CF-v2.5-ARCH-B`/`-C` |
+
+### 6. Was hardening an unenforced gate worth it — and what it implies for the next cycle
+
+**Yes — argued straight, not hedged.** Three reasons, in order of weight. **First:** this is a public template
+repository whose entire product is "the patterns here are correct and safe to copy." The blast radius of D-2/D-3
+was never bounded by this repo's own CI enforcement — it was bounded by how many downstream forks vendor a skill
+declaring a token this gate should have refused. `required_approving_review_count: 0` changes who can merge a
+bad *skill*; it does not change what happens when someone copies the *gate's own logic* into their fork believing
+it is sound. **Second:** the record shows the actual enforcement mechanism for this solo-maintainer repo — a human
+looking at the red X — has held for 13 consecutive patch cycles on this rung alone (v2.19.1-v2.19.13, per the
+prior retro) with zero merges of a broken build. Zero required reviews is not the same claim as zero review;
+it just means the review is a habit, not a lock, and the habit is empirically the thing actually doing the work.
+**Third:** the cycle's cost was not wasted even at the margin — the same rigor that closed D-2/D-3 is what caught
+ADR-097's self-authorship problem, the append-only-discipline questions, the citation drift, and (this retro) the
+security-review's own header miscount. A hardening cycle scoped only to `quality.yml` would not have produced
+those.
+
+**But the implication for choosing the next cycle is real, and it is not "do more of this."** A1 was raised
+once, at Phase 6, as a WARNING that ships unfixed — correctly, since it is pre-existing configuration, not
+something this cycle worsened. This retro is the second place it surfaces, now as the answer to "was the
+work worth it," and elevating it here is deliberate: every future Tier-A hardening cycle inherits the same
+structural discount this cycle did — provably correct, still advisory. The marginal value of a fourth, fifth,
+sixth advisory-only gate hardening is
+demonstrably lower than making the 70 checks that already exist **load-bearing once** — a single
+`required_status_checks` + minimal-ruleset change would retroactively multiply the value of every hardening
+cycle this repo has ever run, this one included. **Recommendation: the next self-improvement or hardening
+cycle should target A1 directly, not another gate.**
+
+---
+
+
 
 ### 0. Errors caught inside the cycle's own remedies, not in the original code
 

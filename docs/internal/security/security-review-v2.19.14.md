@@ -2,7 +2,15 @@
 
 ## Phase: 2 (Architecture Review) — pass 2 (`2.R1`, re-review of `1.R1`)
 ## Date: 2026-08-29T09:20:00Z (corrected −4h at Phase 6.R1 from `2026-08-29T13:20:00Z`, a local-time reading mislabelled `Z` in the original — audit finding A7; this host's real UTC offset is UTC+4, verified via `date`/`date -u`, not the audit's own stated CEST/UTC+2)
-## Status: PASS WITH WARNINGS — 0 blocking, 6 warnings, 4 info
+## Status: PASS WITH WARNINGS — 0 blocking, 8 warnings, 3 info
+<!-- Corrected at Phase 8 (2026-08-29): the header read "6 warnings, 4 info" against a table
+     containing 8 WARNING and 3 INFO rows (20 S-rows total: 8 + 3 + 9 RESOLVED). Found by @qa
+     while building the retro defect ledger, by counting the table instead of reading the header
+     — nobody had checked it across four prior passes. The original figures were @security's own
+     and were propagated unchecked by the orchestrator when it persisted this file. Recorded here
+     rather than silently restated, per this cycle's own subject matter: a total asserted in a
+     header is a CLAIM, while the rows beneath it are the CHECKSUM. -->
+
 
 > **Provenance note (orchestrator, 2026-08-29).** This file was persisted by the orchestrator from
 > `@security`'s returned text, not written by `@security` itself. `@security`'s own `Write` call
