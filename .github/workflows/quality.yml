@@ -1,6 +1,20 @@
 name: Quality Checks
 
-on: [push, pull_request]
+# A1 (ADR-099, v2.19.15): `push` is DROPPED deliberately. `quality.yml` used to fire
+# twice per commit (`push` + `pull_request`), producing a `skipped` twin for the 3
+# job-level-`if:`-gated jobs below on the `push` instance — a structural,
+# zero-privilege duplicate that a bare re-run button could promote over a real
+# `pull_request`-instance failure once required status checks are enabled
+# (@security CRITICAL, upheld). Dropping `push` removes the duplicate entirely rather
+# than depending on GitHub's tie-break rule. Costs no merge-path coverage: this repo's
+# branch protection requires a PR before merging (verified live), so every commit that
+# reaches `main` already fires `pull_request`. `workflow_dispatch` is added as the
+# mechanism that gives bot-opened `sync-agency.yml` PRs (which never trigger
+# `pull_request` themselves — `GITHUB_TOKEN`-authored events are suppressed by
+# GitHub) real check-run results; see `sync-agency.yml`'s `dispatch-quality` job.
+on:
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   markdown-lint:
@@ -1907,7 +1921,14 @@ jobs:
           echo "Attribution-survives-render check passed (S5 MUST-FIX)."
 
   verbatim-attribution-rule-check:
-    name: Verbatim Attribution Rule Check (ADR-024 / #15)
+    # B1/B2 (ADR-099, v2.19.15): quoted. Unquoted, YAML treats ` #` as a comment start
+    # and silently truncates the live check-run name to "Verbatim Attribution Rule
+    # Check (ADR-024 /" — a defect this repo never noticed until this cycle needed the
+    # 35 job names as exact, matchable required-context strings. Fixed HERE, while the
+    # gate is still off (B2): once `required_status_checks` is armed, editing a job
+    # `name:` becomes a gate-breaking operation requiring an atomic context re-derive,
+    # so this is the last free window to normalize it.
+    name: "Verbatim Attribution Rule Check (ADR-024 / #15)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -1945,7 +1966,15 @@ jobs:
       contents: read  # S1 fix — defense-in-depth for PR-triggered jobs (especially fork PRs)
     # Run on every PR — `github.event.pull_request.changed_files` is unreliable in `if:` context.
     # Job body is ~5s; over-running is cheaper than missing a sync-agency.yml change.
-    if: github.event_name == 'pull_request'
+    # A6/B5 (ADR-099, v2.19.15): allow-list, not `!= 'push'` — deliberately ALWAYS TRUE
+    # today, since `quality.yml`'s only two triggers (`pull_request`, `workflow_dispatch`)
+    # are both listed here. It is a fail-closed tripwire for a future third triggering
+    # event, not a currently-discriminating condition. Deleting it costs nothing today,
+    # but a later cycle that adds a third event (e.g. re-adds `push`) would then silently
+    # re-arm this job on that event with no one having consciously re-derived A1/A8 for
+    # it — restoring the exact `skipped`-required-check hazard A1 exists to close. Do not
+    # delete without re-deriving A6/A8 for the new trigger set.
+    if: contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Step 1 — Fetch upstream HEAD SHA (auth class — caught v2.0.3 #25)
@@ -1973,20 +2002,48 @@ jobs:
           echo "LICENSE SHA-256: $SHA"
       - name: Step 3 — Fetch 2 sample files + verify JSONL accumulator pattern (#28 Fix A regression gate)
         run: |
-          # Verify the 8 patterns from upstream-content-scan-rules.md compile cleanly
-          PATTERN_COUNT=$(grep -c '^- `' docs/internal/security/upstream-content-scan-rules.md || echo 0)
+          # AMEND-1 (ADR-099 A2/B8, v2.19.15) — all three sub-defects, each
+          # independently necessary (fixing any two leaves the third latent):
+          #  1. The doc states its 8 patterns in fenced ```regex blocks, not
+          #     `^- \`` backtick list items (that pattern matched 0, exit 1).
+          #  2. `|| echo 0` is replaced with `|| true`. `grep -c` both PRINTS "0" and
+          #     EXITS non-zero on no match, so `|| echo 0` appended a second line,
+          #     producing a multiline value that made `[ "$PATTERN_COUNT" -lt 1 ]`
+          #     error out — and because `set -e` does not fire on a failing `if`
+          #     CONDITION, the `exit 1` guard below was never reached and the step
+          #     printed PASS regardless.
+          #  3. The `-lt 1` floor is kept (house standard, matches
+          #     lock-content-sha-cross-check's CHECKED=0 floor).
+          RULES_FILE="docs/internal/security/upstream-content-scan-rules.md"
+          mapfile -t PATTERNS < <(awk '/^```regex$/{f=1; next} /^```$/{f=0} f' "$RULES_FILE")
+          PATTERN_COUNT=$(printf '%s\n' "${PATTERNS[@]}" | grep -c . || true)
           if [ "$PATTERN_COUNT" -lt 1 ]; then
-            echo "ERROR: No regex patterns found in upstream-content-scan-rules.md"
+            echo "ERROR: No regex patterns found in $RULES_FILE"
             exit 1
           fi
-          # Test pattern compilation by extracting and grepping a sample
-          while IFS= read -r line; do
-            pat=$(echo "$line" | sed -n 's/.*`\([^`]*\)`.*/\1/p')
-            if [ -n "$pat" ]; then
-              # Verify pattern compiles via grep -E (compile-time check, hits irrelevant)
-              echo "test sample input" | grep -qE "$pat" || true
+          # Test pattern compilation by grepping a throwaway sample. A no-match is
+          # expected and fine (grep exit 1); a COMPILE failure (grep exit 2 — invalid
+          # regex) is not, and was previously indistinguishable from a no-match
+          # because `|| true` swallowed both alike, making "N patterns compile
+          # cleanly" unverifiable. The `if`/`else` below reads the real exit status
+          # without letting `set -e` abort on it (a command inside an `if` condition
+          # is exempt), so exit 2 is caught explicitly instead of being absorbed.
+          FAIL=0
+          for pat in "${PATTERNS[@]}"; do
+            [ -n "$pat" ] || continue
+            if echo "test sample input" | grep -qE "$pat"; then
+              rc=0
+            else
+              rc=$?
             fi
-          done < <(grep '^- `' docs/internal/security/upstream-content-scan-rules.md)
+            if [ "$rc" -eq 2 ]; then
+              echo "ERROR: pattern failed to compile (grep exit 2): $pat"
+              FAIL=1
+            fi
+          done
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
           echo "PASS: $PATTERN_COUNT regex patterns compile cleanly"
 
           # JSONL accumulator pattern regression gate — catches subshell-class regressions (#28 Fix A)
@@ -2161,7 +2218,15 @@ jobs:
   lock-content-sha-cross-check:
     name: lock-content-sha-cross-check (C-v2.5-19)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # A6/B5 (ADR-099, v2.19.15): allow-list, not `!= 'push'` — deliberately ALWAYS TRUE
+    # today, since `quality.yml`'s only two triggers (`pull_request`, `workflow_dispatch`)
+    # are both listed here. It is a fail-closed tripwire for a future third triggering
+    # event, not a currently-discriminating condition. Deleting it costs nothing today,
+    # but a later cycle that adds a third event (e.g. re-adds `push`) would then silently
+    # re-arm this job on that event with no one having consciously re-derived A1/A8 for
+    # it — restoring the exact `skipped`-required-check hazard A1 exists to close. Do not
+    # delete without re-deriving A6/A8 for the new trigger set.
+    if: contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Cross-environment content_sha256 verification
@@ -2365,7 +2430,15 @@ jobs:
   vendored-removal-ledger:
     name: Vendored Removal Ledger (ADR-080)
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    # A6/B5 (ADR-099, v2.19.15): allow-list, not `!= 'push'` — deliberately ALWAYS TRUE
+    # today, since `quality.yml`'s only two triggers (`pull_request`, `workflow_dispatch`)
+    # are both listed here. It is a fail-closed tripwire for a future third triggering
+    # event, not a currently-discriminating condition. Deleting it costs nothing today,
+    # but a later cycle that adds a third event (e.g. re-adds `push`) would then silently
+    # re-arm this job on that event with no one having consciously re-derived A1/A8 for
+    # it — restoring the exact `skipped`-required-check hazard A1 exists to close. Do not
+    # delete without re-deriving A6/A8 for the new trigger set.
+    if: contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -2377,9 +2450,22 @@ jobs:
           # to end, reproduced INSIDE the control written to end it. Never relax this.
           fetch-depth: 0
       - name: Assert every lock removal is a declared blocked_files entry
+        # A5 (ADR-099, v2.19.15): `github.base_ref` is empty on any non-`pull_request`
+        # event (e.g. `workflow_dispatch`), which previously produced `origin/` and a
+        # hard failure inside verify-lock-removals.sh (`git show` exit 128) — an
+        # availability defect, discovered when Fixture B's own criterion was tightened
+        # to require `success`, not merely `not skipped` (A3). The fallback below keeps
+        # the job runnable under `workflow_dispatch`; the non-empty assertion makes a
+        # silent empty value impossible to reintroduce whichever context populates it.
+        # `scripts/verify-lock-removals.sh` itself is byte-unchanged.
         env:
-          BASE_REF: ${{ github.base_ref }}
-        run: bash scripts/verify-lock-removals.sh --base "origin/${BASE_REF}" --head HEAD
+          BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}
+        run: |
+          if [ -z "${BASE_REF:-}" ]; then
+            echo "::error::BASE_REF empty — refusing to run a vacuous ledger check"
+            exit 1
+          fi
+          bash scripts/verify-lock-removals.sh --base "origin/${BASE_REF}" --head HEAD
 
   ledger-annotations:
     name: Ledger Annotations (v2.19.8)

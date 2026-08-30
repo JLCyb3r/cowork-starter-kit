@@ -39,11 +39,20 @@ skills/                              @jmlozano1990
 curated-skills-registry.md          @jmlozano1990
 
 # Release/publish surface — v2.19.7 (AC-E3-1, AC-E3-2, ADR-079/ADR-080). Same
-# enforcement-strength caveat as every other row in this file: `required_status_checks`
-# is absent and `require_code_owner_reviews` is `false` on this repo's branch protection
-# (verified live) — these rows ROUTE review to the owner and make an unreviewed change
-# visible; they do not REQUIRE review and cannot block a merge. Becomes blocking only if
-# the owner enables code-owner review, an owner-side decision no agent makes (OQ-2).
+# enforcement-strength caveat as every other row in this file — one clause below
+# corrected at v2.19.15 Phase 1 (ADR-099, D5 third living source): the claim that
+# `required_status_checks` is absent stops being true once this cycle's gate is armed
+# post-merge (`AC-REQCHECK-1`) — several of these same paths (`cowork.lock.json`,
+# `.github/workflows/sync-agency.yml`, `.github/workflows/quality.yml`) become covered
+# by required status checks at that point, a DIFFERENT mechanism from CODEOWNERS
+# review. `require_code_owner_reviews` stays `false` (`AC-REQCHECK-2`, unchanged) — so
+# these rows still do not by themselves REQUIRE a code-owner review and cannot block a
+# merge on that basis alone. Becomes blocking via review only if the owner separately
+# enables code-owner review, an owner-side decision no agent makes (OQ-2). Original
+# clause, retained verbatim: "`required_status_checks` is absent and
+# `require_code_owner_reviews` is `false` on this repo's branch protection (verified
+# live) — these rows ROUTE review to the owner and make an unreviewed change visible;
+# they do not REQUIRE review and cannot block a merge."
 #
 # AC-E3-1: the four release-surface files that make up the standing gate + producer.
 scripts/publish-release.sh          @jmlozano1990

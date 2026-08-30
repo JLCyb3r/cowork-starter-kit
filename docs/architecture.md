@@ -119,6 +119,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-096 | **A re-run in the same population is not an independent check** (v2.19.14) — **amends ADR-095 D9's EVIDENCE CLAUSE only; D9's conclusion is unchanged and still binding.** D9 inferred *"leg (a) has never fired ONCE, through either entry point"* from MF-2 control (b) carrying no `RAN` stamp. The stamp is genuinely absent — **the fire is recorded elsewhere**, at `docs/internal/qa/qa-report-v2.19.0.md:46/55/70` (Scenario 4, filesystem/MD5-verified). **Three authors reproduced the error**, the last under a heading titled *"Re-Run, Not Trusted"*, because all three re-ran the same query over the same corpus: the file that **stamps** controls, never the family that **reports** outcomes — and the inference silently crossed a label boundary (MF-2 control (b) → `AC-UPGRADE-4` leg (a)) that the search population did not cross with it. Replaces D9's two-state premise with **three** states — *never fired* / **fired, unstamped (the actual state)** / *fired and stamped* — so v3.0's leg-(a) work changes in kind from **ESTABLISH to STAMP-AND-ADJUDICATE**, a reduction in work and none in obligation. **Deliberately refuses to adjudicate** whether Scenario 4 discharges control (b) as written (control (b) names `self-upgrade`; Scenario 4 drove `self-apply`) — settling it here would substitute a fresh unverified judgment for the one being corrected. Neither `docs/internal/` report is annotated: they are closed-cycle records whose truth-value is indexed to their own date, and *the remedy for propagation is not more propagation*. `docs/roadmap.md:44` is corrected **in place** on document-class grounds (0 occurrences of `append-only` in that file; it is a forward-binding instruction, not a record of a past moment) — explicitly **not** on the header's re-derive instruction, which is scoped to the version line and names `VERSION` + the tag list as its source. `Reusability: candidate-constituent` | **ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1)** |
 | ADR-097 | **A register cannot repair a claim it authored without a source — the source is created first, then the row is re-derived** (v2.19.14) — **amends ADR-093 §Context; none of its four Decisions is disturbed.** Two figures are false: the *"51 days past due"* premise (`CF-v2.5-F`'s obligation was **conditional** — *"escalate if PR #521 unmerged by 2026-07-08"* — and PR #521 **merged 2026-06-04**, 34 days before the trigger, 26 days into a 60-day window, so **nothing was ever owed**; the arithmetic is correct and irrelevant) and the *"2026-05-11"* disposition date (**0** occurrences in the cited `qa-report-v2.6.0.md`; control `2026-05-10` → 14). Rules on `AC-CF25F-2`: **a direct repair of the register is FORBIDDEN** — the *"source is silent, so the source-wins rule does not fire"* argument **proves too much**, since it would license the register to author and amend freely, which is the *second authority* ADR-093 §Decision (1) exists to forbid; and ADR-093 §Decision (3) does **not** transfer, its predicate being an **intra-file** contradiction where this is external falsification. **A re-derivation is REQUIRED instead**, and the **ordering is the ruling**: this ADR is created as the missing source, and only then are `carry-forwards.md:223`/`:238` re-derived from it — with §Decision (3)'s *"Original status text, retained verbatim"* mechanism adopted even though its authorization is not. **`CF-v2.5-ARCH-D` is NOT discharged** (its venue is the v3.0 gate); only its falsified rationale is re-derived, its input recorded — the contributed file survives upstream **renamed** to `project-management/project-management-meeting-notes-specialist.md`. `Reusability: candidate-constituent` | **ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1; §Decision (2)'s re-derivation ordering is now satisfied — this ADR is ACCEPTED before `carry-forwards.md:223`/`:238` are re-derived from it, per Phase 4)** |
 | ADR-098 | **A vocabulary gate authorizes by fixed-string membership, never by regex match — and the change that widens a gate must harden it in the same commit** (v2.19.14, **Tier A**) — the buildable design for cycle Items 1, 2 and 5, minted at Phase-1 rework after finding **S1 (CRITICAL)** established that these rulings existed only in a chat return and **the merge-gate change had nothing reviewable**. `MF-3` carries **three** defects, not one: the briefed tokenizer collapse (`tools: [a, b]` → `ab`), plus **two live authorization bypasses** — `grep -qw "$token"` treats the token as a **BRE** and bounds the *match* rather than the list entry (`code`, `claude`, `claude.code`, `.*`, `cursor*` all **ACCEPT**; `emacs` and Cyrillic `сursor` reject), and unquoted `for token in $TOKENS` performs **pathname expansion** (`c?p?l?t` → **ACCEPT** once a file named `copilot` exists — **in `bash`, which CI runs; it does NOT reproduce in `zsh`**). Both are latent only because 29/29 skills declare one token, and **`AC-PARSE-1` is precisely what makes them reachable**. **@security's proposed `grep -qxF --` is REFUTED**: against the space-separated `ALLOWED` it rejects *every* legitimate token and would have red-lined CI repo-wide; a POSIX **`case` membership test** is adopted instead (no change to `ALLOWED`, no subprocess, no regex/locale surface, and the quoted token is **not re-globbed** — proven with three inputs that pass iff it were). `set -f` is scoped to the **token loop only**, since the enclosing `skills/*/SKILL.md` glob is required and disabling it step-wide would make MF-3 **pass vacuously**. Validated 13-row current-vs-candidate matrix with both directions of negative control, and **29/29 production skills PASS**. Also: `markdownlint-cli`'s `.jsonc` auto-discovery is **version-conditional** (0.27.1/0.31.1 → defaults; 0.32.2/0.45.0/0.49.1 → applied), correcting an unconditional Phase-1 claim; and **`AC-CF25F-1`'s control is falsified and non-discriminating** (5→0 is 23 at branch tip, names no base, and goes GREEN on a cosmetic edit that leaves *"ORPHANED — OVERDUE … never been performed"* standing) — replaced by a four-assertion control proven to go RED on that same edit. `Reusability: candidate-constituent` | **ACCEPTED (v2.19.14 Phase 3, 2026-08-29T10:01:15Z — was PROPOSED at Phase 1 rework; Tier A, Guard Change Summary owed alongside the PR)** |
+| ADR-099 | **A gate switched on before its blind spot is closed certifies the one PR class it cannot see** (v2.19.15, **Tier A**) — the buildable design for arming `main`'s first enforced merge gate. **D1:** the CI-trigger fix is a `workflow_dispatch` self-chain (`quality.yml` gains the trigger; `sync-agency.yml`'s `sync-upstream` job gains `actions: write` + `id: cpr` and dispatches against the sync branch) — **no new secret**, per `AC-CIGATE-2`. The crux (does a ref-associated dispatched run produce check-runs the gate can see?) was **proven live in this repo, not assumed**: dispatched run `32422621025`'s `check_suite_id 87897158492` appears in `commits/ef89dedee308/check-runs` under its **bare job name**, which is also what confirms contexts are the 35 `name:` values verbatim. **D1.2 is the cycle's central finding:** the naive form is *a check that cannot fail* — `quality.yml`'s 3 job-level `if: github.event_name == 'pull_request'` guards (`:1948`/`:2164`/`:2368`) are `sync-agency-dry-run`, `lock-content-sha-cross-check` and `vendored-removal-ledger`, i.e. **exactly the supply-chain checks**, and they would report `skipped` (which *satisfies* a required check) on **exactly the bot sync PRs that change supply-chain content**, silently withholding the blocking behaviour **ADR-080 §Consequences** promises the moment required checks are enabled. Ruled to `if: github.event_name != 'push'` **on failure-mode grounds** — the input-gated alternative can go vacuous silently, this form cannot. **D2:** require **all 35** (@pm upheld and re-derived; `continue-on-error` → **0**, no job `needs:`, **0** name collisions with the other 3 workflows under a *firing* negative control); the third-event question resolves on **check-runs being SHA-bound** — cross-SHA staleness is structurally impossible and the design deliberately does **not** rely on GitHub's duplicate-name tie-break. **D3:** `enforce_admins` stays `true`, now safe *by construction* rather than by assertion. **D4:** the "approval-required" doc discrepancy is **resolved, not bounded** — `#27`/`#31` are `head.repo == base.repo` (same-repo, not forks), so the fork-approval path is structurally unreachable; both are also `merged: true`, making the `v2.19.5-CODEOWNERS-1` exposure realised rather than hypothetical, and `can_approve_pull_request_reviews: true` is flagged to @security. **D5:** in-place Status-cell correction of OT-7 and `v2.19.5-CODEOWNERS-1` on the **ADR-093 precedent already present in the register itself**, plus a **third living source found this session and named in no prior list** — `.github/CODEOWNERS:41-46`. **D1.4 corrects the spec's own ordering:** `workflow_dispatch` must exist on the default branch first, so `AC-CIGATE-1` cannot be verified until after merge — Phase 3 grants *authorization*, the toggle executes **post-merge**. `Reusability: candidate-constituent` | **PROPOSED (v2.19.15 Phase 1, 2026-08-29T18:41:34Z — ACCEPTED only at the Phase 3 owner gate; Tier A, Guard Change Summary owed alongside the PR) — **AMENDED at Phase 1 rework `1.R1`, 2026-08-29T19:23:01Z, after @security returned FAIL (3 CRITICAL). D2's central disclaimer is FALSIFIED (three names carry `success` + `skipped` on one SHA at `14b41dc`); D1.2's `!= 'push'` ruling is WITHDRAWN and superseded; D1.5's Fixture B criterion is TIGHTENED from 'not skipped' to `success`; D1.2's coverage map and D1.3's fail-open framing are CORRECTED; §Maturation Path option (a) is WITHDRAWN as a deferral and folded in. Read the Amendment record at the end of this file before citing any D1/D2 text.** **AMENDED AGAIN at rework `1.R2`, 2026-08-29T19:40:50Z: D2's DERIVATION METHOD is FALSIFIED — "the 35 `name:` values verbatim" MUST NOT be followed. `quality.yml:1910`'s unquoted ` #15)` is eaten as a YAML comment, so the live context is `Verbatim Attribution Rule Check (ADR-024 /`; using the YAML string would block every PR permanently under `enforce_admins: true`. Contexts are derived ONLY from `check-runs --jq '.check_runs[].name'`. A1's second clause is NARROWED and now depends on A8; `strict: true` added. See Amendment record 2.** |
 
 ---
 
@@ -16913,5 +16914,786 @@ completed Phase 6 audit would put the merge outside what was audited.
   whitespace between now and whenever that trigger fires, and nothing before v3.0 will complain.
   Bounded because whitespace-mashed spellings still resolve only to one of the four approved names —
   no new name enters the vocabulary, only a malformed rendering of one that was already in it.
+
+---
+
+## ADR-099: A gate switched on before its blind spot is closed certifies the one PR class it cannot see (v2.19.15)
+
+**Status:** PROPOSED (v2.19.15 Phase 1, 2026-08-29T18:41:34Z — becomes ACCEPTED only at the Phase 3 owner gate) · **Reusability:** candidate-constituent
+**Scope:** the buildable design for cycle Items **1** (`sync-agency.yml` → `quality.yml` CI trigger), **2** (`main` required status checks) and **3** (`docs/owner-tasks.md` OT-7, `docs/risk-register.md` `v2.19.5-CODEOWNERS-1`). **Tier A** — `.github/workflows/*` plus `main`'s branch-protection configuration.
+
+### Context
+
+> *ISO 15288 — System Requirements Definition Process.*
+
+**Measurement contract.** Every figure below was re-run this session against `94bca8f` and the live
+GitHub API, with `/usr/bin/grep` by absolute path — BSD grep 2.6.0-FreeBSD; this repo's bare `grep`
+is a **ugrep 7.8.4** shim that under-counts. Timestamps are `date -u`; this host is **UTC+4** and a
+local reading mislabelled `Z` is the exact defect audit finding **A7** recorded against the previous
+cycle's approval record, so no timestamp here is hand-typed. Figures inherited from `@pm`'s Phase 0
+and from the cycle brief were **re-run, not adopted**; most survived unchanged, one was extended,
+and one was corrected — recorded below.
+
+`main` requires nothing to merge: `required_status_checks` **absent**, `required_approving_review_count: 0`,
+`require_code_owner_reviews: false`, `rulesets: []`; `enforce_admins: true`, force-push and deletion
+both `false`. Thirteen cycles of gate-hardening sit behind an unarmed gate. The `sync-agency.yml`
+cron fires **2026-09-01** and **will** open a PR: pinned `783f6a72` (`cowork.lock.json`,
+`pinned_at: 2026-05-07T12:32:06Z`) versus upstream `msitarzewski/agency-agents` HEAD
+`3c9588880b7cafaec325a104899fd8bbe27e7d72` (2026-08-26T14:57:10Z) — re-run live, they differ, so
+`needs_update` evaluates true.
+
+### Decision
+
+#### D1 — The CI-trigger mechanism: a `workflow_dispatch` self-chain. CONFIRMED live, in this repo, on this repo's own commits.
+
+The mechanism is **adopted**, and the crux the brief flagged as "the most likely place this design
+fails" was tested rather than assumed. A `workflow_dispatch` run is associated with a *ref*, not
+with a PR; the question was whether its results become check-runs **bound to the head SHA a required
+check is evaluated against**. They do, and this repo already contains the proof:
+
+- `gh api ".../actions/runs?event=workflow_dispatch"` → **9** dispatched runs, each carrying a
+  `check_suite_id` (dispatched runs create check suites; they are not a run-only construct).
+- Run `32422621025` (`Release Surface`, `event: workflow_dispatch`, `head_sha ef89dedee308`) has
+  `check_suite_id 87897158492`. Querying **`commits/ef89dedee308/check-runs`** returns
+  `Verify tag + Release for every CHANGELOG version >= 2.18.0 | suite=87897158492` among the 72
+  check-runs on that commit — the dispatched run's job is present **on the commit, under its bare
+  job name**, indistinguishable in form from the `push`-triggered entries beside it.
+- Context naming is confirmed by the same response: check-run names are **bare job names**
+  (`Markdown Lint`, `Registry Cardinality Check`), **not** `Quality Checks / Markdown Lint`. The
+  required-context strings are therefore the 35 `name:` values verbatim.
+
+**Buildable specification.**
+
+1. `quality.yml:3` — `on: [push, pull_request]` becomes the expanded mapping form with
+   `workflow_dispatch:` added as a third trigger. No inputs are declared (see D1.2 — an input is
+   precisely what would let this design fail silently).
+2. `sync-agency.yml` — the `sync-upstream` job's `permissions:` block (`:40-42`, currently
+   `contents: write` + `pull-requests: write`) gains **`actions: write`**. This is necessary and
+   sufficient: repo `default_workflow_permissions` is **`read`** (re-run live), but an explicit
+   job-level grant overrides the repo default, so `AC-CIGATE-2` holds — no PAT, no App, no secret.
+   `gh secret list` must still return empty post-fix.
+3. The `Create Pull Request` step (`:563-567`) currently has **no `id:`** (verified by direct read;
+   positive control: `/usr/bin/grep -cE '^        id: ' sync-agency.yml` → **7**, so the pattern
+   finds ids where they exist). It gains `id: cpr`.
+4. A new final step, gated on a PR actually having been created:
+   `if: steps.cpr.outputs.pull-request-number != ''`, running
+   `gh workflow run quality.yml --repo "$GITHUB_REPOSITORY" --ref "agency-sync/<latest_sha>"` with
+   `GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}`. The `ref` is the sync branch, whose head **is** the PR
+   head — which is what puts the resulting check-runs on the SHA the gate evaluates.
+   **@dev must confirm the output name `pull-request-number` against `peter-evans/create-pull-request`
+   at the pinned SHA `67ccf781…` — read the pinned action's own documentation, do not recall it.**
+
+**D1.2 — The mechanism as naively built is a check that cannot fail, and this is the central finding of Phase 1.**
+
+`quality.yml` carries exactly **3** job-level `if:` conditions (`/usr/bin/grep -nE '^    if:'` →
+`:1948`, `:2164`, `:2368`), all identical: `if: github.event_name == 'pull_request'`. They guard:
+
+| Line | Job | Name | What it protects |
+|---|---|---|---|
+| 1948 | `sync-agency-dry-run` | `/sync-agency Dry-Run (v2.0.3)` | the sync workflow's own behaviour |
+| 2164 | `lock-content-sha-cross-check` | `lock-content-sha-cross-check (C-v2.5-19)` | ADR-028 §A1 cross-environment `content_sha256` trust anchor |
+| 2368 | `vendored-removal-ledger` | `Vendored Removal Ledger (ADR-080)` | undeclared removal of vendored upstream content |
+
+A `workflow_dispatch` run has `github.event_name == 'workflow_dispatch'`. All three `if:` clauses
+evaluate false, all three report `skipped` — and **`skipped` satisfies a required status check.**
+So the naive mechanism would arm the gate, show green, and skip precisely the three supply-chain
+checks **on precisely the one PR class that changes supply-chain content**. The gate would certify
+the sync PR by not looking at it.
+
+This is not a hypothetical severity. **ADR-080's own §Consequences** states that
+`blocked_files` "becomes blocking only if the owner enables required status checks and code-owner
+review" — this cycle is the event that fires that condition. Shipping the naive form would let this
+ADR record that ADR-080's ledger became blocking while leaving it inert on the ingestion path
+ADR-080 exists to guard. That is the same class of error as the falsified OT-7 closure criterion
+this very cycle exists to correct.
+
+**Ruling.** The three `if:` clauses become **`if: github.event_name != 'push'`**.
+
+This form is chosen over the alternative `github.event_name == 'pull_request' || (github.event_name
+== 'workflow_dispatch' && inputs.pr_number != '')` **on failure-mode grounds, not brevity**: the
+input-bearing form goes vacuous *silently* if the dispatch call ever omits or empties the input,
+reintroducing the exact defect being fixed and making the gate's correctness depend on a value
+passed across a workflow boundary. `!= 'push'` has no such state. It preserves the existing intent
+exactly (these are the not-on-push jobs) and cannot be made vacuous by a caller.
+
+**D1.3 — One genuine scope deviation, named rather than absorbed.** `vendored-removal-ledger` is the
+only one of the three whose body reads PR context: `:2381-2382`,
+`BASE_REF: ${{ github.base_ref }}` → `--base "origin/${BASE_REF}"`. `github.base_ref` is empty on a
+non-`pull_request` event, yielding `origin/`. It requires
+`BASE_REF: ${{ github.base_ref || github.event.repository.default_branch }}` (default branch
+confirmed `main`; sync branches always target it; the job already checks out at `fetch-depth: 0`,
+so `origin/main` resolves). The other two are body-clean — `:1946` is a *comment* explaining why
+`changed_files` is deliberately not used, not a dependency.
+
+The spec constrains this cycle to "trigger surface and job-level `permissions:`". Job-level `if:`
+is trigger surface. **The `BASE_REF` expression is ref plumbing, not check logic** —
+`scripts/verify-lock-removals.sh` is byte-unchanged and the assertion it makes is unchanged — but
+this is a judgment call at the scope boundary, and it is flagged here for **@security to rule on at
+Phase 2** rather than settled unilaterally.
+
+**D1.4 — The bootstrap precondition, which is mechanically checkable and corrects the spec's stated ordering.**
+A workflow is dispatchable only once the `workflow_dispatch` trigger exists in the version of the
+file on the **default branch**; `ref` then selects which branch's copy executes. Therefore
+`AC-CIGATE-1` **cannot be verified until this cycle's PR has merged to `main`**. The spec's
+Technical Constraints place the branch-protection mutation "at the Phase 3 gate"; combined with
+`AC-SEQ-1` (protection only after `AC-CIGATE-1` is verified live) that is **unsatisfiable** —
+Phase 3 precedes Phase 4. **Correction: Phase 3 grants *authorization*; the mutation is executed
+post-merge**, by the orchestrator, only after the fixture in D1.5 passes. Recorded as an
+architectural modification to the spec.
+
+The precondition is checkable, not a note — this command must return `1` before any dispatch or
+toggle is attempted:
+
+```
+gh api repos/jmlozano1990/Cowork-Starter-Kit/contents/.github/workflows/quality.yml?ref=main \
+  --jq '.content' | base64 -d | /usr/bin/grep -cE '^  workflow_dispatch:'
+```
+
+**D1.5 — The fixture, specified so it cannot pass vacuously, with its firing negative control.**
+`AC-REQCHECK-1` demands a PR *shown blocked*. Reading `mergeable_state: blocked` is **not**
+sufficient evidence — `blocked` is also returned for review requirements and for unrelated failing
+checks, so a fixture that merely observes it proves nothing about causation. Two fixtures, each
+with a state transition on the **same** PR:
+
+- **Fixture A — the gate blocks (human path).** Add `tests/fixtures/required-check-fixture.md`
+  containing a deliberate `markdownlint` violation (a leading hard tab, MD010, plus a non-heading
+  first line, MD041). The path is inside `quality.yml`'s glob set (`**/*.md` with `!docs/**` and
+  `!vendored/agency-agents/**`, `:11-14`), so it is genuinely linted. Assert **all three**, not one:
+  (1) `commits/<head>/check-runs` shows `Markdown Lint` with `conclusion: failure`; (2) that exact
+  string is present in the live `required_status_checks.contexts`; (3) `mergeable_state` is
+  `blocked`. **Firing negative control — the transition, which is what makes it non-vacuous:** push
+  one further commit that fixes *only* the lint violation and re-assert: `Markdown Lint` flips to
+  `success` and `mergeable_state` becomes `clean`, with no other change. A block that does not clear
+  when its named cause is removed was never caused by that check.
+- **Fixture B — the bot path runs, and does not skip (`AC-CIGATE-1`).** Manually
+  `workflow_dispatch` `sync-agency.yml` (it already exposes a `reason` input). `needs_update` is
+  true today (pin vs upstream HEAD, re-run above), so it opens a real `GITHUB_TOKEN`-authored PR.
+  Assert: (1) ≥1 check-run per `quality.yml` job name on the PR head SHA — against the pre-fix
+  control `#27`/`#31`, both of which I re-ran this session and which return **0** check-runs,
+  `status.state: pending`, 0 statuses; **and (2), the anti-vacuity assertion that D1.2 exists for:**
+  `/sync-agency Dry-Run (v2.0.3)`, `lock-content-sha-cross-check (C-v2.5-19)` and
+  `Vendored Removal Ledger (ADR-080)` each report a real conclusion (`success` or `failure`) and
+  **not `skipped`**. If any of the three reports `skipped` on a bot PR, the mechanism is vacuous and
+  the gate must not be armed.
+
+#### D2 — Require all 35 contexts. @pm's argument holds; the third-event concern resolves on SHA-binding, not on tie-breaking.
+
+**@pm's reasoning is upheld** and independently re-derived: `/usr/bin/grep -cE '^    name: '
+quality.yml` → **35**, and `sort -u` of those names → **35** (no duplicates). Inventing a
+critical/cosmetic tier would be an unsourced judgment; no such tiering exists in this repo's docs.
+Two further checks support requiring the whole set: `continue-on-error` appears **0** times in
+`quality.yml`, so no required check is structurally unable to fail; and there are **no job-level
+`needs:`**, so the 35 are independent and one failure cannot cascade into a misleading skip.
+
+**Name collisions across workflows — tested, with a firing negative control.** A required context is
+matched by name, so a same-named job in another workflow could satisfy it. Comparing the 35 against
+the union of the other three workflows' job names (`Sync agency-agents upstream`,
+`Verify published release assets (detection)`,
+`Verify tag + Release for every CHANGELOG version >= 2.18.0`) → **0** overlap. The zero is real:
+planting one known-shared name into the comparison set makes `comm -12` emit
+`/sync-agency Dry-Run (v2.0.3)`, so the test can detect an overlap when one exists.
+
+**The question @pm flagged and could not test — does a third event type make name-matching unsafe?
+Ruled: no, and the reason is not GitHub's tie-break rule.** Check-runs are bound to a **commit SHA**,
+and branch protection evaluates only the PR's **current head SHA**. Cross-SHA staleness is therefore
+structurally impossible: if anyone pushes to a sync branch, the PR head moves, and the older
+dispatched check-runs sit on an abandoned commit where the gate never looks. The two populations are
+also disjoint in practice — `push`/`pull_request` produce **0** entries on bot PRs (re-run: `#27`,
+`#31`), and dispatch is not called on human PRs (`#121` shows 70 = 35 × 2, no dispatch). The only
+way to get all three events onto **one** SHA is a deliberate manual re-dispatch, which re-runs the
+same 35 jobs against the same commit and is therefore equivalent in privilege to GitHub's existing
+"re-run jobs" button — an affordance every write-access user already has. **This design does not
+depend on which duplicate wins**, which is the property that makes it safe; GitHub's "most recent
+entry with that name" behaviour is *not* load-bearing here and is deliberately not relied upon.
+
+**Added surface, bounded.** Making `quality.yml` dispatchable lets any write-access user run it
+against any ref. `quality.yml` has **no** top-level `permissions:` block, so it inherits the repo
+default `read`, and all **6** job-level `permissions:` blocks are `contents: read`. The dispatchable
+surface is read-only.
+
+#### D3 — `enforce_admins` stays `true`.
+
+Confirmed unchanged, and the guarantee `AC-REQCHECK-3` asks for is now discharged by construction
+rather than asserted: after D1, **no PR class is structurally unable to produce a conclusion.** Bot
+PRs get check-runs via dispatch (D1.1), and the three formerly PR-only jobs report real conclusions
+rather than `skipped` (D1.2) — which also removes the `if:`-skip hazard the spec named as Edge Case
+2, since `!= 'push'` cannot produce *zero* entries for either surviving event.
+
+What remains, and is accepted knowingly, is Edge Case 3: a required check that ships with a logic
+bug blocks everyone, including the fix, with no admin override. Setting `enforce_admins: false`
+would buy an escape hatch at the cost of making the entire gate advisory for the one account that
+merges everything here — which reinstates exactly today's condition for the only user who matters.
+That is not a gate. **The escape hatch is instead a PR that edits `quality.yml`** (a red required
+check does not prevent *pushing* a fix, only merging one), plus the owner's retained ability to
+disable the requirement in Settings — a deliberate, visible, logged action, which is the correct
+shape for an override.
+
+#### D4 — The approval-required discrepancy is resolved, not merely bounded.
+
+@pm flagged, honestly, that GitHub documents a second exception — `GITHUB_TOKEN`-authored
+`pull_request` events creating runs "in an approval-required state" — which `#27`/`#31` contradict.
+I re-ran it and reproduced the contradiction (`#27` head `5daba9ab…`: **0** check-runs,
+`status.state: pending`, **0** statuses).
+
+**The exception is structurally unreachable here, and the API says why.** Both PRs are
+**same-repo**, not forks: `head.repo.full_name == base.repo.full_name ==
+jmlozano1990/Cowork-Starter-Kit`, `head_ref: agency-sync/783f6a72…`, author `github-actions[bot]`
+(`type: Bot`). GitHub's approval-required-run machinery is the **fork/outside-contributor** approval
+gate; it has no same-repo branch path to fire on. The blanket `GITHUB_TOKEN` suppression applies
+with no exception, hence zero runs — exactly what is observed. The documented sentence describes a
+fork-origin scenario; it was applied to a same-repo case.
+
+Two things this settles that were not previously named: both `#27` and `#31` are **`merged: true`**
+— third-party upstream content has already been merged into `main` with zero checks, which is the
+concrete realisation of `v2.19.5-CODEOWNERS-1`'s exposure rather than a hypothetical. And
+`actions/permissions/workflow` returns **`can_approve_pull_request_reviews: true`**: GitHub Actions
+is currently permitted to approve PRs. It is inert while
+`required_approving_review_count` is `0`, but it means the approvals path rejected in D5/`AC-REQCHECK-2`
+has a *second* reason to stay rejected — a bot-approval route around a review requirement is
+available in this repo's current configuration. **Flagged for @security at Phase 2; not changed
+here** (out of this cycle's scope, and changing it is an owner Settings action).
+
+Residual, stated plainly: D1's mechanism never depended on this exception, and the Phase 5 test that
+would settle any remainder is Fixture B, which observes the real bot path directly.
+
+#### D5 — In-place correction at two living sources, a third source found this session, and yes to a new ADR.
+
+**In-place correction, on this repo's own precedent rather than on document class alone.**
+`docs/risk-register.md` already contains the exact mechanism, twice: rows `AC-PUB-10` and
+`CF-v2.19.6-A` read *"Status cell corrected at `plan-2026-08-27-v3-engine` Phase 1 (ADR-093);
+description and accepted-condition cells byte-unchanged. Original status text, retained verbatim:
+…"*. That is a repo-native, ADR-093-authorised convention, and it fits this case precisely because
+**the falsified criterion lives in the Status cell** — `v2.19.5-CODEOWNERS-1`'s Status reads *"Close
+this row … only after `require_code_owner_reviews` is confirmed enabled"*. Its Description cell's
+`codeowners=false` is a **true historical measurement** and must stay byte-unchanged. Adopt the
+ADR-093 form verbatim, citing this ADR as the source. Same disposition for `docs/owner-tasks.md`
+OT-7, whose falsified step 2 is likewise in its status cell, and where OT-6 and OT-8 already
+demonstrate in-place status correction with the superseded claim retained.
+
+@pm's counts re-run and confirmed: `/usr/bin/grep -cE
+'require_code_owner_reviews|required_approving_review_count' docs/owner-tasks.md` → **1**;
+`/usr/bin/grep -cE 'require_code_owner_reviews' docs/risk-register.md` → **1**.
+
+**A third living source, not in the brief and not in @pm's list.** Sweeping the repo rather than
+trusting the two-item list — the same move that found the second — returns **10** files containing
+`require_code_owner_reviews`. Eight need no action: `docs/architecture.md` (`:2877`, `:13421`) and
+the `security-review-v2.19.5/6`, `security-audit-v2.19.6`, `retro.md`, `design-v2.19.8.md`
+snapshots all state it as a **true fact about the then-current configuration**, and the first is
+append-only. But **`.github/CODEOWNERS:41-46` is a living file** carrying a forward-looking claim
+this cycle falsifies:
+
+> `required_status_checks` is absent and `require_code_owner_reviews` is `false` … these rows ROUTE
+> review to the owner … they do not REQUIRE review and cannot block a merge.
+
+After this cycle the first clause is false. The rest stays true (`AC-REQCHECK-2` keeps
+`require_code_owner_reviews: false`, so the rows still route rather than require) — so this is a
+**narrow, one-clause correction**, not a rewrite, and it is the only one of the eight that would
+otherwise leave a falsified claim in a file that is read as current. Recommended in scope;
+if the owner prefers to hold this cycle's diff to the two named files, it must be booked as a
+carry-forward rather than dropped.
+
+**A new ADR is warranted.** Precedent is mixed by design — ADR-075 and ADR-090 exist for comparable
+`sync-agency.yml`/`quality.yml` structural changes, `v2.19.14` Item 2's 5-site rename got none. This
+cycle sits with the former on three independent grounds: it changes the **trust model** (`main`
+acquires an enforced merge gate for the first time), it is the **source** the two corrected rows
+must cite (ADR-093/ADR-097's ordering rule: the source is created first, then the row is re-derived
+from it — a register may not repair its own claim without one), and D1.2 records a **security
+finding about the mechanism itself** that would otherwise exist only in a chat return — the exact
+failure ADR-098's own §Context was minted to stop repeating.
+
+### Consequences
+
+- `main` gains its first enforced merge gate. `docs/architecture.md` `:2877` and `:13421`, and
+  ADR-080 §Consequences, all state as current fact that `required_status_checks` is absent and that
+  the ledger is "a notification, not a gate". Those statements are **superseded by this ADR** from
+  the moment the toggle is applied; they are not edited (append-only).
+- ADR-080's `vendored-removal-ledger` becomes genuinely blocking — **including on sync PRs**, which
+  is the whole point of D1.2 and the property the naive mechanism would have silently withheld.
+- OT-7's discharge path changes from an unperformable action (self-approval) to a performable one
+  (required status checks). `AC-SYNC-CODEOWNERS-1`'s obligation is met by enforcement over
+  supply-chain files, not by CODEOWNERS review.
+- **Sequencing is load-bearing and now mechanically checkable** (D1.4): merge → verify Fixture B →
+  toggle. Reversing it deadlocks the sync pipeline under `enforce_admins: true`. If this cycle does
+  not complete before the 2026-09-01 cron, **nothing breaks** — the sync PR opens exactly as it does
+  today, unenforced. The hazard exists only in the reversed order, which is why `AC-SEQ-1` is the
+  design rather than ceremony.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) retire the `push`/`pull_request` duplication in `quality.yml` (the
+  70 = 35 × 2 entries) so each name arrives from one event and the required-context set has exactly
+  one producer per name — the spec names this as an optional simplification and it is deliberately
+  **not** folded in here, because changing trigger shape in the same cycle that first makes those
+  names load-bearing would change two variables at once; (b) migrate classic branch protection to a
+  ruleset, which would allow required checks to be scoped per-path rather than repo-wide; (c) drop
+  the dispatch self-chain entirely if GitHub ever exempts `GITHUB_TOKEN`-authored PRs from trigger
+  suppression, which would make D1 dead weight rather than wrong.
+- **Concrete revisit triggers:** a second collaborator gains write access (the sole-maintainer
+  premise under which approvals are rejected in `AC-REQCHECK-2` and D4 dissolves, and
+  `require_code_owner_reviews` becomes viable for the first time); **or** a required check ships a
+  logic bug and blocks a merge under `enforce_admins: true`, which is the accepted risk in D3 coming
+  due and the moment to re-examine whether the escape hatch is adequate; **or** a *fourth* triggering
+  event is added to `quality.yml`, which would invalidate D2's disjointness argument and require it
+  to be re-derived rather than assumed to still hold; **or**
+  `can_approve_pull_request_reviews` (currently `true`, D4) becomes reachable because an approval
+  requirement is introduced.
+- **Risk knowingly accepted:** that a dispatched check-run **satisfies** a required-context gate is
+  proven here only to the point that it lands on the correct SHA under the correct name — the
+  final step, that branch protection accepts it, cannot be observed until protection is actually
+  enabled, which is an owner action. The risk is bounded by ordering, not by confidence: `AC-SEQ-1`
+  puts Fixture B ahead of the toggle, so if the mechanism does not satisfy the gate, that is
+  discovered while the gate is still off and the sync pipeline is still mergeable. The failure mode
+  of being wrong here is a second PR, not an outage.
+
+---
+
+## Amendment record — ADR-099 §Decision D1/D2/D3 and §Maturation Path (appended v2.19.15 Phase 1 rework `1.R1`, 2026-08-29T19:23:01Z; ADR-099's own text is NOT rewritten)
+
+> *ISO 15288 — System Requirements Definition Process (rework iteration).*
+
+`@security` returned **FAIL — 3 CRITICAL** against ADR-099 as first written. All three are **upheld
+on independent re-run**, and one of them falsifies this ADR's own central disclaimer. Recorded here
+rather than by rewriting D1/D2, per this repo's append-only convention and the precedent of
+*"Amendment record — ADR-090 §Maturation Path and §Consequences … ADR-090's own text is NOT
+rewritten"*.
+
+### A1 (was S1) — D2's central disclaimer is FALSIFIED. Re-run live, and it is the reverse of what D2 claimed.
+
+D2 states verbatim: *"This design does not depend on which duplicate wins … GitHub's 'most recent
+entry with that name' behaviour is **not** load-bearing here and is deliberately not relied upon."*
+**That is false**, and the falsifying evidence is one API call on `14b41dc`:
+
+| Name | suite `90115941401` (`pull_request`) | suite `90115901459` (`push`) |
+|---|---|---|
+| `/sync-agency Dry-Run (v2.0.3)` | `success` | **`skipped`** |
+| `lock-content-sha-cross-check (C-v2.5-19)` | `success` | **`skipped`** |
+| `Vendored Removal Ledger (ADR-080)` | `success` | **`skipped`** |
+| `Markdown Lint` *(firing control)* | `success` | `success` |
+| `Vendored Integrity Check (audit F-7)` *(firing control)* | `success` | `success` |
+
+Two check-runs, same SHA, same name, **opposite conclusions**. The controls discriminate: 32 of 35
+genuinely do not care, and **3 of 35 are decided entirely by the tie-break** D2 declared irrelevant.
+D2's disjointness argument was sound for the *bot-vs-human* axis and simply **did not cover the
+push-vs-pull_request axis on the same commit** — the error was reasoning about which *PR classes*
+produce runs, and never enumerating the states a *single SHA* can hold.
+
+**`!= 'push'` (D1.2's ruling) does not close this.** Under it the push instance still evaluates
+false and still emits `skipped`. `@security`'s exploit needs no privilege beyond ordinary write
+access: let a required check fail on the `pull_request` suite, then press **re-run** on the `push`
+run; it completes `skipped` in seconds and becomes the newest entry for that name.
+
+**Ruling — adopt remedy (b), and adopt it together with A6 (was S7).** `quality.yml`'s `on:` becomes
+`pull_request` + `workflow_dispatch`; **`push` is dropped**. Combined with the A6 allow-list below,
+the three jobs then run on *every* event the workflow accepts, **no `skipped` twin is ever emitted,
+and no duplicate-with-opposite-conclusions exists to tie-break.** This is chosen over remedy (a)
+(arm only the 32 unconditional names) because (a) buys safety by leaving the three conditional checks
+advisory forever, whereas (b) makes them **required and unmaskable** — which dominates
+`@security`'s own framing that *"advisory-and-labelled beats required-and-maskable"*, since
+required-and-**un**maskable beats both.
+
+**Why dropping `push` costs no merge-path coverage — verified, not assumed.**
+`repos/.../branches/main/protection` contains a `required_pull_request_reviews` object
+(`has_pr_reviews_object: true`, approvals `0`), which is classic protection's signal that *"Require a
+pull request before merging"* is ON; corroborated by history — the last **12** commits on
+`origin/main` each carry a `(#NNN)` squash-merge reference. Nothing reaches `main` except through a
+PR, and a PR fires `pull_request`. The real cost, named: pushes to a branch with **no** open PR stop
+running CI, and each PR's check list halves from 70 to 35.
+
+**This ADR's own §Maturation Path option (a) is WITHDRAWN as a deferral and folded in.** It deferred
+exactly this change on a *"two variables at once"* argument. `@security` is right that the argument
+**inverts**: not changing it is precisely what leaves the names maskable. A deferral whose stated
+reason is caution, but whose effect is to preserve the vulnerability, is not caution.
+
+**Robustness note, deliberate:** remedy (b) does **not** depend on GitHub's tie-break being
+"most recent" — it removes the duplicate rather than winning it. The exploit's precise mechanics were
+not live-tested (re-running a workflow is a write); the remedy is correct whether or not that
+assumption holds, which is the property D2 originally claimed and did not have.
+
+### A2 (was S2) — a check this cycle would arm cannot fail. Reproduced independently under `bash -e`.
+
+`quality.yml:1977` — `PATTERN_COUNT=$(grep -c '^- \`' docs/internal/security/upstream-content-scan-rules.md || echo 0)`.
+Two independent defects:
+
+1. **The grep format does not match the document.** `/usr/bin/grep -c '^- \`' <file>` → **0**, exit
+   **1**. The file states its patterns in fenced ` ```regex ` blocks — **8** of them (`:27`, `:36`,
+   `:45`, `:54`, `:63`, `:73`, `:82`, `:91`), matching the step's own comment *"the 8 patterns"*.
+2. **`|| echo 0` converts fail-closed into fail-open.** Because `grep -c` both prints `0` **and**
+   exits non-zero, the `||` branch *appends a second line*. Reproduced verbatim under `bash -e`
+   (GitHub Actions' default shell):
+
+```
+PATTERN_COUNT raw=[0
+0]
+bash: line 1: [: 0
+0: integer expected
+PASS: 0
+0 regex patterns compile cleanly
+STEP EXIT CODE=0
+```
+
+`set -e` does not fire on a failing `if` **condition**, so the `exit 1` guard written to catch this
+exact case is **never reached**, and the step exits `0` announcing PASS. **Firing negative control
+(proves the guard logic itself is sound and `|| echo 0` is the sole defect):** substituting
+`|| true` yields `raw=[0]` → `GUARD FIRED -> exit 1` → `STEP EXIT CODE=1`. The sibling
+`lock-content-sha-cross-check` already carries the house `CHECKED=0` floor this job lacks.
+
+**Ruling — `AMEND-1`, a named scope amendment.** The spec bars changes to existing check logic; this
+repair is nonetheless **in scope for this cycle**, because this cycle is the event that would make
+the check load-bearing, and *arming a check that cannot fail is worse than not arming it* — the
+binding discipline this cycle is being run under. Fix is `|| true` plus a `-lt 1` floor **and** the
+corrected fenced-block pattern. **Requires `@security` sign-off at Phase 2 as a named amendment, not
+a silent fold-in.**
+
+### A3 (was S3) — Fixture B could not detect the failure it exists to detect. UPHELD; my own criterion was wrong.
+
+D1.5's Fixture B accepts *"a real conclusion (`success` or `failure`) and **not** `skipped`"*. A
+`failure` caused by **dropping D1.3's `BASE_REF` fix** is then indistinguishable from a genuine
+supply-chain finding. Verified, with both controls: empty `BASE_REF` →
+`git show "origin/:cowork.lock.json"` → exit **128**; populated → `git show
+"origin/main:cowork.lock.json"` → exit **0**. Chain: fix dropped → Fixture B green →
+`AC-SEQ-1` declares the mechanism verified → gate armed → **every sync PR permanently blocked under
+`enforce_admins: true`.**
+
+**Ruling.** Fixture B's criterion is tightened from *"not `skipped`"* to **`success`**. A genuine
+`failure` is a real finding requiring human adjudication — it must never auto-satisfy the
+authorization criterion for arming the gate. Additionally the job asserts **`BASE_REF` is non-empty**
+before use and fails closed with a named message (A5 below).
+
+### A4 (was S6) — D1.2's coverage map is CORRECTED; its severity was overstated.
+
+Both halves of `@security`'s correction are confirmed by reading the job bodies:
+
+- **`sync-agency-dry-run` inspects no PR content.** Its steps fetch upstream HEAD (`:1955`), upstream
+  `LICENSE` (`:1967`) and 2 sample upstream files (`:1999-2001`). It validates the *sync workflow's
+  own logic against live upstream* — a monitor, not a property of the PR under review.
+- **`vendored-integrity-check` (`:2212`) is unconditional and does inspect vendored content** —
+  it verifies every `cowork.lock.json` entry against `vendored/agency-agents/` by `content_sha256`,
+  carries the `CHECKED=0` floor, and its own comment reads *"Runs fully offline — no fetch, no
+  flake."* It reports `success` on **both** suites.
+
+**Consequence for D1.2, stated plainly:** the claim that the naive design would let the gate
+*"certify the sync PR by not looking at it"* is **too strong**. An unconditional, offline
+integrity check would still have looked. The finding stands — three checks would still have been
+silently skipped on the bot path, and `Vendored Removal Ledger` genuinely is a supply-chain control —
+but its severity was overstated and its coverage map was inaccurate. Corrected here so that no later
+cycle cites D1.2 as fact. **D1.2's *remedy* is unaffected**; A1 replaces it with a stronger one for
+independent reasons.
+
+### A5 (was S9) — the unfixed `BASE_REF` is fail-CLOSED, and the proposed fix is itself untested.
+
+D1.3 implied the empty case merely misbehaves. It does not: exit **128** (evidence in A3). This is an
+**availability** risk, not an integrity one — a correction to this ADR's own framing, and it *raises*
+A3's severity while *lowering* D1.3's. Further, `${{ github.base_ref || github.event.repository.default_branch }}`
+is itself unverified for `workflow_dispatch` payloads. **Ruling:** keep the fallback **and** add a
+binding non-empty assertion in the job, so a silent empty cannot recur whichever context turns out to
+be populated:
+
+```
+if [ -z "${BASE_REF:-}" ]; then echo "::error::BASE_REF empty — refusing to run a vacuous ledger check"; exit 1; fi
+```
+
+### A6 (was S7) — the event allow-list is adopted; `!= 'push'` is WITHDRAWN.
+
+D1.2 framed the choice as binary and missed a third option that is strictly safer **on D1.2's own
+stated criterion**. `contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)`
+cannot go vacuous (a caller never sets `event_name`) **and fails closed on any event nobody has
+considered** — where `!= 'push'` fails *open* on a future fourth trigger. Adopted for all three
+jobs. Under A1 this is belt-and-braces rather than load-bearing, which is the correct posture for a
+guard of this kind.
+
+### A7 (was S4/S5) — dispatch moves to its own job, with `env:` indirection.
+
+**S4 upheld.** `actions: write` also confers workflow-run and log deletion, so the job that handles
+untrusted upstream content must not hold it. The dispatch moves to a separate job carrying
+**`permissions: {actions: write}` only**, `needs: sync-upstream`, gated on a `pr_number` output.
+
+**S5 upheld, and it is a repo-native ban, not a style preference.** D1 step 4's natural
+implementation interpolates `${{ steps.upstream.outputs.latest_sha }}` directly into a `run:` block —
+the exact pattern this repo banned at **AC-C3-2** and documented at `sync-agency.yml:630-637`:
+*"a `${{ }}` expansion of upstream-derived content substitutes into the script's TEXT before the
+shell ever runs it … could break out of the intended `echo` argument and execute arbitrary commands."*
+`latest_sha` is upstream-derived (`api.github.com/.../git/ref/heads/main` → `.object.sha`), squarely
+inside that threat class. **Binding: every value crossing into a `run:` block passes through `env:`.**
+
+### A8 (new, found this rework — not raised by @security or @pm): the required-context list needs a *sourced* offline/network split.
+
+@pm argued no critical/cosmetic tiering exists in this repo's docs, so inventing one would be
+unsourced — correct as to *that* axis. But a **different axis is already sourced in the repo's own
+text**: `vendored-integrity-check`'s comment *"Runs fully offline — no fetch, no flake"* (`:2222`),
+and `Link Check (External)`'s host-anchored excludes for *"the two chronically-flaky hosts named in
+`docs/retro.md`"* (`:44-52`). Under `enforce_admins: true`, a required check that depends on a
+**third party** converts someone else's outage into a repo-wide merge lockout.
+
+Network-dependent jobs, enumerated: `Link Check (External)` (`:35`, lychee **without** `--offline`),
+`sync-agency-dry-run` (`:1955`, `:1967`, `:2001`), `sync-verify-ratchet` (`:2092`),
+`lock-content-sha-cross-check` (`:2183`). `Link Check (Internal)` is `--offline` (`:26`) and is
+**not** affected.
+
+**Recommended required set: 33 of 35**, excluding — with basis recorded, exactly as the spec permits:
+
+1. **`Link Check (External)`** — depends on arbitrary third-party hosts whose chronic flakiness this
+   repo already documents and works around in the job itself.
+2. **`/sync-agency Dry-Run (v2.0.3)`** — three independent grounds: it inspects no PR content (A4),
+   it makes three live external fetches, and it carries the A2 fail-open defect. It is a monitor of
+   the sync workflow against live upstream, not a property of the PR being merged.
+
+`lock-content-sha-cross-check` and `sync-verify-ratchet` stay **required** despite fetching, because
+they verify *this PR's* lock content against the pinned upstream — a genuine property of the change —
+and they fetch from GitHub itself, without which no merge could proceed anyway. **This is a
+recommendation for `@security` to weigh at Phase 2, not a unilateral narrowing.**
+
+### §D — File-by-File Implementation Plan (was S12; absent from ADR-099 as first written, and required at Tier A)
+
+| # | File | Change | AC |
+|---|---|---|---|
+| 1 | `.github/workflows/quality.yml` | `:3` `on:` → mapping form; **drop `push`**; add `pull_request` + `workflow_dispatch` | A1, `AC-CIGATE-1` |
+| 2 | `.github/workflows/quality.yml` | `:1948`, `:2164`, `:2368` → `if: contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)` | A6 |
+| 3 | `.github/workflows/quality.yml` | `:1977` → `|| true` + `-lt 1` floor + corrected fenced-block pattern | A2 / `AMEND-1` |
+| 4 | `.github/workflows/quality.yml` | `:2381` → `BASE_REF: ${{ github.base_ref \|\| github.event.repository.default_branch }}` + non-empty assertion | A5 |
+| 5 | `.github/workflows/sync-agency.yml` | `Create Pull Request` (`:563`) gains `id: cpr` | D1 |
+| 6 | `.github/workflows/sync-agency.yml` | `sync-upstream` gains `outputs:` (`pr_number`, `branch`); **`actions: write` NOT added here** | A7 |
+| 7 | `.github/workflows/sync-agency.yml` | new `dispatch-quality` job — `needs: sync-upstream`, `permissions: {actions: write}` only, all values via `env:` | A7 / `AC-CIGATE-2` |
+| 8 | `docs/owner-tasks.md` | OT-7 Status cell corrected in place (ADR-093 form) | `AC-OT7-1`, `AC-OT7-2` |
+| 9 | `docs/risk-register.md` | `v2.19.5-CODEOWNERS-1` Status cell corrected in place (ADR-093 form) | `AC-A1-1` |
+| 10 | `.github/CODEOWNERS` | `:41-46` one-clause correction (D5, third living source) | D5 |
+| 11 | `tests/fixtures/required-check-fixture.md` | Fixture A (MD010 + MD041), added then reverted | `AC-REQCHECK-1` |
+| 12 | *(no file)* `main` branch protection | **post-merge** orchestrator action, owner-authorized | `AC-SEQ-1`, `AC-REQCHECK-1` |
+
+### What this rework falsifies in `@security`'s own review — it inherits no privilege either
+
+- **The control name is cited imprecisely, and precision is the deliverable here.** The review names
+  `Vendored Integrity Check`; the actual job name is **`Vendored Integrity Check (audit F-7)`**
+  (`:2213`). My first query, using the review's string verbatim, returned **nothing** — the control
+  only reproduced once corrected. Required contexts are matched as **exact strings**, so in a cycle
+  whose output is a list of exact context names this is a live hazard, not a typo.
+- **S1's phrase "precisely the supply-chain three" contradicts the review's own S6.** S6 establishes
+  that `sync-agency-dry-run` is not a supply-chain content check. The three are the three
+  *conditional* jobs; describing them as the supply-chain three repeats the error S6 corrects.
+- **The exploit's tie-break mechanics are asserted, not demonstrated** (re-running is a write, so
+  neither of us tested it). Flagged because the adopted remedy is deliberately built not to depend
+  on it.
+
+### Status of ADR-099 after this amendment
+
+`PROPOSED` (unchanged — Phase 3 remains blocked until `@security` re-reviews). D2's disclaimer is
+**FALSIFIED and superseded by A1**; D1.2's `!= 'push'` ruling is **WITHDRAWN and superseded by
+A1+A6**; D1.2's coverage map is **CORRECTED by A4**; D1.3's framing is **CORRECTED by A5**; D1.5's
+Fixture B criterion is **TIGHTENED by A3**; §Maturation Path option (a) is **WITHDRAWN as a deferral
+and folded into A1**. `@security`'s framing — *"this is 'not yet', not 'no'"* — is accepted as
+accurate.
+
+---
+
+## Amendment record 2 — ADR-099 §Decision D2 derivation method, A1, A8 (appended v2.19.15 Phase 1 rework `1.R2`, 2026-08-29T19:40:50Z; neither ADR-099 nor Amendment record 1 is rewritten)
+
+> *ISO 15288 — System Requirements Definition Process (second rework iteration).*
+
+`@security` cleared the three CRITICALs from `1.R1` and returned **one new CRITICAL, located in the
+derivation method both prior passes endorsed.** It is upheld on independent re-run.
+
+### B1 (was R1) — D2's prescribed derivation produces a context string GitHub can never match. UPHELD; this is the cycle's own deliverable failing on execution.
+
+D2 says the required contexts are *"the 35 `name:` values verbatim."* Deriving both ways and diffing
+proves that instruction wrong:
+
+```
+$ diff yaml35.txt api_all.txt
+30c30
+< Verbatim Attribution Rule Check (ADR-024 / #15)
+---
+> Verbatim Attribution Rule Check (ADR-024 /
+```
+
+Raw source (`quality.yml:1910`): `    name: Verbatim Attribution Rule Check (ADR-024 / #15)`.
+Live check-run name on `14b41dc`: `Verbatim Attribution Rule Check (ADR-024 /`. The name is an
+**unquoted YAML scalar**, and ` #` opens a comment, so YAML discards ` #15)` and trims the trailing
+space before GitHub ever sees it. Population, re-run: **0 of 35** names are quoted; exactly **1**
+contains `#`. Both derivations return **35** — they are not the same 35.
+
+Following D2 as written would place a string into `required_status_checks.contexts` that no
+check-run can ever carry: the context stays permanently `pending`, every PR is blocked, and
+`enforce_admins: true` means there is no override **including for the PR that would fix it**. It is
+the spec's own Edge Case 3 arriving through the *context list* rather than through a check bug —
+which is why neither prior pass caught it: both were auditing checks, not the list.
+
+*(Noted because it is the same failure class: the `/usr/bin/grep -c` used to count quoted names
+returned `0` **and** exit 1 — the exact `grep -c` behaviour behind A2. The count was read from the
+value, not from the exit status.)*
+
+**Ruling — derivation is mechanical AND from the API, never from the YAML.** Hand-transcription and
+YAML-derivation are both **forbidden**. The binding command, run against the head SHA of the PR that
+ships this cycle:
+
+```
+gh api "repos/jmlozano1990/Cowork-Starter-Kit/commits/<THIS_PR_HEAD_SHA>/check-runs?per_page=100" \
+  --jq '[.check_runs[].name] | unique | .[]'
+```
+
+The API returns the exact strings GitHub matches, with YAML parsing already applied — it is the only
+source that cannot disagree with the matcher, because it *is* the matcher's own output.
+
+**Truncation canary, so this class cannot recur silently.** Before arming, assert the derived set
+(a) has exactly **33** entries after the A8 exclusions, (b) contains neither excluded name, and
+(c) contains `Verbatim Attribution Rule Check (ADR-024 / #15)` **in full**. Assertion (c) is the
+canary: if the repair in B2 did not land, or landed and was not re-derived, (c) fails and arming
+stops.
+
+### B2 — the atomic-ordering choice: **fix `:1910` in this PR, then derive post-merge.** Chosen, with reason.
+
+`@security` offers two acceptable orderings and forbids treating fix-and-derive as separable. I adopt
+the **first**: quote the name at `:1910` in this PR **while the gate is still off**, and derive the
+context list post-merge from the head SHA of that same PR.
+
+**Why this one and not the second.** The second ordering (enshrine the truncated-but-real name, book
+the repair later) is *safe* but leaves a landmine: a required context reading
+`Verbatim Attribution Rule Check (ADR-024 /` looks like a defect to every future reader, and the
+obvious "cleanup" — quoting the YAML — would **silently break the gate**, which is precisely the trap
+this cycle exists to close. It also couples a cosmetic repair to a live gate mutation permanently.
+The first ordering spends the **zero-risk window that exists only right now**: while
+`required_status_checks` is absent, changing a job `name:` costs nothing. Once armed, every future
+name edit becomes a gate-breaking operation requiring an atomic re-derive. Normalising the name
+before arming is therefore strictly cheaper than normalising it ever again.
+
+**Atomicity, stated mechanically:** the derivation source is the head SHA of **this cycle's own PR**,
+whose `pull_request` run carries all 35 names *with `:1910` already corrected*. Fix → merge-candidate
+CI green → derive from that SHA → assert the canary → arm. The fix and the derivation are one
+decision because they read the same commit.
+
+**Deliberately NOT expanded to all 35.** Quoting every name would remove the defect class at source,
+but it is **not required for correctness** once derivation is API-only: an unquoted name that
+truncates then yields an ugly context string, not a broken gate. Booked as a §Maturation Path option
+rather than done here, because a 35-line cosmetic diff inside a Tier A change buys less than it costs
+to audit. Trigger recorded in B6.
+
+### B3 (was R2) — A1's "no duplicate exists to tie-break" is TOO STRONG. Narrowed, and its coupling to A8 recorded.
+
+A1's first clause holds: dropping `push` genuinely removes the **structural** twin — no `skipped`
+sibling is emitted for any name. But the claim overreached, and it did so by the exact failure I
+diagnosed in D2: reasoning about the events a *workflow* declares, without enumerating the states a
+*SHA* can reach. A **manual dispatch against a branch with an open PR** creates a new check-suite and
+therefore a second check-run under the same name.
+
+**Empirically confirmed, from evidence already in hand this cycle:** on `ef89dedee308`, the name
+`Verify tag + Release for every CHANGELOG version >= 2.18.0` appears **three times**, from suites
+`87985258453`, `87897158492` and `87889560831`. Repeat runs demonstrably produce repeat check-runs
+under one name on one SHA.
+
+**Corrected claim.** A1 eliminates the *structural, zero-privilege, opposite-conclusion* duplicate —
+the one that made a `skipped` twin maskable by a re-run button. It does **not** eliminate duplicates
+in general. The residual is much weaker: both entries carry real conclusions, so it can only matter
+where a check is **non-deterministic** — a re-run that flips a genuine failure to a pass.
+
+**A1↔A8 coupling, recorded so it cannot be silently re-opened.** The residual's blast radius is
+exactly the set of required checks whose result can vary between runs on identical content.
+**A8 is therefore not merely an availability measure; it is load-bearing for A1's correctness.**
+Any future cycle that relaxes A8 — re-admitting `Link Check (External)` or another non-deterministic
+check to the required set — **re-opens A1's residual by that much and must re-derive A1, not cite
+it.** `@security`'s framing is adopted verbatim into the record.
+
+### B4 (was R3) — the stated cost omitted `main`. `strict: true` adopted, deliberately.
+
+A1's cost was written as *"pushes to a branch with no open PR stop running CI"*, which reads as
+feature branches and silently includes **`main` after every merge**. Verified: `quality.yml` is the
+only home of the 35 (0 name overlap with the other three workflows, established in D2 with a firing
+control), and the 35 verify the **PR head**, not the **merge result**.
+
+*Refinement to `@security`'s framing, from re-run:* `main` does not go entirely dark —
+`release-surface.yml` runs on `push: branches: [main]` by explicit design (its own header documents
+this as *"the primary need: immediate post-merge signal"*). But it contributes **one** release-surface
+job, **none of the 35**. The claim is correct as stated about the 35; the absolute reading is not.
+
+**Ruling: set `strict: true`** in the same API call that arms the gate, so a PR must be up to date
+with `main` before merging and the tested head therefore contains `main`'s tip. This must be
+**explicit**: `required_status_checks` is `null` today, so there is no prior value to inherit and
+omitting the field is a silent choice of `false`. Cost, named: with concurrent PRs each merge
+invalidates the others and forces an update-and-re-run — negligible for a single-maintainer repo,
+and it is the reason this is a deliberate ruling rather than a default.
+
+### B5 (was R4) — the A6 allow-list is dead code today. Kept, with a comment that says so.
+
+Correct: under the new `on:` (`pull_request` + `workflow_dispatch`) the allow-list
+`contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)` is **always true**.
+It is retained deliberately as a fail-closed tripwire for a future third event — but an always-true
+condition with no explanation is exactly what a maintainer deletes during cleanup, which would
+restore the A1 hazard silently. **Binding: an adjacent comment on all three jobs** naming it as a
+deliberate tripwire, why it is currently always-true, and what breaks if it is removed. Revisit
+trigger added in B6.
+
+### B6 — §Maturation Path additions (this amendment's own, not a rewrite of ADR-099's)
+
+- **Future-state options:** quote all 35 `name:` scalars in `quality.yml`, removing the
+  YAML-truncation class at source rather than relying on API-derivation to route around it.
+- **Concrete revisit triggers:** the next cycle that edits `quality.yml` job names **while the gate
+  is off** — that is the only cheap window, and B2 establishes it closes the moment the gate is
+  armed; **or** a third triggering event is added to `quality.yml`, which converts B5's tripwire from
+  dead code into a live control and requires the A6 allow-list to be re-derived rather than assumed;
+  **or** any relaxation of A8, which per B3 re-opens A1's residual.
+- **Risk knowingly accepted:** 34 of 35 job names remain unquoted, so a future name containing ` #`,
+  `:` or another YAML-significant sequence will truncate silently in the source. Bounded — not
+  eliminated — by the B1 rule that contexts are only ever derived from the API, which means such a
+  name produces a cosmetically wrong context string rather than an unmatched one; and by the B1
+  canary, which fails arming if the one known instance regresses.
+
+### B7 (was R5) — `S8` booked as a carry-forward. It was never dropped: it was never received.
+
+**Correcting the premise rather than accepting it.** The `1.R1` brief relayed S1, S2, S3, S6, S9, S7,
+S4, S5 and S12. **S8, S10 and S11 were not in it.** S8 therefore carries no A-number and appears in
+no §D because it never reached this phase — a relay gap, not a Phase-1 omission. Recorded plainly
+because a carry-forward whose stated cause is "the architect dropped it" would mislocate the fix.
+
+**Substance verified and accepted as real.** `SCAN_PATTERNS` is an 8-element bash array
+(`sync-agency.yml:173-182`); `docs/internal/security/upstream-content-scan-rules.md` documents 8
+patterns in fenced ` ```regex ` blocks. They currently agree in count, and **nothing enforces that
+they agree at all.** The sharpened form is the load-bearing part: A2's repair makes
+`sync-agency-dry-run` genuinely verify *the document*, which will make the document **look**
+verified while the array it is supposed to mirror stays unchecked against it. Booked as
+`CF-v2.19.15-SCANMIRROR`, owner unassigned, explicitly **not** fixed here — adding an array/doc
+correspondence check is new check logic in a cycle already carrying one named amendment.
+
+### B8 — `AMEND-1`'s three sign-off conditions, accepted as binding
+
+1. **All three sub-defects, not two** — the corrected fenced-block pattern, `|| echo 0` → `|| true`,
+   **and** the `-lt 1` floor. Fixing the pattern and the `||` without the floor leaves a check that
+   passes on an empty document; fixing the pattern alone leaves the fail-open. Each is independently
+   necessary.
+2. **A firing negative control at Phase 5, run by `@qa`** — the job must be shown going **RED** on a
+   corrupted scan-rules document, held to `lock-content-sha-cross-check`'s `CHECKED=0` house
+   standard. The `|| true` reproduction recorded in `1.R1` is the *diagnostic*; it is not the control,
+   because it was run by the author of the fix against a hand-built case.
+3. **The A8 rationale condition** — discharged in B9.
+
+### B9 — A8's recorded rationale MUST name all three grounds
+
+`@security` accepts 33 of 35 and strengthens the basis: offline-vs-network is **also the determinism
+axis**, which per B3 is what closes A1's remainder. It re-derived the enumeration from a superset at
+two levels and swept a level neither prior pass did — **the ten invoked scripts** — surfacing two
+jobs invisible to a YAML sweep, both resolving offline for sourced reasons. **The four network-
+dependent jobs I enumerated are right; the method that produced them was not exhaustive, and that
+belongs in the record** rather than being quietly ratified by a correct answer.
+
+**Binding on the exclusion text for `/sync-agency Dry-Run (v2.0.3)`: all three grounds, always
+together** — (1) it inspects no PR content; (2) it makes three live external fetches; **(3) it
+carried a fail-open defect (A2), repaired under `AMEND-1` in this same cycle.** Omitting (3)
+*launders a repair into a design preference*: a later reader would conclude the check was excluded
+because it was architecturally unsuitable, and would never learn it had been broken. Ground (3) is
+also what makes condition B8.2 legible — the negative control exists because of it.
+
+### B10 (was S10) — carried into OT-7's corrected text
+
+OT-7's correction must record **two independent** reasons approvals stay rejected, not one:
+(a) the sole maintainer is also the sole code owner and GitHub forbids self-approval; and
+(b) the **bot-approval route** — `can_approve_pull_request_reviews: true` (re-run live in D4), with
+`sync-agency.yml`'s job already holding `pull-requests: write`. Reason (b) matters independently:
+were approvals ever required, they could be satisfied by automation rather than by a human, which
+defeats the control's purpose rather than merely deadlocking it. `AC-REQCHECK-2` therefore rests on
+two grounds, and removing either does not release it.
+
+### Status of ADR-099 after this amendment
+
+`PROPOSED` (unchanged). D2's **derivation method** is FALSIFIED and superseded by B1/B2 — the
+`"35 name: values verbatim"` instruction must not be followed. A1's second clause is NARROWED by B3
+and now explicitly depends on A8. A1's cost statement is CORRECTED by B4, which adds `strict: true`.
+A6 is retained but documented as dead code (B5). `AMEND-1` is signed off under B8's three conditions.
+A8 stands at 33 of 35 with B9's three-ground rationale binding.
 
 ---

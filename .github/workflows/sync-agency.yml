@@ -40,6 +40,16 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    # §D item 6 / A7 (ADR-099, v2.19.15): exposed so the separate `dispatch-quality`
+    # job below (needs: sync-upstream) can target the sync PR's own branch.
+    # `actions: write` — the permission that actually performs the dispatch — is
+    # deliberately NOT added to this job's `permissions:` block above; it lives only
+    # on `dispatch-quality`, per S4's ruling that the job which handles untrusted
+    # upstream content must never also hold a permission that can dispatch or delete
+    # workflow runs.
+    outputs:
+      pr_number: ${{ steps.cpr.outputs.pull-request-number }}
+      branch: agency-sync/${{ steps.upstream.outputs.latest_sha }}
 
     steps:
       - name: Checkout repo
@@ -562,6 +572,12 @@ jobs:
 
       - name: Create Pull Request
         if: steps.check.outputs.needs_update == 'true'
+        id: cpr
+        # D1 step 3 (ADR-099, v2.19.15): `id:` added so `dispatch-quality` can read
+        # `pull-request-number` via `needs.sync-upstream.outputs.pr_number` (job
+        # `outputs:` above). Output name confirmed against this pinned action's own
+        # README at `67ccf781…` (`pull-request-number`, `pull-request-url`) — not
+        # recalled from memory.
         uses: peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f # v7.0.6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -650,3 +666,39 @@ jobs:
         if: steps.check.outputs.needs_update == 'false'
         run: |
           echo "Lock file is current (SHA: ${{ steps.upstream.outputs.latest_sha }}). No PR opened."
+
+  dispatch-quality:
+    name: Dispatch quality.yml checks for the sync PR (D1 / AC-CIGATE-1, ADR-099)
+    needs: sync-upstream
+    # D1 step 4 (ADR-099, v2.19.15), relocated to a `needs:`-based job output rather
+    # than a same-job `steps.` reference: gated on a PR actually having been created.
+    # If `sync-upstream`'s "Create Pull Request" step never ran (needs_update ==
+    # 'false') or ran but opened nothing, `pr_number` is empty and this job is
+    # skipped, not failed.
+    if: needs.sync-upstream.outputs.pr_number != ''
+    runs-on: ubuntu-latest
+    # A7 (ADR-099, v2.19.15): `actions: write` lives ONLY here, never on
+    # `sync-upstream`. `sync-upstream` is the job that ingests untrusted upstream
+    # content (fetches files from msitarzewski/agency-agents); `actions: write` also
+    # confers workflow-run and log deletion, so the job handling that content must
+    # not hold it. This job grants no other scope — it does not check out the repo
+    # and needs no `contents` permission to call the Actions API.
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch quality.yml against the sync branch
+        # A7/S5 (AC-C3-2, ADR-099): `TARGET_BRANCH` carries `latest_sha`, a value
+        # fetched from upstream (msitarzewski/agency-agents' HEAD SHA) — squarely
+        # inside the class AC-C3-2 already bans from direct `${{ }}` interpolation
+        # into a `run:` block's TEXT (see this file's "Fail CI if SPDX changed" step
+        # above for the full rationale: such an expansion substitutes into the
+        # script's text before the shell ever runs it, and could break out of the
+        # intended argument). Passed through `env:` instead, exactly like that step.
+        # `GITHUB_REPOSITORY` is a runner-provided environment variable, not a
+        # `${{ }}` expression substituted into script text, so it is used directly
+        # (matches D1 step 4's own buildable spec verbatim).
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_BRANCH: ${{ needs.sync-upstream.outputs.branch }}
+        run: |
+          gh workflow run quality.yml --repo "$GITHUB_REPOSITORY" --ref "$TARGET_BRANCH"
