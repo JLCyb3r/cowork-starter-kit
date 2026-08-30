@@ -12110,3 +12110,629 @@ rather than a repo-wide merge lockout under `enforce_admins: true`.
   here.
 - **Re-anchoring OT-6, resolving OT-3/OT-8, or `CF-v2.5-D`'s 2FA confirmation** — unrelated open
   items in the same files this cycle touches; left untouched.
+
+---
+
+# Product Spec — Cowork Starter Kit v2.19.16 "The Sync That Can't Land"
+
+> **Cycle:** v2.19.16 · **Status:** Phase 1 — finalized into `docs/spec.md` by `@architect` from
+> inside the worktree branch (drafted by `@pm` at Phase 0 and held in
+> `.claude/projects/<active>/scratchpad.md` per the SECURITY-SENSITIVE worktree rule; reworked after
+> two independent adversarial reviews, a closure check, and an orchestrator third pass)
+> **Classification:** SECURITY-SENSITIVE — Tier A (touches `.github/workflows/quality.yml`,
+> `.github/workflows/sync-agency.yml`, `.cowork-allowlist.json`, `scripts/verify-lock-removals.sh`,
+> and — added at Phase 1 — the new deleting script `scripts/vendor-prune.sh`; the allowlist and the
+> ledger script are explicitly tagged *"Classification context: SECURITY-SENSITIVE — Tier A (Guard
+> Change Summary required)"* in ADR-080's own header) · COMPLIANCE-SENSITIVE = NO, conditionally
+> (flips to YES under D1(c) or D2(a) — see §Architectural Modifications AM-5)
+> **Base:** `main` @ `24e1b58`, `VERSION` `2.19.15`, tree clean. Branch
+> `release/v2.19.16-sync-repair`, cut from that commit.
+> **Measurement contract.** Every number below was re-run by `@architect` at Phase 1 against the
+> branch checkout at `24e1b58` and the live GitHub API (read-only GETs only), with `/usr/bin/grep` by
+> absolute path — this repo's bare `grep` is a `.gitignore`-honouring ugrep shim that under-counts —
+> and `-E` for any alternation. Lock facts are read from the **PR head** via the Contents API at
+> `c43d56f438ee820af427c889e1fff6cc6294fb25`, never from a local `main` checkout. Every figure
+> inherited from Phase 0 was **re-run, not adopted**. The Phase-0 "Settled facts" block survived
+> re-run intact — 44 MISSING / 15 MISMATCH / 2 ORPHAN / 150 lock / 108 disk / 106 common, and the
+> rename asymmetry hash-for-hash. **Four claims did not survive, two of them load-bearing on this
+> spec's own decomposition; all four are recorded in §Architectural Modifications and the ACs they
+> touch are amended there rather than silently rewritten above.**
+
+## One idea
+
+Thirteen cycles of hardening CI finally produced a real, checked bot PR: **#125**, open, 35
+check-runs, 31 green / 4 red. Those 4 reds decompose into two structural gaps this repo has always had
+and never hit until now — vendoring was never wired into the sync automation (Item 1), and the content
+allowlist was never extended to a category upstream just started using (Item 2) — plus one downstream
+assertion that has never actually gotten to run (Item 3), plus one stale test fixture that collided
+with real upstream progress on its very first live exercise, across **all three** of its candidate
+paths (Item 4). Two more already-diagnosed, unrelated defects are folded in at the owner's
+instruction: a cardinality guard that cannot fail at zero rows (Item 5), and a governance document
+asserting an approval rule its sole maintainer cannot satisfy (Item 6).
+
+The gate is worth arming only if the thing it gates can pass. Arming `required_status_checks` before
+these are fixed would make every monthly sync PR require hand-repair, and `enforce_admins: true` means
+the owner could not wave it through.
+
+**What this cycle is not.** It does not arm `required_status_checks` (that is v2.19.17). It does not
+merge PR #125. It does not touch `main`'s branch protection. It does not guarantee all 4 checks turn
+green with certainty — Item 3 is settled by an observed re-run, and Item 1's *recurring* closure is
+reachable only under two of D1's three alternatives.
+
+**Two of the six items (D1, D2) and one (D3) are owner decisions with real, non-equivalent
+trade-offs.** `@architect`'s Phase 1 design makes all alternatives of each implementable and states a
+technical recommendation; the owner selects at the Phase 3 gate. One alternative — D3(c) — did not
+survive design and is recorded as unexecutable in-cycle rather than left on the menu.
+
+## Core Features — 6 items
+
+**Dependency note.** Items 1, 2, 4, 5, 6 are execution-independent on their *failure signals*. Item 3
+executes only after Item 2's fix lands on the tested commit (`AC-SEQ-2`). **Amended at Phase 1
+(AM-4):** the items are *not* independent on their *remedies* — Items 1, 2, 3 and 4 are coupled
+through a hidden shared variable, which `cowork.lock.json` state CI evaluates. See §Architectural
+Modifications.
+
+### 1. Close the vendoring-automation gap — fixes "Vendored Integrity Check (audit F-7)"
+
+**Location:** `.github/workflows/sync-agency.yml` (`:507-539` lock rewrite; PR-body checklist `:631`);
+`scripts/vendor-agency.sh` (never invoked by the workflow — the only 2 references to
+`vendored/agency-agents` in the 704-line workflow are inside PR-body markdown at `:630`/`:631`, not
+executed steps); `.github/workflows/quality.yml`'s `vendored-integrity-check` job (`:2277`, and —
+added at Phase 1 — its third step at `:2343-2375`).
+
+**Root cause.** The sync workflow rewrites `cowork.lock.json`'s `files[]` entirely via `jq` against
+freshly-fetched upstream metadata, gated only by a write-completeness assertion compared *within the
+same lock JSON* — never against the actual `vendored/agency-agents/` tree on disk.
+`scripts/vendor-agency.sh`, the only thing that writes real content into that tree, is a
+maintainer-run, non-gating, post-merge checklist item. `vendored/agency-agents/` has not been touched
+since `adf2586` (2026-08-08, v2.19.7); `cowork.lock.json` kept moving underneath it (108 → 150). The
+lock and the tree are inconsistent **by construction** at PR-open time whenever a sync changes tracked
+content. This is a manual-process gap, not a guard-configuration bug — the `if:`-guard framing was
+refuted at Phase 0 and is not revived.
+
+**Settled counts:** 44 MISSING + 15 MISMATCH over head-lock 150 / disk 108 / common 106. Re-derived at
+Phase 1 by independent set arithmetic and a local strip-and-hash pass.
+
+**Decision D1 — where vendoring lives (open; owner decides at Phase 3 gate).**
+
+| Alternative | Consequence | Precedent it sets |
+|---|---|---|
+| **(a) Keep vendoring manual (status quo)** | Small monthly diff. But `vendored-integrity-check` keeps failing on every future sync PR that changes tracked content, because the lock and the tree are structurally inconsistent by construction. `AC-VENDOR-3` is **not satisfiable** under (a) — verified at Phase 1: `dispatch-quality` fires immediately after the lock bump, so there is no point at which a human could intervene; the human step *is* the mechanism the AC excludes. Selecting (a) leaves Item 1 open past this cycle as a named carry-forward. **Amended at Phase 1 (AM-1):** under (a) each sync needs **two** manual acts, not one — run `vendor-agency.sh` *and* reconcile the cardinality assertion. | "Machine bumps the pointer, human materializes content" stays the durable model, and `vendored-integrity-check` stays red-on-arrival for sync PRs indefinitely. |
+| **(b) Fold `vendor-agency.sh` into `sync-agency.yml`**, same PR that bumps the lock | Bot PR becomes self-consistent on open; `AC-VENDOR-3` becomes reachable. Costs no new code for the write path — the existing script is invoked unchanged, and its own round-trip strip assertion refuses to write a file that would redden CI. The self-referential trigger risk is **confirmed absent** at Phase 1, not merely estimated. But because `vendor-agency.sh` stamps one **global** `Pinned commit:` into every vendored file's header, every monthly diff carries the **full current corpus** (150 files today, rising) regardless of what changed. | A sync PR is judged by lock semantics + automated content scan, not by a human reading 150 files of third-party markdown every month. |
+| **(c) Fold vendoring in, but first redesign the attribution header** so a file's stamp only changes when its own content changed | Self-consistency *and* a reviewable diff — measured on this sync: 59 files instead of 150. **Amended at Phase 1 (AM-2): the stated obstacle is falsified.** The round-trip strip is anchored on the END-marker line, not on the header's byte layout — proven on a mutated copy, whose stripped hash is byte-identical. The real constraints are an ADR-024 6-field amendment and an attribution-adequacy opinion from `@compliance`; neither is a hashing problem. | Splits "proves provenance" from "keeps diffs reviewable" as two separate design requirements going forward. |
+
+**AC-VENDOR-1 (Ubiquitous — one-time PR remediation; does NOT by itself close Item 1).**
+**[EARS-REVISED at Phase 1 — see AM-1; the original wording is satisfiable while the check it names
+stays red.]** The `Vendored Integrity Check (audit F-7)` **job** SHALL reach `conclusion=success`
+against the corrected commit — all three of its steps, not the forward check alone — with zero
+MISSING, zero MISMATCH, zero orphans, and `LOCK_COUNT`/`DISK_COUNT` satisfying the cardinality
+assertion in whatever form the design lands.
+- **Firing negative control:** pre-fix, the job reports 44 MISSING + 15 MISMATCH and exits non-zero.
+  Post-fix, the same job against the corrected commit MUST report 0/0 and reach `success`. @qa records
+  the command, exit code, reported counts and the **step** each result came from, dated.
+- **This AC does not prove recurrence is fixed.** A maintainer hand-running `vendor-agency.sh` once
+  satisfies it under D1(a) too — intentional, and exactly why `AC-VENDOR-3` exists as a harder bar.
+
+**AC-VENDOR-2 (Ubiquitous — decision recording).** `@architect`'s Phase 1 design SHALL record which of
+D1's three alternatives was selected, with the owner's Phase 3 ratification, before implementation
+proceeds.
+
+**AC-VENDOR-3 (Event-driven — the recurring/structural bar).** The `Vendored Integrity Check (audit
+F-7)` job SHALL be OBSERVED to reach `conclusion=success` on a sync-shaped commit produced end-to-end
+through the same `workflow_dispatch` path `sync-agency.yml`'s `dispatch-quality` job uses — a fixture
+upstream-pin advance driven through `sync-agency.yml` itself, with **no human step between the pin
+bump and the check**. A tree corrected by a maintainer hand-running `vendor-agency.sh` (admissible for
+`AC-VENDOR-1`) is **not** admissible for this AC.
+- Reachable **only under D1(b) or D1(c)**. Under D1(a) this AC is **UNSATISFIED by construction** —
+  state that plainly at Phase 3 sign-off and record Item 1 as **not closed**, carried forward.
+- **Firing negative control:** every observed run at this event type, including `33314537036`, carries
+  44/15 drift. Post-fix, @qa re-derives the drift counts on the fixture-driven commit, confirms 0/0,
+  and records the run's `.event` value alongside the conclusion.
+
+**AC-VENDOR-4 (Ubiquitous — rides along with this item's Tier-A ceremony).** The
+`sync-agency.yml:631` PR-body checklist text asserting *"no CI runs on a sync PR at all"* SHALL be
+corrected or removed — it is false since v2.19.15 and is read by every future sync PR's reviewer.
+- **Firing negative control:**
+  `/usr/bin/grep -n "no CI runs on a sync PR at all" .github/workflows/sync-agency.yml` currently
+  matches at `:631` (exit 0). Post-fix the same grep SHALL exit 1, or the sentence SHALL be reworded
+  to describe the actual `workflow_dispatch` mechanism.
+
+### 2. Close the allowlist-category gap — fixes "Vendored Removal Ledger (ADR-080)" + the orphan half of "Release Predicate + Standing Gate Check"
+
+**Location:** `.cowork-allowlist.json`; `scripts/verify-lock-removals.sh` (`:153-158`);
+`scripts/verify-vendored-orphans.sh`; the two affected files under
+`vendored/agency-agents/engineering/`.
+
+**Root cause.** Both files are **renamed** upstream, not deleted, into a new `security/` category this
+repo has never allowlisted (`allowed_categories` holds 10 entries; `security` is not among them). The
+sync therefore never fetches the renamed destinations, the content never enters the head lock at all,
+and `verify-lock-removals.sh`'s MOVED test — a pure content-hash membership test *within the head
+lock* — is structurally blind to it. Both paths fall through to REMOVED, are undeclared in
+`blocked_files[]`, and their pre-existing vendored copies are never deleted.
+
+**The two files do not behave identically — re-verified hash-for-hash at Phase 1.**
+`engineering-threat-detection-engineer.md` → `security-threat-detection-engineer.md` is
+**byte-identical** (`83bfaabe485d…` both sides). `engineering-security-engineer.md` →
+`security-architect.md` is **not** (`d6ce02769f3d…` → `b1a68e9614f7…`; the persona's scope was
+narrowed and a sibling AppSec Engineer persona created upstream). Old paths return **HTTP 404** at the
+new pin; firing control `engineering-backend-architect.md` returns **200**.
+
+**No D2 alternative clears the orphan check by itself.** `verify-vendored-orphans.sh` does pure
+disk-path-string matching with no content-hash or rename awareness, and `vendor-agency.sh` contains no
+deletion primitive anywhere. Under **every** alternative the two stale copies remain until something
+explicitly deletes them.
+
+**Decision D2 — how to treat a rename into a non-onboarded category (open; owner decides at Phase 3).**
+
+| Alternative | Consequence | Precedent it sets |
+|---|---|---|
+| **(a) Allowlist `security`** and let the sync follow the rename | Matches what happened upstream. But it ingests all **12** current `security/` files (10 never reviewed here); clears the ledger for the threat-detection file only (MOVED fires on the identical hash) and **not** for `security-architect.md`; does **not** clear the orphan check for either without an explicit deletion; and requires **re-driving the sync**, so verification needs a fixture branch, not a corrective push to PR #125. Adds three steps, removes none. | A categorized upstream rename is followed by allowlist expansion by default — here that default ingests a 12-file, partly-unreviewed third-party corpus. |
+| **(b) Declare both old paths in `blocked_files[]`** and delete the stale vendored copies | Completes in one corrective push, clears ledger and orphan check together, exposes no new category. **Amended at Phase 1 (AM-3):** the "mislabels a mechanical outcome as a deliberate block" objection is answered by writing the decision into the `reason` string and setting `permanent: false` — declining to onboard 12 unreviewed third-party documents two days before a cron fires **is** a deliberate decision. No `blocked_patterns` entries are added: these are not permanent removals, and a basename pattern would sabotage the follow-up cycle that onboards `security/`. | `blocked_files` carries reasons that mean "deferred by a named decision" alongside ones that mean "rejected on merits", distinguished by `permanent:`. |
+| **(c) Extend `verify-lock-removals.sh`'s MOVED classification** to treat a compare-API-confirmed rename into a non-allowlisted category as a third, non-blocking case | Clears the ledger for **both** files uniformly, generalises to future renames, no human touches the allowlist each time. But it is a Tier A edit to the guard built to stop content leaving silently, it introduces a network dependency into a currently pure-local script, it still needs the same separate deletion, and it generalises the exemption to every future rename into an un-onboarded category — starting with the security personas. `AC-ALLOWLIST-4` becomes mandatory. | Weakens the removal ledger's core invariant for an entire future class of removals, in the category where an unnoticed drop matters most. |
+
+**AC-ALLOWLIST-1 (Ubiquitous — split by alternative).** `scripts/verify-lock-removals.sh` SHALL exit 0
+for both `engineering/engineering-security-engineer.md` and
+`engineering/engineering-threat-detection-engineer.md`:
+- **D2(a):** requires allowlisting `security` AND re-driving the sync AND an additional
+  `blocked_files[]` declaration (or equivalent manual review sign-off) for `security-architect.md`
+  specifically.
+- **D2(b):** requires both paths declared in `blocked_files[]`, matching the existing entry schema.
+- **D2(c):** requires the extended classifier reclassifying both as MOVED via the compare-API-confirmed
+  rename, independent of content-hash match.
+- **Firing negative control (all branches):** pre-fix the job reports
+  `REMOVED — … NOT present in .cowork-allowlist.json blocked_files[].path` for both paths, exit
+  non-zero. Post-fix @qa re-runs the same script against the corrected commit and records the exit
+  code, dated, per the branch actually taken.
+
+**AC-ALLOWLIST-2 (Ubiquitous — hard requirement, no discretionary escape).**
+`scripts/verify-vendored-orphans.sh` SHALL exit 0 with **zero orphans of any kind** against the
+corrected tree/lock. There are exactly 2 orphans today, both in scope; no unrelated orphan exists to
+name as an exception, so none is admitted. **Regardless of which D2 alternative is selected**, this
+requires an explicit, separate step deleting both stale `engineering/` copies.
+- **Firing negative control:** pre-fix reports *"2 orphan(s) found out of 108 vendored file(s)
+  scanned."* Post-fix, re-run and confirm exactly 0.
+
+**AC-ALLOWLIST-3 (Ubiquitous — decision recording, mandatory GCS).** `@architect`'s Phase 1 design
+SHALL record which D2 alternative was selected. Because this touches `.cowork-allowlist.json` and/or
+`scripts/verify-lock-removals.sh` — both explicitly tagged SECURITY-SENSITIVE Tier A —
+`@security`'s Phase 2 review **and** a Guard Change Summary are mandatory regardless of alternative.
+**If D2(a) is selected**, the GCS SHALL additionally include the full enumerated `security/` file list
+at the pin being adopted (12 files, re-derived at gate time) and a content-scan result for all 10
+files beyond the 2 renames, before the allowlist change merges. **Extended at Phase 1 (AM-5):** the
+GCS SHALL additionally cover `scripts/vendor-prune.sh`, this cycle's only deleting artefact.
+
+**AC-ALLOWLIST-4 (Conditional on D2(c) only — required positive control for a Tier A guard edit).**
+After any change to `scripts/verify-lock-removals.sh`, the modified script SHALL be run against a
+synthetic fixture pair (a base lock containing a path with a unique `content_sha256`; a head lock with
+that path removed, that hash appearing nowhere in the head lock, **no** matching `blocked_files[]`
+entry and **no** compare-API rename classification) and SHALL be OBSERVED to exit non-zero and name
+that path. @qa records the fixture, command and exit code, dated. Required because a Tier A guard edit
+satisfied only by the two real paths in this PR could mechanically be a change that stops failing on
+*any* path.
+
+### 3. Settle the `AC-PUB-14` hypothesis — "Release Predicate + Standing Gate Check (v2.19.6)" (depends on Item 2)
+
+**Location:** `scripts/publish-release.sh` (step 2 orphan check `:301`; step 5 version-mismatch guard
+`:385`); `.github/workflows/quality.yml`'s `AC-PUB-14` step (`:2902-2969`).
+
+**What is known, precisely — mechanism fully traced at Phase 1.** `publish-release.sh` runs under
+`set -euo pipefail`. Step 2 invokes `verify-vendored-orphans.sh` unconditionally and exits 1 **before**
+step 5's version-mismatch guard ever runs. The `AC-PUB-14` step runs `publish-release.sh 1.0.0` under
+a `gh` shim and asserts, in order: `RC ≠ 127`, `RC = 1`, and `"refusing to CREATE tag"` present in the
+output. With 2 orphans the run exits 1 at step 2 — satisfying the first two — and the output reads
+*"refusing to build a release archive"*, so the **third** assertion fires. That is character-for-
+character the observed error. Differential evidence: the same job is green on `main` (0 orphans) and
+red only on PR #125's head; the only variable is the lock/orphan state.
+
+**Why it stays a hypothesis.** `AC-PUB-14`'s own assertion body has **never once executed** in any
+observed run. "Fixing Item 2 makes this pass" is a reasoned prediction, not an observed outcome.
+
+**AC-SEQ-2 (State-driven — a checkable precondition, not an ordering intention).** `AC-RELEASE-1`'s
+re-run SHALL be performed only against a commit on which `scripts/verify-vendored-orphans.sh` has
+**already been observed to exit 0**. @qa records that exit code and the commit SHA — read from the
+`vendored-integrity-check` job's own step-2 log, not inferred from the job's overall conclusion —
+before running the Release Predicate job.
+
+**AC-RELEASE-1 (Ubiquitous — settles the hypothesis by observed re-run; three branches).** After
+`verify-vendored-orphans.sh` has been observed to exit 0 on the tested commit, the
+`Release Predicate + Standing Gate Check` job SHALL be re-run and its outcome RECORDED, with the
+failing line/step named, not just the conclusion:
+- **(a)** it reaches and passes the version-mismatch guard assertion (`publish-release.sh:385`) —
+  Item 2's fix was sufficient, no code change needed to `AC-PUB-14`'s own step; **or**
+- **(b)** it fails at or beyond `:385` — a genuinely new, previously-unobserved defect in the
+  version-mismatch guard itself, filed and triaged as a fresh finding; **or**
+- **(c)** it fails again at `:302` (the orphan gate) — Item 2 is **NOT complete** on the tested commit.
+  This branch does **not** close Item 3; `AC-SEQ-2`'s precondition was not met and Item 2 must be
+  revisited.
+- Only (a) or (b) close Item 3. The distinguishing artefact is the **line number in the output**.
+- **Baseline:** `AC-PUB-14` has never been observed reaching its own assertion body in any run to date.
+
+### 4. Repair the stale ratchet fixture — "sync-verify-ratchet (AC-SYNC-9)"
+
+**Location:** `.github/workflows/quality.yml`, `sync-verify-ratchet` job, Leg 3 (`:2136` `RATCHET_SHA`,
+`:2140-2144` `RATCHET_PATHS`, `:2196-2201` the fixture-setup guard).
+
+**Root cause.** Leg 3(c) poisons a fixture lock entry using content fetched at a hardcoded
+`RATCHET_SHA` (`c89557f7…`) to verify `verify-lock-content-sha.sh` still fails closed on a stale hash.
+A deliberate v2.19.5 pre-poison guard aborts if the "old" and "poisoned" hashes already match. **All
+three** `RATCHET_PATHS` collide against the PR-head lock. Structural reason: `c89557f…3c9588880` is 6
+commits ahead / 0 behind, 13 files changed (**5 added, 8 modified**), every modified file repo
+infrastructure — **zero persona documents modified**.
+
+**Amended at Phase 1 (AM-2 continued, and this is the load-bearing correction).** The fix shape
+prescribed below — "select a new, earlier `RATCHET_SHA`" with the path set held fixed — is
+**unsatisfiable**, and the spec's own candidate `783f6a72…` is a trap: it is `main`'s current pin, so
+adopting it makes the fixture guard collide on **this cycle's own PR**. Full derivation and the
+verified replacement triple are in `docs/design-v2.19.16.md` §0.2 and §C.4.
+
+**AC-RATCHET-1 (Ubiquitous).** **[EARS-REVISED at Phase 1 — see AM-2.]** The fix SHALL select a
+`RATCHET_SHA` **and a `RATCHET_PATHS` set** such that (i) every path in the set resolves HTTP 200 at
+that SHA, and (ii) the poisoned path's content at that SHA differs from its `content_sha256` in the
+lock of **every commit this cycle causes CI to run on** — enumerated explicitly, not assumed to be
+one. Hashes read at those commits (Contents API at the head SHA, or the branch's checked-out tree),
+never from a local `main` checkout.
+- **Firing negative control:** the current pair collides on all three paths against the PR-head lock,
+  and `783f6a72…` collides against `main`'s lock. Post-fix, @qa re-runs the curl+hash comparison for
+  the new pair against **both** lock states and confirms the hashes differ, dated, before trusting the
+  job's green result.
+
+**AC-RATCHET-2 (Ubiquitous — verify against the NEW pin, and guard the vacuous-null case).** Once a
+new `RATCHET_SHA` is selected, **all three** `RATCHET_PATHS` entries SHALL be independently re-verified
+against the live lock at the commit under test — not only the one path Leg 3(c) hardcodes. If the
+poison logic continues to target a single hardcoded path, that path SHALL additionally be confirmed
+**present** in the live lock before trusting a "differs" result — a path absent from the lock makes
+`jq -r` yield `null`, which trivially "differs" from any real hash and would pass this check
+vacuously.
+
+**Deferred, named explicitly:** the structural fix — decoupling the fixture from a frozen historical
+SHA racing a monotonically-advancing live pin — is not this cycle's job, but Phase 1 establishes that
+an *ancient* pin makes rot conditional on an upstream byte-exact revert rather than on the passage of
+time. See ADR-100 §Maturation Path.
+
+### 5. Fix the registry-cardinality zero-row false-pass (folded-in independent A)
+
+**Location:** `.github/workflows/quality.yml`, `registry-cardinality-check`: `:562` the count,
+`:563` the comparison, `:568` the pass echo.
+
+**Root cause, confirmed on fixtures and re-confirmed at Phase 1.** `grep -c` on zero matches **also
+exits 1** while still printing `0`, so `|| echo 0` fires **in addition to** `grep -c`'s own printed
+`0`, yielding the literal two-line string `"0\n0"`. `[ "0\n0" -lt 18 ]` then errors at runtime inside
+an `if` **condition** — a context `set -e` does not abort on — falling through to the pass branch.
+Confirmed: zero matching rows → *"Registry cardinality check passed: 0\n0 entries found (minimum:
+18)."*, exit 0.
+
+**Audit of the rest of the file, with a firing control (Phase 1).** Exactly **one** live instance
+exists repo-wide: `quality.yml:562`. Seven sibling `$(grep -c …)` sites already use the house-standard
+`|| true` (`:287`, `:324`, `:725`, `:1536`, `:1601`, `:1627`, `:1648`), established by ADR-099
+AMEND-1 one cycle ago; `:562` is the one that was missed. Control: the same instrument over a mutated
+copy carrying one injected instance returns **2** against the real file's **1**. Three further
+`|| echo` matches at `:2009`, `:2010`, `:2448` are **comments** describing this defect class, not
+executable code.
+
+**AC-CARD-1 (Ubiquitous).** The `registry-cardinality-check` job SHALL compute its row count such that
+a `grep -c` match against zero rows is distinguished from a genuine count, and the minimum-count
+comparison SHALL correctly fail (non-zero exit / red conclusion) whenever the real count is below 18,
+including exactly zero.
+
+**AC-CARD-2 (Ubiquitous — negative control).** The repaired guard SHALL be run against a fixture where
+the registry pattern matches **zero rows** and SHALL be OBSERVED to fail.
+- **Firing negative control on the pre-fix guard (baseline):** zero matching rows → *"passed: 0\n0
+  entries found (minimum: 18)."*, exit 0. Post-fix the identical fixture MUST flip that guard red.
+
+**AC-CARD-3 (Ubiquitous — the required positive control).** A guard hardcoded to `exit 1` would
+satisfy `AC-CARD-1`/`AC-CARD-2` alone — the mirror-image of the defect this item fixes. The repaired
+guard SHALL **also** be run against the real `curated-skills-registry.md` (row count re-derived at fix
+time with `/usr/bin/grep -cE` and **exit status checked**) and be OBSERVED to **pass**, **and** against
+a fixture with exactly 17 matching rows and be OBSERVED to **fail** — pinning both sides of the
+boundary, not just zero.
+
+### 6. Correct or contextualize the false "2-approval" claim (folded-in independent B / Decision D3)
+
+**Location:** `CONTRIBUTING.md` (`:358`, and `:359-360`); `.github/CODEOWNERS` (`:4`, `:5`, `:10`).
+
+**Root cause.** Both documents assert agency-sync PRs require 2 separate maintainer approvals.
+`gh api …/collaborators` returns exactly one login (`jmlozano1990`). Live protection:
+`required_approving_review_count: 0`, `require_code_owner_reviews: false`. GitHub does not permit
+self-approval. CODEOWNERS' own later comment (v2.19.5) already states *"@jmlozano1990 is the sole
+collaborator"* — the file contradicts itself. v2.19.15 deliberately withdrew the *plan* to enable
+`require_code_owner_reviews` for exactly this deadlock reason, but never touched either standing
+sentence.
+
+**Amended at Phase 1 (AM-3 continued).** There are **four** assertion sites, not three:
+`.github/CODEOWNERS:10` reads *"2 approvals required for all PRs touching these"* and is invisible to
+the instrument this spec originally prescribed. A **fifth** false claim sits beside them and is about
+enforcement rather than count: `CONTRIBUTING.md:359-360`'s *"This rule is enforced via CODEOWNERS"*.
+
+**Decision D3 — how to close the gap between claim and reality (open; owner decides at Phase 3).**
+
+| Alternative | Consequence | Precedent it sets |
+|---|---|---|
+| **(a) Correct all sites to reality** | Removes a structurally impossible claim standing since v2.0 and an enforcement claim that is simply false. No recruiting required. Is a written downgrade right as this cycle lays groundwork for more automated teeth elsewhere — the counter-argument is that a control which cannot fire should be repaired or removed, not annotated. | Extends this repo's existing practice of correcting stale doc claims in place. |
+| **(b) Keep the texts, add a dated not-currently-enforced note** pointing at the tracked risk-register row | Honest today, preserves the target if a second maintainer is ever added. Leaves a reader cross-referencing three documents to learn that a security control they can read is inert. | Flags known-aspirational claims in place rather than requiring truth before standing. |
+| **(c) Add a second maintainer with write access** | The only option making the *original* control real. **Recorded at Phase 1 as not surviving design:** outside any pipeline agent's authority, does not fit the 2026-09-01 deadline, and silently converts all **19** sole-owned CODEOWNERS rows to a multi-maintainer trust model. It should be struck as an *in-cycle* option rather than left as one the owner might pick and then find unexecutable. Remains a valid strategic direction outside this cycle. | Sole-maintainer → multi-maintainer trust model shift, far beyond these rows. |
+
+**AC-APPROVAL-1 (Ubiquitous — split per alternative).** **[EARS-REVISED at Phase 1 — see AM-3; the
+original instrument cannot match one of the four live sites.]**
+- **Under (a):** neither `CONTRIBUTING.md` nor `.github/CODEOWNERS` contains a sentence asserting a
+  required approval count greater than the live collaborator count — verified by
+  `/usr/bin/grep -rnE '\b2 [A-Za-z-]* ?(maintainer|CODEOWNERS)? ?approvals?'` returning no matches
+  (exit 1) against both files, **and** by `/usr/bin/grep -nF 'enforced via CODEOWNERS' CONTRIBUTING.md`
+  returning no matches. Firing positive control on the pre-fix files: **4** and **1** matches
+  respectively.
+- **Under (b):** every sentence asserting 2 approvals is immediately adjacent to a dated
+  non-enforcement note naming the live collaborator count (1) — verified by reading each of the four
+  match sites after the fix, and the enforcement claim at `:359-360` is likewise annotated.
+- **Under (c):** this AC is **not achievable this cycle** — recorded as an open carry-forward, not as
+  satisfied.
+- **Firing negative control (pre-fix baseline, all branches):** `gh api …/collaborators` returns
+  exactly one login while four sentences assert 2 approvals are required.
+
+## Technical Constraints
+
+- **Ceremony, per item and surface:**
+  - Items 1, 4, 5 → `.github/workflows/*.yml` — Tier A, this repo's established convention.
+  - Item 2 → `.cowork-allowlist.json` and/or `scripts/verify-lock-removals.sh` — Tier A, **mandatory**
+    `@security` Guard Change Summary regardless of which D2 alternative is chosen (per ADR-080's own
+    header). **Extended at Phase 1:** the GCS additionally covers `scripts/vendor-prune.sh`.
+  - Item 6 → `.github/CODEOWNERS` + `CONTRIBUTING.md` — governance-adjacent text, not guard logic;
+    worktree + PR required (all items share one Tier-A worktree), but no guard-logic GCS since no
+    check behaviour changes. `@security` should still review given CODEOWNERS' role in
+    supply-chain-critical path ownership.
+  - Overall: one worktree branch + PR for the cycle.
+- **PR #125 stays open and unmerged throughout.** It is the evidence base, not a deliverable.
+  Verification of every fix MUST use either (a) a corrective push to its own branch
+  `agency-sync/3c9588880b7cafaec325a104899fd8bbe27e7d72` without merging, or (b) an equivalent fixture
+  branch built from the same tree. **Exception:** if D2(a) is selected, its mechanism requires
+  re-driving the sync, which a corrective push cannot do — that alternative requires path (b).
+- **Added at Phase 1 (AM-4) — the lock-state coupling, binding on Phase 4/5.** This cycle causes CI to
+  run on commits with **two different `cowork.lock.json` states**: the v2.19.16 PR (108 entries @ pin
+  `783f6a72`) and any PR-#125-shaped commit (150 entries @ pin `3c958888`). Three of this cycle's
+  assertions read that state and are hardcoded to one value. **Consequence: `AC-VENDOR-1`,
+  `AC-VENDOR-3`, `AC-ALLOWLIST-1`, `AC-ALLOWLIST-2` and `AC-RELEASE-1` are NOT verifiable on this
+  cycle's own PR** — that branch has no drift, no orphans and no lock removals, so those checks pass
+  **vacuously**. They MUST be observed on a fixture branch carrying PR #125's lock state. **A green
+  v2.19.16 PR is not evidence for any of those five ACs, and @qa SHALL reject a claim that cites it.**
+- **Read-only on `main` branch protection throughout.** No item changes `required_status_checks`,
+  `enforce_admins`, approval settings, or rulesets — that is v2.19.17.
+- **Dependency-field adjudication.** The Item 1 evidence dossier tags
+  `depends_on_other_failures: ["Vendored Removal Ledger (ADR-080)"]` while this spec treats Items 1 and
+  2 as execution-independent. Resolution: Item 1's own verbatim errors are computed purely from a
+  lock-vs-disk comparison and do not change based on Item 2's fix — independence stands **on the
+  failure signals**. `AC-SEQ-2`'s Item-3-after-Item-2 ordering derives from the Release Predicate
+  root-cause narrative, not from that dossier's (empty) dependency field, and is retained. **Amended at
+  Phase 1:** independence does **not** hold on the *remedies* — under D1(b)/(c) the vendoring step is
+  the natural home for the orphan deletion `AC-ALLOWLIST-2` requires under every D2 alternative.
+- **Verification-event requirement for `AC-VENDOR-3`.** A corrective push to PR #125's branch fires a
+  `pull_request` event; the population this cycle needs to prove correct — bot sync PRs — is checked
+  via `workflow_dispatch`. These are not interchangeable by construction (`quality.yml` gates 3 jobs
+  on `github.event_name`). @qa SHALL record the `.event` value of every verifying run, and at least
+  one verification run for `AC-VENDOR-3` SHALL be produced through the `workflow_dispatch` path.
+- **Numeric drift is expected, not a discrepancy to re-litigate.** The counts (44/15/150/108/106/2) are
+  settled for PR #125 at head `c43d56f` as of Phase 1. Whoever implements re-derives the authoritative
+  counts from the actual commit they are fixing, with exit status checked and a firing negative
+  control. The *method*, not the values, is binding.
+- **Known verification pitfalls, carried forward:** (1) `gh run view --log-failed` includes
+  ANSI-coloured source echoes of `::error` strings that are not the runtime message — filter on the
+  uncoloured `##[error]` line, or every tally inflates by one. (2) That command omits **successful**
+  steps — per-step conclusions come from the Jobs API. (3) Any lock-file fact must be read from the
+  PR's own head SHA via the Contents API, never a local branch checkout. **(4) Added at Phase 1:** the
+  integrity strip `sed "1,/^${END_MARK}$/d" | sed '1{/^$/d}'` is GNU-sed syntax; BSD `sed` (macOS)
+  rejects `1{/^$/d}` and every file then hashes to the empty-string SHA `e3b0c44298fc1c14…`, reporting
+  106/106 MISMATCH. Use `sed '1{/^$/d;}'` locally. The tell is `e3b0c442…` appearing as every stripped
+  hash.
+- **Every new or repaired guard in this cycle (Items 1, 2, 4, 5) MUST be demonstrated against a
+  zero-row / empty-set fixture AND against a real, non-trivial passing input** — a guard that always
+  fails satisfies a negative control alone just as a guard that always passes satisfies a positive
+  control alone (`AC-VENDOR-3`, `AC-ALLOWLIST-4`, `AC-RATCHET-2`, `AC-CARD-3`). **Extended at Phase 1:**
+  `scripts/vendor-prune.sh` additionally requires a *refusal* control — a lock with `files: []` must
+  exit non-zero having deleted **0** files.
+- **No secrets, no new tokens.** None of these six items requires a new credential; if any
+  implementation path surfaces one, that is a named, explicit Phase 1/2 deviation.
+
+## Acceptance Criteria
+
+- [ ] **AC-VENDOR-1** — the `Vendored Integrity Check (audit F-7)` **job** reaches `conclusion=success`
+      against the corrected commit — all three steps — with 0 MISSING / 0 MISMATCH / 0 orphans and the
+      cardinality assertion satisfied (baseline 44 MISSING + 15 MISMATCH + a `LOCK_COUNT` of 150
+      against a pin of 108). Pre-fix and post-fix results reproduced and dated by @qa, each attributed
+      to the step it came from. Does not by itself close Item 1.
+- [ ] **AC-VENDOR-2** — D1's selected alternative recorded by @architect at Phase 1, ratified by the
+      owner at Phase 3.
+- [ ] **AC-VENDOR-3** — the check is OBSERVED to reach `success` on a sync-shaped commit driven
+      end-to-end through the `workflow_dispatch`/`dispatch-quality` path, with no human step between
+      the pin bump and the check. Reachable only under D1(b)/(c); under D1(a) it is unsatisfied and
+      Item 1 is an open carry-forward, not done.
+- [ ] **AC-VENDOR-4** — the stale `sync-agency.yml:631` "no CI runs on a sync PR at all" text is
+      corrected or removed.
+- [ ] **AC-ALLOWLIST-1** — `Vendored Removal Ledger (ADR-080)` exits 0 for both renamed paths, per the
+      branch-specific requirement of whichever D2 alternative is selected.
+- [ ] **AC-ALLOWLIST-2** — `verify-vendored-orphans.sh` reports **zero** orphans post-fix (no
+      discretionary exception); requires an explicit deletion of both stale `engineering/` copies under
+      every D2 alternative.
+- [ ] **AC-ALLOWLIST-3** — D2's selected alternative recorded by @architect at Phase 1; mandatory
+      @security Guard Change Summary regardless of alternative, covering `scripts/vendor-prune.sh`; if
+      D2(a), additionally the 12-file `security/` content scan.
+- [ ] **AC-ALLOWLIST-4** — conditional on D2(c): the modified `verify-lock-removals.sh` is OBSERVED to
+      still fail on a synthetic fixture representing a genuine undeclared removal.
+- [ ] **AC-SEQ-2** — `AC-RELEASE-1`'s re-run is performed only against a commit on which
+      `verify-vendored-orphans.sh` has already been observed to exit 0, read from that step's own log.
+- [ ] **AC-RELEASE-1** — the Release Predicate's post-precondition outcome is observed and recorded as
+      one of three named branches, with the failing line number named — never assumed; only (a) and (b)
+      close Item 3.
+- [ ] **AC-RATCHET-1** — a `RATCHET_SHA` **and** `RATCHET_PATHS` set is selected such that every path
+      resolves HTTP 200 at that SHA and the poisoned path's content differs from its stored hash in the
+      lock of **every** commit this cycle causes CI to run on. Both lock states enumerated; hash
+      differences reproduced and dated by @qa.
+- [ ] **AC-RATCHET-2** — all three `RATCHET_PATHS` entries re-verified against the new pin; the
+      poisoned path additionally confirmed present in the live lock (not a vacuous `null` match).
+- [ ] **AC-CARD-1** — `registry-cardinality-check` correctly fails when the real row count is below
+      minimum, including exactly zero.
+- [ ] **AC-CARD-2** — the repaired guard is run against a real zero-row fixture and OBSERVED to fail.
+- [ ] **AC-CARD-3** — the repaired guard is ALSO run against the real registry (OBSERVED to pass) and a
+      17-row boundary fixture (OBSERVED to fail) — both sides of the boundary pinned.
+- [ ] **AC-APPROVAL-1** — `CONTRIBUTING.md` / `.github/CODEOWNERS` approval claims reconciled per the
+      specific observable of whichever D3 alternative is selected, across all **four** assertion sites
+      plus the enforcement claim; (c) is recorded as not achievable this cycle rather than satisfied.
+
+## Edge Cases (6 categories)
+
+1. **Zero-row / empty-set inputs to any guard touched or newly written this cycle** (Items 1, 2, 4, 5)
+   — every repaired or new guard must be *shown*, not assumed, to correctly fail on an empty match set
+   AND to correctly pass on a real, non-trivial input. **Extended at Phase 1:** `vendor-prune.sh`'s
+   empty-lock case is not merely a control but a **refusal** — an empty lock must delete nothing.
+2. **Upstream drift between evidence-gathering (2026-08-30) and fix-landing.** PR #125's figures may
+   have shifted by fix time. Verify against the commit's actual state then. **Sharpened at Phase 1:**
+   upstream HEAD **is** the lock's pin right now (`compare/3c958888...main` → `identical`), so there is
+   currently zero headroom ahead of the lock — a fact that decides Item 4's fix direction.
+3. **`AC-RELEASE-1`'s hypothesis resolving into any of its three named branches**, including the branch
+   where Item 2 turns out incomplete on the tested commit.
+4. **Self-referential trigger/commit race** if D1(b)/(c) has `sync-agency.yml` write to
+   `vendored/agency-agents/` and commit within the same job. **Resolved at Phase 1:** the commit is
+   `GITHUB_TOKEN`-authored via `peter-evans/create-pull-request`, and `GITHUB_TOKEN` events do not
+   raise workflow runs — the documented fact ADR-099 built `dispatch-quality` around. Adding files to
+   that commit changes nothing about the trigger. The `[ESTIMATED]` assumption is **confirmed**.
+5. **Recurrence of the ratchet-fixture defect class** on a different path/commit in a future sync.
+   @qa/retro should watch for reappearance on or after the 2026-09-01 cron.
+6. **Asymmetric treatment inside a single decision alternative.** D2(a) does not treat its two target
+   files identically — one reclassifies automatically (content-identical), the other does not
+   (content-edited). An implementer who assumes D2(a) is "allowlist and both problems disappear" ships
+   a still-failing ledger for `security-architect.md`.
+
+## Success Metrics
+
+- **Primary (in-scope, testable this cycle):** a sync-shaped fixture commit, produced end-to-end by
+  whichever mechanism D1 selects, with no human step between the pin bump and the check, yields all
+  applicable fixed checks green with no human intervention. **Only fully achievable under D1(b)/(c);**
+  if D1(a) is selected this metric is **not met**, and that is recorded as an explicit named limitation
+  rather than left silent.
+- **Secondary:** the repo's own written governance states an approval requirement its one actual
+  maintainer can satisfy (per whichever D3 alternative is achievable — (a) or (b)).
+- **Post-merge watch, not a Phase 8 blocker:** whether the actual 2026-09-01 cron's next real sync PR
+  opens fully clean from the start. Name an owner and a date for this watch at Phase 7.
+
+## Assumptions [confidence]
+
+- [CONFIRMED — re-derived at Phase 1, not inherited] PR #125 state: OPEN, head `c43d56f…`, branch
+  `agency-sync/3c9588880b7cafaec325a104899fd8bbe27e7d72`, `mergeable: true`, labels `agency-sync` +
+  `security-review-required`.
+- [CONFIRMED — re-derived at Phase 1 by independent set arithmetic] MISSING = 44, MISMATCH = 15,
+  ORPHAN = 2, over head-lock 150 / disk 108 / common 106. The orphan set and the ledger's removal set
+  are **identical by construction**, because the disk path-set and `main`'s lock path-set are the same
+  set (`comm -3` → empty; firing control against the head lock → 46 lines). H1 is therefore **not a
+  hypothesis**; it is provable from the artefacts before any re-run.
+- [CONFIRMED — hash-for-hash at Phase 1] The rename asymmetry: threat-detection byte-identical
+  (`83bfaabe…`), security-engineer → architect changed (`d6ce0276…` → `b1a68e96…`). Old paths HTTP 404
+  at the new pin; firing control on a non-renamed path returns 200. Neither old hash appears anywhere
+  in the head lock, so MOVED cannot fire for either file today.
+- [CONFIRMED — re-derived at Phase 1] All three `RATCHET_PATHS` collide at the current `RATCHET_SHA`
+  against the PR-head lock. **And the spec's own candidate `783f6a72…` collides against `main`'s
+  lock** — it is `main`'s pin. No `(SHA, current path set)` tuple is green on both commits; the only
+  two-sided-safe content state for the poisoned path predates the `academic/` division, so both
+  `academic/` paths 404 there.
+- [CONFIRMED — with a firing control at Phase 1] `registry-cardinality-check`'s `|| echo 0`
+  double-count at `:562` is the **only** live instance repo-wide; 7 siblings already use `|| true`.
+- [CONFIRMED] Collaborator count = 1; live branch-protection values; **four** standing "2 approvals"
+  claims plus one false "enforced via CODEOWNERS" claim.
+- [CONFIRMED — Phase 1, replacing an [ESTIMATED]] An automated commit-within-the-sync-job mechanism
+  (D1(b)/(c)) does **not** create a self-referential trigger loop. `GITHUB_TOKEN`-authored events do
+  not raise workflow runs; `dispatch-quality` is the deliberate exception and is unchanged.
+- [CONFIRMED — Phase 1, replacing the brief's premise] Redesigning the attribution header does **not**
+  disturb `vendor-agency.sh`'s round-trip hash verification. The strip is END-marker-anchored; a copy
+  with a mutated header interior produces a byte-identical stripped hash.
+- [UNTESTED — HYPOTHESIS, settled by `AC-RELEASE-1`] "Restoring Item 2's fix alone flips the Release
+  Predicate fully green." The mechanism is now fully traced and the prediction is strong, but the
+  `AC-PUB-14` assertion body has never executed. Three outcomes remain live.
+- [UNTESTED] Whether the production `content_sha256` pipeline normalizes or strips content before
+  hashing in a way that would make a raw-upstream-hash comparison diverge for some future path —
+  observed to agree for every path tested this session, but not traced through the writer's code path.
+
+## Architectural Modifications (v2.19.16 — recorded by @architect at Phase 1, 2026-08-30T18:13:40Z)
+
+**This section records five changes to what the spec's ACs require, made because the ACs as written are
+satisfiable while the outcomes they name remain false, or prescribe a remedy that is unsatisfiable. They
+are recorded rather than silently applied. Full derivations, with commands and firing controls, are in
+`docs/design-v2.19.16.md` §0.**
+
+**AM-1 — `AC-VENDOR-1` is amended: it named two of the job's three failure modes.**
+`Vendored Integrity Check (audit F-7)` is a three-step job. Step 3 (`quality.yml:2343-2375`) asserts
+`LOCK_COUNT -ne 108` and `DISK_COUNT -ne 108`. At PR #125's head `LOCK_COUNT` is **150**. So the job
+fails at `AC-B5-1` even with zero MISSING and zero MISMATCH, and again on the disk side after a correct
+re-vendor. The cycle never saw this error because step 1 exits 1 and GitHub aborts the job. **The AC is
+re-worded to bind the job's `conclusion`, not two of its messages.** Before proposing any bump to that
+constant, the re-introduction hazard its own comment names was checked: both v2.19.7 permanent removals
+are **ABSENT** from the 150-entry head lock (firing control: `academic/academic-historian.md` → present
+at index 2). Nothing is hiding inside the count. The design replaces the constant with a
+`LOCK_COUNT == DISK_COUNT` equality plus an upward-ratcheting floor; `AC-B5-4`'s per-path assertions —
+which the step's own comment identifies as the thing that actually survives a count bump — are
+untouched.
+
+**AM-2 — `AC-RATCHET-1` is amended: its prescribed fix shape is unsatisfiable, and its named candidate
+is a trap.** The AC says "select a new, earlier `RATCHET_SHA`" and holds `RATCHET_PATHS` fixed. Leg
+3(c)'s guard requires the poisoned path's content at that SHA to differ from the hash stored in the lock
+of *the commit CI is running on* — and this cycle has two such commits with different locks. For the
+hardcoded poison path there are exactly two reachable content states in the window where the current
+paths all exist, and the two lock states occupy both. The only two-sided-safe state (`0e22704e`,
+2026-03-05) predates the `academic/` division (created 2026-03-15), so both `academic/` paths return
+**HTTP 404** there and `curl -sf` kills the step. Worse, the spec's own candidate `783f6a72…` is
+`main`'s current pin, so adopting it makes the guard collide on **this cycle's own PR** — the same shape
+as v2.19.15's required-context lockout. **The AC is re-worded to require a SHA *and* a path set, and to
+require the set of commits be enumerated rather than assumed to be one.**
+
+**AM-3 — `AC-APPROVAL-1`'s verification instrument is amended: it cannot match one of the four live
+sites.** The prescribed regex requires `maintainer` or `CODEOWNERS` immediately before `approvals`.
+`.github/CODEOWNERS:10` reads *"2 approvals required for all PRs touching these"* and is invisible to it
+— so under D3(a) one could fix three sites, run the instrument, get exit 1, and declare the AC met with
+a false claim still standing. A fifth false assertion is about enforcement rather than count:
+`CONTRIBUTING.md:359-360`'s *"This rule is enforced via CODEOWNERS"*, against live values of
+`require_code_owner_reviews: false` and `required_approving_review_count: 0`. **The instrument is
+widened and a second grep added for the enforcement claim.** Separately, **D3(c) is recorded as not
+surviving design** — it is unexecutable in-cycle by any agent — rather than left on the menu.
+
+**AM-4 — the item decomposition is amended: Items 1, 2, 3 and 4 are coupled through a hidden shared
+variable.** The spec declares the items execution-independent. That holds for their *failure signals*
+and not for their *remedies*. This cycle causes CI to run on two different `cowork.lock.json` states —
+the v2.19.16 PR (108 @ `783f6a72`) and any PR-#125-shaped commit (150 @ `3c958888`) — and three
+assertions read that state, two of them hardcoded to one value. No constant is valid on both. The design
+resolves this by making the pinned assertions lock-state-relative (so both commits stay green) rather
+than by folding PR #125's lock into this cycle's branch, which would turn a CI-repair cycle into a
+third-party content-ingestion PR. **The binding consequence for Phase 4/5 is in Technical Constraints:
+five ACs pass vacuously on this cycle's own PR and must be observed on a fixture branch.**
+
+**AM-5 — the file surface grew, and the additions raise ceremony within Tier A.** Phase 0 named four
+surfaces. Design adds `scripts/vendor-prune.sh` — **the only artefact in this cycle that deletes** — the
+outright deletion of two vendored third-party files, and executed steps in `sync-agency.yml` where today
+there are only markdown references. `AC-ALLOWLIST-3`'s mandatory Guard Change Summary is extended to
+cover the prune script, and a refusal control (empty lock deletes nothing) is added to the
+zero-row/empty-set requirement. Conversely `cowork.lock.json` **leaves** the file surface, because the
+lock bump stays off this branch — a reduction in exposure and the strongest argument for that choice.
+**COMPLIANCE-SENSITIVE remains NO but is now conditional:** it flips to YES under D1(c) (ADR-024
+attribution-format change owes an @compliance opinion) or D2(a) (12 upstream files ingested). Under the
+recommended combination — D1(b)-or-(c) + D2(b) + D3(a) — it stays NO, except that D1(c) itself triggers
+the first condition. Re-run at the Phase 3 gate; do not assume.
+
+## Out of Scope (v2.19.16)
+
+- **Arming `required_status_checks` on `main`** — that is v2.19.17, a separate owner decision.
+- **Any change to `main` branch protection settings** — untouched throughout. Baseline re-read at Phase
+  1: `required_status_checks` ABSENT, `enforce_admins: true`, `required_approving_review_count: 0`,
+  `require_code_owner_reviews: false`, force-push and deletion `false`, **0 rulesets**.
+- **Merging PR #125** — it stays open as the evidence base.
+- **The v2.19.15 carry-forward register backfill** — untouched.
+- **Publishing the missing `v2.19.14` / `v2.19.15` git tags** — confirmed independently twice at Phase
+  0: no failing check's root cause depends on tag existence, and `publish-release.sh`'s own tag handling
+  treats "tag does not exist yet" as the expected non-error case.
+- **Redesigning the ratchet fixture's frozen-SHA-vs-moving-pin architecture in general** — beyond
+  selecting a two-sided-safe `RATCHET_SHA`/path set. Phase 1 establishes that an *ancient* pin makes rot
+  conditional on an upstream byte-exact revert rather than on time; the fully structural fix (a
+  synthetic poison, removing the upstream dependency from Leg 3(c) entirely) is booked as ADR-100
+  §Maturation Path option (a).
+- **Recruiting a second maintainer/collaborator** (D3(c)) — recorded at Phase 1 as not surviving design
+  as an in-cycle option; remains a valid strategic direction outside this cycle.
+- **A full content-scan of all 12 `security/` category files** unless D2(a) is actually selected.
+- **Onboarding the upstream `security/` category** under D2(b) — deferred by decision with a named
+  trigger, tracked as `CF-v2.19.16-SECURITY-ONBOARD`.
+- **`quality.yml`'s `attribution-survives-render` job**, which validates a sample it writes itself
+  rather than the real vendored corpus — found at Phase 1, booked as `CF-v2.19.16-ATTRIB-SAMPLE`, not
+  repaired here.
+- **Any change to `quality.yml`'s or `sync-agency.yml`'s check logic outside the 4 failing checks plus
+  the 2 folded-in independents named here.**
