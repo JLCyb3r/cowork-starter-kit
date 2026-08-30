@@ -19,6 +19,51 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.15] - 2026-08-30
+
+**"The Gate That Isn't On."** Thirteen prior cycles hardened `quality.yml` (35 required-shape
+checks) against a `main` branch whose own protection required none of them to pass. This cycle
+ships the mechanism that makes turning that gate on safe. **Arming `main`'s required status
+checks itself is a separate, owner-authorized, post-merge step — not part of this PR** (`AC-SEQ-1`:
+reversing that order would permanently lock every future sync PR under `enforce_admins: true`).
+
+- **Bot-opened `sync-agency.yml` PRs now dispatch real CI.** `GITHUB_TOKEN`-authored PRs never
+  triggered `quality.yml` — GitHub suppresses recursive workflow runs from the default token — so
+  the monthly upstream-sync PR has shipped with 0 check runs since it existed. A new
+  `dispatch-quality` job (`actions: write`, isolated from the content-ingesting `sync-upstream`
+  job, which never gains that permission) calls `gh workflow run quality.yml` against the sync
+  branch once a PR is opened.
+- **`quality.yml` drops `push` as a trigger.** The prior `[push, pull_request]` pairing produced
+  two check-runs per job name per commit; three job-level-gated jobs (`sync-agency-dry-run`,
+  `lock-content-sha-cross-check`, `vendored-removal-ledger`) reported a `skipped` twin on the
+  `push` instance that a plain re-run could promote over a real `pull_request`-instance failure
+  once required checks are enabled — a live CRITICAL caught in review. `pull_request` +
+  `workflow_dispatch` replace it; the three jobs' `if:` guards move from `== 'pull_request'` to an
+  explicit event allow-list, documented in place as a deliberate always-true tripwire for a future
+  third trigger.
+- **`sync-agency-dry-run`'s pattern-count guard, repaired.** It matched 0 of the document's 8
+  fenced-block patterns and fail-opened silently under `bash -e` — three independent defects
+  (wrong extraction pattern, `|| echo 0` producing an unparseable multiline value, no floor on
+  zero), each required. Also now distinguishes a genuine regex compile failure (`grep` exit 2)
+  from a benign no-match, which the prior bare `|| true` swallowed identically.
+- **A truncated check-run name, fixed while it is still free to fix.** `Verbatim Attribution Rule
+  Check (ADR-024 / #15)`'s unquoted `#15)` was silently eaten by YAML as a comment; quoted now,
+  before any required-context list is ever derived from it — normalizing it after the gate is
+  armed would itself become a gate-breaking edit.
+- **`vendored-removal-ledger`'s `BASE_REF` no longer resolves to a bare `origin/`** on a
+  non-`pull_request` event; a documented fallback plus a loud non-empty assertion replace the
+  prior silent failure.
+- **`docs/owner-tasks.md` OT-7 and `docs/risk-register.md`'s `v2.19.5-CODEOWNERS-1`** no longer
+  recommend an unperformable remedy (`require_code_owner_reviews` — the sole maintainer cannot
+  approve their own PR, and GitHub Actions can currently approve PRs on this repo's behalf
+  regardless). Both now point at required status checks as the actual discharge path, corrected
+  in place per this repo's established Status-cell convention. `.github/CODEOWNERS` gets a
+  matching one-clause correction.
+- New `docs/architecture.md` ADR-099 (plus two amendment records from a security rework) records
+  the full design, including a required-context derivation rule (API-only, never hand-transcribed
+  or read from YAML) and a 33-of-35 recommended required set excluding two network-dependent /
+  non-deterministic jobs.
+
 ## [2.19.14] - 2026-08-29
 
 **"The Parser and the Premise."** The `tools:` vocabulary gate (`MF-3`) authorized by

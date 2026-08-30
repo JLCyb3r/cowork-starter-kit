@@ -11600,3 +11600,513 @@ scope here — see below).
   named, not resolved to a specific target.
 - **`docs/architecture.md`'s existing, already-correct S7 finding** about `SECGATE-B1`'s file count
   (3 vs. 4, `docs/roadmap.md` being the 4th) — that repair already shipped; not reopened here.
+
+---
+
+# Product Spec — Cowork Starter Kit v2.19.15 "The Gate That Isn't On"
+
+> **Cycle:** v2.19.15 · **Status:** Phase 0 — Requirements (drafted by @pm)
+> **Classification:** SECURITY-SENSITIVE — Tier A (touches `.github/workflows/quality.yml`,
+> `.github/workflows/sync-agency.yml`, and `main`'s branch-protection configuration) ·
+> COMPLIANCE-SENSITIVE = NO
+> **Base:** `94bca8f` on `main`. Worktree branch not yet cut at Phase 0 — this cycle follows this
+> repo's own established Phase 0/Phase 1 sequencing (11+ prior Tier-A cycles: the spec lands on
+> `main` first; `@architect` cuts the release branch from that commit at Phase 1, as `v2.19.14`'s
+> own header shows — its branch was cut from `a546292`, the commit immediately preceding that
+> cycle's own spec write).
+> **Measurement contract.** Every number below was re-run by @pm at Phase 0 against the live repo
+> at `94bca8f` (working tree clean, confirmed) and the live GitHub API for
+> `jmlozano1990/Cowork-Starter-Kit`, with `/usr/bin/grep` (absolute path — this repo's plain `grep`
+> is a `.gitignore`-honoring shim and under-counts) and `-E` for any alternation. Every figure in the
+> cycle brief was **re-run, not adopted** — including the ones the brief's own author (@pm, this
+> session) measured going in, per this repo's binding rule that an inherited number is unverified
+> until the recipient re-runs it. **One figure in the brief did not survive re-run cleanly and is
+> corrected below** (the "approval-required" exception to the `GITHUB_TOKEN` trigger-suppression
+> rule) — see "Falsified or corrected on re-run."
+
+## One idea
+
+Thirteen prior cycles hardened a CI gate (`quality.yml`, 70 check entries, 67 passing / 3 designed
+skips) that `main`'s own branch protection does not require anyone to pass. `required_status_checks`
+is absent from the protection object entirely; `required_approving_review_count: 0`;
+`require_code_owner_reviews: false`; 0 GitHub rulesets. This cycle turns that gate on — but only
+after fixing the one thing that would make turning it on actively harmful: the automation this repo
+depends on to stay current with its upstream (`sync-agency.yml`'s monthly PR) produces **zero** CI
+check runs today, for a structural reason (`GITHUB_TOKEN`-authored events do not trigger new
+workflow runs), not a bug in `quality.yml` itself. Requiring checks before fixing that would
+permanently block every future sync PR — and because `enforce_admins: true`, not even the repo
+owner could override it.
+
+**Not guaranteed, and stated so it is not over-read:** this cycle does not require approvals (the
+sole code owner cannot approve their own PR — GitHub does not permit self-approval, and
+`docs/owner-tasks.md` OT-7's text does not currently disclose that), does not publish a `v2.19.14`
+release, does not touch the other 11 open `v2.19.14` carry-forwards, and does not modify
+`quality.yml`'s existing check logic (only its trigger surface and, if `@architect`'s Phase 1
+mechanism needs it, its job-level `permissions:` blocks). All are explicitly out of scope — see
+below.
+
+## Core Features — 3 items, binding order (Item 1 before Item 2; Item 3 either order)
+
+### 1. Make bot-opened sync PRs run CI — the precondition, not optional hardening
+
+**Location:** `.github/workflows/sync-agency.yml` (the PR-opening job, `sync-upstream`, `:565-567`
+using `peter-evans/create-pull-request@67ccf78` with `token: ${{ secrets.GITHUB_TOKEN }}`);
+`.github/workflows/quality.yml` (`on: [push, pull_request]`, `:3` — the workflow this cycle needs to
+also fire for bot PRs).
+
+**Re-run, confirmed exactly as briefed, plus independently re-derived rather than adopted:**
+
+| Fact | Re-run result |
+|---|---|
+| PR `#27` check count, author | `0` checks, `app/github-actions` |
+| PR `#31` check count, author | `0` checks, `app/github-actions` |
+| PR `#121` check count, author | `70` checks, `jmlozano1990` (human) |
+| `gh api commits/<27-sha>/actions/runs` | `[]` — **zero workflow runs recorded**, not merely zero passing |
+| `gh api commits/<27-sha>/check-suites` | `[]` |
+| `gh api commits/<27-sha>/status` | `state: pending` (never resolved — nothing ever reported) |
+| `sync-agency.yml:565,567` | `peter-evans/create-pull-request@67ccf781d68cd99b580ae25a5c18a1cc84ffff1f`, `token: ${{ secrets.GITHUB_TOKEN }}` |
+| `gh secret list` | **empty — 0 secrets configured in this repo today** |
+| Repo visibility | `PUBLIC` (unlimited free Actions minutes — cost is not a constraint on the fix) |
+
+**Mechanism, sourced from GitHub's own documentation, not guessed:**
+
+> "When you use the repository's `GITHUB_TOKEN` to perform tasks, events triggered by the
+> `GITHUB_TOKEN` will not create a new workflow run, with the following exceptions: `workflow_dispatch`
+> and `repository_dispatch` events always create workflow runs."
+> — GitHub Docs, *Triggering a workflow* (`docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow`)
+
+This is the documented, load-bearing reason `sync-agency.yml`'s branch push and PR-open both produce
+**zero** workflow runs: both actions are performed using the built-in `GITHUB_TOKEN`, and neither
+`push` nor plain `pull_request` is on the exception list. `workflow_dispatch` and
+`repository_dispatch` are the only two events GitHub explicitly exempts from this suppression — this
+has been stable, documented behavior since the 2022-09-08 GitHub Changelog announcement that added
+the exception.
+
+**Falsified or corrected on re-run.** GitHub's docs also state a second, narrower exception: *"`pull_request`
+events with the `opened`, `synchronize`, or `reopened` activity types: when a workflow using
+`GITHUB_TOKEN` creates or updates a pull request, the resulting `pull_request` event creates
+workflow runs in an approval-required state."* If this applied here, PR `#27`/`#31` should show a
+`workflow_run` sitting in `action_required`/waiting-approval status, not nothing. **Re-run against
+this repo's actual PRs shows no such run — `actions/runs` and `check-suites` both return an empty
+array for both SHAs, not a pending-approval entry.** I could not resolve why the documented exception
+does not appear to apply to this repo's specific case (same-repo branch, not a fork) without live-
+testing on the real repo, which read-only Phase 0 rules forbid. **This is flagged, not resolved** —
+see Assumptions. It does not change this item's recommendation, because the fix below relies on the
+unambiguous, independently-confirmed `workflow_dispatch` exception, not the disputed one.
+
+**AC-CIGATE-1 (Ubiquitous).** A pull request opened by `sync-agency.yml` using the default
+`GITHUB_TOKEN` SHALL receive real check-run results from `quality.yml`'s job set against its head
+SHA — reaching an actual conclusion (success, failure, or a designed skip) for each job name, not
+remaining entirely absent as PRs `#27`/`#31` do today.
+- **Firing negative control (already reproduced above, not hypothetical):** `#27`/`#31` — both
+  GitHub-Token-authored, same code path this fix touches — show `0` check runs, `[]` workflow runs,
+  `status.state: pending`, forever. A fixture PR opened the same way (or the next real
+  `sync-agency.yml` PR, which arms 2026-09-01) MUST show ≥1 check run per `quality.yml` job name
+  after the fix ships.
+- **@qa MUST reproduce this the same way this repo's other firing controls are recorded** — pre-fix
+  absence (already true, cited above) and post-fix presence, both dated, both from a real
+  invocation — not asserted from reading the workflow YAML alone.
+
+**AC-CIGATE-2 (Ubiquitous).** The fix SHALL NOT require the owner to create, store, or rotate any
+new secret — no personal access token, no GitHub App private key. It SHALL use only the repository's
+existing default `GITHUB_TOKEN`, with whatever additional job-level `permissions:` scope (e.g.
+`actions: write`, needed to call the Actions API's `workflow_dispatch` endpoint — confirmed via
+GitHub Community discussion of the 403 this call returns without it, not independently proven live
+in this read-only session) the chosen mechanism requires.
+- **Firing negative control:** `gh secret list` → empty today (reproduced above). Post-fix, re-run
+  the same command: it MUST still be empty, or any new secret's presence MUST be justified as a
+  deliberate, named deviation at Phase 1/2 — never introduced silently as a side effect.
+
+**AC-CIGATE-3 (Ubiquitous).** The fix SHALL NOT widen `quality.yml`'s trust boundary for PRs from
+actual external forks. `quality.yml` remains `pull_request`, never `pull_request_target`; no fork-
+triggered job gains elevated permissions or secret access as a side effect of fixing the same-repo
+bot-PR path. (This repo's own `security-audit-v2.19.13.md` OWASP A05 row already establishes this
+boundary for the existing config; this AC requires the boundary survive the fix.)
+- Inspection-class — verified by reading the shipped workflow diff at Phase 5/6, not a standalone
+  executable control distinct from the existing fork-safety checks already in place.
+
+**AC-SEQ-1 (Ubiquitous — the ordering trap).** `main`'s branch protection SHALL NOT be changed to
+require status checks (Item 2, `AC-REQCHECK-1`) until **after** `AC-CIGATE-1` has been verified live
+against a real `GITHUB_TOKEN`-authored PR (a fixture, or the next real `sync-agency.yml` run).
+Enabling required checks first — even briefly — would make every future sync PR permanently
+unmergeable: `enforce_admins: true` means not even the repo owner could override it, and a sync PR
+that never produces a single check run can never satisfy a required-status-check gate.
+- Inspection-class — a sequencing/process constraint, not a standalone executable property. @qa
+  records which of the two changes landed first, with commit SHAs and timestamps, at Phase 5/7.
+
+---
+
+### 2. Enable required status checks on `main` — the gate itself
+
+**Location:** `main` branch protection (`gh api repos/jmlozano1990/Cowork-Starter-Kit/branches/main/protection`),
+currently owner-only Settings access, changed by the orchestrator only at the Phase 3 gate after
+owner approval — no pipeline agent enables this unilaterally (this repo's own established
+precedent, `docs/risk-register.md` `v2.19.5-CODEOWNERS-1`: *"enabling the actual gate needs
+owner-level repo Settings access no pipeline agent holds"*).
+
+**Re-run, confirmed exactly as briefed, live against the API, not read from a document:**
+
+```
+required_pull_request_reviews.required_approving_review_count : 0
+required_pull_request_reviews.require_code_owner_reviews       : false
+required_status_checks                                          : ABSENT (key does not exist)
+enforce_admins.enabled                                           : true
+allow_force_pushes.enabled                                       : false
+allow_deletions.enabled                                          : false
+rulesets                                                          : []  (0 rulesets)
+```
+
+**35 unique job names, not 70 — the 70 in every PR's check list is 35 jobs × 2 triggering events.**
+`quality.yml` is `on: [push, pull_request]`. Re-run against PR `#121`'s head SHA
+(`14b41dc2a2240f7816b83a1bdc5f2b0f6e0e696c`): `gh api commits/<sha>/actions/runs` shows **two**
+separate workflow runs for that one commit — one `event: push` (run `33251206019`), one
+`event: pull_request` (run `33251220506`) — each producing the same 35 job names, which is why the
+PR's check list shows every name twice (70 total). **3 of the 35 are designed to skip on the `push`
+instance specifically**, not randomly: `sync-agency-dry-run`, `vendored-removal-ledger`, and
+`lock-content-sha-cross-check` all carry `if: github.event_name == 'pull_request'` (confirmed by
+reading the job bodies — comments on two of the three read *"Run on every PR"* and *"defense-in-depth
+for PR-triggered jobs (especially fork PRs)"*, i.e. these are deliberately PR-only security checks,
+not flaky ones). Their `push`-triggered instance reports `conclusion: skipped` (not absent —
+GitHub still creates a check-run entry for a job whose `if:` evaluates false); their
+`pull_request`-triggered instance reports `success`. **32 of the 35 report `success` on both
+instances.**
+
+**Proposed basis for which checks become required — recommendation, not a Phase-1 override.**
+Require **all 35 unique job names**, not a subset. Reasoning:
+1. This repo's own `docs/retro.md` v2.19.14 §6 already recommends this in the aggregate ("making the
+   70 checks that already exist load-bearing... a single `required_status_checks` +
+   minimal-ruleset change would retroactively multiply the value of every hardening cycle this repo
+   has ever run") — not "make some of them load-bearing."
+2. No tiering of "critical vs. cosmetic" checks exists anywhere in this repo's documentation today.
+   Inventing one at Phase 0 would be an unsourced judgment call this spec is not positioned to make
+   safely — the same discipline this repo already applies to "don't assert a claim the source never
+   made" (`CF-v2.5-F`, this cycle's own predecessor).
+3. All 35 are empirically well-behaved for required-check purposes: 32 always report a real
+   conclusion, and the 3 conditional ones report a designed `skipped` (which satisfies a required
+   check) rather than ever being entirely absent for a `pull_request`-triggered run — the run type
+   that actually gates a merge.
+- **If `@architect`'s Phase 1 design proposes requiring fewer than all 35, `AC-REQCHECK-1` requires
+  that decision be explicitly recorded with its basis, and `@security` reviews it at Phase 2** — this
+  spec does not forbid a narrower list, it forbids an *undocumented* one.
+
+**AC-REQCHECK-1 (Ubiquitous).** `main`'s branch protection SHALL have a non-null
+`required_status_checks` object naming an explicit, Phase-1-recorded set of check contexts (see
+proposed basis above), applied only after `AC-CIGATE-1`/`AC-SEQ-1`.
+- **Firing negative control:** today, `required_status_checks` is absent entirely from the live API
+  response (reproduced above — not merely `null` or empty, the key does not exist). Post-fix, the
+  same API call MUST return a `required_status_checks` object with `contexts` (or the ruleset
+  equivalent) listing ≥1 entry, AND a real PR carrying one deliberately-broken check (e.g. a fixture
+  that fails `Markdown Lint`) MUST be shown blocked from merging — a real, once-run reproduction, not
+  an assertion from reading the config.
+
+**AC-REQCHECK-2 (Ubiquitous).** `required_approving_review_count` and `require_code_owner_reviews`
+SHALL remain at their current values (`0` / `false`) — this cycle enforces via status checks, never
+approvals, because the sole collaborator (`@jmlozano1990`) is also the sole CODEOWNERS entry for
+every row `docs/owner-tasks.md` OT-7 names, and GitHub does not permit self-approval. Requiring
+either would deadlock every PR the owner opens, including the fix for whatever broke a required
+check.
+- **Firing negative control:** both are `0`/`false` today (reproduced above). Post-fix, re-running
+  the same API call MUST show them **unchanged** — proving no approval requirement was introduced as
+  a side effect of turning on status checks.
+
+**AC-REQCHECK-3 (Ubiquitous).** `enforce_admins` SHALL remain `true` (unchanged), and `@architect`
+SHALL record this disposition explicitly rather than leave it unconsidered. `AC-CIGATE-1` is what
+makes keeping it `true` safe — once bot-opened PRs can produce passing checks, no PR class is
+structurally unable to satisfy the gate, so an admin bypass is not needed to avoid a self-inflicted
+deadlock.
+- Inspection-class — the value staying `true` is mechanically checkable (reproduced above,
+  unchanged); the *reasoning being recorded* is a Phase-1 authoring requirement, not a standalone
+  negative control.
+
+**AC-REQCHECK-4 (Ubiquitous).** `allow_force_pushes` and `allow_deletions` SHALL remain `false`
+(unchanged) — untouched by this cycle, reproduced above as already `false`.
+
+---
+
+### 3. Close `OT-7` and finding `A1` at their sources — and correct the falsified deadlock claim
+
+**Location:** `docs/owner-tasks.md` OT-7 (`:23`); `docs/internal/security/security-audit-v2.19.14.md`
+finding `A1` (`:24`, `:392`); `docs/retro.md` v2.19.14 §5 carry-forward row `A1` (`:173`); **and, not
+named in the cycle brief, found this session:** `docs/risk-register.md` row `v2.19.5-CODEOWNERS-1`
+(`:11`), which carries the *same* falsified closure criterion as OT-7, independently.
+
+**Re-run, confirmed exactly as briefed:**
+
+`docs/owner-tasks.md` OT-7's own text, step 2: *"enable `require_code_owner_reviews` (and, ideally,
+`required_approving_review_count ≥ 1`) in repo Settings → Branches... that trap is now closed [the
+CODEOWNERS-inertness trap], but the toggle itself still requires an owner with Settings access."*
+`/usr/bin/grep -c "require_code_owner_reviews\|required_approving_review_count" docs/owner-tasks.md`
+→ **1** (this row, this text).
+
+**The false claim, precisely.** OT-7 correctly states step 1 (re-pointing CODEOWNERS from the inert
+`@msitarzewski` to the actual collaborator `@jmlozano1990`) closed the trap **it names** — that part
+is true and re-confirmed (`.github/CODEOWNERS`, 6 rows, `@jmlozano1990`, verified live). What OT-7
+does **not** disclose is a **second, independent** trap that re-pointing CODEOWNERS creates rather
+than closes: `@jmlozano1990` is now both the repo's sole maintainer and its sole code owner, and
+GitHub does not permit a PR author to approve their own PR. Enabling step 2 exactly as OT-7 currently
+recommends it (`require_code_owner_reviews` + `required_approving_review_count ≥ 1`) would deadlock
+**every PR the owner opens**, permanently, with `enforce_admins: true` removing any override. OT-7's
+text reads as though step 2 is a safe, purely-administrative follow-on to step 1; it is not.
+
+**Not in the brief, found this session — the same false closure criterion is independently baked
+into `docs/risk-register.md`.** Row `v2.19.5-CODEOWNERS-1`'s own closure instruction: *"Close this
+row (or move it to 'Closed this cycle') only after `require_code_owner_reviews` is confirmed enabled
+via `gh api repos/:owner/:repo/branches/main/protection`."* `/usr/bin/grep -c
+"require_code_owner_reviews" docs/risk-register.md` → **1**, this row, this text. This is the same
+error as OT-7's, in a second, independently-writable document — the risk register's own stated
+discharge condition can never be satisfied, for the identical self-approval reason. Because this
+cycle's item 3 explicitly says "close OT-7 and finding A1 **at their sources**," and this row is
+recorded there as one of the two places finding `A1`'s substance lives (its "Discharge routed to
+`docs/owner-tasks.md` OT-7" line makes the two rows one finding tracked in two files), correcting it
+is in scope here, not a new item.
+
+**Which documents are "the source," and which are historical snapshots — this repo's own
+append-only-vs-living distinction, applied.** `docs/owner-tasks.md` and `docs/risk-register.md` are
+both living, in-place-edited documents (no append-only constraint applies to either, unlike
+`docs/architecture.md`). `docs/internal/security/security-audit-v2.19.14.md` and `docs/retro.md`'s
+`v2.19.14` section are dated, per-cycle snapshots — this repo's convention (evident from the
+existence of a separate `security-audit-v2.19.N.md` per cycle, never one shared file) is that these
+are historical records of what a specific audit/retro found at the time, not living state. **This
+cycle does not edit either in place.** Finding `A1`'s closure is recorded going forward in two ways:
+(a) `docs/owner-tasks.md` OT-7 and `docs/risk-register.md`'s row, corrected per the ACs below, and
+(b) this cycle's own `docs/retro.md` `v2.19.15` section, written later at Phase 8 by `@qa` — not
+authored by `@pm` at Phase 0.
+
+**AC-OT7-1 (Ubiquitous).** `docs/owner-tasks.md` OT-7's row SHALL no longer recommend or imply that
+enabling `require_code_owner_reviews` / `required_approving_review_count ≥ 1` is a safe or viable
+remedy. It SHALL state plainly why that path is rejected (the owner is both sole maintainer and sole
+code owner; GitHub does not permit self-approval) and SHALL point to the mechanism this cycle
+actually delivers (required status checks, `AC-REQCHECK-1`) as the discharge path instead.
+- **Firing negative control:** `/usr/bin/grep -c "require_code_owner_reviews\|required_approving_review_count"
+  docs/owner-tasks.md` → **1** pre-fix (reproduced above, live recommendation). Post-fix: either
+  **0**, or the phrase appears only inside a "rejected because..." explanatory clause — never as a
+  live recommendation to enable it. `@qa` verifies by reading the sentence, not by a bare
+  grep-to-zero (a naive deletion could satisfy the grep while leaving an undisclosed remedy behind
+  under different wording).
+
+**AC-OT7-2 (Ubiquitous).** OT-7's status cell SHALL move from `OPEN` to a disposition reflecting that
+its "what it blocks" obligation (`AC-SYNC-CODEOWNERS-1` — an enforced merge gate over supply-chain
+files) is discharged, once `AC-REQCHECK-1` is confirmed live (branch protection API re-queried,
+non-null `required_status_checks`). Do not close the row before that live confirmation exists.
+
+**AC-A1-1 (Ubiquitous).** `docs/risk-register.md` row `v2.19.5-CODEOWNERS-1`'s closure criterion
+SHALL be corrected: it currently names `require_code_owner_reviews` as the condition for closing the
+row (reproduced above, unsatisfiable for the same self-approval reason as OT-7). Replace it with the
+criterion this cycle actually delivers — `required_status_checks` confirmed non-null AND
+`enforce_admins` confirmed still `true` — and close the row once both are verified live.
+- **Firing negative control:** `/usr/bin/grep -c "require_code_owner_reviews" docs/risk-register.md`
+  → **1** pre-fix (reproduced above); post-fix, either **0**, or the phrase appears only inside a
+  corrected historical description of what was originally (wrongly) planned, never as the live
+  closure criterion.
+- **Not in the cycle brief** — found this session by re-deriving OT-7's "at their sources" instruction
+  rather than assuming it named a complete list.
+
+**AC-A1-2 (Inspection-class — no independent executable control; a documentation-placement rule).**
+`@pm` does not edit `docs/internal/security/security-audit-v2.19.14.md` or `docs/retro.md`'s
+`v2.19.14` section in place — both are dated historical snapshots under this repo's own convention.
+Finding `A1`'s closure is recorded in `docs/retro.md`'s `v2.19.15` section at Phase 8 (by `@qa`,
+after `AC-REQCHECK-1` ships and is verified live), not authored here.
+
+## Technical Constraints
+
+- **Ceremony: Tier A** (this repo's own convention — `.github/workflows/*.yml` and branch-protection
+  configuration are both touched). Worktree branch + PR + one `@security` Guard Change Summary
+  covering both the CI-trigger mechanism (Item 1) and the branch-protection change (Item 2). Never
+  fast-forward — squash-merge only, after owner approval on the GCS **and** on the actual branch-
+  protection change (the latter is a live Settings mutation, not a code review — the orchestrator
+  performs it only at the Phase 3 gate, per binding rule).
+- **Binding order: `AC-SEQ-1`.** `AC-CIGATE-1` must be verified live before `AC-REQCHECK-1` is
+  applied. This is the single most important sequencing constraint in this spec — reversing it
+  converts a hardening cycle into a self-inflicted, unrecoverable-without-a-second-PR outage on the
+  sync pipeline.
+- **No new secrets** (`AC-CIGATE-2`). The chosen mechanism must add only job-level `permissions:`
+  scope to the existing default `GITHUB_TOKEN` — not a PAT, not a GitHub App.
+- **`quality.yml`'s existing check logic is not touched.** Only its trigger surface (possibly adding
+  `workflow_dispatch` as an additional `on:` entry, `@architect`'s Phase 1 call) may change; the 35
+  jobs' own bodies are out of scope, matching the brief's explicit exclusion of the parser logic
+  audited in `v2.19.14`.
+- **`docs/owner-tasks.md` and `docs/risk-register.md` are living documents**, edited in place — unlike
+  `docs/architecture.md`. `docs/internal/security/security-audit-v2.19.14.md` and `docs/retro.md`'s
+  `v2.19.14` section are historical snapshots and are not edited (`AC-A1-2`).
+- **Read-only on live GitHub settings through Phase 2.** No pipeline agent (including this spec's own
+  author) mutates `main`'s branch protection. The orchestrator performs that mutation once, at the
+  Phase 3 gate, after the owner approves — mirroring this repo's own established precedent for OT-7
+  step 2.
+- **If `@architect`'s Phase 1 mechanism adds a new ADR** for the CI-triggering fix (this repo's own
+  convention has minted a new ADR for comparable `sync-agency.yml`/`quality.yml` structural changes
+  before — ADR-075, ADR-090 — but not for smaller ones, e.g. `v2.19.14` Item 2's 5-site rename got no
+  ADR), that decision is `@architect`'s to make at Phase 1, not mandated here.
+
+## Acceptance Criteria
+
+- [ ] **AC-CIGATE-1** — a `GITHUB_TOKEN`-authored PR (fixture or the real 2026-09-01 sync PR)
+      produces real check-run results from `quality.yml` against its head SHA; pre-fix absence and
+      post-fix presence both reproduced and dated by @qa.
+- [ ] **AC-CIGATE-2** — no new secret is introduced; `gh secret list` stays empty, or any new secret
+      is a named, justified deviation recorded at Phase 1/2.
+- [ ] **AC-CIGATE-3** — `quality.yml` stays `pull_request`, never `pull_request_target`; no
+      fork-PR trust-boundary widening as a side effect.
+- [ ] **AC-SEQ-1** — `AC-REQCHECK-1` is applied only after `AC-CIGATE-1` is verified live; commit
+      order and timestamps recorded by @qa.
+- [ ] **AC-REQCHECK-1** — `main` branch protection gains a non-null `required_status_checks` with an
+      explicit, Phase-1-recorded context list; a fixture PR with one broken check is shown blocked
+      from merge.
+- [ ] **AC-REQCHECK-2** — `required_approving_review_count` and `require_code_owner_reviews` stay at
+      `0`/`false`; re-verified live post-fix, unchanged.
+- [ ] **AC-REQCHECK-3** — `enforce_admins` stays `true`; disposition explicitly recorded by
+      @architect at Phase 1.
+- [ ] **AC-REQCHECK-4** — `allow_force_pushes` and `allow_deletions` stay `false`; untouched.
+- [ ] **AC-REQCHECK-5** — **the arming PUT is preceded by a full-object GET and followed by a
+      full-object read-back.** `PUT .../branches/main/protection` **replaces** rather than patches, and
+      `required_pull_request_reviews` is a live non-null object that is the *premise* of A1's cost
+      argument for dropping `push`. Re-assert after the write: `enforce_admins: true`,
+      `required_pull_request_reviews` present with `required_approving_review_count: 0` and
+      `require_code_owner_reviews: false`, `allow_force_pushes: false`, `allow_deletions: false`.
+      A contexts-only diff is blind to losing any of these. *(Phase 6 `S1`; fails closed — `main` would
+      become push-locked rather than unguarded — but it is an unintended protection change either way.)*
+- [ ] **AC-REQCHECK-6** — **the context derivation proves it read the whole population.** Assert
+      `total_count == (.check_runs | length)`, or use `--paginate`, **before** the `unique` pipe.
+      Firing control, reproduced three times independently: `?per_page=50` on a 70-entry SHA returns
+      `returned: 50` against `total_count: 70` with **no error and exit 0**, and `--jq` computes
+      `unique` over the truncated array without complaint. A PR head carries 35 check-runs, so 100
+      covers one run plus one re-run; **a third suite on one SHA is 105 and crosses the boundary**, and
+      a third suite on one SHA is already documented (`ef89dedee308`). The `AC-REQCHECK-1` canary
+      catches a *lost name* — it does not reveal that the *instrument* was truncated. *(Phase 6 `S2`.)*
+- [ ] **AC-OT7-1** — OT-7 no longer recommends `require_code_owner_reviews` /
+      `required_approving_review_count ≥ 1`; states the self-approval rejection reason; points to
+      required status checks as the actual remedy.
+- [ ] **AC-OT7-2** — OT-7's status cell reflects discharge only after `AC-REQCHECK-1` is confirmed
+      live; not closed pre-emptively.
+- [ ] **AC-A1-1** — `docs/risk-register.md`'s `v2.19.5-CODEOWNERS-1` row's closure criterion is
+      corrected off `require_code_owner_reviews` and onto `required_status_checks` +
+      `enforce_admins`; row closed only once both are verified live.
+- [ ] **AC-A1-2** — `security-audit-v2.19.14.md` and `docs/retro.md`'s `v2.19.14` section are left
+      byte-unchanged; A1's closure is recorded in `docs/retro.md`'s `v2.19.15` section at Phase 8.
+
+## Edge Cases (4 categories)
+
+1. **Duplicate check-name contexts from the same commit.** `quality.yml`'s `on: [push, pull_request]`
+   produces two workflow runs, hence two check-run entries per job name, for any commit that is both
+   pushed to a branch and covered by an open PR (reproduced: 70 entries = 35 names × 2 runs for PR
+   `#121`). Whether GitHub's required-status-check matching evaluates "the most recent entry with
+   this name" or requires both, and whether a hypothetical `workflow_dispatch`-triggered third run
+   (Item 1's likely mechanism) interacts safely with that matching, is **not verified live in this
+   session** (branch protection is read-only through Phase 2) — flagged for `@architect` to confirm
+   or design around at Phase 1, not assumed safe.
+2. **Job-level `if:` skip vs. true absence.** The 3 checks gated `if: github.event_name ==
+   'pull_request'` report `skipped` (not absent) on their `push`-triggered instance — confirmed safe
+   for required-check purposes. A required check whose job-level condition could ever produce **zero**
+   entries for a `pull_request`-triggered run (rather than a `skipped` conclusion) would instead
+   deadlock permanently under `enforce_admins: true`. Whatever mechanism Item 1 introduces must be
+   checked against this distinction specifically, not assumed to inherit the existing jobs' safe
+   behavior.
+3. **Self-lockout under `enforce_admins: true`.** If a required check ships with a logic bug (this
+   repo's own history has this exact failure mode — the early `registry-cardinality-check` DATA_ROWS
+   bug) and starts failing on every PR, including a critical owner fix, nobody can override until the
+   check itself is repaired. This is an accepted, explicitly-recorded risk (`AC-REQCHECK-3`), not a
+   defect to prevent — mirrors `docs/retro.md` v2.19.14 §6's own reasoning that the human-reviewing-
+   the-red-X habit, not a toggle, has been the actual enforcement mechanism for 13 cycles.
+4. **The ordering hazard itself (`AC-SEQ-1`).** Applying Item 2 before Item 1 is verified is the
+   single most consequential failure mode this spec exists to prevent — see Technical Constraints.
+
+## Success Metrics
+
+- **Primary:** a pull request — human-authored or bot-authored — that ships a real defect (the class
+  `v2.19.14` itself found and fixed: a vocabulary-check bypass, a glob-expansion bypass) is blocked
+  from merging into `main` without a human consciously overriding a red check, closing the exact gap
+  `docs/retro.md` v2.19.14 §6 named as *"the strongest candidate for the next hardening cycle."*
+- **Secondary:** the owner is not asked to create, store, or rotate any new credential as a
+  consequence of this cycle; `docs/owner-tasks.md` OT-7 and `docs/risk-register.md`'s linked row stop
+  pointing at an unperformable action (self-approval) and instead name the mechanism that actually
+  enforces the gate.
+
+## Assumptions [confidence]
+
+- [CONFIRMED] All branch-protection facts (approvals, CODEOWNERS review, `required_status_checks`
+  absence, `enforce_admins`, force-push/deletion settings, 0 rulesets), all re-run live this session
+  against `gh api repos/jmlozano1990/Cowork-Starter-Kit/branches/main/protection` and
+  `.../rulesets`.
+- [CONFIRMED] PR `#27`/`#31` (0 checks, bot-authored) vs. PR `#121` (70 checks, human-authored),
+  re-run live via `gh pr view --json statusCheckRollup`, plus independently re-confirmed via
+  `actions/runs`, `check-suites`, and `commits/.../status` returning empty/pending for both bot PRs
+  — not merely a check-count read.
+- [CONFIRMED] `quality.yml` fires twice per commit (`push` + `pull_request`), producing 35 unique job
+  names × 2 = 70 total check entries on PR `#121`; 3 of the 35 report `skipped` (not absent) on their
+  `push` instance by design (`if: github.event_name == 'pull_request'`), 32 report `success` on both.
+- [CONFIRMED] The `GITHUB_TOKEN` recursive-workflow-trigger-suppression rule, and its
+  `workflow_dispatch`/`repository_dispatch` exemption, sourced from GitHub's own documentation
+  (stable since the 2022-09-08 GitHub Changelog announcement), cross-referenced against independent
+  community sources describing the same behavior and the `actions: write` permission it requires to
+  invoke via API.
+- [CONFIRMED] `gh secret list` returns empty (0 secrets) today; repo is `PUBLIC` (unlimited free
+  Actions minutes — no cost constraint on adding a dispatch call).
+- [UNTESTED] Whether GitHub's documented "`pull_request` opened/synchronize/reopened via
+  `GITHUB_TOKEN` creates an approval-required run" exception applies to this repo's specific
+  same-repo-branch (non-fork) bot-PR scenario. Observed behavior (zero workflow runs, zero
+  check-suites, `status.state: pending` forever, for both `#27` and `#31`) does not match that
+  documented exception. This does not change the recommendation (which relies on the separately-
+  confirmed `workflow_dispatch` exemption instead) but is a real, unresolved discrepancy — flagged
+  for a Phase-1 spike, not silently reconciled.
+- [UNTESTED] Whether GitHub's required-status-checks matching against duplicate same-name check-run
+  contexts (Edge Case 1) behaves safely once a third trigger type (`workflow_dispatch`) is added to
+  the mix — not verified live (branch protection is read-only through Phase 2; this is exactly the
+  kind of check that can only be verified after the actual mutation, which is the orchestrator's
+  Phase 3 action, not @pm's).
+- [CONFIRMED] `docs/owner-tasks.md` OT-7 and `docs/risk-register.md`'s `v2.19.5-CODEOWNERS-1` row
+  independently carry the same falsified closure criterion (`require_code_owner_reviews`), confirmed
+  by reading both in full rather than assuming the second inherits the first's already-known error.
+
+## Architectural Modifications (v2.19.15 — recorded by the orchestrator at Phase 1.R1, 2026-08-29T19:28:17Z)
+
+**This section records a change to the spec's own stated ordering, made because the ordering as written is
+unsatisfiable. It is recorded rather than silently applied.**
+
+**What the spec said.** `## Technical Constraints` places the branch-protection mutation "at the Phase 3
+gate", while `AC-SEQ-1` requires `AC-CIGATE-1` (a real bot PR observed receiving check-runs) to be verified
+*first*. Phase 3 precedes Phase 4, so as written the toggle would have to happen before the mechanism that
+makes it safe exists.
+
+**Why it cannot hold.** `workflow_dispatch` must be present in `quality.yml` **on the default branch**
+before any dispatch can target it — GitHub resolves workflow triggers from the default branch, not from a
+feature branch. So `AC-CIGATE-1` is structurally unverifiable until after merge. Found by `@architect` at
+Phase 1 (D1.4) and endorsed by `@security` at Phase 2 (S11).
+
+**The modification.** Phase 3 grants **authorization**; the branch-protection toggle **executes post-merge**,
+by the orchestrator, only after a real bot-opened sync PR is observed receiving check-runs. Two owner
+touchpoints, not one: approval at Phase 3 of the plan *including* the toggle, and the toggle itself after
+the observation passes.
+
+**Why this is safe, assessed rather than asserted.** `@security` gave affirmative clearance (S11): between
+merge and toggle, `main` is **not worse off at any point**. The trigger change only *adds* coverage; the
+dispatchable surface is read-only (no top-level `permissions:`, all six job-level grants `contents: read`,
+re-verified live); forks cannot dispatch. If the 2026-09-01 cron fires before the cycle completes, the sync
+PR opens exactly as it does today — unenforced, unchanged. **The hazard exists only in the reversed order.**
+
+**Consequence for `AC-SEQ-1`.** Its ordering is the design, not ceremony: if the dispatch mechanism fails to
+satisfy a required context, that is discovered **while the gate is still off**, and the cost is one more PR
+rather than a repo-wide merge lockout under `enforce_admins: true`.
+
+## Out of Scope (v2.19.15)
+
+- **Requiring approvals** (`require_code_owner_reviews`, `required_approving_review_count ≥ 1`) —
+  permanently rejected per Trap 2 (self-approval deadlock for a sole-maintainer, sole-code-owner
+  repo), not merely deferred. `AC-REQCHECK-2` binds this.
+- **Publishing a `v2.19.14` release** — untouched.
+- **The other 11 open `v2.19.14` carry-forwards** — `A2` (intra-token whitespace), `A3` (success-
+  message population mismatch), `P7-1`/`P7-2` (ADR-098 citation/formatting), `S7` (frontmatter-scan
+  fail-open), `S8` (`CF-v2.5-A` disposition), `S9` (multi-tool governance orphan), `S12`
+  (`install-pre-commit.sh` second-axis ruleset claim), `F-3` residue (a `@qa` scope-judgment lesson),
+  `CF-v2.5-A/B/D/E` (unowned, `CF-v2.5-D` needs an owner 2FA confirmation this session's token cannot
+  read), `CF-v2.5-G` (→ v3.0). None are touched here.
+- **Any change to `quality.yml`'s existing check logic** — the audited parser bytes from `v2.19.14`
+  stay audited; only trigger surface and job-level `permissions:` are in scope.
+- **Actually mutating repo settings** — owner-approved, orchestrator-performed at the Phase 3 gate;
+  no pipeline agent (including `@dev` at Phase 4) flips the live toggle.
+- **Migrating classic branch protection to a GitHub ruleset** — this cycle extends the existing
+  classic protection object (already in use, `rulesets: []` today); a rulesets migration is a
+  separate, larger decision not raised by this cycle's brief.
+- **Narrowing `quality.yml`'s `on:` trigger to eliminate the push/pull_request duplication** (Edge
+  Case 1) — a legitimate simplification `@architect` may fold in or defer; not mandated by any AC
+  here.
+- **Re-anchoring OT-6, resolving OT-3/OT-8, or `CF-v2.5-D`'s 2FA confirmation** — unrelated open
+  items in the same files this cycle touches; left untouched.
