@@ -18090,3 +18090,49 @@ silently assumed favorable.
   (structural presence), though not for value correctness against the lock (a residual, not
   reopened here).
 - An `@compliance` opinion on attribution adequacy is owed and not yet obtained (item (e)).
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) obtain the `@compliance` opinion item (e) records as owed and fold its
+  ruling in as a further amendment — if indirect reference proves inadequate, the cheapest repair is a
+  **seventh** field carrying the corpus pin alongside the per-file hash, which restores inline
+  provenance at the cost of reintroducing exactly the corpus-wide churn this amendment removed, so the
+  trade has to be made deliberately rather than by reflex; (b) tighten `attribution-survives-render`'s
+  `Pinned commit:`/`Content SHA-256:` alternation to the single new literal, which item (d) authorises
+  **only** once a real sync has migrated the whole corpus, and never before; (c) make that same
+  real-corpus step compare field **values** against `cowork.lock.json` — `Source:` against `.upstream`,
+  the per-file hash against that entry's `.content_sha256` — instead of asserting that six labels are
+  present; this is the successor to ADR-100 §Maturation Path option (e), which shipped this cycle and
+  is not restated here; (d) have `vendor-agency.sh` emit the header directly from the lock entry it
+  already reads, rather than from separately assembled shell variables, so that the stamped value and
+  the verified value cannot diverge by construction and (c) degrades into a redundant second opinion
+  rather than remaining the only check.
+- **Concrete revisit triggers:** the `@compliance` opinion returns (option (a) comes due in either
+  direction — a favourable ruling closes item (e), an unfavourable one reopens the field list itself);
+  **or** the first real re-vendor under the amended script lands — the 2026-09-01 cron, or whichever
+  later sync first carries the lock bump — at which point every vendored header changes once, option
+  (b) becomes available for the first time, and the one-time migration cost item (d) predicts should be
+  **observed** rather than assumed; **or** `required_status_checks` is armed at v2.19.17, after which
+  `attribution-survives-render` becomes merge-blocking and the worth of a presence-only assertion stops
+  being an advisory question; **or** any attribution field is found in the real corpus carrying a value
+  that does not match the lock, which is the event option (c) exists to catch and the one this
+  amendment, as shipped, cannot.
+- **Risk knowingly accepted:** the real-corpus step this amendment adds checks that the six field
+  **labels** are present, never that their **values** are true. It is `grep -qF` against five literal
+  labels plus a `grep -qE 'Pinned commit:|Content SHA-256:'` alternation for the sixth, and
+  `cowork.lock.json`'s `.upstream`, `.pinned_commit_sha` and `.content_sha256` are not read by it at
+  all. That is not a theoretical gap. @qa reproduced it at Phase 5
+  (`docs/qa-report-v2.19.16.md`): a real vendored file, `design/design-ui-designer.md`, with `Source:`
+  rewritten to name `EVIL-ATTACKER/agency-agents` and the pinned commit zeroed, field labels left
+  intact — the shipped check **passed, zero failures**. It was graded a WARNING rather than a
+  regression only because §Consequences had already disclosed it; that disclosure is what this bullet
+  converts into an accepted residual rather than an unowned one. A reader seeing this job green may
+  therefore conclude that an attribution block is *shaped* correctly, and nothing about whether it is
+  *honest*. The residual is accepted rather than closed here because closing it is guard-logic surgery
+  inside Tier-A `quality.yml` on a CI-repair branch whose central argument is that it does not become a
+  third-party content PR, and because it is **bounded**: `vendored-integrity-check` and
+  `lock-content-sha-cross-check` still hash each file's **body** against the lock, and item (c) above
+  establishes that the strip is anchored on the END-marker line, so a mutated header cannot smuggle
+  mutated content past CI. The exposure is confined to the provenance text a human reads — which is
+  precisely the part no other check covers, and precisely why the successor option is value
+  verification and not more presence checking.
