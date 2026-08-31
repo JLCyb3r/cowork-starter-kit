@@ -630,11 +630,13 @@ jobs:
             Flagged files: `${{ steps.fetch_files.outputs.flagged_files }}`
 
             > **No enforced review gate (ADR-028 v2.19.5 amendment §(d)).** This PR
-            > touches `cowork.lock.json`, an ingested-content file, and no CI check
-            > runs on a PR opened by this workflow. There is currently no enforced
-            > approval requirement on PRs touching it — `.github/CODEOWNERS`'s
-            > supply-chain rows exist but branch protection does not require
-            > CODEOWNERS review or any passing check before merge. See
+            > touches `cowork.lock.json`, an ingested-content file. Since v2.19.15,
+            > `dispatch-quality` DOES run real CI on this PR (`Vendored Integrity
+            > Check`, `sync-verify-ratchet`, and the rest of `quality.yml`) — but
+            > there is currently no enforced approval requirement on PRs touching
+            > it, and `main`'s branch protection does not require any check to pass
+            > before merge. `.github/CODEOWNERS`'s supply-chain rows exist but
+            > branch protection does not require CODEOWNERS review either. See
             > `docs/owner-tasks.md` for the open owner decision to close this gap.
 
             ### Reviewer Checklist (MANDATORY — manual review is the only control here)
