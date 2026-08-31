@@ -76,7 +76,17 @@ while IFS= read -r -d '' vfile; do
   # `set -e` does not abort here: `grep` is not the final command in this `&&` list, so its
   # non-zero exit (no match — the file IS an orphan) is exempt, and control falls through to the
   # `rm` below. Verified this session against a hand-built case before relying on it.
-  printf '%s\n' "$LOCK_PATHS" | grep -qxF "$rel" && continue
+  #
+  # S9 (Phase 6 audit, docs/internal/security/security-audit-v2.19.16.md): the trailing `--`
+  # forces `$rel` to be read as an operand, never as a `grep` option. Without it, a lock path
+  # beginning with `-` (e.g. `-e`) makes `grep` itself fail on a bad option — a DIFFERENT
+  # non-zero exit than "no match" — and this membership test is fail-DESTRUCTIVE: any failure
+  # here, for any reason, reads as "not in the lock" and falls through to `rm`. Demonstrated:
+  # two in-lock files at `${ROOT}/-v` and `${ROOT}/-e` were both deleted, with `usage:` printed
+  # to stderr, exit 0. Not reachable today (measured: 0 of 108 real lock paths are top-level or
+  # dash-leading; every one carries a `category/` prefix) — but the failure direction of a
+  # destructive script's own safety test should never default to "delete".
+  printf '%s\n' "$LOCK_PATHS" | grep -qxF -- "$rel" && continue
 
   rm -f -- "$vfile"
   PRUNED=$((PRUNED + 1))
