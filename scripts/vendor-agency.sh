@@ -81,18 +81,25 @@ while IFS='|' read -r path stored_hash; do
   DEST="${OUT_ROOT}/${path}"
   mkdir -p "$(dirname "$DEST")"
 
-  # ADR-024 6-field attribution block (format matches quality.yml attribution-survives-render).
+  # ADR-024 6-field attribution block, amended v2.19.16 (D1(c), docs/architecture.md ADR-024
+  # amendment): the field is now `Content SHA-256: ${stored_hash}` (per-file) rather than a
+  # global `Pinned commit: ${PINNED}` repeated in every file — so a file's header changes only
+  # when ITS OWN content changes, not on every corpus-wide sync. `Full license:` now points at
+  # the vendored, hash-verified LICENSE (checked above against license_file_sha256) rather than a
+  # pin-scoped GitHub URL. The corpus-level pin is unchanged as the record of authority: it stays
+  # in cowork.lock.json's pinned_commit_sha and THIRD-PARTY-NOTICES.md (format matches
+  # quality.yml attribution-survives-render).
   {
     printf '%s\n' "$START_MARK"
     printf '%s\n' "<!--"
     printf '%s\n' "Agency Source — ${UPSTREAM}"
     printf '%s\n' "Source: https://github.com/${UPSTREAM}"
     printf '%s\n' "Upstream path: ${path}"
-    printf '%s\n' "Pinned commit: ${PINNED}"
+    printf '%s\n' "Content SHA-256: ${stored_hash}"
     printf '%s\n' "Lock file source: cowork.lock.json (cowork-starter-kit)"
     printf '%s\n' "Copyright (c) ${UPSTREAM} contributors"
     printf '\n%s\n\n' "$LICENSE_TEXT"
-    printf '%s\n' "Full license: https://github.com/${UPSTREAM}/blob/${PINNED}/LICENSE"
+    printf '%s\n' "Full license: ${OUT_ROOT}/LICENSE"
     printf '%s\n' "Derivative work: this file has been adapted for use with cowork-starter-kit"
     printf '%s\n' "-->"
     printf '%s\n' "$END_MARK"
