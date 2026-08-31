@@ -1,13 +1,18 @@
 # CODEOWNERS — cowork-starter-kit
 #
-# Per ADR-023 + v2.0 Phase 2 S2 MUST-FIX:
-# Supply-chain-critical files require 2 maintainer approvals.
-# agency-sync PRs (labeled 'agency-sync') MUST have 2 CODEOWNERS approvals
-# before merge. Single-maintainer compromise must not enable silent supply-chain redirect.
+# Per ADR-023 + v2.0 Phase 2 S2 MUST-FIX, corrected v2.19.16 (D3(a), docs/architecture.md
+# ADR-100 D7): supply-chain-critical files are owned by the maintainer below. This repo has
+# exactly one collaborator (jmlozano1990) and live branch protection carries
+# required_approving_review_count: 0, require_code_owner_reviews: false (verified 2026-08-30) —
+# so a rule requiring more than one maintainer's sign-off has never been satisfiable by anyone
+# since v2.0. These rows
+# route review and make an unreviewed change visible; they do not REQUIRE review and cannot block
+# a merge on that basis alone.
 #
-# See CONTRIBUTING.md §Agency-Sync PR Review for the full 2-approval protocol.
+# See CONTRIBUTING.md §Maintainer Review for what actually gates agency-sync PRs (CI checks).
 
-# Supply-chain integrity files — 2 approvals required for all PRs touching these
+# Supply-chain integrity files — maintainer-owned; see CONTRIBUTING.md for what actually gates
+# PRs touching these
 #
 # v2.19.5 (ADR-075 D11, S5 correction): re-pointed from @msitarzewski to
 # @jmlozano1990. @msitarzewski is the UPSTREAM repo's owner (msitarzewski/
