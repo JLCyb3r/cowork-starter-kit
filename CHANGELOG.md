@@ -46,7 +46,9 @@ folded in at the owner's instruction.
 - **The vendored-corpus count guard no longer pins to a single number.** The old exact `== 108`
   check is replaced by an equality assertion (lock count == disk count) plus an upward-ratcheting
   floor, so it stops going red on every legitimate upstream addition. The per-path re-introduction
-  tripwire is generalised from 2 hardcoded paths to every declared `blocked_files[]` entry.
+  tripwire is generalised from 2 hardcoded paths to every `permanent: true` entry; deferral
+  (`permanent: false`) entries are covered for membership only, not for the disk/lock-absence or
+  pattern-coverage sub-assertions.
 - **The stale ratchet fixture is repaired with a two-sided-safe pin and path set**, verified against
   both this cycle's own lock state and the pending sync PR's lock state — the previous pin collided
   with the live lock on its very first exercise.

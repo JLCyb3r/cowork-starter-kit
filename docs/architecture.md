@@ -18005,9 +18005,16 @@ the cycle is fixing, committed by the phase that was fixing it.
   imply set equality, so the count assertion is provably redundant for soundness and the pin's only
   unique contribution was as a re-introduction tripwire that `AC-B5-4` already provides by name. If
   that reasoning is wrong, the failure is silent: a corpus could grow by an unintended addition and the
-  floor would not object. It is bounded by `AC-B5-4` remaining untouched and by the orphan check
-  remaining exact, and it is deliberately preferred over a pin that is red-on-arrival every month,
-  because a guard everyone learns to bump by reflex is a guard nobody reads. Separately accepted: that
+  floor would not object. It is bounded by the orphan check remaining exact and by `AC-B5-4` continuing
+  to serve as the re-introduction tripwire this argument depends on — not, as this bullet originally
+  claimed, by `AC-B5-4` remaining *untouched*: this cycle's own D4(b) (selected at the Phase 3 gate)
+  deliberately generalized `AC-B5-4`'s per-path assertions outward from the two hardcoded v2.19.7 paths,
+  and Phase 4 implemented that generalization. (The Phase 6 audit,
+  `docs/internal/security/security-audit-v2.19.16.md` S3/S4, found the generalization's absence
+  sub-assertions cover `permanent: true` entries only and do not yet re-arm for `permanent: false`
+  ones — a separate, already-tracked carry-forward, not a defect in this bullet's own bound.) It is
+  deliberately preferred over a pin that is red-on-arrival every month, because a guard everyone learns
+  to bump by reflex is a guard nobody reads. Separately accepted: that
   D1(c)'s attribution redesign is safe is established for **hashing** and not for **attribution
   adequacy**, which is a compliance judgement this ADR explicitly declines to make on its own authority.
 
@@ -18130,9 +18137,29 @@ silently assumed favorable.
   therefore conclude that an attribution block is *shaped* correctly, and nothing about whether it is
   *honest*. The residual is accepted rather than closed here because closing it is guard-logic surgery
   inside Tier-A `quality.yml` on a CI-repair branch whose central argument is that it does not become a
-  third-party content PR, and because it is **bounded**: `vendored-integrity-check` and
-  `lock-content-sha-cross-check` still hash each file's **body** against the lock, and item (c) above
-  establishes that the strip is anchored on the END-marker line, so a mutated header cannot smuggle
-  mutated content past CI. The exposure is confined to the provenance text a human reads — which is
-  precisely the part no other check covers, and precisely why the successor option is value
-  verification and not more presence checking.
+  third-party content PR — but the bound this bullet originally stated here was itself false, and was
+  corrected at the Phase 6 audit (`docs/internal/security/security-audit-v2.19.16.md` S1/S2), not
+  merely restated. The strip (`sed "1,/^${END_MARK}$/d"`, `quality.yml:2365`, `vendor-agency.sh:113`)
+  discards everything **up to and including** the END-marker line before hashing. In the real corpus
+  the header's HTML comment closes several lines above that marker (line 34 in the measured file; the
+  marker itself is line 35), so the region between the comment close and the marker is **live
+  markdown, outside any comment, and unhashed** — not merely unverified provenance text but an
+  **unverified writable region inside a file an LLM loads as instructions**. Measured by injecting
+  four lines of live instruction text into that region on a copy: the stripped hash stayed
+  byte-identical to the unmutated file's, and both `vendored-integrity-check` and the real-corpus
+  presence step (item (d) above) passed. The second control this bullet originally cited,
+  `lock-content-sha-cross-check` (`quality.yml:2289-2331`), does **not** read the vendored file at
+  all — it fetches each lock entry from `raw.githubusercontent.com` and compares to the lock's own
+  stored hash, a lock↔upstream check that contributes nothing to this bound; only
+  `vendored-integrity-check`'s body hash does, and only for the region below the marker. Two limits
+  keep this from being worse, stated rather than assumed: the region is **not reachable from a
+  hostile upstream** — `vendor-agency.sh` assembles the header locally from the lock entry and
+  appends upstream bytes only *below* the marker — and reaching it requires a **merged repository
+  write**, i.e. a human decision, not a supply-chain one. One further consequence of item (b) above,
+  unnamed until the audit: the retired `Pinned commit:` field read as an obvious pointer;
+  `Content SHA-256:` is a **self-referential integrity claim** printed in the file's own bytes that
+  nothing re-verifies once `vendor-agency.sh` writes it — a reader who sees a SHA-256 may reasonably
+  assume it was checked, and it was, only once, at write time, against a value the file itself now
+  carries unverified. The exposure is precisely the part no shipped check covers, and precisely why
+  the successor option is value verification (§Maturation Path option (c)), not more presence
+  checking.
