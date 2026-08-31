@@ -559,7 +559,7 @@ jobs:
           fi
           # Count data rows in markdown table: rows whose source_url field is either 'builtin' or 'https://...'
           # This reliably distinguishes data rows from header/separator rows regardless of column ordering.
-          DATA_ROWS=$(grep -cE '\| (builtin|https?://)' curated-skills-registry.md || echo 0)
+          DATA_ROWS=$(grep -cE '\| (builtin|https?://)' curated-skills-registry.md || true)
           if [ "$DATA_ROWS" -lt 18 ]; then
             echo "curated-skills-registry.md has only $DATA_ROWS entries (minimum: 18)"
             echo "Add more entries to meet the minimum registry cardinality requirement."
@@ -1829,14 +1829,18 @@ jobs:
           pip install python-frontmatter --quiet
       - name: Generate sample file with attribution block for render test
         run: |
-          # Create a sample attributed file (simulates what /sync-agency installs)
+          # Create a sample attributed file (simulates what /sync-agency installs).
+          # v2.19.16 (D1(c), docs/architecture.md ADR-024 amendment): the per-file
+          # `Content SHA-256:` field replaces the old global `Pinned commit:` field, and
+          # `Full license:` now points at the vendored, hash-verified LICENSE instead of a
+          # pin-scoped URL — see scripts/vendor-agency.sh.
           cat > /tmp/sample-attributed.md << 'SAMPLE_EOF'
           <!-- COWORK-AGENCY-ATTRIBUTION-START -->
           <!--
           Agency Source — msitarzewski/agency-agents
           Source: https://github.com/msitarzewski/agency-agents
           Upstream path: academic/example-skill.md
-          Pinned commit: abc1234567890abcdef1234567890abcdef123456
+          Content SHA-256: abc1234567890abcdef1234567890abcdef123456abcdef1234567890abcd
           Lock file source: cowork.lock.json (cowork-starter-kit)
           Copyright (c) msitarzewski/agency-agents contributors
 
@@ -1858,7 +1862,7 @@ jobs:
           OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
           SOFTWARE.
 
-          Full license: https://github.com/msitarzewski/agency-agents/blob/abc1234567890abcdef1234567890abcdef123456/LICENSE
+          Full license: vendored/agency-agents/LICENSE
           Derivative work: this file has been adapted for use with cowork-starter-kit
           -->
           <!-- COWORK-AGENCY-ATTRIBUTION-END -->
@@ -1888,7 +1892,7 @@ jobs:
           assert 'COWORK-AGENCY-ATTRIBUTION-START' in raw, "ATTRIBUTION-START delimiter missing after frontmatter parse"
           assert 'COWORK-AGENCY-ATTRIBUTION-END' in raw, "ATTRIBUTION-END delimiter missing after frontmatter parse"
           assert 'msitarzewski/agency-agents' in raw, "Source field missing after frontmatter parse"
-          assert 'Pinned commit:' in raw, "Pinned commit field missing after frontmatter parse"
+          assert 'Content SHA-256:' in raw, "Content SHA-256 field missing after frontmatter parse"
           assert 'Lock file source:' in raw, "Lock file source field missing after frontmatter parse"
           assert 'Copyright (c) msitarzewski' in raw, "Copyright field missing after frontmatter parse"
 
@@ -1908,7 +1912,7 @@ jobs:
           fi
           # Verify all 6 required fields are present
           FAIL=0
-          for field in "Source:" "Upstream path:" "Pinned commit:" "Lock file source:" "Copyright (c)" "Derivative work:"; do
+          for field in "Source:" "Upstream path:" "Content SHA-256:" "Lock file source:" "Copyright (c)" "Derivative work:"; do
             if ! grep -qF "$field" /tmp/sample-attributed.md; then
               echo "FAIL: Required attribution field '$field' not found"
               FAIL=1
@@ -1919,6 +1923,48 @@ jobs:
           fi
           echo "PASS: All 6 attribution fields extractable from rendered content."
           echo "Attribution-survives-render check passed (S5 MUST-FIX)."
+      - name: Assert the ADR-024 attribution block on the REAL vendored corpus (S6 remedy, v2.19.16)
+        # docs/internal/security/security-review-v2.19.16.md S6: the sample-based tests above
+        # validate the FORMAT in isolation but never touch a real vendored file — a real file
+        # re-pointed at an attacker's repo with a zeroed commit passed vendored-integrity-check
+        # byte-for-byte, because the strip excludes the attribution block by construction. D1(c)
+        # rewrites this exact block, so its verification ships in the same cycle, against the
+        # real corpus, not a defined-and-deferred residual (CF-v2.19.16-ATTRIB-SAMPLE).
+        #
+        # The commit-provenance field is checked via alternation (`Pinned commit:` OR
+        # `Content SHA-256:`), not a single literal, because this branch's own 108 real vendored
+        # files were last written under the PRE-amendment format (no re-vendor happens on this
+        # branch — docs/architecture.md ADR-100 §B keeps the lock bump off it) and will not carry
+        # `Content SHA-256:` until the next actual sync re-vendors them under the amended
+        # vendor-agency.sh. A literal pinned to either field name alone would go red the moment
+        # the OTHER state becomes true — exactly the one-state-pinned-constant defect this cycle
+        # exists to retire (ADR-100). Exactly one of the two is present on any given real file at
+        # any point in time; the alternation still catches a file missing BOTH.
+        run: |
+          set -euo pipefail
+          FAIL=0
+          COUNT=0
+          while IFS= read -r -d '' f; do
+            COUNT=$((COUNT + 1))
+            for field in "Source:" "Upstream path:" "Lock file source:" "Copyright (c)" "Derivative work:"; do
+              if ! grep -qF "$field" "$f"; then
+                echo "::error::attribution-survives-render (real corpus): ${f} missing required field '${field}'"
+                FAIL=1
+              fi
+            done
+            if ! grep -qE 'Pinned commit:|Content SHA-256:' "$f"; then
+              echo "::error::attribution-survives-render (real corpus): ${f} missing a commit-provenance field (Pinned commit: or Content SHA-256:)"
+              FAIL=1
+            fi
+          done < <(find vendored/agency-agents -name '*.md' -print0)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::attribution-survives-render (real corpus): 0 vendored files scanned — refusing to report a vacuous PASS."
+            exit 1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            exit 1
+          fi
+          echo "PASS: all ${COUNT} real vendored files carry the ADR-024 attribution block (S6 remedy)."
 
   verbatim-attribution-rule-check:
     # B1/B2 (ADR-099, v2.19.15): quoted. Unquoted, YAML treats ` #` as a comment start
@@ -2130,17 +2176,27 @@ jobs:
           fi
           echo "Leg 2 PASSED — verifier correctly failed closed and named the mismatched path."
 
-      - name: Leg 3 — RATCHET, exercises the real writer, proves RED survives an advance
+      - name: Leg 3 — RATCHET, exercises the real writer, proves RED survives a divergence
+        # v2.19.16 (ADR-100 D2): the previous pin (c89557f7…, 2026-07-30) was chosen AHEAD of the
+        # then-current lock pin to simulate an upstream advance — a pin ahead of a monotonically
+        # advancing lock is guaranteed to be caught up to, and it was, on its first live exercise
+        # (docs/architecture.md ADR-100). The new pin (0e22704e…, 2026-03-05) sits BEHIND every lock
+        # this repo will ever hold, so the guard now proves RED survives a DIVERGENCE, not an advance
+        # — mechanically identical (verify-lock-content-sha.sh:71 is a plain string comparison with
+        # no notion of direction), but the step name and this comment are corrected to say so, per
+        # ADR-083's doc-truth discipline: a name asserting a property the fixture no longer has is the
+        # defect class that ADR exists to forbid. The rot condition is now an upstream byte-exact
+        # revert of one specific file, not the passage of time (docs/architecture.md ADR-100 D2).
         env:
           UPSTREAM_REPO: msitarzewski/agency-agents
-          RATCHET_SHA: c89557f78509868c6d4cc08e5cbc79bc8625fe1c
+          RATCHET_SHA: 0e22704ebe3f1543790cf7b9a4dfb0b83ca43705
         run: |
           set -euo pipefail
 
           RATCHET_PATHS=(
             "marketing/marketing-content-creator.md"
-            "academic/academic-anthropologist.md"
-            "academic/academic-historian.md"
+            "design/design-ui-designer.md"
+            "engineering/engineering-backend-architect.md"
           )
           ACCUM="/tmp/ratchet-accumulator.jsonl"
           : > "$ACCUM"
@@ -2188,7 +2244,7 @@ jobs:
 
           # (c) re-point one entry's stored hash to the OLD-pin hash of the
           # same path and re-run — must FAIL, naming that path. This proves
-          # the check is still armed AFTER an advance, which Leg 1 alone
+          # the check is still armed AFTER a divergence, which Leg 1 alone
           # cannot exclude (an implementation could pass Leg 1 by taking a
           # skip branch on every entry, and D3 already forbids skip
           # branches — but this leg proves it empirically, not by
@@ -2204,7 +2260,7 @@ jobs:
             /tmp/ratchet-lock.json > /tmp/ratchet-lock-poisoned.json
 
           if bash scripts/verify-lock-content-sha.sh /tmp/ratchet-lock-poisoned.json > /tmp/leg3c-output.txt 2>&1; then
-            echo "::error::Leg 3(c) FAILED — verifier PASSED against a poisoned post-advance lock; it must fail closed"
+            echo "::error::Leg 3(c) FAILED — verifier PASSED against a poisoned post-divergence lock; it must fail closed"
             cat /tmp/leg3c-output.txt
             exit 1
           fi
@@ -2213,7 +2269,7 @@ jobs:
             cat /tmp/leg3c-output.txt
             exit 1
           fi
-          echo "Leg 3 PASSED — real writer produced a valid lock (verified=3), and RED re-arms after the advance."
+          echo "Leg 3 PASSED — real writer produced a valid lock (verified=3), and RED re-arms after the divergence."
 
   lock-content-sha-cross-check:
     name: lock-content-sha-cross-check (C-v2.5-19)
@@ -2340,61 +2396,81 @@ jobs:
         # scripts/verify-vendored-orphans.sh is the reverse direction — see that script's
         # header for the full rationale (docs/spec.md AC-C1-1/AC-C1-2, ADR-080 decision 2).
         run: bash scripts/verify-vendored-orphans.sh
-      - name: Assert vendored count == 108 and the two v2.19.7 removals are complete (AC-B5-1, AC-B5-4)
-        # [QA-5 fix] ADR-080's soundness argument has THREE legs: forward check (lock⊆disk,
-        # the step above at :1604) + orphan check (disk⊆lock, the step above at :1659) +
-        # count == 108. The third leg was never asserted in CI — this step is it.
+      - name: Assert vendored count is internally consistent, never shrinks, and every declared removal is complete (AC-B5-1, AC-B5-4)
+        # [QA-5 fix, v2.19.16 ADR-100 D1] ADR-080's soundness argument has THREE legs: forward check
+        # (lock⊆disk, the step above) + orphan check (disk⊆lock, the step above) + count equality.
+        # The third leg was never asserted in CI until v2.19.7 added it — this step is it.
         #
-        # AC-B5-1's `== 108` is a CONSTANT that legitimately moves on the next upstream
-        # addition — bumping it is exactly the moment a re-introduction could hide inside
-        # a "the count changed for a good reason" commit. AC-B5-4's per-path assertions are
-        # what survive that: without them, deleting two DIFFERENT files satisfies every
-        # count-based/set-based check in this job (@architect's Phase-0.D Condition 3).
+        # v2.19.16 (docs/architecture.md ADR-100 D1): AC-B5-1's old `== 108` was a CONSTANT pinned to
+        # one cowork.lock.json state. This cycle causes CI to run on commits with two DIFFERENT lock
+        # states (108 @ this PR's own pin, 150 @ any PR-#125-shaped commit) — no single constant is
+        # valid on both. Replaced with LOCK_COUNT == DISK_COUNT (the forward + orphan checks above
+        # already prove set equality; this is a fast, self-diagnosing restatement, not a new soundness
+        # claim) plus an upward-ratcheting VENDORED_FLOOR that fails closed on any shrink.
+        #
+        # v2.19.16 (D4(b), docs/internal/security/security-review-v2.19.16.md S2/S5): AC-B5-4's
+        # per-path assertions — the step's own re-introduction tripwire — are GENERALISED from a
+        # hardcoded 2-element array to every entry in `.cowork-allowlist.json` blocked_files[], so
+        # `permanent` gets its first machine consumer instead of covering only the two v2.19.7 paths
+        # by name. Sub-assertions 1-2 (absent from disk, absent from lock) and 4 (blocked_patterns
+        # coverage) are scoped to `permanent == true` entries — a `permanent: false` DEFERRAL entry
+        # (see D2(b)'s two new entries) declares a fetch-time policy for a path this branch's own lock
+        # has not yet dropped, not a claim that the path is already gone; asserting disk/lock absence
+        # for it here would redden THIS branch's own PR for exactly the reason ADR-100 exists to name
+        # (a check pinned to a state that isn't true yet). ADR-080 Decision 1 also reserves
+        # blocked_patterns for PERMANENT removals only, so sub-assertion 4 follows the same gate.
+        # Sub-assertion 3 (named in blocked_files) runs for every entry — trivially true by
+        # construction when iterating blocked_files[].path itself, but kept as a template-correctness
+        # check in case a future edit changes the iteration source.
         run: |
           set -euo pipefail
           FAIL=0
 
-          # --- AC-B5-1: count == 108, both sides. `-type f -o -type l`, NEVER `-name '*.md'`
-          #     (the extension filter is blind to a non-.md orphan — same reason as
-          #     AC-C1-1) and NEVER `-type f` alone (S23 — `-type f` misses a symlink,
-          #     which `git archive` still includes in every release archive; widened here
-          #     to stay consistent with scripts/verify-vendored-orphans.sh's own S23 fix,
-          #     so the two "108" counts in this repo can never silently disagree). ---
+          # --- AC-B5-1: LOCK_COUNT == DISK_COUNT, plus an upward-ratcheting floor. `-type f -o
+          #     -type l`, NEVER `-name '*.md'` (the extension filter is blind to a non-.md orphan —
+          #     same reason as AC-C1-1) and NEVER `-type f` alone (S23 — `-type f` misses a symlink,
+          #     which `git archive` still includes in every release archive; widened here to stay
+          #     consistent with scripts/verify-vendored-orphans.sh's own S23 fix, so the counts in
+          #     this repo can never silently disagree). ---
           LOCK_COUNT=$(jq '.files | length' cowork.lock.json)
           DISK_COUNT=$(find vendored/agency-agents ! -name LICENSE \( -type f -o -type l \) | wc -l | tr -d ' ')
-          if [ "$LOCK_COUNT" -ne 108 ]; then
-            echo "::error::AC-B5-1: cowork.lock.json has ${LOCK_COUNT} files[] entries, expected 108."
+          VENDORED_FLOOR=108   # ratchets upward only, never re-pinned downward — a drop below this
+                                # is exactly what a silent deletion looks like (docs/architecture.md ADR-100).
+          if [ "$LOCK_COUNT" -ne "$DISK_COUNT" ]; then
+            echo "::error::AC-B5-1: lock/disk count mismatch — LOCK_COUNT=${LOCK_COUNT} DISK_COUNT=${DISK_COUNT}."
             FAIL=1
           fi
-          if [ "$DISK_COUNT" -ne 108 ]; then
-            echo "::error::AC-B5-1: vendored/agency-agents has ${DISK_COUNT} files (excl. LICENSE), expected 108."
+          if [ "$LOCK_COUNT" -lt "$VENDORED_FLOOR" ]; then
+            echo "::error::AC-B5-1: LOCK_COUNT=${LOCK_COUNT} is below VENDORED_FLOOR=${VENDORED_FLOOR} — the corpus shrank."
             FAIL=1
           fi
           if [ "$FAIL" -eq 0 ]; then
-            echo "AC-B5-1 PASSED — lock=${LOCK_COUNT} disk=${DISK_COUNT} (both 108)."
+            echo "AC-B5-1 PASSED — lock=${LOCK_COUNT} disk=${DISK_COUNT}, floor=${VENDORED_FLOOR}."
           fi
 
-          # --- AC-B5-4: the two literal v2.19.7 permanent removals, named — not just
-          #     counted. Each of the 4 sub-assertions is independently checked and named
-          #     on failure, so a partial regression (e.g. re-added to disk but not the
-          #     lock) is diagnosable from the log alone. ---
-          REMOVED_PATHS=(
-            "marketing/marketing-carousel-growth-engine.md"
-            "project-management/project-manager-senior.md"
-          )
-          for path in "${REMOVED_PATHS[@]}"; do
+          # --- AC-B5-4: every declared .cowork-allowlist.json blocked_files[] entry, not just the
+          #     two hardcoded v2.19.7 paths. Each sub-assertion is independently checked and named on
+          #     failure, so a partial regression is diagnosable from the log alone. ---
+          BLOCKED_COUNT=$(jq '.blocked_files | length' .cowork-allowlist.json)
+          if [ "$BLOCKED_COUNT" -eq 0 ]; then
+            echo "::error::AC-B5-4: .cowork-allowlist.json blocked_files[] is empty — refusing to report a vacuous PASS."
+            exit 1
+          fi
+          while IFS='|' read -r path permanent; do
             filename=$(basename "$path")
 
-            # 1. absent from disk
-            if [ -f "vendored/agency-agents/${path}" ]; then
-              echo "::error::AC-B5-4: ${path} is PRESENT on disk — expected absent (v2.19.7 permanent removal)."
-              FAIL=1
-            fi
+            if [ "$permanent" = "true" ]; then
+              # 1. absent from disk
+              if [ -f "vendored/agency-agents/${path}" ]; then
+                echo "::error::AC-B5-4: ${path} is PRESENT on disk — expected absent (permanent removal)."
+                FAIL=1
+              fi
 
-            # 2. absent from the lock
-            if jq -e --arg p "$path" '.files[] | select(.path == $p)' cowork.lock.json >/dev/null 2>&1; then
-              echo "::error::AC-B5-4: ${path} is PRESENT in cowork.lock.json — expected absent."
-              FAIL=1
+              # 2. absent from the lock
+              if jq -e --arg p "$path" '.files[] | select(.path == $p)' cowork.lock.json >/dev/null 2>&1; then
+                echo "::error::AC-B5-4: ${path} is PRESENT in cowork.lock.json — expected absent."
+                FAIL=1
+              fi
             fi
 
             # 3. present in blocked_files (full path, exact match — mirrors
@@ -2404,22 +2480,26 @@ jobs:
               FAIL=1
             fi
 
-            # 4. covered by blocked_patterns (basename match — mirrors
-            #    sync-agency.yml:233-244's per-pattern glob-to-regex match against filename)
-            PATTERN_COVERED=false
-            while IFS= read -r pattern; do
-              if echo "$filename" | grep -qiE "^$(echo "$pattern" | sed 's/\*/.*/')\$"; then
-                PATTERN_COVERED=true
-                break
+            if [ "$permanent" = "true" ]; then
+              # 4. covered by blocked_patterns (basename match — mirrors
+              #    sync-agency.yml:233-244's per-pattern glob-to-regex match against filename).
+              #    Reserved for permanent removals (ADR-080 Decision 1) — a deferral entry gets no
+              #    blocked_patterns coverage by design (docs/architecture.md ADR-100 D4).
+              PATTERN_COVERED=false
+              while IFS= read -r pattern; do
+                if echo "$filename" | grep -qiE "^$(echo "$pattern" | sed 's/\*/.*/')\$"; then
+                  PATTERN_COVERED=true
+                  break
+                fi
+              done < <(jq -r '.blocked_patterns[].pattern' .cowork-allowlist.json)
+              if [ "$PATTERN_COVERED" != "true" ]; then
+                echo "::error::AC-B5-4: ${filename} (permanent:true) is NOT covered by any .cowork-allowlist.json blocked_patterns[] entry."
+                FAIL=1
               fi
-            done < <(jq -r '.blocked_patterns[].pattern' .cowork-allowlist.json)
-            if [ "$PATTERN_COVERED" != "true" ]; then
-              echo "::error::AC-B5-4: ${filename} is NOT covered by any .cowork-allowlist.json blocked_patterns[] entry."
-              FAIL=1
             fi
-          done
+          done < <(jq -r '.blocked_files[] | "\(.path)|\(.permanent)"' .cowork-allowlist.json)
           if [ "$FAIL" -eq 0 ]; then
-            echo "AC-B5-4 PASSED — both v2.19.7 removals absent from disk+lock, present in blocked_files, covered by blocked_patterns."
+            echo "AC-B5-4 PASSED — ${BLOCKED_COUNT} blocked_files[] entries checked (disk+lock absence and blocked_patterns coverage for permanent:true; blocked_files membership for all)."
           fi
 
           if [ "$FAIL" -eq 1 ]; then
