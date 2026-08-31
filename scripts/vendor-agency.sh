@@ -55,6 +55,31 @@ while IFS='|' read -r path stored_hash; do
     exit 1
   fi
 
+  # S8 (Phase 6 audit, docs/internal/security/security-audit-v2.19.16.md): `.files[].path`
+  # is lock content, not a value this script controls, and nothing here previously asserted
+  # its shape before it was joined into a filesystem path. A `../`-bearing path (demonstrated:
+  # `../<sha>/design/design-ui-designer.md`) fetches (curl normalizes the URL fine), passes the
+  # SHA-256 check, passes the round-trip check below, and writes OUTSIDE `$OUT_ROOT` — exit 0,
+  # no error. A textual `"$OUT_ROOT"/*` prefix check on the joined path would NOT catch this
+  # (`vendored/agency-agents/../x` still starts with the right prefix before the `..` resolves),
+  # so this checks for a literal `..` path segment directly, plus an absolute path outright —
+  # the same defensive shape (case / error / exit) as vendor-prune.sh's `"$ROOT"/*` assertion,
+  # adapted for a string that has not yet touched the filesystem. This script now runs
+  # unattended inside `sync-agency.yml`'s `contents: write` job every month, so this is the
+  # writer's counterpart to the deleter's already-shipped prefix assertion.
+  case "$path" in
+    /*)
+      echo "ERROR: refusing to vendor '${path}' — absolute path, outside ${OUT_ROOT}." >&2
+      exit 1
+      ;;
+  esac
+  case "/${path}/" in
+    */../*)
+      echo "ERROR: refusing to vendor '${path}' — '..' segment escapes ${OUT_ROOT}." >&2
+      exit 1
+      ;;
+  esac
+
   TMP_FILE=$(mktemp)
   ok=0
   for attempt in 1 2 3; do
