@@ -273,3 +273,272 @@ carry-forward, not a blocker.
 
 Once Finding A is closed and Finding D is either resolved via live CI or explicitly waived by the
 owner, this cycle's engineering is ready for Phase 6.
+
+---
+
+## Phase: 7
+## Date: 2026-08-31T15:44:27Z
+## Status: APPROVED WITH CONDITIONS
+
+Everything below was re-derived this session — grep/jq/`gh api` run fresh, exit status checked,
+never a keyword match on a claim's headline. HEAD verified first: `c2941e39a4cfb97492ffb779b40205faaff9b42e`
+on `release/v2.19.16-sync-repair`, matching the brief, no drift.
+
+### 1. Are the audit's conditions actually closed, or reworded?
+
+**Closed, substantively — read line-by-line, not grepped for keywords.**
+
+- **ADR-024 amendment, `Risk knowingly accepted` (`docs/architecture.md:18127-18166`, commit
+  `0a19f7b`).** Read the full bullet. It now says the strip "discards everything up to and
+  including the END-marker line," the exposed region is "**not merely unverified provenance text
+  but an unverified writable region inside a file an LLM loads as instructions**," and explicitly
+  states the second control it originally cited — `lock-content-sha-cross-check` — "does **not**
+  read the vendored file at all." Both halves the task asked me to confirm are present, verbatim,
+  not paraphrased around.
+- **`§Maturation Path` (Finding A, closed at `44e02f7`, pre-dates this Phase 7 pass but
+  re-verified here).** `/usr/bin/grep -n "§Maturation Path"` on `docs/architecture.md` finds the
+  header at `:18101`. Read the section directly (`:18101-18166`): `**Future-state options:**` at
+  `:18103`, `**Concrete revisit triggers:**` at `:18117`, `**Risk knowingly accepted:**` at
+  `:18127` — each exactly once. Decoy check: `grep -n "Future state options"` (no hyphen) across
+  the whole file — **0 hits, exit 1**, a real zero.
+- **ADR-100, `Risk knowingly accepted` (`docs/architecture.md:18008-18019`, commit `0a19f7b`).**
+  The false "`bounded by AC-B5-4 remaining untouched`" clause is gone; replaced with an accurate
+  account naming `D4(b)`'s generalization and citing the Phase 6 audit's S3/S4 for the residual.
+- **`CHANGELOG.md` (commit `0a19f7b`).** "generalised... to every declared `blocked_files[]`
+  entry" → "generalised... to every `permanent: true` entry; deferral (`permanent: false`) entries
+  are covered for membership only" — matches condition #3 exactly.
+- **`CONTRIBUTING.md:362` (commit `0a19f7b`).** "the CI checks... actually gate these PRs" is
+  deleted; replaced with "`main`'s branch protection does not require any check to pass before
+  merge, so nothing in CI actually gates the merge." I checked this against live GitHub state
+  myself: `gh api repos/jmlozano1990/Cowork-Starter-Kit/branches/main/protection --jq
+  '.required_status_checks'` → **`null`**, confirmed today, not stale. And I checked it against
+  the sibling doc the audit said it contradicted: `.github/workflows/sync-agency.yml:637` still
+  reads "`main`'s branch protection does not require any check to pass" — the two documents now
+  agree; the defect family the audit called this repo's dominant one is closed at this locus.
+
+No rewording-only fix found anywhere in this set.
+
+### 2. Did anything out of scope move?
+
+**No — checked by diffing the actual commit range, not by trusting the commit messages.**
+
+`git diff --name-only 5345033 c2941e39a4cfb97492ffb779b40205faaff9b42e` (Phase 6 audit's own
+commit to current HEAD) touches exactly 6 paths: `CHANGELOG.md`, `CONTRIBUTING.md`,
+`docs/architecture.md`, `docs/internal/qa/qa-report-v2.19.16.md`, `scripts/vendor-agency.sh`,
+`scripts/vendor-prune.sh`. Confirmed **untouched**, by the same diff's absence:
+`.github/workflows/quality.yml` (S3/S4's differential lock rule, and `AC-B5-1`/`AC-B5-4`
+themselves), `scripts/verify-lock-removals.sh` (same), `docs/risk-register.md` (S12's wording),
+`.cowork-allowlist.json` (the D2(b) deferral entries — re-read directly: both still carry
+`permanent: false`, byte-identical to Phase 4). The `vendor-agency.sh` diff (`a901db4`) is a pure
+insertion — I read every added line and confirmed the pre-existing BSD-`sed` line at `:113` (S10)
+is not among them; it is untouched, exactly as the audit's carry-forward list said it would stay.
+`AC-B5-1` was not weakened while the S8 path-shape assertion was added: they live in different
+files (`quality.yml` vs. `vendor-agency.sh`), and `quality.yml` has zero diff lines in this range.
+
+### 3. Are the two Phase-6.R script fixes (S9 in `vendor-prune.sh`, S8 in `vendor-agency.sh`) defense-in-depth or behavior changes?
+
+**Defense-in-depth, re-measured myself, not accepted from the commit message.**
+
+```
+jq '.files | length' cowork.lock.json                                  → 108
+jq -r '.files[].path' cowork.lock.json | /usr/bin/grep -cE '^-'        → 0  (exit 1)
+jq -r '.files[].path' cowork.lock.json | /usr/bin/grep -cF '..'        → 0  (exit 1)
+jq -r '.files[].path' cowork.lock.json | /usr/bin/grep -cE '^/'        → 0  (exit 1)
+```
+
+All three are real zeros (exit 1, not an empty-match artifact). Firing controls, run against the
+attack shapes themselves, not the real corpus:
+
+```
+echo "../783f6a72/design/design-ui-designer.md" | grep -cF '..'   → 1
+echo "/etc/passwd" | grep -cE '^/'                                 → 1
+```
+
+The patterns fire on the attack shape and do not fire on any of the 108 real paths — the control
+varies the property the null turns on, which is the standard this session holds itself to. I also
+extracted the exact `case` logic added in `a901db4` (absolute-path reject, `/../ /`-segment reject)
+and ran it standalone against the four attack-shaped strings named in the commit message (all
+rejected) with no persisted file — nothing here mutates the repo. Since no real lock path matches
+either rejection shape, the real vendoring path is unaffected by construction; I did not additionally
+run the network-fetching script end-to-end (that would write into this tracked repo, which I avoid
+per this session's own "no destructive test on a live/shared resource" discipline — the isolated
+extraction is the equivalent, lower-risk check).
+
+### 4. Topology — is the relocated Phase 5 report actually clean?
+
+**Yes, and the numbers cross-check exactly.**
+
+- `git ls-files docs/internal/qa/qa-report-v2.19.16.md docs/qa-report-v2.19.16.md` → only the
+  `docs/internal/qa/` path is tracked.
+- `git archive HEAD | tar -t | grep -c '^docs/internal/'` → **0** (exit 1) at current HEAD.
+  `git archive HEAD | tar -t | wc -l` → **421**, exactly one less than the audit's own measured
+  **422** at `44e02f7` — the arithmetic a real relocation predicts (one file moved from an
+  included path to an excluded one), not asserted.
+- Citation: `docs/architecture.md:18131-18132` now reads `` `docs/internal/qa/qa-report-v2.19.16.md`,
+  relocated from `docs/qa-report-v2.19.16.md` at Phase 6.R per S11 ``. I grepped the whole repo for
+  the old bare path (`docs/qa-report-v2.19.16.md`) outside `docs/internal/qa/` itself — the only 2
+  remaining hits are inside `security-audit-v2.19.16.md` itself, describing the finding
+  historically (as it stood before the fix) and the recommended remedy — a point-in-time audit
+  record, correctly left as written, not a live stale citation.
+- No cycle state stranded on `main`: `git log --oneline main -5` shows `main`'s tip is
+  `24e1b58`, the same commit `git merge-base main HEAD` returns — none of this cycle's Phase 5/6/6.R
+  commits landed there.
+
+### 5. The evidence base — fixture provenance and the CI tallies, re-derived from zero
+
+**Provenance, independently reconstructed:**
+
+```
+git show 4d49e2f0…:cowork.lock.json | jq '.files | length'           → 150
+git show 4d49e2f0…:cowork.lock.json | jq -r '.pinned_commit_sha'      → 3c9588880b7cafaec325a104899fd8bbe27e7d72
+git diff 4d49e2f0… c43d56f4…(PR #125 head) -- cowork.lock.json        → empty
+```
+
+All three match the brief exactly, and I obtained them without trusting the brief's numbers as
+input — I ran the commands cold.
+
+**Check-run tallies, every one with `?per_page=100` and a `returned == total_count` assertion**
+(the audit's own first pass silently truncated at 30/35 without this):
+
+| Commit | total_count | returned | conclusions |
+|---|---|---|---|
+| `4d49e2f0…` (fixture) | 35 | 35 | 35 success / 0 failure |
+| `c43d56f4…` (PR #125 head) | 35 | 35 | 31 success / **4 failure** |
+
+The 4 failing names on PR #125 head (`gh api .../check-runs?per_page=100 --jq '[.check_runs[] |
+select(.conclusion=="failure") | .name]'`): `Release Predicate + Standing Gate Check (v2.19.6)`,
+`Vendored Integrity Check (audit F-7)`, `Vendored Removal Ledger (ADR-080)`,
+`sync-verify-ratchet (AC-SYNC-9)` — and a second, separate query confirms all 4 read `success` on
+the fixture commit. Anti-skip control: I listed the full 35-name array for both commits directly
+(sorted, one query each — `comm`/process-substitution was refused by this session's own
+too-complex-command guard, so I compared the two 35-element arrays directly) — **byte-for-byte
+identical**, same order, same 35 names, 0 divergence. `0` check-runs have `status != completed` or
+`conclusion == skipped` on the fixture. Workflow run `33401842508`:
+`{"conclusion":"success","created_at":"2026-08-31T14:18:18Z","event":"workflow_dispatch",
+"head_branch":"qa-fixture/v2.19.16-pr125-shaped","head_sha":"4d49e2f0…"}` — exact match. Only one
+open PR exists (`gh pr list --state open`): `#125`. S4's trap re-confirmed live: commit `85b4f28`
+(a bare push, no dispatch) shows `total_count: 0` on GitHub today.
+
+**One thing neither the audit nor the 6.R commits stated, worth naming plainly:** the fixture
+commit (`4d49e2f0…`) predates the S8/S9 script fixes. `git diff 4d49e2f0… c2941e3… --stat --
+scripts/` shows 36 lines that exist at current HEAD and did **not** exist in the CI-tested fixture.
+So the 35/35 green certifies the fixture's 150-entry lock state running **Phase-4-era script code**
+— it does not, and cannot, certify that the exact bytes about to be pushed (with S8, S9, and the 4
+doc corrections layered on) have ever executed inside GitHub Actions. This does not change my
+verdict (§8 explains why), but it sharpens the audit's own disclosed limit and I want it on the
+record rather than left implicit.
+
+### 6. The honest limit — stated plainly, as instructed
+
+`gh api repos/jmlozano1990/Cowork-Starter-Kit/commits/c2941e39a4cfb97492ffb779b40205faaff9b42e`
+→ **HTTP 422, "No commit found."** `gh api
+repos/jmlozano1990/Cowork-Starter-Kit/branches/release/v2.19.16-sync-repair` → **HTTP 404.**
+
+**This branch, at its current tip, has never been pushed, carries no PR, and has zero CI runs of
+its own.** The 35/35 green in §5 belongs to a fixture carrying PR #125-shaped content on
+Phase-4-era code, not to this branch's own 108-entry corpus running the final, doc-corrected,
+S8/S9-hardened code. What *is* mechanically reassuring, and I checked this rather than assumed it:
+`quality.yml:15-17` triggers on `pull_request` **and** `workflow_dispatch`, and every job I traced
+through this cycle (`:2023`, `:2285`, `:2521`) gates explicitly on
+`contains(fromJSON('["pull_request","workflow_dispatch"]'), github.event_name)` — the same jobs
+run under both trigger types by the workflow's own design, which is exactly why the fixture's
+dispatched run is a methodologically sound proxy for what a real PR trigger will do, not a
+coincidence of convenience. And per this repo's own merge rule, the orchestrator's next action —
+push this branch, open a PR, run `gh pr checks` — puts the *actual* final bytes through that exact
+real gate, and the user does not see a merge prompt until every check is green. My approval below
+is for work that is fit to be pushed into that gate, not a claim that the gate has already been
+cleared.
+
+---
+
+## Rework rate
+
+Phase 4 SHA `85b4f28ceeb01d284e850c366bc72114046c3fd7` vs. current HEAD `c2941e3`:
+
+- **Whole-diff** (`git diff --numstat 85b4f28… c2941e3…`): 7 files, 840 insertions / 9 deletions =
+  849 changed lines. Against Phase 4's own whole-diff footprint vs. `main` (3103+87 = 3190):
+  **≈ 26.6%** — but this figure is dominated by the Phase 6 audit's own 444-line report and this
+  Phase 5 report's own 275 lines landing inside the same commit range, neither of which is rework
+  of the implementation.
+- **Implementation-surface only** (`scripts/`, `.github/`, `.cowork-allowlist.json` — excluding
+  docs/report files): rework touched only `scripts/vendor-agency.sh` (+25/-0) and
+  `scripts/vendor-prune.sh` (+11/-1) = **37 lines**, against Phase 4's own implementation-surface
+  footprint of **368 lines** (`.cowork-allowlist.json` 10, `.github/CODEOWNERS` 17,
+  `quality.yml` 208, `sync-agency.yml` 34, `vendor-agency.sh` 13, `vendor-prune.sh` 86) = **≈ 10.1%**.
+  Zero lines of `.github/workflows/` or `.cowork-allowlist.json` were touched post-Phase-4 — the
+  entire CI-logic and allowlist surface Phase 4 shipped is unchanged since.
+
+I report the implementation-surface figure (**≈ 10.1%**) as the meaningful rework rate: it reflects
+what the audit's findings actually caused to be re-touched in code, isolated from this cycle's own
+documentation output.
+
+## Fix-Chain Circuit Breaker
+
+One REJECT→rework transition this cycle (Phase 5 REJECT → Phase 5.R fixing Finding A, and
+Phase 6 → Phase 6.R fixing S1/S2/S6/S7/S8/S9/S11). Each control received exactly one `FIX-GEN`-shaped
+pass before closing (ADR-024/ADR-100/CHANGELOG/CONTRIBUTING text in one commit; S9 and S8 each in
+their own single commit; S11 in its own single commit) — no control shows 2+ rework passes, so the
+breaker's trigger condition is not met and no `FIX-STRAT` row is owed. No `COUNCIL_FIXCHAIN_BYPASS`
+use observed or expected (this project does not use that mechanism).
+
+## Worktree commit topology
+
+SECURITY-SENSITIVE cycle (classification carried from Phase 5, reconfirmed — new file-deletion
+script, allowlist/security-boundary changes, CI permission surface, rewritten attribution
+mechanism; no Phase 6/6.R change reduces this). Checked: `main`'s tip (`24e1b58`) equals
+`git merge-base main HEAD`, and `git log --oneline main -5` shows no Phase 5/6/6.R commit landed
+there. **PASS** — no state stranded on `main`. (This repo does not use a `pipeline.md`/`scratchpad.md`
+ledger the way The-Council's own registered-project convention does; state for this cycle lives
+entirely in the git history and the `docs/` files above, which is this project's own long-standing,
+consistent convention across all 36 prior cycles inspected in `docs/internal/qa/`.)
+
+## Verdict
+
+**APPROVED WITH CONDITIONS.**
+
+The engineering is sound, and I found no functional defect, no falsified claim, and no scope
+creep in this session's own re-derivation — every number in this report was produced by a command
+I ran this session, not copied from a prior agent's narrative. The Phase 6 audit's four required
+sentence corrections are substantive, not reworded, and independently confirmed by reading the
+shipped text at its cited line ranges. The two optional one-token hardenings (S8, S9) are
+defense-in-depth, provably inert against all 108 real lock paths, and provably firing against the
+attack shapes they exist to catch. The Phase 5 report relocation (S11) is a clean `git mv` with a
+correctly updated citation and a load-bearing archive-count cross-check (422→421) that would not
+arithmetically hold if anything else had moved. Nothing the audit named out-of-scope was touched.
+
+**What this approval covers, and what it does not, stated as instructed:**
+- It covers: the Phase-4 core logic (`vendor-prune.sh`'s S1 fix, the cardinality/ratchet rewrite,
+  `AC-B5-1`/`AC-B5-4`, the D1(c) attribution redesign) — all of which ran, and passed, in a real
+  GitHub Actions execution against a realistic 150-file corpus shape (run `33401842508`, 35/35
+  green, independently re-verified this session with `per_page=100` assertions throughout).
+- It does **not** cover a real CI execution of the exact bytes at `c2941e3` — this branch has
+  never been pushed (confirmed: 422/404 against GitHub, both re-checked this session) — and, more
+  specifically than the audit stated, the one real CI run that exists predates the S8/S9 script
+  fixes entirely. The audit itself renders "MERGE WITH CONDITIONS" on the CRITICAL-closure
+  evidence alone, and I agree with that judgment; I additionally verified, mechanically, that the
+  workflow's own job-level `if:` gates treat `pull_request` and `workflow_dispatch` identically,
+  which is why I'm comfortable that the fixture's result predicts the real PR's result rather than
+  merely hoping it does.
+
+**Disclosed residuals shipping unfixed, all pre-existing findings, none newly discovered blocking
+this cycle:** S1 (unhashed region above the `ATTRIBUTION-END` marker — real, not reachable from a
+hostile upstream, requires a merged-repo write to exploit), S3/S4 (the `permanent`-gated
+re-introduction tripwire cannot re-arm for the two new deferral entries — a fetch-time exact-path
+block in `sync-agency.yml:228` remains as an independent, weaker mitigation), S5 (the two
+deferrals' own stated un-block instruction is refused by `AC-B5-8` — no working exit exists yet),
+S10 (BSD-`sed` incompatibility in `vendor-agency.sh:113`, pre-existing, GNU sed in CI is
+unaffected). I judge none of these should block this merge: all four are already disclosed in the
+architecture record with citations, none is newly introduced or newly discovered by me, all are
+already named as near-term carry-forwards, and the mitigating factors named against each (S3/S4,
+S5) genuinely exist and were independently checked, not merely asserted, by the Phase 6 audit.
+
+**One recommendation, not a condition:** given the branch is about to be pushed for the PR anyway,
+consider treating that PR's own CI run as the first real execution of S8/S9/the doc fixes together
+— nothing here suggests it will fail, but nothing here proves it won't either, and the standard
+merge rule already requires that gate to be green before the user sees a confirmation prompt. No
+further QA action is needed to reach that gate; it is the orchestrator's next mechanical step, not
+an open QA finding.
+
+Recommend the orchestrator proceed: push `release/v2.19.16-sync-repair`, open the PR, run
+`gh pr checks` to confirm all checks pass on the real thing, and only then present the merge
+decision to the owner — per this repo's own merge rule, unchanged by anything in this report.
