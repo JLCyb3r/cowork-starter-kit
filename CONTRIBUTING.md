@@ -353,11 +353,15 @@ PRs labeled `agency-sync` are opened automatically by `.github/workflows/sync-ag
 when the upstream `msitarzewski/agency-agents` SHA changes. These PRs have elevated
 security requirements:
 
-### 2-Approval Rule (CODEOWNERS, S2)
+### Maintainer Review (CODEOWNERS, S2)
 
-**Agency-sync PRs require 2 separate maintainer approvals before merge.** A single-maintainer
-compromise must not enable a silent supply-chain redirect. This rule is enforced via CODEOWNERS
-(see `.github/CODEOWNERS`).
+**Agency-sync PRs require review by a maintainer before merge.** This repository currently has one
+collaborator (`jmlozano1990`), so a 2-approval rule is not satisfiable — GitHub does not permit
+self-approval, and this repo's live branch protection carries `required_approving_review_count: 0`
+and `require_code_owner_reviews: false` (verified 2026-08-30). The supply-chain controls that
+actually gate these PRs are the CI checks in `.github/workflows/quality.yml`, which a sole
+maintainer can satisfy. CODEOWNERS (see `.github/CODEOWNERS`) records ownership and routes review;
+it does not currently enforce approvals.
 
 ### Review Checklist for Agency-Sync PRs
 
