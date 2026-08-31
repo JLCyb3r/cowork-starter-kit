@@ -19,6 +19,52 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.16] - 2026-08-31
+
+**"The Sync That Can't Land."** `v2.19.15` wired real CI onto the monthly upstream sync (`PR #125`)
+for the first time in this repo's history — 35 check-runs, and 4 of them red. Two were structural
+gaps this repo has always had and never hit until a sync PR actually got checked; a third was a
+downstream assertion that had never gotten to run; a fourth was a stale test fixture overtaken by
+real upstream progress. This cycle repairs all four, plus two unrelated, already-diagnosed defects
+folded in at the owner's instruction.
+
+- **Vendoring is folded into the sync automation.** `scripts/vendor-agency.sh` and the new
+  `scripts/vendor-prune.sh` now run as steps inside `.github/workflows/sync-agency.yml`, gated on
+  the same lock update — a sync PR arrives self-consistent (lock and vendored tree agree) instead of
+  depending on a post-merge maintainer step nothing was actually verifying.
+- **The attribution header is redesigned so a file's stamp changes only with its own content.**
+  `Pinned commit:` (one value, repeated in all 108 files, every sync) is replaced by a per-file
+  `Content SHA-256:`; `Full license:` points at the vendored, hash-verified `LICENSE` instead of a
+  pin-scoped URL. Diff-size effect measured on this sync: 59 changed files instead of 150.
+  `quality.yml`'s `attribution-survives-render` job gains a new assertion against the **real**
+  vendored corpus (previously it validated only a sample it wrote itself).
+- **Two renamed upstream security personas are declared, not silently dropped.**
+  `engineering/engineering-security-engineer.md` and `engineering/engineering-threat-detection-engineer.md`
+  were renamed upstream into a `security/` category this repo has never allowlisted.
+  `.cowork-allowlist.json` now declares both as an explicit, dated deferral (`permanent: false`,
+  naming the decision and the un-block trigger) — not onboarded here, and not silently lost either.
+- **The vendored-corpus count guard no longer pins to a single number.** The old exact `== 108`
+  check is replaced by an equality assertion (lock count == disk count) plus an upward-ratcheting
+  floor, so it stops going red on every legitimate upstream addition. The per-path re-introduction
+  tripwire is generalised from 2 hardcoded paths to every declared `blocked_files[]` entry.
+- **The stale ratchet fixture is repaired with a two-sided-safe pin and path set**, verified against
+  both this cycle's own lock state and the pending sync PR's lock state — the previous pin collided
+  with the live lock on its very first exercise.
+- **Two independent, already-diagnosed defects are fixed:** a registry cardinality guard that
+  reported success while examining zero rows (`grep -c`'s own exit-1-on-no-match interacting badly
+  with `set -e`), and `CONTRIBUTING.md`/`.github/CODEOWNERS` correctly now describe review as
+  maintainer-gated rather than asserting a 2-approval rule this repo's sole collaborator can never
+  satisfy.
+- **A newline-in-filename path-deletion bug in the new `vendor-prune.sh` script was found and fixed
+  before it shipped** (Phase 2 security review, CRITICAL) — NUL-delimited enumeration plus an
+  explicit path-prefix assertion, both independently verified to fire.
+
+**What this cycle is not.** It does not arm `main`'s required status checks (that is `v2.19.17`, a
+separate owner decision). It does not merge `PR #125` — it stays open as the evidence base. It does
+not onboard the `security/` category upstream just started using.
+
+---
+
 ## [2.19.15] - 2026-08-30
 
 **"The Gate That Isn't On."** Thirteen prior cycles hardened `quality.yml` (35 required-shape
