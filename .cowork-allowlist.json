@@ -29,6 +29,16 @@
       "path": "project-management/project-manager-senior.md",
       "permanent": true,
       "reason": "Permanently blocked — v2.19.7 Scope B2. Leaked third-party workspace content unsuitable for redistribution. Deleted, not corrected, per the owner's locked decision (2026-08-07) — not filed upstream (docs/spec.md AC-B4-1)."
+    },
+    {
+      "path": "engineering/engineering-security-engineer.md",
+      "permanent": false,
+      "reason": "DEFERRAL, not a content rejection — the security category is not yet onboarded. Renamed upstream into security/security-architect.md (verified at pin 3c9588880b7cafaec325a104899fd8bbe27e7d72: old path HTTP 404; content changed d6ce02769f3dbe732badc886e34531c8eb9393aa19b170651e256d482232c629 -> b1a68e9614f7adb43938f5bd9964f6e41250febc9a57f691eefcbab58d5b1df1 -- the persona's scope was narrowed and a sibling AppSec Engineer persona created upstream). The security category has never been allowlisted (allowed_categories holds 10 entries; security is not among them), so the sync cannot follow the rename. Declared at v2.19.16 as a deliberate owner decision: this repo declines to ingest a 12-file, largely unreviewed upstream category under a 2026-09-01 cron deadline -- onboarding security is a separate, properly-scoped cycle (tracked: docs/architecture.md ADR-100 Residuals CF-v2.19.16-SECURITY-ONBOARD). permanent:false records that this is a deferral with a named owner decision behind it, not a permanent rejection on the merits. Un-block trigger: remove this entry and its sibling below (engineering/engineering-threat-detection-engineer.md) together, in the same commit that adds security to allowed_categories."
+    },
+    {
+      "path": "engineering/engineering-threat-detection-engineer.md",
+      "permanent": false,
+      "reason": "DEFERRAL, not a content rejection — the security category is not yet onboarded. Renamed upstream into security/security-threat-detection-engineer.md, byte-identical content (verified at pin 3c9588880b7cafaec325a104899fd8bbe27e7d72: old path HTTP 404; content_sha256 83bfaabe485d51965ba6474de3eb6e00f67fd7f76e5b34ca1d3fb385a8fa3d97 unchanged on both sides). The security category has never been allowlisted, so the sync cannot follow the rename. Declared at v2.19.16 as the same deliberate owner decision as its sibling entry above (engineering/engineering-security-engineer.md) -- see that entry's reason for the full rationale. permanent:false records a deferral, not a rejection on the merits. Un-block trigger: remove this entry and its sibling above together, in the same commit that adds security to allowed_categories."
     }
   ],
   "blocked_patterns": [
