@@ -18129,7 +18129,8 @@ silently assumed favorable.
   labels plus a `grep -qE 'Pinned commit:|Content SHA-256:'` alternation for the sixth, and
   `cowork.lock.json`'s `.upstream`, `.pinned_commit_sha` and `.content_sha256` are not read by it at
   all. That is not a theoretical gap. @qa reproduced it at Phase 5
-  (`docs/qa-report-v2.19.16.md`): a real vendored file, `design/design-ui-designer.md`, with `Source:`
+  (`docs/internal/qa/qa-report-v2.19.16.md`, relocated from `docs/qa-report-v2.19.16.md` at Phase
+  6.R per S11): a real vendored file, `design/design-ui-designer.md`, with `Source:`
   rewritten to name `EVIL-ATTACKER/agency-agents` and the pinned commit zeroed, field labels left
   intact — the shipped check **passed, zero failures**. It was graded a WARNING rather than a
   regression only because §Consequences had already disclosed it; that disclosure is what this bullet
