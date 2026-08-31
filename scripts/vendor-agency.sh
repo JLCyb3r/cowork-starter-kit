@@ -55,6 +55,31 @@ while IFS='|' read -r path stored_hash; do
     exit 1
   fi
 
+  # S8 (Phase 6 audit, docs/internal/security/security-audit-v2.19.16.md): `.files[].path`
+  # is lock content, not a value this script controls, and nothing here previously asserted
+  # its shape before it was joined into a filesystem path. A `../`-bearing path (demonstrated:
+  # `../<sha>/design/design-ui-designer.md`) fetches (curl normalizes the URL fine), passes the
+  # SHA-256 check, passes the round-trip check below, and writes OUTSIDE `$OUT_ROOT` — exit 0,
+  # no error. A textual `"$OUT_ROOT"/*` prefix check on the joined path would NOT catch this
+  # (`vendored/agency-agents/../x` still starts with the right prefix before the `..` resolves),
+  # so this checks for a literal `..` path segment directly, plus an absolute path outright —
+  # the same defensive shape (case / error / exit) as vendor-prune.sh's `"$ROOT"/*` assertion,
+  # adapted for a string that has not yet touched the filesystem. This script now runs
+  # unattended inside `sync-agency.yml`'s `contents: write` job every month, so this is the
+  # writer's counterpart to the deleter's already-shipped prefix assertion.
+  case "$path" in
+    /*)
+      echo "ERROR: refusing to vendor '${path}' — absolute path, outside ${OUT_ROOT}." >&2
+      exit 1
+      ;;
+  esac
+  case "/${path}/" in
+    */../*)
+      echo "ERROR: refusing to vendor '${path}' — '..' segment escapes ${OUT_ROOT}." >&2
+      exit 1
+      ;;
+  esac
+
   TMP_FILE=$(mktemp)
   ok=0
   for attempt in 1 2 3; do
@@ -81,18 +106,25 @@ while IFS='|' read -r path stored_hash; do
   DEST="${OUT_ROOT}/${path}"
   mkdir -p "$(dirname "$DEST")"
 
-  # ADR-024 6-field attribution block (format matches quality.yml attribution-survives-render).
+  # ADR-024 6-field attribution block, amended v2.19.16 (D1(c), docs/architecture.md ADR-024
+  # amendment): the field is now `Content SHA-256: ${stored_hash}` (per-file) rather than a
+  # global `Pinned commit: ${PINNED}` repeated in every file — so a file's header changes only
+  # when ITS OWN content changes, not on every corpus-wide sync. `Full license:` now points at
+  # the vendored, hash-verified LICENSE (checked above against license_file_sha256) rather than a
+  # pin-scoped GitHub URL. The corpus-level pin is unchanged as the record of authority: it stays
+  # in cowork.lock.json's pinned_commit_sha and THIRD-PARTY-NOTICES.md (format matches
+  # quality.yml attribution-survives-render).
   {
     printf '%s\n' "$START_MARK"
     printf '%s\n' "<!--"
     printf '%s\n' "Agency Source — ${UPSTREAM}"
     printf '%s\n' "Source: https://github.com/${UPSTREAM}"
     printf '%s\n' "Upstream path: ${path}"
-    printf '%s\n' "Pinned commit: ${PINNED}"
+    printf '%s\n' "Content SHA-256: ${stored_hash}"
     printf '%s\n' "Lock file source: cowork.lock.json (cowork-starter-kit)"
     printf '%s\n' "Copyright (c) ${UPSTREAM} contributors"
     printf '\n%s\n\n' "$LICENSE_TEXT"
-    printf '%s\n' "Full license: https://github.com/${UPSTREAM}/blob/${PINNED}/LICENSE"
+    printf '%s\n' "Full license: ${OUT_ROOT}/LICENSE"
     printf '%s\n' "Derivative work: this file has been adapted for use with cowork-starter-kit"
     printf '%s\n' "-->"
     printf '%s\n' "$END_MARK"

@@ -538,6 +538,24 @@ jobs:
           mv /tmp/updated-lock.json cowork.lock.json
           echo "Lock file updated: pinned_commit_sha=${NEW_SHA} (COUNT=${COUNT}, BLANK=0, DIVERGE=0)"
 
+      - name: Materialize vendored/agency-agents/ from the new lock (ADR-080 leg 1, D1(c))
+        # v2.19.16 (docs/architecture.md ADR-100 D1): folds the existing scripts/vendor-agency.sh
+        # into this same commit, so the sync PR is self-consistent on open instead of relying on a
+        # post-merge maintainer step nothing actually verifies (S7). Invokes the script unchanged —
+        # it already fetches at the lock's pin, verifies each file's SHA-256 against
+        # content_sha256 fail-closed, injects the ADR-024 attribution block, and refuses to write a
+        # file that would redden vendored-integrity-check.
+        if: steps.check.outputs.needs_update == 'true'
+        run: bash scripts/vendor-agency.sh
+
+      - name: Prune vendored files the new lock no longer carries (ADR-080 leg 2)
+        # v2.19.16: the disk→lock direction vendor-agency.sh structurally lacks (it only ever
+        # writes). Without this, a renamed-away upstream file's stale vendored copy survives every
+        # future sync until someone deletes it by hand (this is exactly how the two engineering/
+        # security-persona copies this cycle repairs went stale). See scripts/vendor-prune.sh.
+        if: steps.check.outputs.needs_update == 'true'
+        run: bash scripts/vendor-prune.sh
+
       - name: Regenerate THIRD-PARTY-NOTICES.md (ADR-025; preserves DO-NOT-REGENERATE tail)
         if: steps.check.outputs.needs_update == 'true'
         env:
@@ -612,11 +630,13 @@ jobs:
             Flagged files: `${{ steps.fetch_files.outputs.flagged_files }}`
 
             > **No enforced review gate (ADR-028 v2.19.5 amendment §(d)).** This PR
-            > touches `cowork.lock.json`, an ingested-content file, and no CI check
-            > runs on a PR opened by this workflow. There is currently no enforced
-            > approval requirement on PRs touching it — `.github/CODEOWNERS`'s
-            > supply-chain rows exist but branch protection does not require
-            > CODEOWNERS review or any passing check before merge. See
+            > touches `cowork.lock.json`, an ingested-content file. Since v2.19.15,
+            > `dispatch-quality` DOES run real CI on this PR (`Vendored Integrity
+            > Check`, `sync-verify-ratchet`, and the rest of `quality.yml`) — but
+            > there is currently no enforced approval requirement on PRs touching
+            > it, and `main`'s branch protection does not require any check to pass
+            > before merge. `.github/CODEOWNERS`'s supply-chain rows exist but
+            > branch protection does not require CODEOWNERS review either. See
             > `docs/owner-tasks.md` for the open owner decision to close this gap.
 
             ### Reviewer Checklist (MANDATORY — manual review is the only control here)
@@ -627,8 +647,8 @@ jobs:
             - [ ] Review any files with `requires_review: true` in lock file
             - [ ] If LICENSE hash changed: route to `/legal` review before merge
             - [ ] Review `THIRD-PARTY-NOTICES.md` changes — verify timestamps and SHA match
-            - [ ] Review the "Removed Upstream Paths" section above — for any `RENAMED → ... (category not in .cowork-allowlist.json)` entry, delete the orphaned `vendored/agency-agents/` copy AND decide whether the new category should be allowlisted (the content is still maintained upstream, not gone)
-            - [ ] Run `bash scripts/vendor-agency.sh` and commit the refreshed `vendored/agency-agents/` — this is a maintainer step verified AFTER merge, by the `vendored-integrity-check` CI job running on the push to `main`. It does not gate this PR: no CI runs on a sync PR at all.
+            - [ ] Review the "Removed Upstream Paths" section above — for any `RENAMED → ... (category not in .cowork-allowlist.json)` entry, decide whether the new category should be allowlisted (the content is still maintained upstream, not gone). The stale `vendored/agency-agents/` copy of the OLD path is now deleted automatically by `scripts/vendor-prune.sh`, run as a step in this same workflow — you do not need to delete it by hand.
+            - [ ] `vendored/agency-agents/` is refreshed automatically by this workflow (`scripts/vendor-agency.sh` + `scripts/vendor-prune.sh`, both gated on this same lock update) — you do not need to run either by hand. **Verify `Vendored Integrity Check (audit F-7)` is green on THIS PR's own check-runs before merge** (via `dispatch-quality`). `quality.yml` has no `push` trigger, so nothing verifies this content after merge — this PR's own checks are the only gate.
             - [ ] If first sync (bootstrap): treat as SECURITY-SENSITIVE per `docs/internal/security/security-review.md` Open Issue #3
 
             > **24h soak rule (S7):** Do not merge this PR within 24h of opening. Allow time for community eyes.
