@@ -26,7 +26,10 @@ silently discoverable only by diffing tags against sections.
 deleting, moving, or overwriting any file or folder." Re-derived against the real files this cycle,
 that sentence was false at ten-plus paths in a brownfield folder — a folder that already has the
 user's own `cowork-profile.md`, `CLAUDE.md`, or installed skills before the wizard ever runs. This
-cycle makes the sentence true.
+cycle makes the sentence true at every **guarded** path, with one deliberate, named exception: the
+four mandatory safety skills, which stay unconditional by design (see below) and are disclosed as
+always-installed only when the collision survey happens to render a turn for some other reason —
+not guaranteed on every run.
 
 - **A named Collision Rule, not ten scattered checks.** A new non-overridable section in `WIZARD.md`
   defines a fixed, kit-authored guarded-path set (10 single paths plus every
@@ -46,10 +49,13 @@ cycle makes the sentence true.
   append (`context/.archive/`, `context/.apply-backups/`) runs before any archive write, with explicit
   failure branches: a write failure or read-only file aborts the handover rather than failing silently;
   a symlinked `.gitignore` is refused outright rather than followed outside the workspace.
-- **The four mandatory safety skills stay unconditional, disclosed but never declinable.** Guarding
+- **The four mandatory safety skills stay unconditional and never declinable — the deliberate
+  exception to "ask before overwriting," not an oversight.** Guarding
   them would have made a trusted-installer gate declinable; instead their Step 4 copies (and the
   Fallback's backfill copies) gain the registry-`sha256` byte-verify the kit already claims for this
-  class of write, closing an asymmetry where only two of the four were actually checked.
+  class of write, closing an asymmetry where only two of the four were actually checked. Disclosure
+  that they're always-installed rides the collision survey turn when one renders for some other
+  reason — it is not itself a guaranteed announcement on every run.
 - **The `working-rules.md` qualifier (F4).** When the ledger records a `declined` guarded path, a
   one-sentence qualifier is inserted into `context/working-rules.md` as the final step of the handover
   — two-valued (qualifier, or silence otherwise, including on ledger loss). A third "uncertainty
