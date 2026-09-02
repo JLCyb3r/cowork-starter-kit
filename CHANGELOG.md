@@ -63,10 +63,15 @@ not guaranteed on every run.
   a genuinely-empty ledger apart from a lost one, so that branch could never actually detect its own
   trigger. Silence under ledger loss is therefore accepted rather than solved — no worse than this
   file's unqualified pre-v2.19.18 wording, never worse (`CF-v2.19.18-QUALSILENCE`, carried forward).
-- **Three false claims about `_setup-kit/` corrected.** The workspace `CLAUDE.md` template, the
-  closing message, and `README.md` no longer assert an archive that may not exist — the dependency is
-  inverted so the wording is written correctly the first time (Mode B / declined 7b) or rewritten once
-  the real outcome is known (accepted 7b), never asserted ahead of the fact.
+- **Three false claims about `_setup-kit/` corrected — and a fourth, narrower one caught after merge
+  (Phase 6 S10) and fixed the same way.** The workspace `CLAUDE.md` template, the closing message, and
+  `README.md` no longer assert an archive that may not exist. The template's two remaining
+  `_setup-kit/`-dependent lines (Skill swap, Re-run setup) went further than "don't assert an archive
+  that may not exist" required: their first fix still asserted a fixed pool/script *location*
+  (`skills/`, `WIZARD.md`) that is also false in a genuine Mode-B workspace, where neither ever existed
+  at all. Both lines now tell the model to check for the path and say so if it isn't reachable, rather
+  than assert it — true in Mode A (archived or not) and Mode B alike; 7b's existing rewrite-on-Yes step
+  still names the confirmed archive path once it's a known fact, unchanged.
 - **`WIZARD.md:308`'s move-list claim is corrected.** "So your workspace contains only your files" was
   false whenever a user's own `docs/` or `scripts/` folder shared a name with the kit's — the prompt now
   lists only what actually exists at the workspace root before asking.
