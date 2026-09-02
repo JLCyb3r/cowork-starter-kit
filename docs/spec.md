@@ -12736,3 +12736,89 @@ the first condition. Re-run at the Phase 3 gate; do not assume.
   repaired here.
 - **Any change to `quality.yml`'s or `sync-agency.yml`'s check logic outside the 4 failing checks plus
   the 2 folded-in independents named here.**
+
+---
+
+## Architectural Modifications (v2.19.18 — recorded by @architect at Phase 1, 2026-09-02T17:37:39Z)
+
+**This section records seven changes to what the spec's ACs require, made because the spec's path
+enumeration is incomplete, its predicate self-collides with the wizard's own writes, and one of its
+classification labels cites a table row that does not exist. They are recorded rather than silently
+applied. Full derivations, with the commands re-run this session, are in `docs/design-v2.19.18.md` §0.**
+
+**AM-1 — `AC-COLLIDE-1`'s "9 paths" is raised to a named set, and `context/writing-profile.md` is added.**
+The spec excludes `writing-profile.md` on the grounds that `WIZARD.md:242`'s same-session skip already
+protects it. It does not. `:242` is an *ordering* rule inside Step 3 whose predicate is *"did Q3 already
+generate a personalized profile there"* — it stops the **preset copy** from clobbering a file **this
+session** wrote. The unguarded write is Q3 itself at `WIZARD.md:185`, which generates
+`context/writing-profile.md` on every route through the interview, including the "skip" answer
+(*"On skip, the file still generates with goal-appropriate defaults"*), and does so **before** Step 3
+runs. A brownfield user-authored `context/writing-profile.md` is destroyed at `:185`, and `:242` cannot
+save it because by then its predicate has flipped true *because of the destroying write*. The path
+joins the guarded set.
+
+**AM-2 — the guarded set gains a path class: `.claude/skills/<slug>/SKILL.md`.**
+The spec guards `cowork.install.json` (`:255`) but not one of the `SKILL.md` writes that manifest
+describes. `WIZARD.md:250` copies `skills/<slug>/SKILL.md` into
+`<workspace>/.claude/skills/<slug>/SKILL.md` for every bundle slug, and `:257`, `:259`, `:261`, `:263`
+copy four more **unconditionally** — each phrased *"always installed, independent of the F4 bundle … in
+every workspace (Mode A and Mode B)"*. These are the highest-authority instruction files in a workspace
+and the substance on which this cycle's own SECURITY-SENSITIVE classification rests; guarding
+`about-me.md` while leaving `.claude/skills/self-apply/SKILL.md` unguarded is the wrong way round on
+severity. Slugs are drawn from the kit's fixed 25-slug pool plus four fixed names, so the binding
+constraint is untouched — the vocabulary is kit-controlled, never folder-derived. The `:349`/`:351`
+Fallback bounds the common case but not this one: its predicate is *skills-present*, not
+*path-collides*, and Option 2's backfill at `:361` is conditional (*"if it is missing"*) where `:257`'s
+Step-4 copy is not.
+
+**AM-3 — the predicate is amended from existence to existence AND provenance.**
+`cowork-profile.md` is written at least three times per run: `:134` (stub, *"non-optional"*), `:145`
+(*"Update this file as each later answer arrives"*), `:195` (completion). A predicate of the form
+*"path exists → confirm"* fires on the wizard's own stub at Step 1 and on every intermediate update,
+producing prompts that are not merely surplus but incoherent — *"this file exists, replace it?"* about a
+file the wizard created ninety seconds earlier at the user's instruction. `AC-COLLIDE-1` is re-worded
+to bind a **session write-ledger** with four dispositions (`unseen` / `created-this-run` / `authorized`
+/ `declined`), held in the session transcript on the same channel `self-archive/SKILL.md:62` already
+uses for its reversible-move tuple. No new on-disk state.
+
+**AM-4 — the "Tier B" label is withdrawn; the ceremony conclusion is unchanged.**
+The spec correctly notes `docs/pipeline-policy.md:496-516` has no Tier A row for `WIZARD.md`,
+`examples/**`, or `tests/fixtures/`. Re-read this session, **Tier B's rows do not reach this repository
+either**: they are `.github/workflows/`, `.claude/commands/*.md`, and non-`scope_allow:`/`hooks:`
+agent-contract sections. The honest statement is that The-Council's two-tier ceremony table reaches
+**no file in this cycle**. Ceremony remains branch + PR with no Guard Change Summary — derived from the
+substance classification plus this repo's external-project convention, not from a table row. Recorded
+so Phase 2 does not cite a row that does not exist.
+
+**AM-5 — `AC-COLLIDE-4`'s control must be run with `-i`.**
+`grep -n "overwrit" WIZARD.md` returns **3** lines (`:172`, `:242`, `:366`). The 4th, `:303`, is
+*"**O**verwriting CLAUDE.md requires explicit confirmation"* — capitalised, so it appears only under
+`grep -n -i`. The spec's own control already specifies `-i` and is internally consistent; this is
+recorded because a control stated one flag away from its true value is how a later reader concludes the
+file changed when it did not. The substantive finding is unchanged and unaffected:
+`grep -n -i "overwrit" WIZARD.md | grep -iE 'about-me|working-rules|output-format'` returns **zero**.
+
+**AM-6 — the write surface gains a third promise site and one corrected control.**
+`.claude/skills/setup-wizard/SKILL.md:49` carries the promise verbatim — *"Always ask for explicit
+confirmation before deleting, moving, or overwriting any file or folder"* — in the file that executes
+**first**, before `WIZARD.md`'s Q1 (`:10` Resume guard, `:12` Reset guard). The spec names two promise
+sites and lists this file only as *"a surface to check"*. Separately,
+`tests/self-archive-firing-controls.md:17` states its mechanism as *"**workspace** `.gitignore` excludes
+`context/.archive/`"* while the control it runs at `:20-27` executes `git check-ignore` inside the
+**kit** repo against `.gitignore:20-21`. That control certified archive non-publication for two cycles
+against a different file from the one its own mechanism sentence names — a check that could not fail on
+the property it claimed. It is corrected in the same commit as F3; leaving it would re-teach the belief
+that hid the defect.
+
+**AM-7 — `AC-COLLIDE-3`'s remedy is re-sequenced, because it is not implementable as written.**
+The AC requires every `_setup-kit/` claim to *"render only where that archive actually exists"*. The
+three template claims (`templates/workspace-claude-md-template.md:10`, `:35`, `:39`) are written at
+**7a**, but whether `_setup-kit/` exists is decided at **7b** — which runs *after* 7a, only in Mode A,
+and is declinable (`:308`). 7a cannot know. The dependency is inverted instead: **7a writes the Mode-B
+(no-archive) wording unconditionally, and 7b — on Yes, as the final step of the move — rewrites those
+three lines to the archive wording.** That rewrite targets a file this run created, so the ledger holds
+it `created-this-run` and no prompt fires. Mode B and declined-7b correctly keep the no-archive wording
+with no conditional logic at 7a at all. `WIZARD.md:303`'s own prompt text (*"The setup version stays in
+the archive"*) is false at the moment it is spoken on Mode B and is rewritten to name
+`context/.archive/`, the destination F2 actually creates. `README.md:50` is static documentation and
+gets a plain rewrite describing the archive step as offered, not done.
