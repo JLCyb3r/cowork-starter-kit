@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml/badge.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/actions/workflows/quality.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.19.16-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.19.18-green.svg)](https://github.com/jmlozano1990/Cowork-Starter-Kit/blob/main/CHANGELOG.md)
 [![GitHub stars](https://img.shields.io/github/stars/jmlozano1990/Cowork-Starter-Kit?style=social)](https://github.com/jmlozano1990/Cowork-Starter-Kit)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -47,7 +47,7 @@ Two routes. Pick either.
 2. Open `examples/<name>/project-instructions-starter.txt` and copy the whole file
 3. Paste it into Project Settings > Custom Instructions, then start talking
 
-**Setup ends with a clean handover.** When the wizard finishes, it replaces `CLAUDE.md` with your personalized workspace instructions and archives the entire installer into `_setup-kit/` (moved, never deleted) — your project folder contains your files, not setup machinery.
+**Setup ends with a clean handover.** When the wizard finishes, it replaces `CLAUDE.md` with your personalized workspace instructions, preserving a byte-identical copy of what it replaces in `context/.archive/`. If you unzipped the kit directly into your project folder, it also offers to move the entire installer into `_setup-kit/` (moved, never deleted, and only on your yes) — so your project folder ends up containing your files, not setup machinery.
 
 **Setup works fully offline.** Everything the wizard installs ships inside the ZIP — skills are copied from the local `skills/` folder, never downloaded. If Claude mentions it can't reach github.com or the internet during setup, that's normal and blocks nothing (see the troubleshooting section in `SETUP-CHECKLIST.md`). Web access is only needed for optional web research features, never for setup.
 

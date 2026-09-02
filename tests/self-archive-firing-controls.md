@@ -14,9 +14,18 @@ or `skills/self-archive/SKILL.md`.
 
 ## 1. Archive non-publication (S1 reframe of C-v2.17-8 + S2 apply-backups gap)
 
-**Mechanism:** workspace `.gitignore` excludes `context/.archive/` and
-`context/.apply-backups/`; `.gitattributes export-ignore` covers both
-(belt-and-suspenders, since `context/` itself is not export-ignored — v2.15 S3).
+**Mechanism (corrected v2.19.18 — design-v2.19.18.md §0.7):** the control below
+validates **this kit repository's own** `.gitignore` and `.gitattributes
+export-ignore`, both excluding `context/.archive/` and `context/.apply-backups/` —
+it is a release-hygiene control on this repo, never a check of any user
+**workspace's** `.gitignore`. The two are different files with different owners: a
+generated workspace has no `.gitignore` of its own until v2.19.18's F3 (WIZARD.md 7a)
+creates or appends it, and that workspace-side protection is validated separately in
+`tests/collision-safety-firing-controls.md`. This mechanism line stated "workspace
+`.gitignore`" for two prior cycles while the control beneath it exercised the kit's
+own — a check that could not fail on the property it named. Left uncorrected, a
+future reader would re-inherit exactly the belief that hid the gap F3 closes; see
+`design-v2.19.18.md` §0.7 for the full derivation.
 
 ```bash
 # GREEN — with both guard clauses present

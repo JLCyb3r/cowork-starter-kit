@@ -19,6 +19,61 @@ silently discoverable only by diffing tags against sections.
 
 ---
 
+## [2.19.18] - 2026-09-02
+
+**"The Promise It Already Made."** `WIZARD.md`, the workspace `CLAUDE.md` template, and
+`.claude/skills/setup-wizard/SKILL.md` all tell every user, verbatim: "Cowork always asks before
+deleting, moving, or overwriting any file or folder." Re-derived against the real files this cycle,
+that sentence was false at ten-plus paths in a brownfield folder — a folder that already has the
+user's own `cowork-profile.md`, `CLAUDE.md`, or installed skills before the wizard ever runs. This
+cycle makes the sentence true.
+
+- **A named Collision Rule, not ten scattered checks.** A new non-overridable section in `WIZARD.md`
+  defines a fixed, kit-authored guarded-path set (10 single paths plus every
+  `.claude/skills/<slug>/SKILL.md` in the confirmed bundle ∩ the kit's fixed pool), held against a
+  session write-ledger with five dispositions (`unseen` / `created-this-run` / `authorized` /
+  `declined` / `disclosed-not-granted`). The backstop — ask before overwriting an `unseen`, already-
+  present guarded path — is the invariant; a route-scoped pre-flight survey right after the bundle is
+  confirmed is the optimization on top of it, never a replacement for it. `context/writing-profile.md`
+  joins the guarded set (Q3 overwrote it unconditionally, on every route, before this cycle).
+- **`CLAUDE.md` preservation, at zero new prompt cost.** 7a's existing overwrite confirmation now sits
+  above a copy-verify-overwrite ordering, reusing `self-archive/SKILL.md`'s destination-collision
+  refusal and byte-identity verify: a preserved, byte-identical copy lands in `context/.archive/`
+  *before* the personalized file is written, and only after the copy verifies. The confirmation itself
+  is exempt from the ledger and always fires — closing a route (`skill-studio` in Mode B) that could
+  otherwise have suppressed it.
+- **The workspace's own `.gitignore` now actually protects its own archive.** A two-line, idempotent
+  append (`context/.archive/`, `context/.apply-backups/`) runs before any archive write, with explicit
+  failure branches: a write failure or read-only file aborts the handover rather than failing silently;
+  a symlinked `.gitignore` is refused outright rather than followed outside the workspace.
+- **The four mandatory safety skills stay unconditional, disclosed but never declinable.** Guarding
+  them would have made a trusted-installer gate declinable; instead their Step 4 copies (and the
+  Fallback's backfill copies) gain the registry-`sha256` byte-verify the kit already claims for this
+  class of write, closing an asymmetry where only two of the four were actually checked.
+- **The `working-rules.md` qualifier (F4).** When the ledger records a `declined` guarded path, a
+  one-sentence qualifier is inserted into `context/working-rules.md` as the final step of the handover
+  — three-valued (qualifier / silence / an explicit uncertainty sentence if the ledger was lost), so
+  silence never reads as a false "nothing was kept."
+- **Three false claims about `_setup-kit/` corrected.** The workspace `CLAUDE.md` template, the
+  closing message, and `README.md` no longer assert an archive that may not exist — the dependency is
+  inverted so the wording is written correctly the first time (Mode B / declined 7b) or rewritten once
+  the real outcome is known (accepted 7b), never asserted ahead of the fact.
+- **`WIZARD.md:308`'s move-list claim is corrected.** "So your workspace contains only your files" was
+  false whenever a user's own `docs/` or `scripts/` folder shared a name with the kit's — the prompt now
+  lists only what actually exists at the workspace root before asking.
+- **A two-cycle-old false test control is corrected in the same commit.**
+  `tests/self-archive-firing-controls.md`'s mechanism line claimed to validate the **workspace**
+  `.gitignore`; the control beneath it validated the **kit's own**. Left standing, it would have
+  re-taught the exact belief that hid this cycle's F3 gap.
+- **Three new synthetic brownfield fixtures** (`tests/fixtures/brownfield/{mode-a,mode-b,stale-skills}/`)
+  and `tests/collision-safety-firing-controls.md`, run for real — pre-fix RED, post-fix GREEN — against
+  each, following this repo's manual firing-control discipline (`WIZARD.md` is LLM-executed prose with
+  no CI runtime to check it against).
+- Named residual, not fixed here: `.claude/skills/` folder names are still echoed into model context
+  when an existing installed-skills workspace is detected (`CF-v2.19.18-STALEECHO`) — pre-existing, now
+  reachable via a real fixture for the first time, and covered by the Collision Rule's own
+  hop-scoped wording so a collision confirmation can't be overridden by content already in context.
+
 ## [2.19.16] - 2026-08-31
 
 **"The Sync That Can't Land."** `v2.19.15` wired real CI onto the monthly upstream sync (`PR #125`)

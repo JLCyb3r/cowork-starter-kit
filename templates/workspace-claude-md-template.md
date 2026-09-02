@@ -2,12 +2,14 @@
 
 This is the template for the **workspace** `CLAUDE.md` that WIZARD.md Step 7 generates when setup completes. It REPLACES the kit's wizard-bootstrap `CLAUDE.md` in the user's workspace (with explicit confirmation — Safety rule). Fill every `[bracket]` from the interview answers; keep the generated file under 350 words; do not use em dashes (they inflate the CI word count under C.UTF-8).
 
+**Mode-B-first wording (design-v2.19.18.md §C.4).** 7a runs before 7b decides whether `_setup-kit/` will ever exist — 7b is Mode-A-only and declinable — so 7a cannot know yet. The three lines below are therefore filled with the **no-archive** wording unconditionally, every time. If 7b later runs and the user says Yes, 7b's own final step rewrites these same three lines, in this already-written file, to the archive wording — a `created-this-run` edit that never re-prompts. On Mode B, or a declined 7b, these lines are simply correct as filled and are never touched again.
+
 ---
 
 ```markdown
 # [WORKSPACE NAME] — Cowork Workspace
 
-Setup is complete. This file is your workspace's standing instructions; the setup kit is archived in `_setup-kit/`.
+Setup is complete. This file is your workspace's standing instructions.
 
 ## Who you're working with
 
@@ -32,11 +34,11 @@ When a correction or ask repeats, note it in `context/memory-of-use.md` (create 
 
 ## Skill swap
 
-If [NAME] asks for a capability outside the installed bundle, offer the closest match from the archived pool at `_setup-kit/skills/` (25 skills; suggestions ≤3 at a time) and copy it into `.claude/skills/` on confirmation. The reviewed upstream agent library at `_setup-kit/vendored/agency-agents/` is available to read and adapt offline. These personas are illustrative fiction, not licensed professionals; verify any finance or legal guidance independently before acting on it. Never fetch skills from GitHub or external URLs.
+If [NAME] asks for a capability outside the installed bundle, offer the closest match from the pool at `skills/` (25 skills; suggestions ≤3 at a time) and copy it into `.claude/skills/` on confirmation. The reviewed upstream agent library at `vendored/agency-agents/` is available to read and adapt offline. These personas are illustrative fiction, not licensed professionals; verify any finance or legal guidance independently before acting on it. Never fetch skills from GitHub or external URLs.
 
 ## Re-run or extend setup
 
-Type `/setup-wizard` anytime — the script is archived at `_setup-kit/WIZARD.md` and detects this existing workspace (add/remove skills without resetting).
+Type `/setup-wizard` anytime — the script is at `WIZARD.md` and detects this existing workspace (add/remove skills without resetting).
 
 ## Offline
 
