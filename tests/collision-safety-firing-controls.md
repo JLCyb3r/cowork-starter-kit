@@ -258,25 +258,38 @@ $ grep -c "_setup-kit" templates/workspace-claude-md-template.md
       corrected the same way (archive described as offered, not done), and the Closing
       message's opening clause is now conditioned on whether 7b actually ran.
 
-## AC-QUALIFIER-1 — F4's three-valued `working-rules.md` qualifier (structural, mode-b re-run shape)
+## AC-QUALIFIER-1 — F4's two-valued `working-rules.md` qualifier (structural, mode-b re-run shape)
+
+**Revised at Phase 5.** The original control here asserted a three-valued write (qualifier /
+silence / an "uncertainty sentence" on ledger loss) as GREEN. @qa rejected that shape:
+searching the Collision Rule and this end-of-7a text for an instruction telling the
+executing model how to distinguish "ledger present, holds no declines" from "ledger absent
+or incomplete" turns up nothing — no completeness check against the survey's earlier
+enumeration, no sentinel, no test. A control asserting that branch as GREEN was a control
+that could not fail on the property it claimed (the exact `§0.7` pattern this cycle exists
+to catch) — it is removed rather than left standing, per the coordinator's Phase 5 ruling.
 
 ```
 $ grep -n "F4 qualifier" WIZARD.md
    297: F4 qualifier note: write this file now with NO qualifying sentence...
-   383: F4 qualifier -- the final step of 7a, after CLAUDE.md is written above...
-$ sed -n '383,387p' WIZARD.md
-   - Ledger present and holds one or more `declined` entries -> insert one sentence naming the kept files...
-   - Ledger present and holds no declines -> insert nothing; absence is accurate here.
-   - Ledger lost or incomplete (e.g., a compaction) -> insert one sentence stating that setup could not
-     confirm which files were kept... Never silence under uncertainty...
+   383: F4 qualifier -- the final step of 7a, after CLAUDE.md is written above... Two-valued
+        (Phase 5 rework -- CF-v2.19.18-QUALSILENCE):
+$ sed -n '383,385p' WIZARD.md
+   - Ledger holds one or more `declined` entries -> insert one sentence naming the kept files...
+   - Otherwise (no declines recorded -- including if the ledger itself was lost, e.g. to a
+     compaction) -> insert nothing. There is no third branch...
 ```
 
-- [x] **RAN 2026-09-02.** Confirmed structurally: all three values are present
-      (qualifier / silence / uncertainty sentence), Step 3's write is unconditioned (no
-      premature qualifier), and the rewrite is scoped as a `section-insert` on a
-      `created-this-run` file — matching §C.5's amended design exactly, including the
-      OQ-2 point-1 ordering fix (the qualifier can no longer be written before the ledger
-      knows what was declined) and point-2 fix (silence never fires under ledger loss).
+- [x] **RAN 2026-09-02 (revised).** Confirmed structurally: exactly two values are present
+      (qualifier / silence), the third branch's removal is documented in-line with its own
+      reasoning (no detection mechanism for its trigger condition), Step 3's write is still
+      unconditioned (no premature qualifier), and the rewrite is still scoped as a
+      `section-insert` on a `created-this-run` file. **No control exercises "ledger
+      lost/incomplete" as a distinct case, because the design no longer claims one exists** —
+      under ledger loss this write now takes the same `otherwise -> insert nothing` path as a
+      genuinely-empty ledger, which is the correct, honestly-bounded behavior (`CF-v2.19.18-
+      QUALSILENCE`: no worse than the pre-v2.19.18 baseline, never better under loss, and
+      never asserting a distinction the rule cannot make).
 
 ## F5 / stale-skills — `CF-v2.19.18-STALEECHO` reachability (named residual, not fixed)
 
@@ -323,6 +336,10 @@ from.
   is not itself proof the ledger persists.
 - **`CF-v2.19.18-STALEECHO` (MEDIUM).** Named above, not fixed — pre-existing, out of this
   cycle's binding constraint.
+- **`CF-v2.19.18-QUALSILENCE` (MEDIUM, added Phase 5).** Under ledger loss, F4's qualifier is
+  silently absent — indistinguishable from "nothing was declined," identical to the
+  pre-v2.19.18 baseline. Not closed by the two-valued rework above; closing it for real needs
+  a durable (non-transcript) record of declines, which is a design question for a later rung.
 
 ## Scope note
 

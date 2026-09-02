@@ -18453,6 +18453,25 @@ surveyed line carries a fixed kit-authored descriptor of what replaces it.
   objection is answered by making the write **three-valued** — qualifier / silence / *uncertainty
   sentence* — so silence is emitted only when a live ledger records no declines. Both positions go to
   the Phase 3 gate.
+
+  > **[CORRECTED at Phase 5 — @qa REJECTED the three-valued write, and correctly.]** @qa searched the
+  > Collision Rule and the end-of-7a qualifier text for an instruction telling the executing model how
+  > to distinguish "ledger present, holds no declines" from "ledger absent or incomplete," and found
+  > none — no completeness check against the survey's earlier enumeration, no sentinel, no test. The
+  > three-valued form's branch (c) was keyed on a condition the rule gave the model no way to detect: to
+  > a model at end of run, "zero declines" and "lost the record of what was declined" are
+  > observationally identical. Checked and confirmed rather than assumed: no anchor independent of the
+  > ledger exists to make the distinction — the survey's rendered list lives in the same conversational
+  > channel and would most likely be lost together with the ledger, and a durable (disk-written or
+  > freshly-asked) anchor would require reopening F1 or adding a new prompt, neither authorized by this
+  > rework. **The write is now two-valued: qualifier (ledger holds one or more `declined` entries) /
+  > silence (otherwise, including on ledger loss).** Silence under ledger loss is accepted, not solved —
+  > it is bounded at "no worse than today's unqualified `working-rules.md`," never worse. Carried
+  > forward as `CF-v2.19.18-QUALSILENCE` (MEDIUM, `docs/design-v2.19.18.md` §G): closing it for real
+  > needs a durable record of declines, a design question for a later rung. @security's OQ-2 dissent
+  > identified this exact mechanism gap before F4 was built; the owner shipped the two-valued form with
+  > the limitation named rather than defer F4 a second time.
+
 - Two owner decisions remain open and are **not** resolved by this ADR: OQ-1's Option B (tighten
   `:310`'s directory-move detector) and OQ-2 (ship the `working-rules.md` qualifier now, or defer). Both are framed as buildable options with costs in
   `docs/design-v2.19.18.md` §F. The default posture on an undecided OQ-2 is **deferred**, and F4 must

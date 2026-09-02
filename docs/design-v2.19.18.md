@@ -890,6 +890,50 @@ configuration the workspace does not have.
 > uncertainty. This is the amendment that makes F4 shippable; without it, @security's point 2 stands
 > and F4 should be deferred.
 
+> **[AMENDED Phase 5 — @qa REJECTED branch (c), and the rejection is correct. Withdrawn, not
+> defended.]** @qa searched the Collision Rule (`WIZARD.md`'s ledger definition and dispositions) and
+> the end-of-7a qualifier text for an instruction telling the executing model how to distinguish "ledger
+> present, holds no declines" from "ledger absent or incomplete" — and found none. No completeness
+> check against the survey's earlier enumeration, no sentinel, no test anywhere in this rule. The
+> branch-(c) trigger text above (*"ledger absent or incomplete"*) names a condition with no detection
+> mechanism: to a model at end of run, "I recall zero declines" and "I've lost the record of what I
+> declined" are observationally identical — both present as an empty ledger. A branch keyed on a
+> condition it cannot detect can never correctly fire, which makes it indistinguishable from dead code
+> dressed as a safety branch.
+>
+> **Checked, not assumed: is there an anchor independent of the ledger that could make branch (c)
+> detectable?** No. The only two candidates both fail: (1) reconciling against the survey's earlier
+> rendered list doesn't work, because the ledger and the survey list live in the same conversational
+> channel — a session that loses one very plausibly loses the other, so the reconciliation would be
+> checking one lost thing against another, not an independent check. (2) A genuinely durable anchor (a
+> disk-written sentinel, or a fresh question to the user at end of run) would require either a new F1
+> mechanism (out of scope — F1 is not reopened by this rework) or a new prompt (changing F4's cost model
+> the owner did not approve). Neither is a same-cycle fix.
+>
+> **Resolution: branch (c) is deleted. The write is two-valued.** (a) Ledger holds one or more `declined`
+> entries ⇒ write the naming qualifier. (b) Otherwise — no declines recorded, **including if the ledger
+> itself was lost** ⇒ write nothing. **Silence under ledger loss is accepted, not solved.** The
+> trade this makes explicit: today (pre-v2.19.18), `context/working-rules.md` carries its rule
+> unqualified on every setup, unconditionally. Under two-valued F4, a live ledger makes the qualifier
+> strictly better than today; a lost ledger makes it identical to today. The failure mode is bounded at
+> "no better than today," never "worse than today" — which is the property that makes shipping the
+> two-valued form defensible where the undetectable three-valued form was not. Keeping branch (c) as a
+> documented limitation, rather than deleting it, was considered and rejected: a branch whose own
+> stated trigger it cannot detect is the same *stated-scope-drifted-from-what-it-does* defect this
+> cycle has now independently caught four times (`tests/self-archive-firing-controls.md:17`,
+> `WIZARD.md:361`, `skill-studio/SKILL.md:122`, and @dev's own pre-commit self-catch of its Collision
+> Rule's stale internal line citations) — shipping a fifth instance inside this cycle's own design
+> record was not acceptable.
+>
+> **Named residual, carried forward as `CF-v2.19.18-QUALSILENCE` (MEDIUM), not closed here.** Under
+> ledger loss, the qualifier is silently absent — indistinguishable from "nothing was declined," and
+> identical to the pre-v2.19.18 baseline output. Closing this for real requires a **durable** record of
+> declines (something outside the session transcript, e.g. a disk-written marker), not a wording fix —
+> a design question for a later rung. @security's OQ-2 dissent identified this exact mechanism gap
+> before F4 was ever built (*"'it fails into an honest sentence' is a design claim, not a
+> measurement"*); the owner's ruling on this rework is to ship the two-valued qualifier with the
+> limitation named rather than defer F4 a second time.
+
 **Clean cut if OQ-2 defers:** delete this subsection and `AC-QUALIFIER-1`; remove the ledger's
 `declined`-consumer clause from the Collision Rule. **F1/F2/F3 are unaffected** — the `declined`
 disposition is still needed by F1 itself (to skip the write), so nothing else unravels. That is what
@@ -942,7 +986,7 @@ discovered by the fixture. Named here, not designed here.
 
 | # | File | Change | Feature |
 |---|---|---|---|
-| 1 | `WIZARD.md` | Insert `## Collision Rule (runtime, non-overridable)` after `:29`, before `## Wizard Instructions`. Add one-line guarded-path pointers at `:134`, `:145`, `:185`, `:195`, `:226`, `:239`, `:240`, `:241`, `:242`, `:250`, `:255`, `:257`, `:259`, `:261`, `:263`, `:273`, `:274`, `:282`, `:361`, `:362`, `:363`, `:364`. Rewrite `:303`'s prompt (archive destination + `.gitignore` clause). Add the F2 copy-verify-overwrite ordering at 7a. Add F3's `.gitignore` step ahead of it. Add 7b's template-line rewrite step. **[Phase 1.R additions]** Carry `:17`'s operative clause into the Collision Rule, worded against the hop (S6). Make `:303`'s confirmation **unconditional and ledger-exempt** (S1). Add the registry-`sha256` byte-verify to `:257`/`:259`/`:261`/`:263` (S2). Add F3's failure branches incl. the symlink refusal (S9). Add F2's destination-collision refusal (S8). Rewrite `:308` to drop *"so your workspace contains only your files"* and enumerate the fixed move list **intersected with what is present at root** (OQ-1 amendment). Route-scope the survey and make it fire on Option 2 (S11a) — this **replaces** the `:355` bespoke scope-carrying change, which is withdrawn. Resolve `:242`-vs-`authorized` precedence in the Collision Rule text (S11b). Move F4's qualifier to an end-of-7a `section-insert` re-write, three-valued (OQ-2 pt 1) | F1, F2, F3, C.4, B.4, §H |
+| 1 | `WIZARD.md` | Insert `## Collision Rule (runtime, non-overridable)` after `:29`, before `## Wizard Instructions`. Add one-line guarded-path pointers at `:134`, `:145`, `:185`, `:195`, `:226`, `:239`, `:240`, `:241`, `:242`, `:250`, `:255`, `:257`, `:259`, `:261`, `:263`, `:273`, `:274`, `:282`, `:361`, `:362`, `:363`, `:364`. Rewrite `:303`'s prompt (archive destination + `.gitignore` clause). Add the F2 copy-verify-overwrite ordering at 7a. Add F3's `.gitignore` step ahead of it. Add 7b's template-line rewrite step. **[Phase 1.R additions]** Carry `:17`'s operative clause into the Collision Rule, worded against the hop (S6). Make `:303`'s confirmation **unconditional and ledger-exempt** (S1). Add the registry-`sha256` byte-verify to `:257`/`:259`/`:261`/`:263` (S2). Add F3's failure branches incl. the symlink refusal (S9). Add F2's destination-collision refusal (S8). Rewrite `:308` to drop *"so your workspace contains only your files"* and enumerate the fixed move list **intersected with what is present at root** (OQ-1 amendment). Route-scope the survey and make it fire on Option 2 (S11a) — this **replaces** the `:355` bespoke scope-carrying change, which is withdrawn. Resolve `:242`-vs-`authorized` precedence in the Collision Rule text (S11b). Move F4's qualifier to an end-of-7a `section-insert` re-write, three-valued (OQ-2 pt 1) — **[Phase 5: reduced to two-valued (qualifier / silence); the third branch had no detection mechanism and was withdrawn — see §C.5's Phase 5 amendment and `CF-v2.19.18-QUALSILENCE`]** | F1, F2, F3, C.4, B.4, §H |
 | 2 | `.claude/skills/setup-wizard/SKILL.md` | Entry-route seeding pointers at `:10` (Resume) and `:12` (Reset/Option 3) referencing the Collision Rule; make `:12`'s reset text name what it replaces. `:49`'s promise line left verbatim (it is now true) | F1, §0.6 |
 | 3 | `templates/workspace-claude-md-template.md` | `:10`, `:35`, `:39` → Mode-B (no-archive) wording as written by 7a; note that 7b rewrites them on Yes | C.4 |
 | 4 | `README.md` | `:50` → archive described as offered, not done | C.4 |
@@ -1222,6 +1266,17 @@ owner to accept a mechanism whose durability neither of us can test from this re
 If the owner weights unproven-mechanism risk above always-wrong-today, **defer is a defensible call and
 §C.5 remains a one-deletion cut.**
 
+> **[Superseded at Phase 5 — read with §C.5's own amendment, not in place of it.]** The "closed by
+> construction" claim above (*"the only way to emit silence is to have a live ledger that records no
+> declines"*) turned out to be false as *implemented*: @qa found no instruction anywhere in the
+> Collision Rule that lets the executing model tell "ledger present, no declines" apart from "ledger
+> lost." The three-valued mechanism this whole exchange debated the *durability risk* of was never
+> actually buildable — the risk that materialized was not the one either side was arguing about. §C.5
+> now ships the two-valued form (qualifier / silence). @architect's underlying point — that deferring
+> F4 keeps today's unqualified `working-rules.md` unconditionally wrong, while shipping it is wrong only
+> under ledger loss — still holds under two-valued, and is in fact why two-valued was chosen over
+> deferring a second time. See §C.5 and `CF-v2.19.18-QUALSILENCE` for the full correction.
+
 ---
 
 ## §H — Phase 1.R amendments (@security BLOCK: 2 CRITICAL, 11 WARNING)
@@ -1393,6 +1448,7 @@ reservation.
 | `CF-v2.19.18-SLUGGATE` | **Added Phase 1.R (§H.3).** `skill-studio/SKILL.md:122` labels its slug charset gate *"run before the slug is used anywhere"*, but step 5 already uses the slug as a path component at `:61` and `:64`, before step 8. The gate's stated scope has drifted from what it does — the §0.7 pattern, third instance. **Not created here and not fixed here**; the design deliberately does not lean on the gate (§H.3) | MEDIUM |
 | `CF-v2.19.18-STUDIOSLUG` | **Added Phase 1.R (§D).** `WIZARD.md:99` appends a `skill-studio` slug to the F4 bundle, but Step 4's loop (`:249`–`:250`) has no branch for a slug with no registry row and no pool file — so `:255` would record `installed_registry_version` / `installed_content_sha256` from a row that does not exist. Pre-existing; adjacent to S3 and named so Phase 4 does not paper over it | MEDIUM |
 | `CF-v2.19.18-361ASYM` | **Added Phase 1.R (§H.2).** `WIZARD.md:361` closes by asserting *"both paths byte-verify against the registry `sha256`"*, but its `self-apply` and `self-archive` backfills carry no byte-verify clause. This cycle closes the **Step-4** half by adding the verify to `:257`–`:263`; whether `:361`'s own two unverified backfills are corrected in the same edit is a Phase-4 judgement, flagged here so it is a decision rather than an oversight | MEDIUM |
+| `CF-v2.19.18-QUALSILENCE` | **Added Phase 5 (@qa finding; §C.5 amended in the same pass).** F4's end-of-7a `working-rules.md` qualifier is **two-valued**, not three: branch (c) (*"ledger absent or incomplete ⇒ write an uncertainty sentence"*) was withdrawn because nothing in the Collision Rule lets the executing model tell a genuinely-empty ledger apart from a lost one — the branch's own trigger condition was undetectable. Under ledger loss, the qualifier is now silently absent, indistinguishable from "nothing was declined" and identical to the pre-v2.19.18 baseline (never worse than today, per §C.5's amendment). Closing this for real needs a **durable** (non-transcript) record of declines — a design question for a later rung, not a wording fix. @security's OQ-2 dissent named this mechanism gap before F4 was built; the owner shipped the two-valued form with the limitation named | MEDIUM |
 
 ---
 

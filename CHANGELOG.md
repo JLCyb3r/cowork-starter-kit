@@ -52,8 +52,11 @@ cycle makes the sentence true.
   class of write, closing an asymmetry where only two of the four were actually checked.
 - **The `working-rules.md` qualifier (F4).** When the ledger records a `declined` guarded path, a
   one-sentence qualifier is inserted into `context/working-rules.md` as the final step of the handover
-  — three-valued (qualifier / silence / an explicit uncertainty sentence if the ledger was lost), so
-  silence never reads as a false "nothing was kept."
+  — two-valued (qualifier, or silence otherwise, including on ledger loss). A third "uncertainty
+  sentence on ledger loss" branch was cut in Phase 5 rework: nothing in the ledger lets the wizard tell
+  a genuinely-empty ledger apart from a lost one, so that branch could never actually detect its own
+  trigger. Silence under ledger loss is therefore accepted rather than solved — no worse than this
+  file's unqualified pre-v2.19.18 wording, never worse (`CF-v2.19.18-QUALSILENCE`, carried forward).
 - **Three false claims about `_setup-kit/` corrected.** The workspace `CLAUDE.md` template, the
   closing message, and `README.md` no longer assert an archive that may not exist — the dependency is
   inverted so the wording is written correctly the first time (Mode B / declined 7b) or rewritten once
