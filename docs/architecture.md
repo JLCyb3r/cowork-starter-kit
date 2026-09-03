@@ -122,6 +122,7 @@ Claude Cowork Config is a static template repository that provides a goal-driven
 | ADR-099 | **A gate switched on before its blind spot is closed certifies the one PR class it cannot see** (v2.19.15, **Tier A**) — the buildable design for arming `main`'s first enforced merge gate. **D1:** the CI-trigger fix is a `workflow_dispatch` self-chain (`quality.yml` gains the trigger; `sync-agency.yml`'s `sync-upstream` job gains `actions: write` + `id: cpr` and dispatches against the sync branch) — **no new secret**, per `AC-CIGATE-2`. The crux (does a ref-associated dispatched run produce check-runs the gate can see?) was **proven live in this repo, not assumed**: dispatched run `32422621025`'s `check_suite_id 87897158492` appears in `commits/ef89dedee308/check-runs` under its **bare job name**, which is also what confirms contexts are the 35 `name:` values verbatim. **D1.2 is the cycle's central finding:** the naive form is *a check that cannot fail* — `quality.yml`'s 3 job-level `if: github.event_name == 'pull_request'` guards (`:1948`/`:2164`/`:2368`) are `sync-agency-dry-run`, `lock-content-sha-cross-check` and `vendored-removal-ledger`, i.e. **exactly the supply-chain checks**, and they would report `skipped` (which *satisfies* a required check) on **exactly the bot sync PRs that change supply-chain content**, silently withholding the blocking behaviour **ADR-080 §Consequences** promises the moment required checks are enabled. Ruled to `if: github.event_name != 'push'` **on failure-mode grounds** — the input-gated alternative can go vacuous silently, this form cannot. **D2:** require **all 35** (@pm upheld and re-derived; `continue-on-error` → **0**, no job `needs:`, **0** name collisions with the other 3 workflows under a *firing* negative control); the third-event question resolves on **check-runs being SHA-bound** — cross-SHA staleness is structurally impossible and the design deliberately does **not** rely on GitHub's duplicate-name tie-break. **D3:** `enforce_admins` stays `true`, now safe *by construction* rather than by assertion. **D4:** the "approval-required" doc discrepancy is **resolved, not bounded** — `#27`/`#31` are `head.repo == base.repo` (same-repo, not forks), so the fork-approval path is structurally unreachable; both are also `merged: true`, making the `v2.19.5-CODEOWNERS-1` exposure realised rather than hypothetical, and `can_approve_pull_request_reviews: true` is flagged to @security. **D5:** in-place Status-cell correction of OT-7 and `v2.19.5-CODEOWNERS-1` on the **ADR-093 precedent already present in the register itself**, plus a **third living source found this session and named in no prior list** — `.github/CODEOWNERS:41-46`. **D1.4 corrects the spec's own ordering:** `workflow_dispatch` must exist on the default branch first, so `AC-CIGATE-1` cannot be verified until after merge — Phase 3 grants *authorization*, the toggle executes **post-merge**. `Reusability: candidate-constituent` | **PROPOSED (v2.19.15 Phase 1, 2026-08-29T18:41:34Z — ACCEPTED only at the Phase 3 owner gate; Tier A, Guard Change Summary owed alongside the PR) — **AMENDED at Phase 1 rework `1.R1`, 2026-08-29T19:23:01Z, after @security returned FAIL (3 CRITICAL). D2's central disclaimer is FALSIFIED (three names carry `success` + `skipped` on one SHA at `14b41dc`); D1.2's `!= 'push'` ruling is WITHDRAWN and superseded; D1.5's Fixture B criterion is TIGHTENED from 'not skipped' to `success`; D1.2's coverage map and D1.3's fail-open framing are CORRECTED; §Maturation Path option (a) is WITHDRAWN as a deferral and folded in. Read the Amendment record at the end of this file before citing any D1/D2 text.** **AMENDED AGAIN at rework `1.R2`, 2026-08-29T19:40:50Z: D2's DERIVATION METHOD is FALSIFIED — "the 35 `name:` values verbatim" MUST NOT be followed. `quality.yml:1910`'s unquoted ` #15)` is eaten as a YAML comment, so the live context is `Verbatim Attribution Rule Check (ADR-024 /`; using the YAML string would block every PR permanently under `enforce_admins: true`. Contexts are derived ONLY from `check-runs --jq '.check_runs[].name'`. A1's second clause is NARROWED and now depends on A8; `strict: true` added. See Amendment record 2.** |
 | ADR-024 (amendment v2.19.16) | D1(c) implementation record: the per-file `Content SHA-256:` field replaces the global `Pinned commit:` field in the ADR-024 six-field attribution block, and `Full license:` points at the vendored, hash-verified LICENSE instead of a pin-scoped URL — so a vendored file's stamp changes only when its own content changes. `quality.yml`'s `attribution-survives-render` job gains a real-corpus assertion (S6 remedy) tolerant of the pre/post-migration field-name transition via alternation. | ACCEPTED |
 | ADR-100 | **A constant pinned to one lock state cannot be green on two, and a fixture pinned ahead of a moving pin is guaranteed to be caught** (v2.19.16, **Tier A**) — the buildable design for the four red checks on sync PR #125 plus two folded-in independents. **The cycle's central finding is in no prior document:** v2.19.16 causes CI to run on **two** different `cowork.lock.json` states (its own PR at 108 entries @ `783f6a72`, and any PR-#125-shaped commit at 150 @ `3c958888`), and **three** of its assertions read that state with two hardcoded to one value — so `108 ≠ 150` and no `RATCHET_SHA` is valid on both. **D1 amends `AC-VENDOR-1`:** `vendored-integrity-check` is a **three-step** job whose third step (`quality.yml:2343-2375`) pins `LOCK_COUNT`/`DISK_COUNT` to **108**; it has never been reached because step 1 aborts the job, so the AC as written is fully satisfiable **while the check it names stays red**. Replaced by `LOCK_COUNT == DISK_COUNT` + an upward-ratcheting floor, with `AC-B5-4`'s per-path assertions — which the step's own comment identifies as what actually survives a count bump — untouched, and the re-introduction hazard checked first (both v2.19.7 removals **ABSENT** at 150; firing control present at index 2). **D2 amends `AC-RATCHET-1`:** "select a new, earlier `RATCHET_SHA`" is **unsatisfiable** with the path set held fixed, and the spec's own candidate `783f6a72…` is `main`'s pin, so adopting it would collide on the very PR carrying the fix — v2.19.15's lockout shape again. Selected and verified two-sided: `RATCHET_SHA=0e22704e…` with `RATCHET_PATHS` = `marketing-content-creator` + `design-ui-designer` + `engineering-backend-architect`, all three HTTP 200 at that SHA, all three differing from **both** locks, all three present in both. The previous pin rotted because it was set **ahead** of a monotonically advancing lock; an **ancient** pin makes rot conditional on an upstream byte-exact revert rather than on time. Upstream HEAD **is** the lock's pin today (`compare` → `identical`), so there is zero headroom ahead — the original fixture direction is not merely stale, it is unavailable. **D3 falsifies the D1(c) blocker:** the round-trip strip is anchored on the END-marker line, not the header's byte layout — a copy with a mutated header interior yields a **byte-identical** stripped hash, so redesigning the attribution block is an ADR-024 amendment and a compliance question, never a hashing problem. **D4:** `blocked_files[]` with `permanent: false` and a reason naming the decision is honest, not a mislabel — declining to onboard 12 unreviewed third-party documents two days before a cron fires *is* a decision; **no `blocked_patterns` entries**, since a basename block would sabotage the follow-up cycle that onboards `security/`. **D5:** the disk→lock prune `vendor-agency.sh` structurally lacks becomes its own script with a zero-lock **refusal**, and belongs inside the sync job under D1(b)/(c) — which is a remedy-level coupling between Items 1 and 2 that the spec's "execution-independent" finding does not capture. **H1 is proven by set arithmetic, not left as a hypothesis:** the disk path-set and `main`'s lock path-set are the *same set*, so the orphan set and the removal set are identical by construction. `Reusability: candidate-constituent` | **PROPOSED (v2.19.16 Phase 1, 2026-08-30T18:13:40Z — ACCEPTED only at the Phase 3 owner gate; Tier A, Guard Change Summary owed alongside the PR, extended to cover `scripts/vendor-prune.sh`)** |
+| ADR-101 | **A promise the product prints in the user's own workspace is a specification, and the predicate that keeps it needs a provenance term** (v2.19.18) — the buildable design for making `WIZARD.md:172`'s verbatim promise (*"Cowork always asks before deleting, moving, or overwriting any file or folder"*) true. Adopts the spec's per-path collision predicate over a folder classifier, and **corrects it in three structural places found only by opening the files.** **(1)** `context/writing-profile.md` is unguarded: the spec excludes it because `:242` "already protects it", but `:242` is an *ordering* rule inside Step 3 whose predicate is *"did Q3 already generate one"* — the destroying write is **Q3 itself at `:185`**, which fires on **every** route including the "skip" answer (*"On skip, the file still generates"*) and **before** Step 3, so `:242`'s predicate has flipped true *because of* the write it is claimed to prevent. **(2)** Every `.claude/skills/<slug>/SKILL.md` write is unguarded — `:250` per bundle slug plus **four unconditional** copies at `:257`/`:259`/`:261`/`:263` (*"always installed … in every workspace"*) — i.e. the spec guards `about-me.md`, which the user fills in by hand, while leaving the workspace's **highest-authority instruction files**, the substance its own SECURITY-SENSITIVE call rests on, to be overwritten silently. **(3)** The naive predicate **self-collides**: `cowork-profile.md` is written ≥3× per run (`:134` stub → `:145` updates → `:195` completion), so *"path exists → confirm"* prompts about a file the wizard created 90 seconds earlier. Resolved by a four-disposition **session write-ledger** (`unseen`/`created-this-run`/`authorized`/`declined`) held in the transcript on `self-archive:62`'s channel — no new on-disk state. **The backstop is the invariant, the pre-flight survey is the optimization:** **[corrected Phase 1.R]** the routes that bypass the survey are **Resume** (`:417`, verbatim *"Skip Q1 and F4 entirely"*) and **`skill-studio`** (`:99`, which fires before F4 exists) — **not** Option 2, which `:359` routes *into* F4, so `:132` fires and a **route-scoped** survey reaches it (S11a). **This repo's standing `AC-BATCH-1` (`docs/spec.md:3895`, *"No batching, ever"*) is answered rather than dodged:** its trigger is *apply-eligible* state in the **workspace self-modification** channel, where the workspace proposes changes the user did not initiate; the wizard is foreground, user-initiated and single-session, and `WIZARD.md:310` already batches a 15-path move. The survey is what **earns** the batch — Option 3's reset text says *"reset your profile"* and never authorized replacing `context/about-me.md`, so a consolidated prompt is honest only because it names every path first. **F2 costs zero new prompts** (preservation is inserted *under* `:303`'s existing confirmation, reusing `self-archive:62-71`'s ordering and `:56`'s destination shape **without invoking the skill**, which refuses `CLAUDE.md` three ways — no exception carved). **F3's CRITICAL basis is proven, not argued:** `tests/self-archive-firing-controls.md:17` states its mechanism as *"**workspace** `.gitignore`"* while running `git check-ignore` against the **kit's** — a control that certified archive non-publication for two cycles against a different file from the one it names, the ADR-098/ADR-099 defect class, live. **`AC-COLLIDE-3` is re-sequenced** because it is unimplementable as written: 7a writes the template but 7b decides whether `_setup-kit/` exists and runs *after* it, so 7a writes the no-archive wording and 7b rewrites on Yes. A `scripts/` helper is **rejected on citation**: the wizard is LLM-executed prose with no caller, so the script would be an instrument that cannot fail. `Reusability: candidate-constituent` | **PROPOSED (v2.19.18 Phase **1.R**, amended 2026-09-02 after @security BLOCK: 2 CRITICAL, 11 WARNING — ACCEPTED only at the Phase 3 owner gate; SECURITY-SENSITIVE **CONFIRMED** on the amended file list, branch + PR, no Guard Change Summary). **The block was one structural omission with two consequences:** the entry-route matrix omitted `WIZARD.md:99` → `skill-studio`, whose step-8.2 kit-checkout guard (`skill-studio:135`) is **Mode-A-only**, so in Mode B it resolves the workspace `CLAUDE.md` (`:137`), confirms (`:165`) and writes (step 8.8, `:167`) at Q1-routing time — and a **path-keyed** `authorized` then suppressed `WIZARD.md:303`, a **net regression** plus **consent laundering** (LLM08: authority for *whole-file-replace* acquired from a yes given to *section-insert*). **D10** makes authorization `(path, operation-class, disclosed-scope)` and puts `:303` in an un-suppressable exemption class. **D11** reverses D2(b)'s remedy: guarding `:257`/`:259`/`:261`/`:263` would make a **trusted-installer gate declinable** — `:361` names both the threat and the defence (*"byte-verified against … `sha256` … poisoned-backfill defense, AC-PULL-7/ADR-073"*) — so the four mandatory safety skills leave the guarded set, stay unconditional, are **disclosed but not declinable**, and Step 4 gains the registry-`sha256` verify it lacks (also closing an asymmetry `:361` holds against itself). **D12** withdraws D2(b)'s false *"vocabulary is kit-controlled"* claim — `:99` appends a model-composed slug — and rests the constraint on **(bundle ∩ the fixed 25-slug pool)**, `ls skills/` = 29, citing `skill-studio:130`'s charset gate as defense-in-depth only because `:122` claims it runs *"before the slug is used anywhere"* while step 5 uses it as a path at `:61`/`:64`. **D13** corrects "~14 paths" to **15/~17/39 named, 11/~13/35 declinable** and bounds the survey grant to **content-determined** writes, excluding `project-instructions.txt` and `context/writing-profile.md` because Q2 (`:151`) and Q3 (`:176`) run *after* the survey. **OQ-1's `:308` rewrite is folded in**; **OQ-2 is contested** — @security dissents to defer, both positions go to the gate)** |
 
 ---
 
@@ -18164,3 +18165,358 @@ silently assumed favorable.
   carries unverified. The exposure is precisely the part no shipped check covers, and precisely why
   the successor option is value verification (§Maturation Path option (c)), not more presence
   checking.
+
+---
+
+## ADR-101: A promise the product prints in the user's own workspace is a specification, and the predicate that keeps it needs a provenance term (v2.19.18)
+
+**Date:** 2026-09-02T17:37:39Z
+**Status:** PROPOSED (v2.19.18 Phase **1.R** — ACCEPTED only at the Phase 3 owner gate).
+**Amended 2026-09-02 after @security returned BLOCK: 2 CRITICAL, 11 WARNING.** @security re-derived and
+confirmed intact all four structural findings the ADR rests on (D2(a), D2(b)'s substance, D1, D6) and
+concurred with D4's `AC-BATCH-1` channel-scope reading. It blocked because the **entry-route matrix was
+missing a route** — `WIZARD.md:99` → `skill-studio` — and that single omission produced both CRITICALs.
+Amendments land as **D10-D12** below; **D2(b) carried a false claim and is corrected in place**. Full
+disposition index for S1-S13 in `docs/design-v2.19.18.md` §H.
+**Cycle:** v2.19.18 "The Promise It Already Made" (patch)
+**Classification:** SECURITY-SENSITIVE on substance. Ceremony: branch + PR, **no Guard Change Summary**.
+**Design record:** `docs/design-v2.19.18.md`
+**Reusability:** candidate-constituent
+
+### Context
+
+`WIZARD.md:172` instructs the wizard to tell every user, in the product's own voice:
+
+> "One thing to know: Cowork always asks before deleting, moving, or overwriting any file or folder."
+
+The same sentence is generated into every workspace at `templates/workspace-claude-md-template.md:47`,
+and it is standing instruction at `.claude/skills/setup-wizard/SKILL.md:49` — the file that executes
+**first**, before `WIZARD.md`'s Q1 (`:10` Resume guard, `:12` Reset guard). Three sites, not two.
+
+The promise is false. `grep -n -i "overwrit" WIZARD.md` returns four lines; filtered against the Step-3
+filenames — `grep -iE 'about-me|working-rules|output-format'` — it returns **zero**. Exactly two paths
+in the entire wizard are governed by anything: `writing-profile.md` by an ordering rule at `:242`, and
+`CLAUDE.md` by a real confirmation at `:303`. Every other write lands silently.
+
+A first attempt at this cycle proposed a *folder classifier* — "is this folder brownfield?" — and was
+returned BLOCKER by both Phase 0.D reviewers. The wizard is LLM-executed prose (`WIZARD.md:32`), so a
+model-computed boolean over the user's folder puts the user's file and folder **names** into model
+context at the *read* hop, and a folder named `Ignore previous instructions` is letters and spaces. The
+spec's rework replaced it with a **per-path collision predicate** over kit-known paths, which never
+enumerates the folder and never tests a name the user chose. That pivot is correct and this ADR adopts
+it unchanged.
+
+What this ADR adds is what the files said when they were opened.
+
+### Decision
+
+**D1 — The predicate is existence AND provenance, not existence.** `cowork-profile.md` is written at
+least three times in one run: `:134` (the stub, *"non-optional"*), `:145` (*"Update this file as each
+later answer arrives"*), `:195` (completion). A predicate of the form *"path exists → confirm"* fires on
+the wizard's own stub at Step 1, producing a prompt that is not merely surplus but incoherent — *"this
+file exists, replace it?"* about a file the wizard created ninety seconds earlier at the user's
+instruction. The predicate is therefore evaluated against a **session write-ledger** with four
+dispositions: `unseen`, `created-this-run`, `authorized`, `declined`. The ledger lives in the session
+transcript, the channel `skills/self-archive/SKILL.md:62` already uses for its reversible-move tuple.
+No new file, no new on-disk state, nothing new to protect.
+
+**D2 — The guarded set is larger than the spec's nine, in two structural ways.**
+
+*(a) `context/writing-profile.md`.* The spec excludes it because `:242` "already protects it". `:242`
+is an **ordering** rule inside Step 3 whose predicate is *"did the optional Q3 voice turn already
+generate a personalized one there"* — it stops the **preset copy** from clobbering a file **this
+session** wrote. The destroying write is Q3 itself, at `WIZARD.md:185`, which fires on every route
+through the interview including the "skip" answer (*"On skip, the file still generates with
+goal-appropriate defaults"*) and does so **before** Step 3. A user-authored profile is gone at `:185`,
+and `:242` cannot save it because by then its own predicate has flipped true *because of* the write it
+is claimed to prevent.
+
+*(b) `.claude/skills/<slug>/SKILL.md`, as a path class.* `WIZARD.md:250` copies a `SKILL.md` into the
+workspace for every bundle slug, and `:257`/`:259`/`:261`/`:263` copy four more **unconditionally**
+(`self-apply`, `self-archive`, `self-upgrade`, `pull-updates` — each phrased *"always installed,
+independent of the F4 bundle … in every workspace (Mode A and Mode B)"*). The spec guards the manifest
+that describes these writes (`cowork.install.json`, `:255`) and not one of the writes themselves. That
+is the wrong way round on severity: `about-me.md` is a file `:239` says the user fills in by hand,
+while a workspace `SKILL.md` is an instruction file Cowork subsequently reads **as authoritative** —
+the substance the SECURITY-SENSITIVE classification rests on. Slugs come from the kit's fixed 25-slug
+pool plus four fixed names, so the vocabulary is kit-controlled and the binding constraint is untouched.
+**[STRUCK at Phase 1.R — that last sentence is false; see the correction note below and D12.]**
+The `:349`/`:351` Fallback bounds the common case but not this one: its predicate is *skills-present*,
+not *path-collides*, and Option 2's backfill at `:361` is conditional (*"if it is missing"*) where
+`:257`'s Step-4 copy is not.
+
+> **[CORRECTED at Phase 1.R — this paragraph carried a false claim, and the remedy it proposed was
+> unsafe. Both are fixed by D11 and D12.]** The original text asserted *"the vocabulary is
+> kit-controlled and the binding constraint is untouched."* **False.** `WIZARD.md:99` invokes
+> `skill-studio` on an explicit yes and *"append[s] the new `<slug>` (de-duplicated) to the F4 proposed
+> bundle"* — a slug the model composed from the user's own Q1 goal, so the confirmed bundle is **not** a
+> kit-controlled vocabulary. **D12** restores the constraint by construction (intersection with the
+> fixed pool) rather than by assertion. Separately, D2(b)'s remedy — guarding the four **unconditional**
+> copies at `:257`/`:259`/`:261`/`:263` — would have made a **trusted-installer gate declinable**, which
+> **D11** reverses: the finding stands, the remedy does not.
+
+**D3 — The backstop is the invariant; the pre-flight survey is an optimization.** Stated in that order
+because it is what makes the spec's "safe by construction" claim true rather than merely asserted. At
+**every** guarded write site, `unseen` + present ⇒ ask before writing. Separately, once per run —
+after the F4 bundle is confirmed, before the `:134` stub — the wizard tests the fixed guarded set and,
+if anything collides, spends one turn naming every colliding path and offering keep / replace / one-by-
+one. The route matrix decides it — **and Phase 1.R found the matrix incomplete, which is what produced both
+of Phase 2's CRITICALs (D10, D12).** As corrected: **Resume (`:417`, verbatim *"Skip Q1 and F4
+entirely"*) and `skill-studio` (`:99`) never reach the survey.** Option 2 **does** reach it — `:359`
+routes it into F4, so `:132` fires — and the survey there is **route-scoped**, covering only the paths
+Option 2 actually writes. Resume is covered by the backstop alone; `skill-studio` is covered by D10's
+exemption class and operation-scoping, because its defect was never a missing question. Fast-track (`:147`) — a route the spec does not
+name — does reach it, because the survey precedes the stub the fast-track offer follows.
+
+**D4 — Batching here does not violate `AC-BATCH-1`, and the survey is what earns it.**
+`docs/spec.md:3895` binds *"WHEN >1 entry independently reaches an **apply-eligible** state … a
+**separate** turn-2 confirmation for EACH entry"*, and `self-archive/SKILL.md:58` restates it as *"No
+batching, ever."* Read from its own trigger, that AC governs the **workspace self-modification**
+channel — the one whose defining property is that the workspace proposes changes **the user did not
+initiate**, repeatedly, over time; `AC-BATCH-2`'s entire subject is the *Nth* occurrence. The wizard is
+the inverse: foreground, user-initiated, single-session, and the user asked for these files a minute
+ago. The kit already separates them — `WIZARD.md:310` batches a fifteen-path *move* under one
+confirmation and ADR-060 did not disturb it.
+
+The trade is real and is accepted on **safety** grounds, not comfort: the maximum-collision case is
+re-running setup on an existing Cowork workspace, and that user has already passed the `:349` menu and
+Option 3's *"This will reset your profile and re-run onboarding. Confirm?"*. Asking fourteen more times
+after an explicit "start fresh" does not add scrutiny — it trains click-through, and that habit is what
+makes the next prompt, the one that matters, unsafe. The one-by-one option is offered every time.
+
+But Option 3's text says *"reset your **profile**"*. It does **not** authorize replacing
+`context/about-me.md`, which `:239` says the user filled in by hand. A consolidated prompt would be
+claiming an authorization that text never gave — unless every affected path is named **before** the
+user answers. That is why the survey runs before the first write rather than anywhere more convenient:
+**it is not a fatigue optimization, it is the thing that makes the batch honest.**
+
+**D5 — `CLAUDE.md` preservation reuses the archive convention and never invokes the archive skill, at
+zero prompt cost.** `:303` already confirms 7a's overwrite, so preservation is inserted *underneath* it:
+record the fingerprint in the transcript → ensure the workspace `.gitignore` (D6) → copy to
+`context/.archive/CLAUDE.md.<UTC-timestamp>` → verify byte-identity **against the transcript tuple, not
+the on-disk copy** (`self-archive:70`'s own words) → only then overwrite. `skills/self-archive/SKILL.md`
+is **not modified**: it refuses `CLAUDE.md` three independent ways (`:42`'s namespace floor denies every
+bare workspace-root `*.md`; `:46`'s positive predicate clause (c) plus *"the DEFAULT is deny"*; `:71`'s
+reference-integrity grep). No exception is carved into a separately-ceremonied surface.
+
+**D6 — The workspace `.gitignore` is written before the first archive write, and the control that
+misdescribed it is corrected in the same commit.** The kit's `.gitignore:20-21` protects
+`context/.archive/` and `context/.apply-backups/`; `.gitattributes:12` marks `.gitignore` itself
+`export-ignore`, so the release ZIP ships without it; and `grep -rn "gitignore" WIZARD.md skills/
+templates/ examples/` returns **zero** — no kit surface has ever written a workspace `.gitignore`. In a
+brownfield folder that is the user's own git repo — the defining case — D5's preserved bytes would land
+where `git add .` tracks and pushes them.
+
+The repo already contained the proof, green. `tests/self-archive-firing-controls.md:17` states its
+mechanism as *"**workspace** `.gitignore` excludes `context/.archive/`"* while the control it runs at
+`:20-27` executes `git check-ignore` inside the **kit** repo against `.gitignore:20-21`. For two cycles
+that control certified archive non-publication against a different file from the one its own sentence
+names — a check that could not fail on the property it claimed, the exact defect class ADR-098 and
+ADR-099 were minted about. It is corrected alongside the fix; leaving it re-teaches the belief that hid
+the defect.
+
+**D7 — `AC-COLLIDE-3` is re-sequenced, because it is unimplementable as written.** The AC requires every
+`_setup-kit/` claim to render only where that archive exists. But the three template claims
+(`workspace-claude-md-template.md:10`, `:35`, `:39`) are written at **7a**, and whether `_setup-kit/`
+exists is decided at **7b** — which runs *after* 7a, only in Mode A, and is declinable (`:308`). 7a
+cannot know. The dependency is inverted: 7a writes the **no-archive** wording unconditionally; 7b, on
+Yes and as the final step of the move, rewrites those three lines. The rewrite targets a file this run
+created, so the ledger holds it `created-this-run` and no prompt fires. `WIZARD.md:303`'s own prompt
+text (*"The setup version stays in the archive"*) is false at the moment it is spoken on Mode B and is
+rewritten to name `context/.archive/`.
+
+**D8 — The rule lives in `WIZARD.md`'s standing-rules region; a `scripts/` helper is rejected on
+citation.** The wizard is LLM-executed prose (`:32`) with no runtime that invokes a shell script; all
+17 entries in `scripts/` are maintainer/CI tooling or user-invoked by hand. A `scripts/collision-check.sh`
+would ship with **no caller** — an instrument that cannot fail, the very thing D6 just caught a live
+instance of. `.claude/skills/setup-wizard/SKILL.md` is rejected as the *home* because `:8` says
+*"WIZARD.md is the single script source — this file only routes into it"*; it receives the entry-route
+seeding hooks instead, pointing back, on the bidirectional-pointer convention `:12` and `WIZARD.md:357`
+already use. Ten inline copies are rejected because drift is exactly how `:242` became the only
+protected path in a file that promises to protect all of them.
+
+**D9 — The classification is CONFIRMED on substance, and the "Tier B" label is withdrawn.** The cycle
+is SECURITY-SENSITIVE because it changes the logic that writes a workspace's standing instruction
+files. It is **not** SECURITY-SENSITIVE by `docs/roadmap.md:7`, which binds *"Every **rung**…"* while
+`:5` states verbatim that v2.19.x releases are *"patch-level … no new functional rung, no ladder row of
+their own"* — a rung-scoped rule does not reach a patch by its own text, and a classification escapable
+by "we're a patch" is not worth having. And it is **neither Tier A nor Tier B**: The-Council's
+`docs/pipeline-policy.md:496-516` table lists Tier B as `.github/workflows/`, `.claude/commands/*.md`,
+and non-`scope_allow:` agent-contract sections — **none of which reaches this repository either.** The
+ceremony (branch + PR, no Guard Change Summary) is correct; its basis is the substance classification
+plus this repo's external-project convention, not a table row.
+
+**D10 — An authorization is scoped to an OPERATION, never to a path, and no ledger disposition may
+suppress a confirmation the kit already makes** (Phase 1.R, closes CRITICAL S1). The entry-route matrix
+omitted `WIZARD.md:99` → `.claude/skills/skill-studio/SKILL.md`. Re-derived: `skill-studio`'s step-8.2
+kit-checkout guard (`:135`) refuses the `CLAUDE.md` write **only when `WIZARD.md` is at the workspace
+root — Mode A only**. In Mode B, the brownfield case this cycle exists for, step 8.3 (`:137`) resolves
+the target as *"the workspace's `CLAUDE.md`"*, step 8.7 (`:165`) confirms, step 8.8 writes — at
+Q1-routing time, long before 7a. Under D1's path-keyed ledger that yes marked `CLAUDE.md` `authorized`,
+and `authorized` meant *"write, no prompt"* — so **`WIZARD.md:303` would never fire**, and D5's byte
+preservation, specified as living *underneath that existing confirmation*, would lose the gate carrying
+it. Two defects, not one: a **net regression** (`:303` fires unconditionally today), and **consent
+laundering that generalises** — the yes authorised *inserting a delimited proactive-skill block*; the
+ledger converted it into authority for *replacing the entire file*. @security classes it LLM08 Excessive
+Agency: *"an agent acquiring authority for an action from a consent given for a different action."*
+Closed two ways. **(i)** A ledger entry is the triple `(path, operation-class, disclosed-scope)`, with
+operation-class drawn from a closed kit vocabulary — `section-insert`, `whole-file-replace`,
+`create-if-absent` — and a grant honoured only on a three-component match. **(ii)** An enumerated
+**exemption class**: `WIZARD.md:303`, `skill-studio:165`, `:306`/`:308`, `:312` are confirmations the
+kit already makes, and **no disposition may suppress them**; recording happens after they fire. The
+generalisation is the durable part: *any ledger keyed on path alone will launder consent across
+operations on every path it holds.*
+
+**D11 — The four mandatory safety skills are excluded from the guarded set and are never declinable;
+their unconditional overwrite IS the gate, and this cycle makes that true rather than merely arguable**
+(Phase 1.R, closes CRITICAL S2). D2(b)'s finding — `:257`/`:259`/`:261`/`:263` are unguarded — stands.
+Its remedy does not: guarding them makes them declinable, so `unseen` + present ⇒ ask ⇒ *"keep mine"* ⇒
+whatever bytes sit at `.claude/skills/self-apply/SKILL.md` survive, at a path this ADR's own
+classification calls one of *"the files Cowork subsequently reads as authoritative instructions."* The
+kit names both the threat and the defence in the line D2(b) quoted from — `WIZARD.md:361`: *"byte-
+verified against `curated-skills-registry.md`'s `self-upgrade` `sha256` entry before it goes live
+(poisoned-backfill defense, AC-PULL-7/ADR-073)"*, closing *"the same trusted-installer gate."* So:
+`self-apply`, `self-archive`, `self-upgrade`, `pull-updates` leave the guarded set; F1 covers **bundle
+slugs only**; the four are **disclosed** in the survey turn as always-installed and not optional —
+disclosure without declinability. And the guarantee is made real: **Step 4's four copies gain the
+registry-`sha256` byte-verify they do not have today**, which also closes an asymmetry `:361` contains
+against itself (it verifies `self-upgrade` and `pull-updates`, does **not** verify `self-apply` and
+`self-archive`, then asserts *"both paths byte-verify"*). Whether `:257`'s unconditionality was
+**deliberate or an omission is not determinable from this repo** — the defence is documented at `:361`,
+not at `:257`, and no ADR states the intent — so it is carried as a named residual
+(`CF-v2.19.18-INSTALLERINTENT`); the decision above is safe under either reading, which is why it
+proceeds without the answer.
+
+**D12 — The guarded path class is an INTERSECTION with the kit's fixed pool, not a union with the
+confirmed bundle** (Phase 1.R, closes S7). The bundle is not kit-controlled: `WIZARD.md:99` appends a
+model-composed slug to it. The class is therefore **(confirmed bundle ∩ the kit's fixed 25-slug pool)**,
+mechanically checkable against `ls skills/` = **29** directories (25 pool + 4 mandatory). A slug outside
+that pool can only have come from `skill-studio`, is excluded from the guarded set, and is covered by
+`skill-studio/SKILL.md:61`, which **refuses to overwrite** on collision — strictly stronger than
+ask-before-overwrite. `skill-studio:130`'s whole-string charset gate is cited as **defense-in-depth
+only**: `:122` claims it runs *"before the slug is used anywhere"*, but step 5 already uses the slug as
+a path component at `:61` and `:64`, before step 8 — the same *stated-scope-drifts-from-actual-scope*
+pattern D6 was minted about, in a third place (`CF-v2.19.18-SLUGGATE`). A constraint resting on that
+gate would be this ADR repeating the error it exists to expose.
+
+**D13 — Two counts, not one, and the original figure was wrong** (Phase 1.R, closes S12, S5).
+`ls skills/` = 29 and `WIZARD.md:128` floors the bundle at 1, so a survey turn names **15 minimum / ~17
+typical / 39 maximum** paths — of which **11 / ~13 / 35** are declinable after D11. The ADR previously
+said "~14" throughout. The correction is load-bearing rather than clerical: *a single turn naming up to
+39 paths is where a "replace all" reflex is strongest.* The mitigation is not a smaller number but a
+**smaller grant** — the survey seeds `authorized` only for paths it rendered, each write site re-checks
+its own membership, and the grant is further bounded to writes whose content is **already determined**
+when the survey renders. Q2 (`:151`) and Q3 (`:176`) run *after* the survey, so
+`project-instructions.txt` (`:222` substitutes the user's name) and `context/writing-profile.md` (`:185`
+generates from Q3) are **named but never granted** — they fall to the backstop, where
+`self-archive:56`'s *"computed FRESH from the ACTUAL operation about to run"* bar is genuinely met.
+That is the reconciliation with `:56`: a pre-flight survey cannot meet it in general, and is confined
+here to the subset where it can. Additionally, **naming a path is not disclosing its content** —
+`:239` calls `about-me.md` *"user fills this in"* while Step 3 copies a **blank template** — so each
+surveyed line carries a fixed kit-authored descriptor of what replaces it.
+
+### Consequences
+
+- The promise at `WIZARD.md:172`, `workspace-claude-md-template.md:47`, and
+  `setup-wizard/SKILL.md:49` becomes true for the first time.
+- **Greenfield is byte-identical to today**, as a mathematical consequence rather than a property that
+  could independently fail: zero pre-existing paths ⇒ zero collisions ⇒ zero prompts. The ordinary
+  brownfield document folder is also usually zero, because `cowork-profile.md`,
+  `project-instructions.txt`, `connector-checklist.md` and `skills-as-prompts.md` are Cowork-specific
+  names a user's folder will not contain.
+- Cost is **independent of folder size** — a fixed 15/~17/39-path list is tested (D13), never an
+  enumeration. This is a genuine simplification over the rejected classifier, not merely a safer one.
+- **Option 2 gains two prompts where it has zero today** (`:363`'s mandatory `skills-as-prompts.md`
+  regeneration and `:364`'s profile bundle line). **[Amended Phase 1.R]** Mitigated by the **route-scoped
+  survey**, not by a bespoke `:355` change: `:359` routes Option 2 into F4, so `:132` fires and the
+  survey reaches it — D3's route matrix said otherwise and the anchor is right. The survey's scope is
+  route-determined (a kit-authored route→path-subset mapping, reading nothing from the folder), so
+  Option 2 surveys only what Option 2 writes. The `:355` scope-carrying change is **withdrawn**. A *declined*
+  `skills-as-prompts.md` then becomes a file that lies about what is installed, and the wizard must say
+  so in one line — designed in, not left to Phase 4.
+- One pre-existing exposure is made **test-reachable for the first time**: `WIZARD.md:353` echoes
+  user-controlled folder names (*"[list detected skills]"*) into model context, and the `stale-skills`
+  fixture will render it. Flagged to @security as `CF-v2.19.18-STALEECHO`; **not** fixed here, because
+  fixing it requires the folder inspection this cycle exists to avoid.
+- F2 protects only 7a's own overwrite. A `CLAUDE.md` already lost to a pre-v2.19.18 run is not
+  recoverable. Named limitation, kept deliberately.
+- **[Amended Phase 1.R]** OQ-1's **framing** is corrected and part of it is folded in. @security tested
+  the alternative and found no non-classifier detector helps *"because the failure scenario is an
+  extract-here unzip, where every kit marker genuinely is present"* — so Option A stands. But `:308`'s
+  clause *"so your workspace contains only your files"* is **not incomplete, it is false**, and false in
+  the same way `:172` is false; documenting it while fixing `:172` would contradict the cycle's own
+  thesis. `:308` is therefore **rewritten this cycle** to drop the clause and enumerate the fixed move
+  list **intersected with what is present at root** — a fixed-list existence test, structurally
+  identical to the collision predicate, so no classifier and no added cost. **OQ-2 is contested:**
+  @security dissents and recommends **defer**. Its ordering objection was correct and is fixed (the
+  qualifier moves to an end-of-7a `section-insert` on a `created-this-run` file); its durability
+  objection is answered by making the write **three-valued** — qualifier / silence / *uncertainty
+  sentence* — so silence is emitted only when a live ledger records no declines. Both positions go to
+  the Phase 3 gate.
+
+  > **[CORRECTED at Phase 5 — @qa REJECTED the three-valued write, and correctly.]** @qa searched the
+  > Collision Rule and the end-of-7a qualifier text for an instruction telling the executing model how
+  > to distinguish "ledger present, holds no declines" from "ledger absent or incomplete," and found
+  > none — no completeness check against the survey's earlier enumeration, no sentinel, no test. The
+  > three-valued form's branch (c) was keyed on a condition the rule gave the model no way to detect: to
+  > a model at end of run, "zero declines" and "lost the record of what was declined" are
+  > observationally identical. Checked and confirmed rather than assumed: no anchor independent of the
+  > ledger exists to make the distinction — the survey's rendered list lives in the same conversational
+  > channel and would most likely be lost together with the ledger, and a durable (disk-written or
+  > freshly-asked) anchor would require reopening F1 or adding a new prompt, neither authorized by this
+  > rework. **The write is now two-valued: qualifier (ledger holds one or more `declined` entries) /
+  > silence (otherwise, including on ledger loss).** Silence under ledger loss is accepted, not solved —
+  > it is bounded at "no worse than today's unqualified `working-rules.md`," never worse. Carried
+  > forward as `CF-v2.19.18-QUALSILENCE` (MEDIUM, `docs/design-v2.19.18.md` §G): closing it for real
+  > needs a durable record of declines, a design question for a later rung. @security's OQ-2 dissent
+  > identified this exact mechanism gap before F4 was built; the owner shipped the two-valued form with
+  > the limitation named rather than defer F4 a second time.
+
+- Two owner decisions remain open and are **not** resolved by this ADR: OQ-1's Option B (tighten
+  `:310`'s directory-move detector) and OQ-2 (ship the `working-rules.md` qualifier now, or defer). Both are framed as buildable options with costs in
+  `docs/design-v2.19.18.md` §F. The default posture on an undecided OQ-2 is **deferred**, and F4 must
+  then be recorded as explicitly cut, never silently unimplemented.
+
+### §Maturation Path (per [[maturation-path-in-adr]] binding)
+
+- **Future-state options:** (a) promote the guarded set from prose enumeration in `WIZARD.md` to a
+  single machine-readable manifest that the wizard reads and CI lints for drift, closing the gap where
+  a new write site is added without a matching guarded-path pointer; (b) extend the predicate to 7b's
+  directory move once a reliable kit-ownership test exists — this is OQ-1's Option B, deferred here
+  precisely because it needs the folder classification this cycle removed; (c) replace the session
+  transcript ledger with a durable per-workspace record, which would let a *resumed* run in a **new**
+  session recall what the user already authorized instead of re-asking via the backstop; (d) unify the
+  wizard's confirmation surface with `self-apply`/`self-archive`'s four-part shape, so the two channels
+  stop being separable by anything other than their trigger.
+- **Concrete revisit triggers:** a new write site is added to `WIZARD.md` **without** a guarded-path
+  pointer (triggers (a)); a user reports files moved into `_setup-kit/` that were theirs (triggers (b));
+  the guarded set exceeds ~20 paths, at which point prose enumeration stops being reviewable (triggers
+  (a)); a resumed-in-a-new-session run is reported as re-asking about paths already authorized
+  (triggers (c)); or `AC-BATCH-1`'s scope is ever widened beyond the apply channel, which would
+  invalidate D4's reasoning outright and force (d). **[Added Phase 1.R]** Two more, both from the
+  unprovable residuals: **any** observation that a real session lost the write-ledger across a
+  compaction promotes (c) from optional to required (`CF-v2.19.18-LEDGERDUR`); and a **new entry route
+  into `WIZARD.md`** — a fifth invocation path alongside fresh / fast-track / resume / Option 2/3 /
+  `skill-studio` — triggers a full re-run of D3's matrix, because a missing route in that matrix is
+  precisely what produced both of Phase 2's CRITICALs.
+- **Risk knowingly accepted:** the guarded set is a **hand-maintained list in prose**, and nothing
+  mechanically proves it still covers every write site — a new write added later without its pointer is
+  silently unguarded, which is the same class of drift that left `:242` as the only protected path in
+  the first place. Accepted for this cycle because the alternative (a manifest plus a linter) is a new
+  surface to keep in sync, and D6 has just demonstrated in this very repo that a check whose
+  description drifts from what it tests is worse than no check at all. The mitigation is a firing
+  control per guarded path in `tests/collision-safety-firing-controls.md`, each with a RED negative
+  control, so the coverage claim is at least *asserted* against real fixtures rather than narrated.
+  Accepted equally: D4's batch gives a "replace them all" user weaker per-file scrutiny than
+  `self-archive` gives one file, bought deliberately against click-through training — narrowed at Phase
+  1.R by D13, so the batch now grants strictly less than the list it renders. **[Added Phase 1.R] Two
+  risks accepted that neither @architect nor @security could discharge from this repo, named rather than
+  asserted away.** First, the ledger's survival across a context compaction is **runtime model behaviour
+  and untestable here**, and it is this design's central mechanism; accepted because the disposition
+  table fails **safe on data** (a lost entry reverts to `unseen`, which asks) and the single coherence
+  hole — `:417`'s resume livelock on the wizard's own `cowork-profile.md` stub — is closed by a narrow
+  exemption gated on the kit-authored `Status: in-progress` sentinel. Second, whether `:257`'s
+  unconditional overwrite of safety machinery is a **deliberate trusted-installer guarantee or an
+  omission** cannot be determined: the defence is documented at `:361`, not at `:257`, and no ADR states
+  the intent. Accepted because D11 is safe under both readings — it makes the guarantee real if it was
+  deliberate, and closes the gap if it was not.

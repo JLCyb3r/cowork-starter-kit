@@ -1,0 +1,22 @@
+{
+  "_fixture_note": "SYNTHETIC FIXTURE — tests/fixtures/brownfield/mode-b/cowork.install.json — not a real install manifest.",
+  "schema": "cowork.install.template.json",
+  "components": [
+    {
+      "slug": "email-drafting",
+      "installed_path": ".claude/skills/email-drafting/SKILL.md",
+      "source": "curated-pool",
+      "installed_registry_version": "2026-06-01",
+      "installed_content_sha256": "0000000000000000000000000000000000000000000000000000000000fx",
+      "last_synced_upstream_sha256": "0000000000000000000000000000000000000000000000000000000000fx"
+    },
+    {
+      "slug": "self-apply",
+      "installed_path": ".claude/skills/self-apply/SKILL.md",
+      "source": "curated-pool",
+      "installed_registry_version": "2026-06-01",
+      "installed_content_sha256": "1111111111111111111111111111111111111111111111111111111111fx",
+      "last_synced_upstream_sha256": "1111111111111111111111111111111111111111111111111111111111fx"
+    }
+  ]
+}

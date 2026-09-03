@@ -1,0 +1,5 @@
+[SYNTHETIC FIXTURE — tests/fixtures/brownfield/mode-b/project-instructions.txt]
+
+You are working with Priya Chen, a graduate student at a placeholder university.
+Their goal: synthesizing literature for a placeholder thesis. Deadlines: 2026-09-30
+committee draft. Respond in preset-default research formatting unless asked otherwise.
