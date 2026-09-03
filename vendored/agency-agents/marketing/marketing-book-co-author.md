@@ -3,7 +3,7 @@
 Agency Source — msitarzewski/agency-agents
 Source: https://github.com/msitarzewski/agency-agents
 Upstream path: marketing/marketing-book-co-author.md
-Pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a
+Content SHA-256: 09ea2fb4770180b072c92100be84b808367c40ef8a3f2119cfd059206aa4c717
 Lock file source: cowork.lock.json (cowork-starter-kit)
 Copyright (c) msitarzewski/agency-agents contributors
 
@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Full license: https://github.com/msitarzewski/agency-agents/blob/783f6a72bfd7f3135700ac273c619d92821b419a/LICENSE
+Full license: vendored/agency-agents/LICENSE
 Derivative work: this file has been adapted for use with cowork-starter-kit
 -->
 <!-- COWORK-AGENCY-ATTRIBUTION-END -->

@@ -3,7 +3,7 @@
 Agency Source — msitarzewski/agency-agents
 Source: https://github.com/msitarzewski/agency-agents
 Upstream path: engineering/engineering-mobile-app-builder.md
-Pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a
+Content SHA-256: 1a3e043f806b0b7c071d58b2ee3ab3c58c8342e2727c1ca9e6e5175f86986caf
 Lock file source: cowork.lock.json (cowork-starter-kit)
 Copyright (c) msitarzewski/agency-agents contributors
 
@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Full license: https://github.com/msitarzewski/agency-agents/blob/783f6a72bfd7f3135700ac273c619d92821b419a/LICENSE
+Full license: vendored/agency-agents/LICENSE
 Derivative work: this file has been adapted for use with cowork-starter-kit
 -->
 <!-- COWORK-AGENCY-ATTRIBUTION-END -->
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
 **Performance**: Optimized for mobile constraints and user experience
 ```
 
-## =­ Your Communication Style
+## 💭 Your Communication Style
 
 - **Be platform-aware**: "Implemented iOS-native navigation with SwiftUI while maintaining Material Design patterns on Android"
 - **Focus on performance**: "Optimized app startup time to 2.1 seconds and reduced memory usage by 40%"

@@ -3,7 +3,7 @@
 Agency Source — msitarzewski/agency-agents
 Source: https://github.com/msitarzewski/agency-agents
 Upstream path: engineering/engineering-solidity-smart-contract-engineer.md
-Pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a
+Content SHA-256: 9e6f96fb29cc71faf2638bce3a5aa06ff15b4c674ca4ec039e5e4515a7844839
 Lock file source: cowork.lock.json (cowork-starter-kit)
 Copyright (c) msitarzewski/agency-agents contributors
 
@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Full license: https://github.com/msitarzewski/agency-agents/blob/783f6a72bfd7f3135700ac273c619d92821b419a/LICENSE
+Full license: vendored/agency-agents/LICENSE
 Derivative work: this file has been adapted for use with cowork-starter-kit
 -->
 <!-- COWORK-AGENCY-ATTRIBUTION-END -->
@@ -512,7 +512,7 @@ main().catch((error) => {
 Remember and build expertise in:
 - **Exploit post-mortems**: Every major hack teaches a pattern — reentrancy (The DAO), delegatecall misuse (Parity), price oracle manipulation (Mango Markets), logic bugs (Wormhole)
 - **Gas benchmarks**: Know the exact gas cost of SLOAD (2100 cold, 100 warm), SSTORE (20000 new, 5000 update), and how they affect contract design
-- **Chain-specific quirks**: Differences between Ethereum mainnet, Arbitrum, Optimism, Base, Polygon — especially around block.timestamp, gas pricing, and precompiles
+- **Chain-specific quirks**: Differences between Ethereum mainnet, Arbitrum, Optimism, Base, Polygon, XDC — especially around block.timestamp, gas pricing, and precompiles
 - **Solidity compiler changes**: Track breaking changes across versions, optimizer behavior, and new features like transient storage (EIP-1153)
 
 ### Pattern Recognition

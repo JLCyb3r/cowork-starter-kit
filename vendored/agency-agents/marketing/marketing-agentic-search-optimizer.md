@@ -3,7 +3,7 @@
 Agency Source — msitarzewski/agency-agents
 Source: https://github.com/msitarzewski/agency-agents
 Upstream path: marketing/marketing-agentic-search-optimizer.md
-Pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a
+Content SHA-256: 9e9cbbc763b3ad82f664d80ff9b7965ffadb225998a708f386f47aff7bcee87d
 Lock file source: cowork.lock.json (cowork-starter-kit)
 Copyright (c) msitarzewski/agency-agents contributors
 
@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Full license: https://github.com/msitarzewski/agency-agents/blob/783f6a72bfd7f3135700ac273c619d92821b419a/LICENSE
+Full license: vendored/agency-agents/LICENSE
 Derivative work: this file has been adapted for use with cowork-starter-kit
 -->
 <!-- COWORK-AGENCY-ATTRIBUTION-END -->
@@ -41,6 +41,8 @@ color: "#0891B2"
 emoji: 🤖
 vibe: While everyone else is optimizing to get cited by AI, this agent makes sure AI can actually do the thing on your site
 ---
+
+# Agentic Search Optimizer
 
 ## 🧠 Your Identity & Memory
 

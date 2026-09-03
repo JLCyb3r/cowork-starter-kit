@@ -3,7 +3,7 @@
 Agency Source — msitarzewski/agency-agents
 Source: https://github.com/msitarzewski/agency-agents
 Upstream path: support/support-infrastructure-maintainer.md
-Pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a
+Content SHA-256: 64d705a9e58f73868136d781f83ceaf12dfc1721cdb5bfb31b2c03441d69bf5c
 Lock file source: cowork.lock.json (cowork-starter-kit)
 Copyright (c) msitarzewski/agency-agents contributors
 
@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Full license: https://github.com/msitarzewski/agency-agents/blob/783f6a72bfd7f3135700ac273c619d92821b419a/LICENSE
+Full license: vendored/agency-agents/LICENSE
 Derivative work: this file has been adapted for use with cowork-starter-kit
 -->
 <!-- COWORK-AGENCY-ATTRIBUTION-END -->

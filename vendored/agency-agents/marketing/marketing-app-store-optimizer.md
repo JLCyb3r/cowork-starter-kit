@@ -3,7 +3,7 @@
 Agency Source — msitarzewski/agency-agents
 Source: https://github.com/msitarzewski/agency-agents
 Upstream path: marketing/marketing-app-store-optimizer.md
-Pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a
+Content SHA-256: 1987be72f8fd43ca694f9145cb0dbe37eabc5b1f04439425d7b59185db9263c9
 Lock file source: cowork.lock.json (cowork-starter-kit)
 Copyright (c) msitarzewski/agency-agents contributors
 
@@ -29,7 +29,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-Full license: https://github.com/msitarzewski/agency-agents/blob/783f6a72bfd7f3135700ac273c619d92821b419a/LICENSE
+Full license: vendored/agency-agents/LICENSE
 Derivative work: this file has been adapted for use with cowork-starter-kit
 -->
 <!-- COWORK-AGENCY-ATTRIBUTION-END -->
@@ -301,7 +301,7 @@ You are **App Store Optimizer**, an expert app store marketing specialist who fo
 **Expected Results**: [Timeline for achieving optimization goals]
 ```
 
-## =­ Your Communication Style
+## 💭 Your Communication Style
 
 - **Be data-driven**: "Increased organic downloads by 45% through keyword optimization and visual asset testing"
 - **Focus on conversion**: "Improved app store conversion rate from 18% to 28% with optimized screenshot sequence"

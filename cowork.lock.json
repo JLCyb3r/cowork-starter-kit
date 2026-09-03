@@ -1,8 +1,8 @@
 {
   "$schema_version": "1.0",
   "upstream": "msitarzewski/agency-agents",
-  "pinned_commit_sha": "783f6a72bfd7f3135700ac273c619d92821b419a",
-  "pinned_at": "2026-05-07T12:32:06Z",
+  "pinned_commit_sha": "3c9588880b7cafaec325a104899fd8bbe27e7d72",
+  "pinned_at": "2026-09-01T14:02:38Z",
   "license_file_sha256": "9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f",
   "files": [
     {
@@ -41,6 +41,13 @@
       "content_sha256": "193b7dba6d04346d15ee21753fd1cdb69dc1a21a5ac30d5d62726654820a5633"
     },
     {
+      "path": "academic/academic-statistician.md",
+      "sha256": "4b023595c59becec2026cab38807f835e48e280885f9cd381bab7845cbf4280c",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "4b023595c59becec2026cab38807f835e48e280885f9cd381bab7845cbf4280c"
+    },
+    {
       "path": "design/design-brand-guardian.md",
       "sha256": "d1d5c78af85d4d35be94b93d5c011d17e3cf5dcb69b2037a3ebf3059803b893e",
       "spdx": "MIT",
@@ -62,11 +69,25 @@
       "content_sha256": "b1c535f1b18bc64865eee0b4a1b58d019e92762e5dd995e30417f63d86b95583"
     },
     {
+      "path": "design/design-persona-walkthrough.md",
+      "sha256": "8def8c73df7f79a61704e7353b85b915afa31c4a9fa1100fbb9220c50d6a1c55",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "8def8c73df7f79a61704e7353b85b915afa31c4a9fa1100fbb9220c50d6a1c55"
+    },
+    {
       "path": "design/design-ui-designer.md",
       "sha256": "3130768958d3b3d38178aaec91cf789e01ecca4984c8674d4aaea446b6cba240",
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "3130768958d3b3d38178aaec91cf789e01ecca4984c8674d4aaea446b6cba240"
+    },
+    {
+      "path": "design/design-ui-finish-gate-reviewer.md",
+      "sha256": "cc2cc803782a791797b63530bfd46ee676148f05bc1db7c614c8860f9798bc86",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "cc2cc803782a791797b63530bfd46ee676148f05bc1db7c614c8860f9798bc86"
     },
     {
       "path": "design/design-ux-architect.md",
@@ -111,6 +132,13 @@
       "content_sha256": "f25a69aad25acd35dd1d62e33d5a814f4a26b075d90f968b4d778452e53924d8"
     },
     {
+      "path": "engineering/engineering-api-platform-engineer.md",
+      "sha256": "278798c42d7a7cf4f42d3973795765403105ce60d518d647abfdaa522d862d8e",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "278798c42d7a7cf4f42d3973795765403105ce60d518d647abfdaa522d862d8e"
+    },
+    {
       "path": "engineering/engineering-autonomous-optimization-architect.md",
       "sha256": "6904f627eff4a2035ecc245b3ee65f326b484083a08c3e284ad4106bdc57d2d8",
       "spdx": "MIT",
@@ -119,10 +147,10 @@
     },
     {
       "path": "engineering/engineering-backend-architect.md",
-      "sha256": "15f9e1361f63a5551eb690bd31d82b5ba18c5797d8d038e66aebd87d6cce17e5",
+      "sha256": "18f237d054fa91f72a5dcda46a52ddcf7354ea3a3e39e0247629f4ea0f446917",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "15f9e1361f63a5551eb690bd31d82b5ba18c5797d8d038e66aebd87d6cce17e5"
+      "content_sha256": "18f237d054fa91f72a5dcda46a52ddcf7354ea3a3e39e0247629f4ea0f446917"
     },
     {
       "path": "engineering/engineering-cms-developer.md",
@@ -153,6 +181,13 @@
       "content_sha256": "d46e5ebdb81f5f3e7e0296fa8355583f13693e47cce0e1c8e834c6ff956e861a"
     },
     {
+      "path": "engineering/engineering-data-visualization-engineer.md",
+      "sha256": "0f5b5391f82aa98ca489768d31024f7a5f840a8ee5fe968fe1499ed538948ce5",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "0f5b5391f82aa98ca489768d31024f7a5f840a8ee5fe968fe1499ed538948ce5"
+    },
+    {
       "path": "engineering/engineering-database-optimizer.md",
       "sha256": "a58860b44590ed643ca02b6faf738b889c99bd889df78c695f519b5288ea018d",
       "spdx": "MIT",
@@ -160,11 +195,46 @@
       "content_sha256": "a58860b44590ed643ca02b6faf738b889c99bd889df78c695f519b5288ea018d"
     },
     {
+      "path": "engineering/engineering-database-reliability-engineer.md",
+      "sha256": "a25e100eb5ada1b26a9b01ce82822c967dfabc09772bd4e3803dfc0a4382a247",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "a25e100eb5ada1b26a9b01ce82822c967dfabc09772bd4e3803dfc0a4382a247"
+    },
+    {
+      "path": "engineering/engineering-desktop-app-engineer.md",
+      "sha256": "01b103bae349f127726e2a37a06502aad9be64793e72331c5ff01db9b8fffd55",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "01b103bae349f127726e2a37a06502aad9be64793e72331c5ff01db9b8fffd55"
+    },
+    {
+      "path": "engineering/engineering-developer-tooling-engineer.md",
+      "sha256": "da81449e9bbaf957df34a358fbac7cc8b539b52710022f2c201ddf8f66a03d9b",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "da81449e9bbaf957df34a358fbac7cc8b539b52710022f2c201ddf8f66a03d9b"
+    },
+    {
       "path": "engineering/engineering-devops-automator.md",
       "sha256": "5d3c3d12c605a8c07fadfd109697249f98bc8e3d1901247c390641ef9fb013e8",
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "5d3c3d12c605a8c07fadfd109697249f98bc8e3d1901247c390641ef9fb013e8"
+    },
+    {
+      "path": "engineering/engineering-drupal-performance.md",
+      "sha256": "544942f460b76e15c2cd6e9a820b4048e3344186db3a7123d99adfbdf6c41d09",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "544942f460b76e15c2cd6e9a820b4048e3344186db3a7123d99adfbdf6c41d09"
+    },
+    {
+      "path": "engineering/engineering-drupal-shopping-cart.md",
+      "sha256": "cbd06e6d27363029dbbc6638297d47608c78d3b93b3e4a6ff52d16757199ee50",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "cbd06e6d27363029dbbc6638297d47608c78d3b93b3e4a6ff52d16757199ee50"
     },
     {
       "path": "engineering/engineering-email-intelligence-engineer.md",
@@ -195,11 +265,25 @@
       "content_sha256": "428f6a6be2318a123678b2838600e33c5e193afecbe8f828fa97c779eaf85fbf"
     },
     {
+      "path": "engineering/engineering-finops-engineer.md",
+      "sha256": "54134b5d3e3bf59db0de7a42b1246ea3a6ad771133d946670f4211e424c33aba",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "54134b5d3e3bf59db0de7a42b1246ea3a6ad771133d946670f4211e424c33aba"
+    },
+    {
       "path": "engineering/engineering-frontend-developer.md",
       "sha256": "35961da50f408e00eb6189c87825ac5e62e6b1bf9de3dee198a95536c6d2619e",
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "35961da50f408e00eb6189c87825ac5e62e6b1bf9de3dee198a95536c6d2619e"
+    },
+    {
+      "path": "engineering/engineering-gaussdb-expert.md",
+      "sha256": "db3e2fbd178e4df20885c5d5f27b0a552061c7736374f9977807fc374ff99e07",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "db3e2fbd178e4df20885c5d5f27b0a552061c7736374f9977807fc374ff99e07"
     },
     {
       "path": "engineering/engineering-git-workflow-master.md",
@@ -209,11 +293,53 @@
       "content_sha256": "b2ab151fa5dc31035ba5f40f9b104f61cc8ef45dab8a8249ad15675141550d77"
     },
     {
+      "path": "engineering/engineering-i18n-engineer.md",
+      "sha256": "913c72b65eca4af13d2edadf4b53acff63df91715c7c446a63cea75a9a14f007",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "913c72b65eca4af13d2edadf4b53acff63df91715c7c446a63cea75a9a14f007"
+    },
+    {
+      "path": "engineering/engineering-identity-access-engineer.md",
+      "sha256": "f37ea9df4e87d468fe2e34e29fc78fc508e717ae69d5bf4187a09375e842eedf",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "f37ea9df4e87d468fe2e34e29fc78fc508e717ae69d5bf4187a09375e842eedf"
+    },
+    {
       "path": "engineering/engineering-incident-response-commander.md",
       "sha256": "1df5c8f558f99a8d3e6455cf6a6badbd1e0c2b2cccb02682843ee7ca11a13929",
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "1df5c8f558f99a8d3e6455cf6a6badbd1e0c2b2cccb02682843ee7ca11a13929"
+    },
+    {
+      "path": "engineering/engineering-iot-fleet-engineer.md",
+      "sha256": "90cfb3b713d0cd11e9529f6158ed72ac99fe1d945a838d9d740009a51e9d3421",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "90cfb3b713d0cd11e9529f6158ed72ac99fe1d945a838d9d740009a51e9d3421"
+    },
+    {
+      "path": "engineering/engineering-it-service-manager.md",
+      "sha256": "26c23ef51726da346dcdf5b9eb004e7c03cfae4ad6a995ed46a26ec6cd5520e6",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "26c23ef51726da346dcdf5b9eb004e7c03cfae4ad6a995ed46a26ec6cd5520e6"
+    },
+    {
+      "path": "engineering/engineering-knowledge-graph-engineer.md",
+      "sha256": "4d6eff6c2dac6b2950cc66a2708f3ec29ef5bb776cfa209858e8dc1a4b9a76b3",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "4d6eff6c2dac6b2950cc66a2708f3ec29ef5bb776cfa209858e8dc1a4b9a76b3"
+    },
+    {
+      "path": "engineering/engineering-llm-post-training-engineer.md",
+      "sha256": "aa697dc1c0eb402551b9f6764a89938c8787c9628760b74065d3e383299a980a",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "aa697dc1c0eb402551b9f6764a89938c8787c9628760b74065d3e383299a980a"
     },
     {
       "path": "engineering/engineering-minimal-change-engineer.md",
@@ -224,10 +350,66 @@
     },
     {
       "path": "engineering/engineering-mobile-app-builder.md",
-      "sha256": "5b6d3d6ba2db86095abb00f6e8a4961c776b88784effbf74e1a1b1ee52f1d7e9",
+      "sha256": "1a3e043f806b0b7c071d58b2ee3ab3c58c8342e2727c1ca9e6e5175f86986caf",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "5b6d3d6ba2db86095abb00f6e8a4961c776b88784effbf74e1a1b1ee52f1d7e9"
+      "content_sha256": "1a3e043f806b0b7c071d58b2ee3ab3c58c8342e2727c1ca9e6e5175f86986caf"
+    },
+    {
+      "path": "engineering/engineering-mobile-release-engineer.md",
+      "sha256": "9ec73eb4effdefa4858b444d29bbd66b57e717c1d4cab39f53adcb21c07ca9a4",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "9ec73eb4effdefa4858b444d29bbd66b57e717c1d4cab39f53adcb21c07ca9a4"
+    },
+    {
+      "path": "engineering/engineering-multi-agent-systems-architect.md",
+      "sha256": "d93dd20fef67bf85a537ba0f869fad1a17d0e589f20899d1bbe1f095a7bcb91b",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "d93dd20fef67bf85a537ba0f869fad1a17d0e589f20899d1bbe1f095a7bcb91b"
+    },
+    {
+      "path": "engineering/engineering-network-engineer.md",
+      "sha256": "d4c65a148af24cec08e14ab2bee3a0a3699cc966c8d170eea196f00df3e87d98",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "d4c65a148af24cec08e14ab2bee3a0a3699cc966c8d170eea196f00df3e87d98"
+    },
+    {
+      "path": "engineering/engineering-orgscript-engineer.md",
+      "sha256": "f8426369743ff0086e32cb9facfc3935488d99a1c2de92961917f9b27d401427",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "f8426369743ff0086e32cb9facfc3935488d99a1c2de92961917f9b27d401427"
+    },
+    {
+      "path": "engineering/engineering-payments-billing-engineer.md",
+      "sha256": "b07c4e97ee1c23aec7fdacc79ffd39a0fcee73fef46700f82970be240dad9f5e",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "b07c4e97ee1c23aec7fdacc79ffd39a0fcee73fef46700f82970be240dad9f5e"
+    },
+    {
+      "path": "engineering/engineering-privacy-engineer.md",
+      "sha256": "0d00d2f0d3008a55000eb01f13adac54f40daf471d240a7c073477efe92376a6",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "0d00d2f0d3008a55000eb01f13adac54f40daf471d240a7c073477efe92376a6"
+    },
+    {
+      "path": "engineering/engineering-prompt-engineer.md",
+      "sha256": "625b066e01fca23222b71331833f7851941a6ba800857481ead4ea2420d40081",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "625b066e01fca23222b71331833f7851941a6ba800857481ead4ea2420d40081"
+    },
+    {
+      "path": "engineering/engineering-rag-pipeline-engineer.md",
+      "sha256": "a87135cd8a852aeec3da7edf00d2a019cbe30ee9cd9394ea00bd62a4668ca8c7",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "a87135cd8a852aeec3da7edf00d2a019cbe30ee9cd9394ea00bd62a4668ca8c7"
     },
     {
       "path": "engineering/engineering-rapid-prototyper.md",
@@ -237,11 +419,32 @@
       "content_sha256": "327598e2cee41b78866720e20ee76d84e674b4a95ed92773b40c942153cba88a"
     },
     {
-      "path": "engineering/engineering-security-engineer.md",
-      "sha256": "d6ce02769f3dbe732badc886e34531c8eb9393aa19b170651e256d482232c629",
+      "path": "engineering/engineering-realtime-collaboration-engineer.md",
+      "sha256": "08ab1a6a421a435fd5fffa9f03720566bd95fcda17c06eeff6e056d482e96a2a",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "d6ce02769f3dbe732badc886e34531c8eb9393aa19b170651e256d482232c629"
+      "content_sha256": "08ab1a6a421a435fd5fffa9f03720566bd95fcda17c06eeff6e056d482e96a2a"
+    },
+    {
+      "path": "engineering/engineering-rust-refactoring-specialist.md",
+      "sha256": "06ca53dbd12694560bf01feb94cbbd8c428e4abe6ac92c8a72eeb277ce179a78",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "06ca53dbd12694560bf01feb94cbbd8c428e4abe6ac92c8a72eeb277ce179a78"
+    },
+    {
+      "path": "engineering/engineering-search-relevance-engineer.md",
+      "sha256": "5562f37cbb561dce6dac47b1dd4e75cb7bde6c0c48045198db346ba7d6d790af",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "5562f37cbb561dce6dac47b1dd4e75cb7bde6c0c48045198db346ba7d6d790af"
+    },
+    {
+      "path": "engineering/engineering-section-508-specialist.md",
+      "sha256": "d4fb7139c69e270fd626cfc1410b7412bd864d010903b459f9eb90c8359809f9",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "d4fb7139c69e270fd626cfc1410b7412bd864d010903b459f9eb90c8359809f9"
     },
     {
       "path": "engineering/engineering-senior-developer.md",
@@ -252,17 +455,17 @@
     },
     {
       "path": "engineering/engineering-software-architect.md",
-      "sha256": "08239f789f83fbd9b117fe78a34af1ad640af2851685caa9d40e00f9cbf31586",
+      "sha256": "b85121691776147bacde26673e68fbbacd6a7f0816d1ca8e203c264d25ce1d30",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "08239f789f83fbd9b117fe78a34af1ad640af2851685caa9d40e00f9cbf31586"
+      "content_sha256": "b85121691776147bacde26673e68fbbacd6a7f0816d1ca8e203c264d25ce1d30"
     },
     {
       "path": "engineering/engineering-solidity-smart-contract-engineer.md",
-      "sha256": "1f68b7857b83c613324dd9685a7692b4427330f5680675b8781d8f66f088dc9b",
+      "sha256": "9e6f96fb29cc71faf2638bce3a5aa06ff15b4c674ca4ec039e5e4515a7844839",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "1f68b7857b83c613324dd9685a7692b4427330f5680675b8781d8f66f088dc9b"
+      "content_sha256": "9e6f96fb29cc71faf2638bce3a5aa06ff15b4c674ca4ec039e5e4515a7844839"
     },
     {
       "path": "engineering/engineering-sre.md",
@@ -279,11 +482,18 @@
       "content_sha256": "70c8a29cddf7de486b41185693b4961af3fcccbc632b8df13ec43572859edc43"
     },
     {
-      "path": "engineering/engineering-threat-detection-engineer.md",
-      "sha256": "83bfaabe485d51965ba6474de3eb6e00f67fd7f76e5b34ca1d3fb385a8fa3d97",
+      "path": "engineering/engineering-uswds-developer.md",
+      "sha256": "d3c46e2340d50a97cec536edd985abd2fe6b5f012c3c02e5e9187cd061b27ca7",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "83bfaabe485d51965ba6474de3eb6e00f67fd7f76e5b34ca1d3fb385a8fa3d97"
+      "content_sha256": "d3c46e2340d50a97cec536edd985abd2fe6b5f012c3c02e5e9187cd061b27ca7"
+    },
+    {
+      "path": "engineering/engineering-video-streaming-engineer.md",
+      "sha256": "a07dca52d7882ac55af9128fffd66c8a753d4c44170da19abffc51710dea9a11",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "a07dca52d7882ac55af9128fffd66c8a753d4c44170da19abffc51710dea9a11"
     },
     {
       "path": "engineering/engineering-voice-ai-integration-engineer.md",
@@ -293,11 +503,32 @@
       "content_sha256": "de80469db772d96f3d6d55d3e040360e3a19b45197b2dbd446cb3fcd5a4645f6"
     },
     {
+      "path": "engineering/engineering-webassembly-engineer.md",
+      "sha256": "013afbdab6688dfd278815e0ded8f2ce38580de2ee7e3b09d5974ca2f72c0b44",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "013afbdab6688dfd278815e0ded8f2ce38580de2ee7e3b09d5974ca2f72c0b44"
+    },
+    {
       "path": "engineering/engineering-wechat-mini-program-developer.md",
       "sha256": "dcda22b2d93c1bbfb5d29a78bba031ad40552af54713d89c49ece2d70d08a02c",
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "dcda22b2d93c1bbfb5d29a78bba031ad40552af54713d89c49ece2d70d08a02c"
+    },
+    {
+      "path": "engineering/engineering-wordpress-performance.md",
+      "sha256": "58ed429ace903aac3a2c9e190ecae5b61966b7330e9e51ea66aa03eb4112854f",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "58ed429ace903aac3a2c9e190ecae5b61966b7330e9e51ea66aa03eb4112854f"
+    },
+    {
+      "path": "engineering/engineering-wordpress-shopping-cart.md",
+      "sha256": "a2ef45cebe1cf03175b16ef48a2a01acdd2b7e8eda289114f568ebe0f1ae4112",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "a2ef45cebe1cf03175b16ef48a2a01acdd2b7e8eda289114f568ebe0f1ae4112"
     },
     {
       "path": "finance/finance-bookkeeper-controller.md",
@@ -335,25 +566,32 @@
       "content_sha256": "37ea1a246e1290f473ef59abe1bba9ecc4f346c9867522fefcc11d37cd0265ab"
     },
     {
-      "path": "marketing/marketing-agentic-search-optimizer.md",
-      "sha256": "1fce74cb42bc8461d67111afc440550cf673212d4325879ad9e7c417a70c7299",
+      "path": "marketing/marketing-aeo-foundations.md",
+      "sha256": "b7ef7e1188c924833974bab5cc57f166a7eb6b681d63ccd22eb05c91c25a3c8b",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "1fce74cb42bc8461d67111afc440550cf673212d4325879ad9e7c417a70c7299"
+      "content_sha256": "b7ef7e1188c924833974bab5cc57f166a7eb6b681d63ccd22eb05c91c25a3c8b"
+    },
+    {
+      "path": "marketing/marketing-agentic-search-optimizer.md",
+      "sha256": "9e9cbbc763b3ad82f664d80ff9b7965ffadb225998a708f386f47aff7bcee87d",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "9e9cbbc763b3ad82f664d80ff9b7965ffadb225998a708f386f47aff7bcee87d"
     },
     {
       "path": "marketing/marketing-ai-citation-strategist.md",
-      "sha256": "7cd2e456680669ece9f3b8c59a2c543d6c66f47ec957f773059fc4aba575d6a8",
+      "sha256": "1d23c94aced61beb0e7a3151ad4c14ccb8205a95e48d4bc6c0fda6739c2e356d",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "7cd2e456680669ece9f3b8c59a2c543d6c66f47ec957f773059fc4aba575d6a8"
+      "content_sha256": "1d23c94aced61beb0e7a3151ad4c14ccb8205a95e48d4bc6c0fda6739c2e356d"
     },
     {
       "path": "marketing/marketing-app-store-optimizer.md",
-      "sha256": "ed7c05b3a3e0965c4b937a8a76310f30817cecb133cc9ceb772beee13068f2d5",
+      "sha256": "1987be72f8fd43ca694f9145cb0dbe37eabc5b1f04439425d7b59185db9263c9",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "ed7c05b3a3e0965c4b937a8a76310f30817cecb133cc9ceb772beee13068f2d5"
+      "content_sha256": "1987be72f8fd43ca694f9145cb0dbe37eabc5b1f04439425d7b59185db9263c9"
     },
     {
       "path": "marketing/marketing-baidu-seo-specialist.md",
@@ -392,10 +630,10 @@
     },
     {
       "path": "marketing/marketing-content-creator.md",
-      "sha256": "676c536de09bd37195d5761ab4806037116cb5a03ffd41be152736b359d99e35",
+      "sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "676c536de09bd37195d5761ab4806037116cb5a03ffd41be152736b359d99e35"
+      "content_sha256": "26ddce44f057068a3935c13d53becd3c57385fb47fcdcfdd891b80269070b3d5"
     },
     {
       "path": "marketing/marketing-cross-border-ecommerce.md",
@@ -412,11 +650,25 @@
       "content_sha256": "87e3b91287fc97ad0dedb2f407a49d551b52b8513c8c61d06c1a93d837a7ae46"
     },
     {
-      "path": "marketing/marketing-growth-hacker.md",
-      "sha256": "3b1157ed09dc0402e3c83f3ea218654b7dc4f9074a649f728e5c8bd48b25ea7e",
+      "path": "marketing/marketing-email-strategist.md",
+      "sha256": "605c98066a4a1b5538d76476a11316247316ecb8da88beda68a21f2c8918f19b",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "3b1157ed09dc0402e3c83f3ea218654b7dc4f9074a649f728e5c8bd48b25ea7e"
+      "content_sha256": "605c98066a4a1b5538d76476a11316247316ecb8da88beda68a21f2c8918f19b"
+    },
+    {
+      "path": "marketing/marketing-global-podcast-strategist.md",
+      "sha256": "98416e338db666c5cc1d6bfd37c35daffa00532010623fdb4a92ed7dce76a7aa",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "98416e338db666c5cc1d6bfd37c35daffa00532010623fdb4a92ed7dce76a7aa"
+    },
+    {
+      "path": "marketing/marketing-growth-hacker.md",
+      "sha256": "6938b4fccaf4447e8c4b8fd071ce383a484cd3fb72583d87ac9835fa9741a7c7",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "6938b4fccaf4447e8c4b8fd071ce383a484cd3fb72583d87ac9835fa9741a7c7"
     },
     {
       "path": "marketing/marketing-instagram-curator.md",
@@ -447,11 +699,25 @@
       "content_sha256": "2d53e67cd70d825aeeddc9fd8b3b4a496887893b64df85c19903a2e7dbcb101f"
     },
     {
+      "path": "marketing/marketing-multi-platform-publisher.md",
+      "sha256": "adfc6c481c0c1e1c03df21a17ccb5fb4d4c56a84193249abb27cb3d44e4f1f5e",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "adfc6c481c0c1e1c03df21a17ccb5fb4d4c56a84193249abb27cb3d44e4f1f5e"
+    },
+    {
       "path": "marketing/marketing-podcast-strategist.md",
       "sha256": "37fb126529afb4aa6f4409ca02307330d26b01f695dfbaade017d569169d936b",
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "37fb126529afb4aa6f4409ca02307330d26b01f695dfbaade017d569169d936b"
+    },
+    {
+      "path": "marketing/marketing-pr-communications-manager.md",
+      "sha256": "e255a9ebf00a0db0dc12e72fe2a647195ceacf3c0e63f38788e077966d69b800",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "e255a9ebf00a0db0dc12e72fe2a647195ceacf3c0e63f38788e077966d69b800"
     },
     {
       "path": "marketing/marketing-private-domain-operator.md",
@@ -469,10 +735,10 @@
     },
     {
       "path": "marketing/marketing-seo-specialist.md",
-      "sha256": "b2aa467176bb3489f9098e0c79399f9de162aee17a54cb0d30ed2163024e661f",
+      "sha256": "cfa35eb3626230e1bc96ab3d434b42005b092fd4de8f517efe4a4b3f8fca60d0",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "b2aa467176bb3489f9098e0c79399f9de162aee17a54cb0d30ed2163024e661f"
+      "content_sha256": "cfa35eb3626230e1bc96ab3d434b42005b092fd4de8f517efe4a4b3f8fca60d0"
     },
     {
       "path": "marketing/marketing-short-video-editing-coach.md",
@@ -524,6 +790,13 @@
       "content_sha256": "7a79f1ec3894ab2e32cb0b0b729b77fda176defaffdb59f4feae29e56a767917"
     },
     {
+      "path": "marketing/marketing-x-twitter-intelligence-analyst.md",
+      "sha256": "e3dd504765e720f0dce0c5b68254ab65c440798edccfe6af6aafd0d3925d6dcb",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "e3dd504765e720f0dce0c5b68254ab65c440798edccfe6af6aafd0d3925d6dcb"
+    },
+    {
       "path": "marketing/marketing-xiaohongshu-specialist.md",
       "sha256": "c0afe07b77d7795ff6c5ea928360f0e545d51a6df231d42d6282168ace027154",
       "spdx": "MIT",
@@ -546,10 +819,10 @@
     },
     {
       "path": "product/product-feedback-synthesizer.md",
-      "sha256": "7db6770a51c396a77a7535a068195e996aa0d0afba7e82b564278aaabdefafad",
+      "sha256": "9f7bc1474bf8bf95c0573c20df5e3d8ae70c3b9659ec5ea7958cc4692b958270",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "7db6770a51c396a77a7535a068195e996aa0d0afba7e82b564278aaabdefafad"
+      "content_sha256": "9f7bc1474bf8bf95c0573c20df5e3d8ae70c3b9659ec5ea7958cc4692b958270"
     },
     {
       "path": "product/product-manager.md",
@@ -567,10 +840,10 @@
     },
     {
       "path": "product/product-trend-researcher.md",
-      "sha256": "4adef8e84b1a8a1c78602372faa0a66e131328216e2a2f91f75235cdbcbda85d",
+      "sha256": "69c8e54a9413ba411195e8d5274ee3cd88fa8cda18486db70c0f19ce374550a2",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "4adef8e84b1a8a1c78602372faa0a66e131328216e2a2f91f75235cdbcbda85d"
+      "content_sha256": "69c8e54a9413ba411195e8d5274ee3cd88fa8cda18486db70c0f19ce374550a2"
     },
     {
       "path": "project-management/project-management-experiment-tracker.md",
@@ -585,6 +858,13 @@
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "e45c68423c1df0c20452916a5caafe7f41a97b56ca5af8872af966212ccbf389"
+    },
+    {
+      "path": "project-management/project-management-meeting-notes-specialist.md",
+      "sha256": "53a6efaa379b70cbc3276b44544ecf569789fffe892ba82eb68e8672407de91f",
+      "spdx": "MIT",
+      "requires_review": true,
+      "content_sha256": "53a6efaa379b70cbc3276b44544ecf569789fffe892ba82eb68e8672407de91f"
     },
     {
       "path": "project-management/project-management-project-shepherd.md",
@@ -641,6 +921,13 @@
       "spdx": "MIT",
       "requires_review": false,
       "content_sha256": "355014b3ecf52aaa1209a5d7b089e5e65c3aad7874eef513e60b6da79fec572e"
+    },
+    {
+      "path": "sales/sales-offer-lead-gen-strategist.md",
+      "sha256": "75a12987fb2a205ac029c2ebf43d1ae1a1502d1707ab4921923928489ff3778c",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "75a12987fb2a205ac029c2ebf43d1ae1a1502d1707ab4921923928489ff3778c"
     },
     {
       "path": "sales/sales-outbound-strategist.md",
@@ -714,10 +1001,10 @@
     },
     {
       "path": "testing/testing-api-tester.md",
-      "sha256": "7812267518ff10c81a642aeb2d9e755408d540ebacee3c9bfdfd6d34735eb5e1",
+      "sha256": "c89d7ae592523f4799426a8b09700ec4b9d99bf2fcae2d1b0dd2900d5f770127",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "7812267518ff10c81a642aeb2d9e755408d540ebacee3c9bfdfd6d34735eb5e1"
+      "content_sha256": "c89d7ae592523f4799426a8b09700ec4b9d99bf2fcae2d1b0dd2900d5f770127"
     },
     {
       "path": "testing/testing-evidence-collector.md",
@@ -728,17 +1015,24 @@
     },
     {
       "path": "testing/testing-performance-benchmarker.md",
-      "sha256": "db3cc9a462baa31ec8d1cde1e58c49f8adfb10b5bb581b10f96b4d802c7645ab",
+      "sha256": "24dbd3a55cf6ca36c5f8af4081e87859914131199d87b6f90d129643fcfba43e",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "db3cc9a462baa31ec8d1cde1e58c49f8adfb10b5bb581b10f96b4d802c7645ab"
+      "content_sha256": "24dbd3a55cf6ca36c5f8af4081e87859914131199d87b6f90d129643fcfba43e"
     },
     {
       "path": "testing/testing-reality-checker.md",
-      "sha256": "748334839b21f5b2b1f746153f7e8921feaf676333191bcd9e45b8e6f75d322b",
+      "sha256": "6d32fcdb114233e13902ec6372d50293b120e85d490b5e81d372c29808f988a1",
       "spdx": "MIT",
       "requires_review": false,
-      "content_sha256": "748334839b21f5b2b1f746153f7e8921feaf676333191bcd9e45b8e6f75d322b"
+      "content_sha256": "6d32fcdb114233e13902ec6372d50293b120e85d490b5e81d372c29808f988a1"
+    },
+    {
+      "path": "testing/testing-test-automation-engineer.md",
+      "sha256": "479ba12efa5c19e87b60e3b154170c124ac38c46b95c342f0e3b62537113c0a7",
+      "spdx": "MIT",
+      "requires_review": false,
+      "content_sha256": "479ba12efa5c19e87b60e3b154170c124ac38c46b95c342f0e3b62537113c0a7"
     },
     {
       "path": "testing/testing-test-results-analyzer.md",

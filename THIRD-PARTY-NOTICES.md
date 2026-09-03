@@ -9,8 +9,8 @@ This file is regenerated automatically by `.github/workflows/sync-agency.yml`
 on every upstream SHA bump. Direct edits will be overwritten — to update
 notices, update the lock file via `/sync-agency`.
 
-Last regenerated: 2026-05-07T12:32:06Z
-Lock file: cowork.lock.json (pinned commit: 783f6a72bfd7f3135700ac273c619d92821b419a)
+Last regenerated: 2026-09-01T14:03:12Z
+Lock file: cowork.lock.json (pinned commit: 3c9588880b7cafaec325a104899fd8bbe27e7d72)
 
 ---
 
@@ -19,7 +19,7 @@ Lock file: cowork.lock.json (pinned commit: 783f6a72bfd7f3135700ac273c619d92821b
 - **Source:** <https://github.com/msitarzewski/agency-agents>
 - **License:** MIT
 - **Copyright:** Copyright (c) msitarzewski/agency-agents contributors
-- **Pinned commit:** 783f6a72bfd7f3135700ac273c619d92821b419a
+- **Pinned commit:** 3c9588880b7cafaec325a104899fd8bbe27e7d72
 - **License file SHA-256:** 9a45258434d5cedf0af73c9ad4771373701225038d246c49219026c33677f66f (from `cowork.lock.json` `license_file_sha256`)
 
 ### Full License Text
@@ -55,9 +55,6 @@ Content is pinned to the commit SHA above and verified against the lock file
 at install time (see ADR-020).
 
 Files distributed from this source: see `cowork.lock.json` `files` array.
-
----
-
 <!-- DO-NOT-REGENERATE: hand-maintained section; sync-agency.yml regeneration must preserve below this marker -->
 
 ## Direct Pattern Incorporations
